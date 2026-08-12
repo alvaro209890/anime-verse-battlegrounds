@@ -1,0 +1,10 @@
+[package]
+name = "alvaro209890/anime-verse-battlegrounds"
+version = "0.1.0"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+
+[dependencies]
+# ProfileService não está no registro Wally — será adicionado como arquivo local
+# em src/shared/ProfileService/ quando a implementação começar
+# (fonte: https://github.com/littensy/ProfileService)

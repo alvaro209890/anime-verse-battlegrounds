@@ -1,0 +1,20 @@
+{
+  "luau-lsp.types.documentation": true,
+  "luau-lsp.types.definitionFiles": ["https://raw.githubusercontent.com/JohnnyMorganz/luau-lsp/main/scripts/globalTypes.d.luau"],
+  "luau-lsp.sourcemap.enabled": true,
+  "luau-lsp.sourcemap.rojoProjectFile": "default.project.json",
+  "luau-lsp.fflags.enableByString": true,
+  "stylua.targetVersion": "luau",
+  "selene.luaVersion": "luau51",
+  "files.associations": {
+    "*.luau": "luau"
+  },
+  "[luau]": {
+    "editor.defaultFormatter": "JohnnyMorganz.stylua",
+    "editor.formatOnSave": true
+  },
+  "[lua]": {
+    "editor.defaultFormatter": "JohnnyMorganz.stylua",
+    "editor.formatOnSave": true
+  }
+}

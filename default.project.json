@@ -1,0 +1,12 @@
+{
+  "name": "anime-verse-battlegrounds",
+  "tree": {
+    "$className": "DataModel",
+    "$path": "src",
+    "ReplicatedStorage": {
+      "Packages": {
+        "$path": "Packages"
+      }
+    }
+  }
+}

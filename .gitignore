@@ -1,0 +1,17 @@
+# Wally packages
+Packages/
+
+# Rojo build artifacts
+*.rbxl
+*.rbxlx
+
+# luau-lsp
+.luau-aliases
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor — commitar settings.json do projeto, ignorar estado local
+.vscode/*.local.json
+.idea/
