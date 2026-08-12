@@ -97,6 +97,8 @@ Fases podem ter pré-produção sobreposta, mas nenhuma funcionalidade dependent
 
 ## 5. Fase 0 — fatia vertical jogável
 
+A spec de execução (IDs, frame data, greybox, roteiro de 20 min, remotes e backlog de build) está em `docs/13-F0-SLICE.md`. Este capítulo permanece o gate de aceite; aquele arquivo é o que se implementa.
+
 **Esforço aprovado:** 8–12 pessoa-meses, incluindo o esqueleto já criado e todo o trabalho necessário para provar a fatia em runtime.
 
 ### Hipótese a validar

@@ -53,7 +53,7 @@ src/
   server/            services (bootstrap, recurso, habilidade, combate, rede, sessão)
   client/            controllers (bootstrap de apresentação)
 tests/               harness Lune + 22 testes unitários
-docs/                produto, arquitetura, decisões, benchmark e testes (00 a 12)
+docs/                produto, arquitetura, decisões, benchmark, testes e spec F0 (00 a 13)
 lib/                 bibliotecas pinadas (ProfileStore)
 ```
 
@@ -67,6 +67,7 @@ lib/                 bibliotecas pinadas (ProfileStore)
 - [docs/10-MARKET-BENCHMARKS.md](docs/10-MARKET-BENCHMARKS.md) — evidência de mercado datada e limites de uso
 - [docs/11-ABILITY-SPEC.md](docs/11-ABILITY-SPEC.md) — como adicionar habilidade (spec do formato)
 - [docs/12-TESTING.md](docs/12-TESTING.md) — como rodar e o que cobre os testes
+- [docs/13-F0-SLICE.md](docs/13-F0-SLICE.md) — spec de execução da fatia vertical (kit, mapa, roteiro, backlog)
 
 `PROMPT_AnimeVerseBattlegrounds_v2.md` é o briefing histórico que originou o
 planejamento. Em conflito, os documentos canônicos em `docs/` prevalecem.

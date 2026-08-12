@@ -1,6 +1,7 @@
 # 11 — Spec do formato de habilidade (`AbilityDefinition`)
 
 > **Status:** contrato-alvo aprovado em 2026-08-12; o código F0 implementa apenas o subconjunto identificado abaixo.
+> **Fatia jogável:** IDs, runners e números do Punho do Eclipse estão em `docs/13-F0-SLICE.md`. Este arquivo descreve o formato; aquele descreve o conteúdo F0.
 > **Fontes:** `docs/01-GDD.md` §4–7, `docs/05-DATA-SCHEMA.md` §5.3 e `src/shared/Types.luau`.
 > **Regra de ouro:** adicionar uma habilidade não cria ramificação por personagem em sistema compartilhado; exige uma definição de dados versionada e um runner server-side registrado.
 

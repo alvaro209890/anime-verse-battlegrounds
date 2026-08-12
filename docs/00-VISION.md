@@ -159,7 +159,7 @@ Uma área pequena e jogável contém:
 - uma cadeia curta de missão, um inimigo elite e um objetivo PvP;
 - progressão e persistência ponta a ponta.
 
-Essa fatia prova sensação de combate, autoridade do servidor, controles nas três plataformas, clareza de zona e integridade do save. Loadout misto, Ressonância, equipamento complexo, clãs, guerra, torneios e ranking não pertencem à Fase 0.
+Essa fatia prova sensação de combate, autoridade do servidor, controles nas três plataformas, clareza de zona e integridade do save. Loadout misto, Ressonância, equipamento complexo, clãs, guerra, torneios e ranking não pertencem à Fase 0. Detalhe de execução: `docs/13-F0-SLICE.md`.
 
 ### Ordem de expansão decidida
 

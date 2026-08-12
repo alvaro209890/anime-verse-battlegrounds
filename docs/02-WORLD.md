@@ -313,6 +313,8 @@ As fases devem ser consolidadas com `06-ROADMAP.md`; esta sequência expressa de
 
 ### Fase 0 — fatia vertical
 
+Medidas, âncoras, inimigos e fronteira de implementação: `docs/13-F0-SLICE.md` §8–§10.
+
 - Bastião do Limiar e uma parte pequena da Planície Estilhaçada;
 - uma fronteira segura/livre com todos os sinais e regras de combate;
 - spawn, treino, retorno e um NPC para o primeiro objetivo;

@@ -74,7 +74,7 @@ Os testes abaixo são backlog, não parte dos 22 existentes:
 
 ## 6. Matriz runtime ainda pendente
 
-Antes de chamar F0 de jogável ou liberar a fase seguinte, registrar evidência para:
+A spec de execução da fatia (`docs/13-F0-SLICE.md` §19–§21) lista os testes Lune que devem mudar com o catálogo novo e o roteiro Studio. Antes de chamar F0 de jogável ou liberar a fase seguinte, registrar evidência para:
 
 - Studio solo: boot limpo, spawn, três técnicas, morte/respawn, save simulado e desconexão;
 - Studio server + pelo menos dois clientes: autoridade de dano/custo/cooldown, latência, spam de remote e estado após morte;
