@@ -18,6 +18,7 @@ export type SessionDeps = {
 	getFighter: ((string) -> any?)?,
 	playerFighterId: ((number) -> string)?,
 	onSnapshot: ((any, { any }) -> ())?,
+	getPlayerZone: ((number) -> string)?,
 }
 
 export type SessionSnapshot = {
@@ -81,10 +82,14 @@ function PlayerSessionService.buildSnapshot(userId: number, characterId: string,
 	if family then
 		maxResource = family.poolCap
 	end
+	local zoneId = DEFAULT_ZONE_ID
+	if deps.getPlayerZone then
+		zoneId = deps.getPlayerZone(userId) or DEFAULT_ZONE_ID
+	end
 	return {
 		protocolVersion = 1,
 		ready = true,
-		zoneId = DEFAULT_ZONE_ID,
+		zoneId = zoneId,
 		characterId = characterId,
 		health = health,
 		maxHealth = maxHealth,

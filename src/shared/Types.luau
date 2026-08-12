@@ -108,4 +108,32 @@ export type NetworkContract = {
 	payload: string,
 }
 
+-- Zonas e âncoras (docs/13-F0-SLICE.md §4, §8)
+export type ZoneId = string
+export type AnchorId = string
+
+export type ZoneDefinition = {
+	id: ZoneId,
+	displayNameKey: string,
+	kind: "safe" | "transition" | "free",
+	pvp: boolean,
+}
+
+export type AnchorDefinition = {
+	id: AnchorId,
+	zoneId: ZoneId,
+	position: { x: number, y: number, z: number },
+}
+
+-- Evento S→C de fronteira (docs/13-F0-SLICE.md §13 — ZoneEvent)
+export type ZoneEventPayload = {
+	from: ZoneId,
+	to: ZoneId,
+	pvp: boolean,
+	signals: { string },
+	holdConfirmed: boolean,
+	lockoutRemaining: number?,
+	instant: number,
+}
+
 return {}

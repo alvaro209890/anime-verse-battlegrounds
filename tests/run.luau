@@ -39,12 +39,14 @@ local Characters = require("../src/shared/Data/Characters")
 local EnergyFamilies = require("../src/shared/Data/EnergyFamilies")
 local Npcs = require("../src/shared/Data/Npcs")
 local Remotes = require("../src/shared/Remotes")
+local Zones = require("../src/shared/Data/Zones")
 local CooldownService = require("../src/server/Services/CooldownService")
 local CombatService = require("../src/server/Services/CombatService")
 local ResourceService = require("../src/server/Services/ResourceService")
 local AbilityService = require("../src/server/Services/AbilityService")
 local CatalogService = require("../src/server/Services/CatalogService")
 local PlayerSessionService = require("../src/server/Services/PlayerSessionService")
+local ZoneService = require("../src/server/Services/ZoneService")
 
 -- ── Relógio injetável (janela de reentrada / cap de Fluxo) ──────────────────
 local fakeNow = 1000
@@ -888,6 +890,302 @@ test("fatia: ready + comet no dummy gasta 18 e tira 9 HP", function()
 		assertEq(dummy.health, 9991, "9 de dano")
 	end
 	PlayerSessionService.onPlayerLeft({ UserId = 100, Name = "Comet" })
+end)
+
+-- ══ Testes: zonas e fronteira PvP ───────────────────────────────────────────
+local function makeZoneDeps(events: { any }?)
+	return {
+		getZone = function(zoneId: string): any
+			return Zones.get(zoneId)
+		end,
+		getAnchor = function(anchorId: string): any
+			return Zones.getAnchor(anchorId)
+		end,
+		now = clockNow,
+		onZoneEvent = function(userId: number, event: { any })
+			if events then
+				table.insert(events, { userId = userId, event = event })
+			end
+		end,
+	}
+end
+
+test("dados: 3 zonas, PvP só na livre, 6 âncoras, spawn no bastião", function()
+	assertEq(#Zones.all(), 3, "3 zonas")
+	for _, zone in Zones.all() do
+		if zone.pvp then
+			assertEq(zone.id, "zone_plain_free", "PvP só na planície")
+		end
+	end
+	assertEq(#Zones.allAnchors(), 6, "6 âncoras")
+	local spawn = Zones.getAnchor("anchor_bastion_spawn")
+	assertTrue(spawn ~= nil, "anchor_bastion_spawn existe")
+	if spawn then
+		assertEq(spawn.zoneId, "zone_bastion_safe", "spawn na zona segura")
+	end
+end)
+
+test("catálogo: zona ou âncora inválida falha validação", function()
+	local function withZones(zones: any)
+		return pcall(function()
+			CatalogService.init({
+				Abilities = Abilities,
+				Characters = Characters,
+				EnergyFamilies = EnergyFamilies,
+				Zones = zones,
+			})
+		end)
+	end
+	-- âncora aponta para zona inexistente
+	local badAnchor = withZones({
+		get = Zones.get,
+		all = Zones.all,
+		getAnchor = Zones.getAnchor,
+		allAnchors = function()
+			return {
+				{ id = "anchor_bad", zoneId = "zona_que_nao_existe", position = { x = 0, y = 0, z = 0 } },
+			}
+		end,
+	})
+	assertFalse(badAnchor, "âncora com zona desconhecida deveria falhar")
+	-- spawn default ausente
+	local noSpawn = withZones({
+		get = Zones.get,
+		all = Zones.all,
+		getAnchor = function()
+			return nil
+		end,
+		allAnchors = function()
+			return {
+				{ id = "anchor_elite", zoneId = "zone_plain_free", position = { x = 0, y = 0, z = 0 } },
+			}
+		end,
+	})
+	assertFalse(noSpawn, "sem anchor_bastion_spawn deveria falhar")
+	-- zona com PvP fora da planície
+	local wrongPvp = withZones({
+		get = Zones.get,
+		all = function()
+			return {
+				{ id = "zone_bastion_safe", displayNameKey = "k", kind = "safe", pvp = false },
+				{ id = "zone_threshold_transition", displayNameKey = "k", kind = "transition", pvp = false },
+				{ id = "zone_plain_free", displayNameKey = "k", kind = "free", pvp = true },
+				{ id = "zone_bad", displayNameKey = "k", kind = "free", pvp = true },
+			}
+		end,
+		getAnchor = Zones.getAnchor,
+		allAnchors = Zones.allAnchors,
+	})
+	assertFalse(wrongPvp, "zona extra com PvP deveria falhar")
+end)
+
+test("zona: join começa na zona segura e sem PvP", function()
+	ZoneService.init(makeZoneDeps())
+	ZoneService.registerPlayer(200)
+	ZoneService.registerPlayer(201)
+	assertEq(ZoneService.getPlayerZone(200), "zone_bastion_safe", "zona inicial")
+	assertEq(ZoneService.canPvp(200), false, "sem PvP na segura")
+	assertEq(ZoneService.canPvpBetween(200, 201), false, "sem PvP entre jogadores na segura")
+end)
+
+test("zona: sem holdConfirmed recusa a primeira ida à livre", function()
+	fakeNow = 6000
+	ZoneService.init(makeZoneDeps())
+	ZoneService.registerPlayer(210)
+	local res = ZoneService.tryEnterZone(210, "zone_threshold_transition", fakeNow, {})
+	assertEq(res.ok, false, "recusa")
+	assertEq(res.reason, "hold_required", "motivo")
+	assertEq(ZoneService.getPlayerZone(210), "zone_bastion_safe", "continua na segura")
+	assertEq(ZoneService.canPvp(210), false, "sem PvP")
+end)
+
+test("zona: com hold entra em transição 5 s e canPvp false", function()
+	fakeNow = 7000
+	local events: { any } = {}
+	ZoneService.init(makeZoneDeps(events))
+	ZoneService.registerPlayer(220)
+	local res = ZoneService.tryEnterZone(220, "zone_threshold_transition", fakeNow, { holdConfirmed = true })
+	assertEq(res.ok, true, "aceita com hold: " .. tostring(res.reason))
+	assertEq(ZoneService.getPlayerZone(220), "zone_threshold_transition", "em transição")
+	assertEq(ZoneService.canPvp(220), false, "sem PvP durante a transição")
+	local crossed = ZoneService.tryEnterZone(220, "zone_plain_free", fakeNow + 1, {})
+	assertEq(crossed.ok, true, "cruza para a livre: " .. tostring(crossed.reason))
+	assertEq(ZoneService.getPlayerZone(220), "zone_plain_free", "na livre")
+	assertEq(ZoneService.canPvp(220), false, "proteção de 5 s ainda ativa")
+	fakeNow = 7000 + 5
+	assertEq(ZoneService.canPvp(220), true, "PvP ligado após 5 s")
+	assertEq(ZoneService.canPvpBetween(220, 221), false, "parceiro ainda na segura")
+	ZoneService.registerPlayer(221)
+	ZoneService.tryEnterZone(221, "zone_threshold_transition", fakeNow, { holdConfirmed = true })
+	ZoneService.tryEnterZone(221, "zone_plain_free", fakeNow + 1, {})
+	fakeNow = 7011
+	assertEq(ZoneService.canPvpBetween(220, 221), true, "ambos na livre: PvP")
+	assertEq(#events, 4, "um evento por travessia")
+end)
+
+test("zona: ação hostil na transição encerra a proteção na hora", function()
+	fakeNow = 8000
+	ZoneService.init(makeZoneDeps())
+	ZoneService.registerPlayer(230)
+	ZoneService.tryEnterZone(230, "zone_threshold_transition", fakeNow, { holdConfirmed = true })
+	assertEq(ZoneService.canPvp(230), false, "protegido na transição")
+	ZoneService.markHostileAction(230, fakeNow + 1)
+	assertEq(ZoneService.getPlayerZone(230), "zone_plain_free", "ativa PvP indo à livre")
+	assertEq(ZoneService.canPvp(230), true, "ação hostil encerra a proteção")
+end)
+
+test("zona: sinais da fronteira retornam os 5 IDs juntos", function()
+	local SIGNAL_IDS: { [string]: boolean } = {
+		physical_gate = true,
+		lighting_material = true,
+		ui_banner = true,
+		audio_haptic = true,
+		persistent_indicator = true,
+	}
+	local forward = ZoneService.getFrontierSignals("zone_bastion_safe", "zone_plain_free")
+	assertTrue(forward ~= nil, "segura→livre tem sinais")
+	if forward then
+		assertEq(#forward, 5, "5 sinais")
+		for _, s in forward do
+			assertTrue(SIGNAL_IDS[s] == true, "sinal " .. s)
+		end
+	end
+	local back = ZoneService.getFrontierSignals("zone_plain_free", "zone_bastion_safe")
+	assertTrue(back ~= nil and #back == 5, "volta também tem 5 sinais")
+	assertEq(ZoneService.getFrontierSignals("zone_bastion_safe", "zone_bastion_safe"), nil, "sem sinais na mesma zona")
+end)
+
+test("zona: evento da travessia carrega payload completo", function()
+	fakeNow = 9000
+	local events: { any } = {}
+	ZoneService.init(makeZoneDeps(events))
+	ZoneService.registerPlayer(235)
+	ZoneService.tryEnterZone(235, "zone_threshold_transition", fakeNow, { holdConfirmed = true })
+	assertEq(#events, 1, "evento emitido")
+	local first = events[1].event
+	assertEq(first.from, "zone_bastion_safe", "de")
+	assertEq(first.to, "zone_threshold_transition", "para")
+	assertEq(first.pvp, false, "transição não é PvP")
+	assertEq(#first.signals, 5, "sinais no evento")
+	assertEq(first.holdConfirmed, true, "hold confirmado")
+	assertEq(first.instant, 9000, "instante")
+	local crossed = ZoneService.tryEnterZone(235, "zone_plain_free", fakeNow + 1, {})
+	assertEq(crossed.event.pvp, true, "destino livre marca PvP")
+end)
+
+test("zona: combate PvP recente bloqueia reentrada na segura por 15 s", function()
+	fakeNow = 10000
+	ZoneService.init(makeZoneDeps())
+	ZoneService.registerPlayer(240)
+	ZoneService.tryEnterZone(240, "zone_threshold_transition", fakeNow, { holdConfirmed = true })
+	ZoneService.tryEnterZone(240, "zone_plain_free", fakeNow + 1, {})
+	fakeNow = 10000 + 6
+	ZoneService.markPvpCombat(240, fakeNow)
+	local blocked = ZoneService.tryEnterZone(240, "zone_threshold_transition", fakeNow, {})
+	assertEq(blocked.ok, false, "bloqueado")
+	assertEq(blocked.reason, "combat_lockout", "motivo")
+	assertTrue(
+		blocked.lockoutRemaining ~= nil and blocked.lockoutRemaining > 0 and blocked.lockoutRemaining <= 15,
+		"timer visível"
+	)
+	fakeNow = 10000 + 6 + 15
+	local free = ZoneService.tryEnterZone(240, "zone_threshold_transition", fakeNow, {})
+	assertEq(free.ok, true, "após 15 s libera: " .. tostring(free.reason))
+	ZoneService.tryEnterZone(240, "zone_bastion_safe", fakeNow + 1, {})
+	assertEq(ZoneService.getPlayerZone(240), "zone_bastion_safe", "de volta à segura")
+	assertEq(ZoneService.canPvp(240), false, "sem PvP na segura")
+end)
+
+test("zona: projétil/área não cruza a fronteira com dano", function()
+	ZoneService.init(makeZoneDeps())
+	assertEq(ZoneService.canDamageCrossBoundary("zone_plain_free", "zone_bastion_safe"), false, "livre→segura")
+	assertEq(
+		ZoneService.canDamageCrossBoundary("zone_plain_free", "zone_threshold_transition"),
+		false,
+		"livre→transição"
+	)
+	assertEq(
+		ZoneService.canDamageCrossBoundary("zone_bastion_safe", "zone_threshold_transition"),
+		true,
+		"dentro do lado seguro"
+	)
+	assertEq(ZoneService.canDamageCrossBoundary("zone_plain_free", "zone_plain_free"), true, "mesma zona livre")
+	assertEq(ZoneService.canDamageCrossBoundary("zone_bastion_safe", "zone_bastion_safe"), true, "mesma zona segura")
+end)
+
+test("dados: ZoneEvent registrado como remote S→C", function()
+	local zc = Remotes.Contracts.get(Remotes.Names.ZoneEvent)
+	assertTrue(zc ~= nil, "ZoneEvent deveria ter contrato")
+	if zc then
+		assertEq(zc.direction, "ServerToClient", "direção")
+		assertEq(zc.version, 1, "versão")
+		assertTrue(zc.payload:find("signals") ~= nil, "payload com signals")
+		assertTrue(zc.payload:find("holdConfirmed") ~= nil, "payload com holdConfirmed")
+	end
+end)
+
+test("fatia: sessão Ready com ZoneService e comet intacto", function()
+	CombatService.clear()
+	CooldownService.clear(250)
+	fakeNow = 11000
+	ZoneService.init(makeZoneDeps())
+	ResourceService.init(makeResourceDeps())
+	CombatService.createFighter("npc_training_dummy", "npc", 10000, 0)
+	local deps = makeAbilityDeps()
+	deps.getAttackerFighter = function(userId: number)
+		return CombatService.getFighter(CombatService.playerFighterId(userId))
+	end
+	deps.getAbilityTarget = function(_userId: number)
+		return CombatService.getFighter("npc_training_dummy")
+	end
+	deps.tryCometShoulder = CombatService.tryCometShoulder
+	AbilityService.init(deps)
+	local snapshots: { any } = {}
+	PlayerSessionService.init({
+		getCharacter = function(id: string): any
+			return Characters.get(id)
+		end,
+		getFamily = function(id: string): any
+			return EnergyFamilies.get(id)
+		end,
+		createResourceState = function(userId: number, familyId: string)
+			return ResourceService.createState(userId, familyId)
+		end,
+		removeResourceState = ResourceService.removeState,
+		getResourceState = ResourceService.getState,
+		clearCooldowns = function(userId: number)
+			CooldownService.clear(userId)
+		end,
+		releaseProfile = function() end,
+		createFighter = CombatService.createFighter,
+		removeFighter = CombatService.removeFighter,
+		getFighter = CombatService.getFighter,
+		playerFighterId = CombatService.playerFighterId,
+		onSnapshot = function(_player: any, snap: { any })
+			table.insert(snapshots, snap)
+		end,
+		getPlayerZone = ZoneService.getPlayerZone,
+	})
+	ZoneService.registerPlayer(250)
+	PlayerSessionService.onPlayerJoined({ UserId = 250, Name = "Zona" })
+	assertEq(PlayerSessionService.isReady(250), true, "ready")
+	assertEq(#snapshots, 1, "snapshot")
+	local snap = snapshots[1]
+	assertEq(snap.zoneId, "zone_bastion_safe", "zona do snapshot via ZoneService")
+	local attacker = ResourceService.getState(250)
+	assertTrue(attacker ~= nil, "estado de recurso")
+	if not attacker then
+		return
+	end
+	local ok, reason = AbilityService.tryActivate(attacker, "comet_shoulder", nil)
+	assertTrue(ok, "comet: " .. tostring(reason))
+	local dummy = CombatService.getFighter("npc_training_dummy")
+	assertTrue(dummy ~= nil, "dummy existe")
+	if dummy then
+		assertEq(dummy.health, 9991, "dummy intacto")
+	end
+	PlayerSessionService.onPlayerLeft({ UserId = 250, Name = "Zona" })
+	ZoneService.unregisterPlayer(250)
 end)
 
 -- ══ Runner ─────────────────────────────────────────────────────────────────

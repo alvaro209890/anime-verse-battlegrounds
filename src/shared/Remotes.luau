@@ -24,6 +24,7 @@ export type RemoteName =
 	| "BasicAttackIntent"
 	| "GuardIntent"
 	| "DashIntent"
+	| "ZoneEvent"
 
 local REMOTES = {
 	AbilityActivate = "AbilityActivate",
@@ -35,6 +36,7 @@ local REMOTES = {
 	BasicAttackIntent = "BasicAttackIntent",
 	GuardIntent = "GuardIntent",
 	DashIntent = "DashIntent",
+	ZoneEvent = "ZoneEvent",
 }
 
 local RemoteContracts = {
@@ -91,6 +93,12 @@ local RemoteContracts = {
 		direction = "ClientToServer",
 		version = 1,
 		payload = "{ requestId: string }",
+	} :: NetworkContract,
+	[REMOTES.ZoneEvent] = {
+		name = REMOTES.ZoneEvent,
+		direction = "ServerToClient",
+		version = 1,
+		payload = "{ from: string, to: string, pvp: boolean, signals: { string }, holdConfirmed: boolean, lockoutRemaining: number?, instant: number }",
 	} :: NetworkContract,
 }
 

@@ -2,7 +2,7 @@
 
 ## 1. Objetivo e estado deste documento
 
-Este roadmap transforma a visão do jogo em uma sequência de entregas verificáveis e passa a ser a referência de escopo para uma equipe de 1–3 pessoas. A implementação **já começou**: existe um esqueleto F0 com serviços, catálogos alinhados ao Punho do Eclipse e remotes, além de CI com StyLua, Selene, 49 testes Lune, Wally e build Rojo. Esse estado não equivale a F0 concluída e ainda não comprova Roblox Studio, DataStore real, servidor publicado, mobile ou gamepad.
+Este roadmap transforma a visão do jogo em uma sequência de entregas verificáveis e passa a ser a referência de escopo para uma equipe de 1–3 pessoas. A implementação **já começou**: existe um esqueleto F0 com serviços, catálogos alinhados ao Punho do Eclipse (incl. zonas/âncoras e `ZoneService` com a fronteira PvP como domínio headless) e remotes, além de CI com StyLua, Selene, 61 testes Lune, Wally e build Rojo. Esse estado não equivale a F0 concluída e ainda não comprova Roblox Studio, DataStore real, servidor publicado, mobile ou gamepad.
 
 O projeto é um **RPG / Action RPG** persistente; “Battlegrounds” permanece como nome de marketing, não como arquitetura de arena exclusiva. A ordem abaixo prioriza combate em rede, persistência e progressão antes de multiplicar conteúdo ou construir sistemas sociais caros.
 

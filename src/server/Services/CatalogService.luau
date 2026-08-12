@@ -11,6 +11,7 @@ export type CatalogDeps = {
 	Characters: { get: (string) -> any?, all: () -> { any } },
 	EnergyFamilies: { get: (string) -> any?, all: () -> { any } },
 	Npcs: { get: (string) -> any?, all: () -> { any } }?,
+	Zones: { get: (string) -> any?, all: () -> { any }, getAnchor: (string) -> any?, allAnchors: () -> { any } }?,
 }
 
 local CatalogService = {
@@ -84,6 +85,51 @@ function CatalogService.validate(): ()
 		end
 	end
 
+	if deps.Zones then
+		local zoneIds: { [string]: boolean } = {}
+		local freeZones = 0
+		for _, zone in deps.Zones.all() do
+			zoneIds[zone.id] = true
+			if zone.kind ~= "safe" and zone.kind ~= "transition" and zone.kind ~= "free" then
+				fail(("zone %s → kind inválido"):format(zone.id))
+			end
+			if zone.pvp then
+				freeZones += 1
+				-- F0: alto risco não existe; PvP só em zone_plain_free
+				if zone.id ~= "zone_plain_free" then
+					fail(("zone %s → PvP fora da planície não existe na fatia"):format(zone.id))
+				end
+			end
+		end
+		if freeZones < 1 then
+			fail("catálogo de zonas sem zona livre (PvP)")
+		end
+		if not zoneIds["zone_bastion_safe"] then
+			fail("catálogo de zonas sem zone_bastion_safe")
+		end
+		if not zoneIds["zone_threshold_transition"] then
+			fail("catálogo de zonas sem zone_threshold_transition")
+		end
+		if not zoneIds["zone_plain_free"] then
+			fail("catálogo de zonas sem zone_plain_free")
+		end
+
+		local anchors: { [string]: boolean } = {}
+		for _, anchor in deps.Zones.allAnchors() do
+			anchors[anchor.id] = true
+			if not zoneIds[anchor.zoneId] then
+				fail(("anchor %s → zona desconhecida %s"):format(anchor.id, anchor.zoneId))
+			end
+		end
+		local spawnAnchor = deps.Zones.getAnchor("anchor_bastion_spawn")
+		if not spawnAnchor then
+			fail("spawn default anchor_bastion_spawn ausente")
+		end
+		if spawnAnchor.zoneId ~= "zone_bastion_safe" then
+			fail(("spawn default deve estar em zone_bastion_safe (está em %s)"):format(spawnAnchor.zoneId))
+		end
+	end
+
 	CatalogService.validated = true
 end
 
@@ -121,6 +167,24 @@ function CatalogService.getNpc(npcId: string): any?
 	end
 	CatalogService.validate()
 	return deps.Npcs.get(npcId)
+end
+
+function CatalogService.getZone(zoneId: string): any?
+	local deps = CatalogService.deps
+	if not deps or not deps.Zones then
+		return nil
+	end
+	CatalogService.validate()
+	return deps.Zones.get(zoneId)
+end
+
+function CatalogService.getAnchor(anchorId: string): any?
+	local deps = CatalogService.deps
+	if not deps or not deps.Zones then
+		return nil
+	end
+	CatalogService.validate()
+	return deps.Zones.getAnchor(anchorId)
 end
 
 return CatalogService

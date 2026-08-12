@@ -17,11 +17,13 @@ local PlayerSessionService = require(script.Parent.Services.PlayerSessionService
 local RemoteGateway = require(script.Parent.Services.RemoteGateway)
 local ResourceService = require(script.Parent.Services.ResourceService)
 local SaveService = require(script.Parent.Services.SaveService)
+local ZoneService = require(script.Parent.Services.ZoneService)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Abilities = require(ReplicatedStorage.Shared.Data.Abilities)
 local Characters = require(ReplicatedStorage.Shared.Data.Characters)
 local EnergyFamilies = require(ReplicatedStorage.Shared.Data.EnergyFamilies)
 local Npcs = require(ReplicatedStorage.Shared.Data.Npcs)
+local Zones = require(ReplicatedStorage.Shared.Data.Zones)
 
 -- 1. Catálogo — validação em fail-fast
 CatalogService.init({
@@ -29,8 +31,24 @@ CatalogService.init({
 	Characters = Characters,
 	EnergyFamilies = EnergyFamilies,
 	Npcs = Npcs,
+	Zones = Zones,
 })
 print("[Bootstrap] catálogo validado")
+
+-- 2. Zonas/fronteira — regras PvP e eventos de travessia
+ZoneService.init({
+	getZone = CatalogService.getZone,
+	getAnchor = CatalogService.getAnchor,
+	now = os.clock,
+	onZoneEvent = function(userId: number, event: { any })
+		local player = game.Players:GetPlayerByUserId(userId)
+		if not player then
+			return
+		end
+		RemoteGateway.fireClient(player, Remotes.Names.ZoneEvent, event)
+	end,
+})
+print("[Bootstrap] ZoneService iniciado")
 
 -- 2. Persistência (stub seguro até ProfileStore entrar no build)
 SaveService.init()
@@ -120,6 +138,7 @@ PlayerSessionService.init({
 	onSnapshot = function(player: Player, snapshot: { any })
 		RemoteGateway.fireClient(player, Remotes.Names.SessionSnapshot, snapshot)
 	end,
+	getPlayerZone = ZoneService.getPlayerZone,
 })
 
 local function requireReady(player: Player): boolean
@@ -196,10 +215,12 @@ end)
 
 -- 8. Ciclo de sessão
 game.Players.PlayerAdded:Connect(function(player: Player)
+	ZoneService.registerPlayer(player.UserId)
 	PlayerSessionService.onPlayerJoined(player)
 end)
 game.Players.PlayerRemoving:Connect(function(player: Player)
 	PlayerSessionService.onPlayerLeft(player)
+	ZoneService.unregisterPlayer(player.UserId)
 end)
 
 print("[Bootstrap] servidor pronto (F0)")
