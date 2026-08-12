@@ -2,11 +2,11 @@
 
 ## 1. Escopo e decisões arquiteturais
 
-Este documento descreve a arquitetura-alvo. Nesta rodada, todas as ferramentas, módulos, remotes, serviços, testes e pipelines citados são **planejamento futuro**, não implementação existente.
+Este documento descreve a arquitetura-alvo e distingue o que já existe do que ainda precisa ser entregue. O repositório contém um **esqueleto executável da F0**: bootstrap de servidor/cliente, catálogos compartilhados, registry de remotes e serviços iniciais de catálogo, sessão, save, habilidade, combate, cooldown e recurso. A CI versionada executa StyLua, Selene, 22 testes Lune, instalação Wally e build Rojo. Isso comprova estrutura e lógica automatizada do recorte atual; **não comprova** runtime no Roblox Studio, DataStore real, teleporte, servidor publicado, mobile ou gamepad.
 
 Decisões principais:
 
-| Tema | Decisão recomendada | Motivo | Custo assumido |
+| Tema | Decisão aprovada | Motivo | Custo assumido |
 |---|---|---|---|
 | Autoridade | Servidor autoritativo para regras, combate, economia, progressão e posição válida | O cliente Roblox é controlável pelo jogador e não pode ser fonte de verdade | Mais trabalho de previsão visual e reconciliação |
 | Organização | Arquitetura própria de `service/controller`, com contratos explícitos | Mantém dependências, remotes e superfície de segurança visíveis | Exige disciplina e um bootstrap pequeno |
@@ -15,6 +15,8 @@ Decisões principais:
 | Comunicação | Intenções do cliente; snapshots e deltas aprovados pelo servidor | Não replica o perfil bruto nem aceita resultados calculados no cliente | Contratos precisam de versão e compatibilidade |
 | Consistência | Operações econômicas idempotentes, com revisão e recibo | Evita duplicação em retry, reconexão e falhas parciais | Mais metadados e fluxos de compensação |
 | Equipamento | Modificadores de habilidade, com bônus numérico pequeno e limitado | Preserva identidade de build sem transformar PvP em corrida de atributos | Maior esforço de balanceamento e QA combinatório |
+| Topologia | `World Place` compacto com streaming e `Arena Place` separado | Mantém o mundo persistente legível e isola partidas competitivas em servidores reservados | Teleporte e reconexão precisam de testes publicados |
+| Operação | Acesso técnico global, soft launch Brasil-first e datas canônicas em UTC | Concentra suporte inicial sem acoplar regra a idioma ou fuso | PT-BR e inglês exigem revisão manual contínua |
 
 ### 1.1 Atributos de qualidade prioritários
 
@@ -106,7 +108,17 @@ Regras adicionais:
 - nenhuma definição de personagem contém função executável arbitrária vinda do cliente;
 - IDs e chaves de localização são estáveis; nomes públicos podem mudar após revisão legal sem migrar save.
 
-## 4. Mapa de módulos planejados
+## 4. Mapa de módulos por estado
+
+### 4.0 Estado auditado do esqueleto F0
+
+- `src/server/init.server.lua` liga os serviços iniciais por dependências explícitas;
+- `src/shared/Data` e `src/shared/Remotes.luau` fornecem catálogos e contratos iniciais;
+- existem implementações iniciais de `AbilityService`, `CatalogService`, `CombatService`, `CooldownService`, `PlayerSessionService`, `RemoteGateway`, `ResourceService` e `SaveService`;
+- `src/client/init.client.lua` é apenas o ponto de entrada mínimo; controllers e UX descritos abaixo continuam alvo;
+- os 22 testes Lune cobrem dados e parte do domínio/serviços, mas ainda não substituem os testes de integração e runtime previstos neste documento.
+
+As tabelas seguintes são o mapa-alvo. Uma linha em F0 não significa que o contrato inteiro esteja pronto; o roadmap e os testes de aceite determinam a conclusão.
 
 ### 4.1 Servidor
 
@@ -125,15 +137,15 @@ Regras adicionais:
 | CooldownService | Cooldowns por habilidade, grupo e personagem | Relógio do servidor | F0 |
 | ZoneService | Zona atual, regras PvP, transição e spawn seguro | World/Spatial, Character | F0 |
 | LoadoutService | Validação de slots, ultimate, ressonância e ativação | Catalog, Profile, Resource | F1 |
-| ProgressionService | XP, maestria, unlock, respec e consolidação | Profile, Catalog, Economy | F2 |
+| ProgressionService | F0: XP/objetivo mínimo, reward idempotente e consolidação; F2: maestria, unlock e respec completos | Profile, Catalog, Economy | F0 mínimo; amplia F2 |
 | InventoryService | Posse, stacks, instâncias, capacidade e equip | Profile, Catalog | F2 |
-| CraftingService | Forja, upgrade, falha e materiais | Inventory, Economy | F2 |
-| TradeService | Oferta, escrow, commit/compensação e histórico | Inventory, Profile, OperationLedger | F7 |
-| QuestService | Estado e objetivos dirigidos por eventos | Profile, Catalog, World | F3 |
-| BossService | Spawn, contribuição e recompensa idempotente | Combat, Quest, Loot | F3 |
+| CraftingService | Forja determinística, graus, custos, recibos e materiais | Inventory, Economy | F2 |
+| TradeService | Mercado mediado, escrow, commit/compensação e histórico | Inventory, Profile, OperationLedger | F7 opcional pós-lançamento |
+| QuestService | F0: objetivo único da fatia com receipt/flag; F3: cadeias, estado e objetivos dirigidos por eventos | Profile, Catalog, World | F0 mínimo; amplia F3 |
+| BossService | Spawn, contribuição, loot pessoal e pity de raro separado da forja | Combat, Quest, Loot | F3 |
 | ReputationService | Reputação, fora da lei, morte e bounty | Combat, Zone, AbuseSignals | F4 |
 | ClanService | Membros, cargos, convites, perks e banco limitado | ClanRepository, OperationLedger | F5 |
-| TerritoryService | Posse, disputa e bônus de região | Clan, World, Scheduler | F7 |
+| TerritoryService | Posse, disputa e bônus capado de região | Clan, World, Scheduler | F7 opcional pós-lançamento |
 | TournamentService | Inscrição, bracket, forfeit e premiação | Matchmaking, Teleport, Ranking | F6 |
 | RankingService | Temporada, MMR e projeções de leaderboard | SeasonRepository, OrderedDataStore | F6 |
 | SecurityService | Validações comuns, score de risco e kill switches | Telemetry, configuração operacional | F0 |
@@ -155,6 +167,13 @@ Serviços de fases futuras não devem ser antecipados com implementação vazia 
 | InventoryController | Exibir inventário e solicitar mutações | Não cria, move ou destrói item localmente como verdade |
 | SocialController | Clã, torneio, ranking e convites | Exibe projeções autorizadas |
 | UIController | Roteamento de telas, acessibilidade e estado transitório | Não chama remotes fora dos controllers de domínio |
+
+### 4.3 Topologia de places e operação regional
+
+- O `World Place` reúne vila, região inicial e zona livre em um mapa compacto com streaming. O baseline é 16 jogadores; 20 ou 24 só podem ser habilitados depois de profiling de scripts, física, rede e densidade de combate.
+- O `Arena Place` é separado e usa servidores reservados para ranked e torneios. O servidor de arena reconstrói o snapshot permitido; dados do cliente ou do teleporte não autorizam build, rating ou resultado.
+- O acesso técnico pode ser global, mas o soft launch é operado primeiro no Brasil. PT-BR e inglês são revisados manualmente; outros idiomas podem usar tradução automática sem promessa inicial de suporte.
+- Regras, agendas e persistência usam UTC. A apresentação converte para o locale/fuso do jogador, e o cliente nunca escolhe a janela autoritativa.
 
 ## 5. Estado e fronteiras de autoridade
 
@@ -197,9 +216,9 @@ Não aceitar timestamp do cliente como prova de cooldown, posição, propriedade
 | AbilityIntent | C→S | Ativar, manter ou cancelar uma habilidade por ID e input mínimo | Aceite/rejeição com fase e sequência autoritativa |
 | MovementAbilityIntent | C→S | Solicitar dash ou movimento especial | Aceite e parâmetros visuais aprovados |
 | InteractionIntent | C→S | Interagir com entidade identificada | Resultado do caso de uso, nunca recompensa arbitrária |
-| LoadoutCommand | C→S | Salvar ou ativar composição | Loadout normalizado e resumo de ressonância |
+| LoadoutCommand | C→S | Salvar ou ativar composição | Aceite/rejeição, loadout recalculado e resumo de Ressonância |
 | InventoryCommand | C→S | Equipar, desequipar, forjar ou melhorar | Revisão nova do inventário ou erro de conflito |
-| TradeCommand | C→S | Criar, alterar, confirmar ou cancelar troca | Estado da saga e revisão; nenhuma troca otimista no cliente |
+| TradeCommand | C→S | Criar, alterar, confirmar ou cancelar troca futura | Estado da saga e revisão; contrato só é habilitado na F7 pós-lançamento |
 | QuestCommand | C→S | Aceitar ou reclamar etapa elegível | Progresso/recompensa confirmados |
 | ClanCommand | C→S | Convite, cargo, banco, guerra ou território | Estado autorizado ou recibo da operação |
 | TournamentCommand | C→S | Inscrição, ready, forfeit ou reconexão | Estado de inscrição/partida |
@@ -210,6 +229,8 @@ Não aceitar timestamp do cliente como prova de cooldown, posição, propriedade
 | OperationResult | S→C | Resultado correlacionado de comando | `requestId`, status estável e revisão relevante |
 
 Eventos servidor → cliente usam sequência por domínio. Ao detectar lacuna, o cliente solicita ressincronização limitada da seção, não o perfil inteiro.
+
+Para `LoadoutCommand`, o servidor valida no máximo quatro unidades de capacidade, uma ultimate separada, no máximo uma técnica Definidora e impacto total até 12. Ele calcula `rawD = slots estrangeiros + (2 se a ultimate for estrangeira) + famílias estrangeiras adicionais`. Se `rawD > 3`, o comando é rejeitado; **não** se usa clamp como autorização. O perfil recebe três presets-base (`PvE`, `Mundo`, `Arena`) e pode chegar a seis somente com entitlement de conveniência, sem ampliar slots, impacto ou Dissonância.
 
 ## 7. Fluxos ponta a ponta
 
@@ -232,6 +253,8 @@ Eventos servidor → cliente usam sequência por domínio. Ao detectar lacuna, o
 6. Eventos confirmados alimentam recurso, maestria, reputação, UI, VFX e telemetria.
 7. Cancelamento ou interrupção segue política da definição; reembolso também é regra de dados, não decisão do cliente.
 
+Ao conceder maestria elegível, o servidor acumula XP e deriva nível de técnica de 1 a 10. Os marcos comportamentais ficam em 3, 6 e 9; ganhos numéricos pequenos em 2, 5 e 8 são removidos em ranked. Nível 10 não concede pico de poder competitivo.
+
 ### 7.3 Morte no mundo aberto
 
 1. `CombatService` emite morte confirmada com cadeia de contribuição.
@@ -239,6 +262,8 @@ Eventos servidor → cliente usam sequência por domínio. Ao detectar lacuna, o
 3. `ReputationService` calcula elegibilidade, diferença de poder, repetição de pares e sinais de abuso.
 4. Penalidades e recompensas são aplicadas por uma operação idempotente.
 5. Proteção e destino de respawn são definidos no servidor; o cliente apenas apresenta.
+
+O poder efetivo é uma projeção server-side de 0 a 100, derivada de progressão da zona (30%), completude do loadout (25%), maestria (20%), equipamento (15%) e desempenho PvP com incerteza (10%). O grupo agressor soma até 30 pontos. Esse valor não é persistido nem aceito do cliente; é recalculado sob a versão de regra vigente.
 
 ### 7.4 Mutação econômica
 
@@ -249,12 +274,14 @@ Eventos servidor → cliente usam sequência por domínio. Ao detectar lacuna, o
 5. Retry retorna o mesmo resultado. Falha parcial entra em compensação; não repete a concessão.
 6. O cliente recebe recibo e delta somente após commit lógico.
 
+Na forja, a receita escolhe deterministicamente um dos cinco graus (potência 60/70/80/90/100% e custo relativo 1/2/3/5/8). Não existem roll, falha de design, destruição, rebaixamento ou pity de upgrade. Uma falha técnica anterior ao commit não consome materiais; retry com o mesmo `operationId` retorna o mesmo recibo. O pity persistente pertence somente ao loot pessoal raro de boss e usa agregado próprio por conta/boss/tabela.
+
 ### 7.5 Torneio entre servidores
 
 1. Scheduler publica janela e inscrições em estado compartilhado, sem depender do relógio do cliente.
 2. O bracket é congelado com versão e participantes elegíveis.
 3. Cada participante recebe um token de teleporte de uso único, ligado a partida e UserId.
-4. O servidor de arena reconstrói loadout permitido a partir da fonte do servidor e registra presença/resultado.
+4. O servidor de arena reconstrói o loadout e aplica a versão de normalização: HP, dano, guarda, recurso, ganhos numéricos de maestria, atributos brutos e refinamento são normalizados; habilidades desbloqueadas, composição, Dissonância e variantes comportamentais legais são preservadas.
 5. O resultado usa operação idempotente; arena em falha fica pendente para reconciliação, sem premiar ambos por padrão.
 6. OrderedDataStore recebe projeção posterior; não é a fonte de verdade do resultado.
 
@@ -344,41 +371,42 @@ Regras de implementação futura:
 - cachear definições imutáveis, nunca resultados de autorização;
 - degradar VFX no mobile, mas preservar telegraph e regra de hit.
 
-## 12. Stack e fluxo de engenharia — plano futuro
+## 12. Stack e fluxo de engenharia
 
 | Ferramenta | Papel planejado | Decisão de adoção |
 |---|---|---|
-| Rojo | Sincronizar filesystem e Studio com mapeamento explícito | Adotar em F0; Studio não será fonte exclusiva de scripts |
-| Wally | Pacotes Luau com versões fixadas e lockfile | Adotar; dependências passam por licença, manutenção e segurança |
-| luau-lsp | Tipos e análise; módulos core em modo estrito | Adotar desde o primeiro módulo de domínio |
-| Selene | Lint semântico e regras do projeto | Adotar com configuração versionada |
-| StyLua | Formatação determinística | Adotar; CI verifica divergência |
-| ProfileStore | Session locking e ciclo de perfil atrás de adaptador | Auditar e pinar revisão em P0; validar contrato e takeover em F0 |
-| GitHub Actions | Lint, formato, type check e testes no push/PR | Introduzir quando existir esqueleto executável; sem deploy automático inicial |
+| Rojo | Sincronizar filesystem e Studio com mapeamento explícito | Configuração e build de CI existentes; runtime no Studio ainda precisa ser provado |
+| Wally | Pacotes Luau com versões fixadas e lockfile | Configuração e instalação de CI existentes; atualização exige revisão |
+| luau-lsp | Tipos e análise; módulos core em modo estrito | Alvo incremental; ainda não é gate explícito da CI atual |
+| Selene | Lint semântico e regras do projeto | Configuração e check de CI existentes |
+| StyLua | Formatação determinística | Configuração e check de CI existentes |
+| ProfileStore | Session locking e ciclo de perfil atrás de adaptador | Dependência presente; contrato, takeover e DataStore real ainda precisam de teste publicado |
+| GitHub Actions | Formato, lint, testes, dependências e build no push/PR | Pipeline existente; sem credencial ou deploy automático |
 
-Pipeline futuro proposto: validação de catálogos → formato → lint → type check → testes de domínio → testes de migração → build Rojo. A CI não terá credenciais de produção e não publicará place automaticamente em F0.
+Pipeline atual: StyLua check → Selene → 22 testes Lune → instalação Wally → build Rojo. A evolução aprovada acrescenta validação dedicada de catálogos/schemas, type check e fixtures de migração sem remover os gates existentes. A CI não terá credenciais de produção e não publicará place automaticamente.
 
 ## 13. Ordem arquitetural por fase
 
-0. **P0 — aprovação do plano:** fechar documentos, decisões, equipe, arquitetura, tamanho-alvo de servidor e métricas. ProfileStore e bootstrap são auditados aqui, sem implementação.
+0. **P0 — consolidação do plano:** decisões de produto e arquitetura foram aprovadas em 2026-08-12; divergências documentais são sincronizadas antes de ampliar a implementação.
 1. **P1 — gate jurídico/plataforma:** revisar nomes, assets, políticas Roblox e monetização antes de qualquer asset público.
 2. **F0 — fatia vertical:** um estilo, três habilidades, uma família de recurso, mapa pequeno com zona segura + livre, PvP e save ponta a ponta.
 3. **F1 — plataforma de combate:** conteúdo dirigido a dados, expansão controlada de estilos, loadout e Ressonância.
 4. **F2 — progressão/economia básica:** maestria, respec, inventário, equipamento e forja; troca continua fora de escopo.
 5. **F3–F4:** mundo PvE/recursos; depois reputação, morte e proteção social.
 6. **F5–F6:** clãs sem território completo; depois torneios e ranking sazonal.
-7. **F7:** território, troca mediada, live ops e monetização, todos atrás de gates de consistência e segurança.
+7. **Hardening e soft launch Brasil-first:** depois de F6, validar operação, localização, segurança e produto inicial sem poder pago.
+8. **F7 opcional pós-lançamento:** território e mercado mediado, cada um atrás de gate próprio de consistência, população e segurança; não condicionam o lançamento.
 
 Conteúdo amplo, comércio aberto, banco compartilhado, guerras e torneio multi-servidor são escopo excessivo para as duas primeiras fases. Antecipá-los aumentaria o risco de perda de save e duplicação antes do combate principal estar validado.
 
-## 14. Riscos e decisões a validar
+## 14. Riscos e validações técnicas
 
-| Risco | Consequência | Mitigação/decisão necessária |
+| Risco | Consequência | Mitigação/validação necessária |
 |---|---|---|
 | Arquitetura própria crescer como framework | Atraso e complexidade | Limitar bootstrap às quatro capacidades definidas e revisar em F0 |
 | ProfileStore ou sua API mudar | Dependência operacional frágil | Pinar revisão, auditar upstream e manter adaptador/testes de contrato |
 | Previsão visual divergir do servidor | Combate parece pesado ou injusto | IDs de execução, reconciliação e testes com latência/perda |
 | Combinações de modificadores explodirem | Bugs e meta dominante | Ordem de aplicação formal, caps e teste combinatório |
-| Trading exigir atomicidade inexistente | Dupe/perda de item | Saga com escrow; adiar lançamento até crash tests |
+| Trading exigir atomicidade inexistente | Dupe/perda de item | Manter fora do lançamento; F7 só entra com saga/escrow e crash tests |
 | Clã e território terem múltiplos escritores | Corrupção ou dupla posse | Revisionamento, UpdateAsync, lease com fencing e registros separados |
 | Metas de performance não caberem no mundo | Queda de FPS e latência | Provar na fatia vertical antes de ampliar mapa e servidor |

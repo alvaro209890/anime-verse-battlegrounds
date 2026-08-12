@@ -2,7 +2,7 @@
 
 ## 1. Status, uso e regra de exportação
 
-Todos os nomes públicos, rótulos de energia e kits deste documento são **provisórios** até o **Gate jurídico P1**. Foram afastados dos nomes sugeridos inicialmente porque apenas trocar o nome de uma técnica não torna seguro um conjunto reconhecível de silhueta, poderes, animação, cor, história e marketing.
+As prioridades de produção e as quatro famílias foram aprovadas para planejamento em 2026-08-12. Ainda assim, todos os nomes públicos, rótulos de energia, fantasias e kits deste documento são **provisórios** até o **Gate jurídico P1**. Aprovação de escopo não equivale a liberação jurídica nem autoriza concept art público, marketing ou publicação. Os nomes foram afastados dos sugeridos inicialmente porque apenas trocar o nome de uma técnica não torna seguro um conjunto reconhecível de silhueta, poderes, animação, cor, história e marketing.
 
 A coluna **“Codinome interno — NÃO EXPORTAR”** existe somente para rastrear a intenção de balanceamento autorizada pelo briefing. Ela não pode chegar a:
 
@@ -17,12 +17,13 @@ Os codinomes canônicos devem ser removidos do artefato publicado, não apenas o
 
 | ID | Decisão | Estado |
 |---|---|---|
-| ROSTER-DEC-001 | O avatar pertence ao jogador; identidades são escolas/títulos desbloqueáveis, não personagens licenciados jogáveis. | recomendada |
-| ROSTER-DEC-002 | Rótulos públicos de família: Éter Umbral, Fluxo Vital, Contrafluxo e Ímpeto Metamórfico. | provisória até P1 |
-| ROSTER-DEC-003 | Cada identidade oferece três técnicas normais e uma ultimate no primeiro passe de conteúdo. | hipótese de produção |
-| ROSTER-DEC-004 | Todo kit completo respeita capacidade 4 e impacto 12; técnicas continuam combináveis por dados. | recomendada |
-| ROSTER-DEC-005 | O roster de treze identidades é backlog, não escopo de lançamento. | fechada |
-| ROSTER-DEC-006 | Nenhuma identidade tem passiva gratuita própria; sua sinergia vem de marcas/estados produzidos pelas técnicas e da passiva pública da família. | recomendada |
+| ROSTER-DEC-001 | O avatar pertence ao jogador; identidades são escolas/títulos desbloqueáveis, não personagens licenciados jogáveis. | aprovada — 2026-08-12 |
+| ROSTER-DEC-002 | Rótulos de planejamento: Éter Umbral, Fluxo Vital, Contrafluxo e Ímpeto Metamórfico. | aprovada para planejamento; publicação bloqueada até P1 |
+| ROSTER-DEC-003 | Cada identidade oferece três técnicas normais e uma ultimate quando seu passe de conteúdo estiver completo; produção pode ser fatiada sem anunciar kit incompleto. | aprovada — 2026-08-12 |
+| ROSTER-DEC-004 | Todo kit completo respeita capacidade máxima 4, impacto máximo 12 e no máximo uma técnica normal Definidora; técnicas continuam combináveis por dados. | aprovada — 2026-08-12 |
+| ROSTER-DEC-005 | O roster de treze identidades é backlog pós-lançamento, não escopo comprometido de lançamento. | aprovada — 2026-08-12 |
+| ROSTER-DEC-006 | Nenhuma identidade tem passiva gratuita própria; sua sinergia vem de marcas/estados produzidos pelas técnicas e da passiva pública da família. | aprovada — 2026-08-12 |
+| ROSTER-DEC-007 | Para uma equipe de 1–3 pessoas, F0 prova uma identidade e F1 termina com três identidades/famílias; identidade adicional só entra depois de medir custo e qualidade do conteúdo anterior. | aprovada — 2026-08-12 |
 
 ## 3. Contrato de conteúdo
 
@@ -47,11 +48,12 @@ Quando uma técnica depende de marca criada por outra, ela precisa de comportame
 | Onda | Identidades | Objetivo | Fora do escopo dessa onda |
 |---|---|---|---|
 | Fase 0 | Punho do Eclipse | provar combate, Éter Umbral, três técnicas e persistência | ultimate final, mistura e roster completo |
-| Onda 1 | Punho do Eclipse, Tecelão de Ecos, Lâmina Nula, Bastião Mutável | uma identidade por família; validar recursos e controles | Ressonância pública até haver opções suficientes |
-| Onda 2 | Nexo Inalcançável, Condutor de Âmbar, Oráculo Cinerário, Navegante Abissal | ampliar arquétipos e habilitar builds puras/híbridas reais | clãs e competitivo de topo como dependência de kit |
-| Onda 3 | Monarca da Ruína, Jardineiro Primevo, Riscador Áureo, Andarilho Oblíquo, Regente Celeste | completar variedade de controle, suporte e late game | produção simultânea sem telemetria das ondas anteriores |
+| F1 | Punho do Eclipse, Tecelão de Ecos, Lâmina Nula | terminar três identidades e três famílias jogáveis; validar recursos, controles e o primeiro conjunto limitado de builds | Ímpeto Metamórfico, quarta identidade e roster grande |
+| F2 | as mesmas três identidades | entregar maestria 1–10 e seis arquétipos de modificador reutilizáveis antes de ampliar conteúdo | identidade nova apenas para inflar variedade |
+| Pós-lançamento A | Bastião Mutável | introduzir Ímpeto Metamórfico e a quarta família somente após custo, retenção e legibilidade de F1/F2 serem conhecidos | qualquer outra identidade em produção paralela |
+| Backlog pós-lançamento | Nexo Inalcançável, Condutor de Âmbar, Oráculo Cinerário, Navegante Abissal, Monarca da Ruína, Jardineiro Primevo, Riscador Áureo, Andarilho Oblíquo, Regente Celeste | selecionar uma lacuna por vez a partir de telemetria e capacidade real da equipe | calendário ou ordem prometida antes de P1 e dos gates de produção |
 
-Uma onda só avança após os kits anteriores terem telegraph legível nas três plataformas, taxa de escolha saudável, contra-jogo compreendido e aprovação de originalidade.
+Uma onda só avança após os kits anteriores terem telegraph legível nas três plataformas, taxa de escolha saudável, contra-jogo compreendido, custo de produção medido e aprovação de originalidade. O Gate P1 é obrigatório antes de encomendar arte pública ou expor qualquer identidade fora de teste interno controlado. Backlog não representa promessa de lançamento.
 
 ## 5. Resumo do roster
 
@@ -59,23 +61,23 @@ Uma onda só avança após os kits anteriores terem telegraph legível nas três
 
 | Codinome interno — NÃO EXPORTAR | Nome público provisório | Energia pública | Papel | Dificuldade | Onda | Risco PI inicial |
 |---|---|---|---|---|---|---|
-| gojo | Nexo Inalcançável | Éter Umbral | zoner / defesa direcional | alta | 2 | alto |
-| sukuna | Monarca da Ruína | Éter Umbral | pressão / armadilhas de linha | média | 3 | alto |
-| yuji | Punho do Eclipse | Éter Umbral | bruiser / timing | baixa–média | 0 | médio |
-| kashimo | Condutor de Âmbar | Éter Umbral | mobilidade / sobrecarga | alta | 2 | alto |
-| asta | Lâmina Nula | Contrafluxo | anti-projétil / quebra de guarda | média | 1 | alto |
-| eren | Bastião Mutável | Ímpeto Metamórfico | tanque / transformação de cerco | média | 1 | alto |
-| naruto | Tecelão de Ecos | Fluxo Vital | pressão / repetição atrasada | média | 1 | alto |
-| sasuke | Oráculo Cinerário | Fluxo Vital | precisão / leitura | alta | 2 | alto |
-| hashirama | Jardineiro Primevo | Fluxo Vital | controle / suporte destrutível | média | 3 | alto |
-| tobirama | Navegante Abissal | Fluxo Vital | rotas / invocação utilitária | alta | 2 | alto |
-| minato | Riscador Áureo | Fluxo Vital | trilhos / burst móvel | alta | 3 | alto |
-| obito | Andarilho Oblíquo | Fluxo Vital | redirecionamento / antiprojetil | alta | 3 | alto |
-| madara | Regente Celeste | Fluxo Vital | defesa orbital / área tardia | alta | 3 | alto |
+| gojo | Nexo Inalcançável | Éter Umbral | zoner / defesa direcional | alta | backlog | alto |
+| sukuna | Monarca da Ruína | Éter Umbral | pressão / armadilhas de linha | média | backlog | alto |
+| yuji | Punho do Eclipse | Éter Umbral | bruiser / timing | baixa–média | F0 | médio |
+| kashimo | Condutor de Âmbar | Éter Umbral | mobilidade / sobrecarga | alta | backlog | alto |
+| asta | Lâmina Nula | Contrafluxo | anti-projétil / quebra de guarda | média | F1 | alto |
+| eren | Bastião Mutável | Ímpeto Metamórfico | tanque / transformação de cerco | média | pós-lançamento A | alto |
+| naruto | Tecelão de Ecos | Fluxo Vital | pressão / repetição atrasada | média | F1 | alto |
+| sasuke | Oráculo Cinerário | Fluxo Vital | precisão / leitura | alta | backlog | alto |
+| hashirama | Jardineiro Primevo | Fluxo Vital | controle / suporte destrutível | média | backlog | alto |
+| tobirama | Navegante Abissal | Fluxo Vital | rotas / invocação utilitária | alta | backlog | alto |
+| minato | Riscador Áureo | Fluxo Vital | trilhos / burst móvel | alta | backlog | alto |
+| obito | Andarilho Oblíquo | Fluxo Vital | redirecionamento / antiprojetil | alta | backlog | alto |
+| madara | Regente Celeste | Fluxo Vital | defesa orbital / área tardia | alta | backlog | alto |
 
 ## 6. Kits planejados
 
-Valores são **hipóteses de playtest**, medidos contra 100 de vida e os recursos-base do GDD. `Cap/Imp` significa capacidade normal e impacto. Ultimate não usa capacidade normal, mas consome impacto. `C` é custo-base de recurso; `CD` é recarga-base em segundos. Dano indicado não inclui ataque básico, equipamento ou variante de maestria.
+Valores são **hipóteses de playtest**, medidos contra 100 de vida e os recursos-base do GDD. `Cap/Imp` significa capacidade normal e impacto. Ultimate não usa capacidade normal, mas consome impacto. Quando um kit possui técnica normal com `Cap = 2`, ela é a `Definidora`; nenhum kit pode ter mais de uma. `C` é custo-base de recurso; `CD` é recarga-base em segundos. Dano indicado não inclui ataque básico, equipamento ou variante de maestria.
 
 ### 6.1 Nexo Inalcançável
 
@@ -118,7 +120,7 @@ Valores são **hipóteses de playtest**, medidos contra 100 de vida e os recurso
 | Retorno de Pulso | 1/2 | 20 / 12 | Postura de 0,25 s reduz 50% de um golpe e responde com 8 e empurrão. Erro gera 0,6 s de recuperação; agarrão vence. |
 | Ultimate — Batimento Eclipse | —/5 | 55 / 90 | Por 10 s, três timings corretos carregam finalizador sinalizado de até 26. Perder o ritmo não paralisa o usuário, mas zera a carga parcial. |
 
-**Notas de balanceamento:** kit inicial usa apenas 3 de capacidade e 11 de impacto, deixando espaço futuro sem exigir mistura. Timing é tolerante no mobile e validado pelo servidor. Não há dano de 100–0.
+**Notas de balanceamento:** o kit inicial usa apenas 3 de capacidade e 11 de impacto, deixando espaço futuro sem exigir mistura. Timing precisa ser tolerante no mobile e validado pelo servidor. Não há dano de 100–0.
 
 **Risco PI — médio:** “golpe com segundo impacto” ainda pode lembrar referências conhecidas. Direção de arte deve usar motivo astronômico, postura e áudio próprios; não reproduzir sequência, pose ou efeito cromático reconhecível.
 
@@ -193,7 +195,7 @@ Valores são **hipóteses de playtest**, medidos contra 100 de vida e os recurso
 | Brasa Persistente | 1/2 | 20 / 10 | Brasa visível no chão detona por 8 quando alvo marcado usa técnica sobre ela; pode ser apagada por ataque pesado. |
 | Ultimate — Mapa de Brasas | —/5 | 60 / 95 | Liga marcas em corredores após 0,9 s; três pulsos causam máximo 30. Limpar a marca ou sair do polígono responde. |
 
-**Notas de balanceamento:** kit 3/12; sobra capacidade, mas não impacto para outra ferramenta forte. Marcas têm ícone, duração e método de limpeza.
+**Notas de balanceamento:** o kit usa 3/12; sobra capacidade, mas não impacto para outra ferramenta forte. Marcas têm ícone, duração e método de limpeza.
 
 **Risco PI — alto:** precisão elétrica, contra por leitura e fogo persistente são um conjunto reconhecível. A produção deve evitar olho, arma, cor, gesto e fogo visual associados; cinza cartográfica e armadilhas públicas precisam dominar a leitura.
 
@@ -283,9 +285,9 @@ Valores são **hipóteses de playtest**, medidos contra 100 de vida e os recurso
 | suporte | Jardineiro Primevo, Navegante Abissal | cura não pode alongar TTK indefinidamente |
 | pressão melee | Punho do Eclipse, Monarca da Ruína | nenhum grappler planejado |
 | leitura/counter | Oráculo Cinerário, Lâmina Nula | janela mobile exige teste específico |
-| transformação | Bastião Mutável | família depende de uma única identidade na Onda 1 |
+| transformação | Bastião Mutável | quarta família fica pós-lançamento e depende de uma única identidade |
 
-Antes de criar a décima quarta identidade, avaliar se é melhor preencher Contrafluxo, Ímpeto ou grappler do que repetir Fluxo Vital. Sete das treze propostas pertencem a Fluxo Vital; essa concentração é herança do briefing e é inadequada para um sistema que pretende diversidade de família. A recomendação é não produzir todas na sequência prevista sem antes desenhar pelo menos mais uma identidade de Contrafluxo e uma de Ímpeto.
+Antes de promover qualquer identidade do backlog, avaliar se é melhor preencher Contrafluxo, Ímpeto, suporte inicial ou grappler do que repetir Fluxo Vital. Sete das treze propostas pertencem a Fluxo Vital; essa concentração é herança do briefing e é inadequada para um sistema que pretende diversidade de família. Para uma equipe de 1–3 pessoas, não se produz o backlog em sequência: escolhe-se uma lacuna, valida-se o kit e só então se agenda a próxima identidade.
 
 ## 8. Gates de originalidade e lançamento
 
@@ -298,6 +300,7 @@ Antes de criar a décima quarta identidade, avaliar se é melhor preencher Contr
 
 ### P1 — conceito jurídico e de design
 
+- confirmar que a aprovação de planejamento não foi tratada como parecer jurídico;
 - revisão conjunta de nome, fantasia e combinação mecânica;
 - teste cego de reconhecimento com pessoas não envolvidas;
 - pesquisa de nomes e marcas pelo responsável jurídico;
@@ -326,6 +329,7 @@ Uma identidade está pronta para entrar numa onda somente quando:
 
 - as três técnicas e a ultimate funcionam isoladamente e em combinações permitidas;
 - capacidade total é no máximo 4 e impacto total no máximo 12;
+- no máximo uma técnica normal está marcada como `Definidora` no kit completo;
 - custos, recargas, dano, controle, tags e contra-jogo estão declarados;
 - existe ao menos um matchup favorável e dois tipos de resposta adversária;
 - telegraph continua legível em celular de baixo desempenho, controle e PC;
@@ -342,7 +346,8 @@ Uma identidade está pronta para entrar numa onda somente quando:
 - Dano máximo de ultimate entre 24 e 32 preserva o TTK alvo.
 - Técnicas definidoras com recarga de 16–18 s têm janela de punição perceptível.
 - Estruturas de 20–50 de durabilidade não congestionam combate em grupo.
-- Onda 1 consegue validar quatro famílias com apenas uma identidade em três delas.
+- F1 consegue validar três famílias com três identidades completas sem exigir uma quarta linha de conteúdo.
+- O custo observado de produzir, localizar e validar uma identidade é sustentável por uma equipe de 1–3 pessoas antes de promover o backlog.
 - Os novos conceitos passam por reconhecimento cego sem associação específica; hoje isso **não está comprovado**.
 
 Esses valores e nomes não são finais. Mudança posterior precisa manter o ID da decisão relacionada, registrar hipótese e voltar ao gate aplicável quando alterar identidade pública ou conjunto mecânico.

@@ -2,9 +2,9 @@
 
 ## 1. Contrato deste documento
 
-Este documento planeja o espaço jogável, a leitura de risco, as missões, os encontros PvE e o ciclo econômico. Ele não define implementação. Os números indicados são **hipóteses iniciais de balanceamento** e precisam ser validados por telemetria, teste de jogo e pesquisa com jogadores.
+Este documento planeja o espaço jogável, a leitura de risco, as missões, os encontros PvE e o ciclo econômico. Ele não define implementação. Políticas marcadas como aprovadas são vinculantes para o planejamento; cadências, custos e demais números operacionais são **baselines de balanceamento** que precisam ser validados por telemetria, teste de jogo e pesquisa com jogadores.
 
-O mundo deve sustentar o loop de um action MMO: explorar, assumir risco, conquistar habilidades, obter recursos, melhorar a build e voltar ao conflito com uma decisão nova. Ele não pode ser apenas um corredor entre arenas.
+O mundo deve sustentar o loop de um **RPG / Action RPG**: explorar, assumir risco, conquistar habilidades, obter recursos, melhorar a build e voltar ao conflito com uma decisão nova. Ele não pode ser apenas um corredor entre arenas.
 
 Regras permanentes:
 
@@ -27,24 +27,24 @@ Regras permanentes:
 
 ## 3. Forma do mapa
 
-### 3.1 Decisão recomendada
+### 3.1 Decisão aprovada
 
-Adotar um mapa contínuo em **rede de regiões**, cada uma com um assentamento ou posto seguro e duas ou mais saídas para áreas livres. Até a expansão do mundo, manter tudo no mesmo lugar da experiência. Arena ranqueada usa lugar reservado separado. Só dividir o mundo em vários lugares se orçamento de memória, streaming ou população por servidor provar a necessidade.
+Adotar um `World Place` compacto com streaming, contendo vila, região inicial e zona livre conectadas, cada assentamento com duas ou mais saídas para áreas livres. O competitivo usa um `Arena Place` separado e servidores reservados. O `World Place` começa com limite de **16 jogadores**; elevar para 20 e depois 24 exige profiling de memória, rede, FPS e densidade de encontros nas plataformas-alvo.
 
-Essa direção favorece exploração e encontros espontâneos. A alternativa — várias ilhas ou instâncias independentes — simplifica desempenho, mas transforma a viagem em menu e reduz a sensação de mundo compartilhado.
+Essa direção favorece exploração e encontros espontâneos sem misturar o estado persistente do mundo com a autoridade de partidas. Outros lugares de mundo só serão criados se orçamento de memória, streaming ou população provar a necessidade.
 
 ### 3.2 Regiões planejadas
 
-As faixas abaixo medem progressão efetiva, não autorizam dano garantido sobre jogadores abaixo delas. Nomes e temas ainda passam por revisão jurídica e visual antes de produção.
+As faixas abaixo medem progressão efetiva, não autorizam dano garantido sobre jogadores abaixo delas. Os nomes provisórios estão aprovados para planejamento, mas continuam condicionados à revisão jurídica e visual do Gate P1 antes de produção pública.
 
-| Região pública provisória | Faixa recomendada | Perfil | Função | Fase mínima |
+| Região pública provisória | Faixa de progressão | Perfil | Função | Fase mínima |
 |---|---:|---|---|---|
 | **Bastião do Limiar** | 1–5 | segura | spawn inicial, treino, forja básica, quadro de missão e acesso futuro a torneio | Fase 0 |
 | **Planície Estilhaçada** | 1–8 | livre com transição de onboarding | primeiro PvP, recursos comuns, rotas curtas e primeiro encontro PvE | Fase 0 |
 | **Bosque dos Ecos** | 6–14 | mista | cadeias de habilidade, coleta e encontros de emboscada com boa visibilidade alternativa | Fase 3 |
-| **Garganta de Cinzas** | 12–22 | alto risco | boss regional, materiais de forja e primeiro contrato de perda aumentada | Fase 3 |
-| **Arquipélago da Tormenta** | 20–30 | mista | mobilidade avançada, eventos agendados e rotas de alto valor | Fase 7 ou posterior |
-| **Cratera do Véu** | 25+ | alto risco | materiais eficientes de fim de jogo, guardiões e conflito territorial | pós-Fase 7 |
+| **Garganta de Cinzas** | 12–22 | alto risco | boss regional, materiais de forja e primeiro contrato de perda aumentada | pós-lançamento, se a densidade justificar |
+| **Arquipélago da Tormenta** | 20–30 | mista | mobilidade avançada, eventos agendados e rotas de alto valor | pós-lançamento |
+| **Cratera do Véu** | 25+ | alto risco | materiais eficientes de fim de jogo, guardiões e conflito territorial | pós-lançamento, após gate territorial |
 
 “Mista” significa uma região com um posto seguro claramente delimitado e uma área externa livre; não significa alternar PvP silenciosamente dentro da mesma rua.
 
@@ -150,7 +150,7 @@ Fracassar permite tentar de novo sem pagar Robux e sem perder o progresso narrat
 
 ### 6.2 Tipos de missão
 
-| Tipo | Uso recomendado | Risco a evitar |
+| Tipo | Uso | Risco a evitar |
 |---|---|---|
 | Caça | ensinar alvo, rota e mecânica | contagem longa de inimigos idênticos |
 | Boss | fechar cadeia ou reunir região | último golpe, espera excessiva e boss sem telégrafo |
@@ -179,7 +179,7 @@ Escolta é a mais cara e frágil; fica fora da fatia vertical e só entra após 
 |---|---:|---|---|
 | Elite local | 1–3 | reaparece em 10–15 min | ensinar leitura e dar material comum |
 | Boss regional | 3–8 | janela de 30–45 min | fechar cadeia e alimentar forja |
-| Boss de mundo | 8–20 | horários regionais anunciados | encontro social, cosmético e material raro |
+| Boss de mundo | 8–16 | horários regionais anunciados | encontro social, cosmético e material raro |
 | Guardião de alto risco | variável | invocado por recurso/objetivo | concentrar disputa endgame sem spawn aleatório |
 
 Cadências são hipóteses. Um boss obrigatório para habilidade precisa ter instância, invocação ou espera máxima garantida; não pode exigir que o jogador fique parado por 45 minutos.
@@ -189,9 +189,10 @@ Cadências são hipóteses. Um boss obrigatório para habilidade precisa ter ins
 - Ataques perigosos têm silhueta, áudio e tempo de reação compatíveis com mobile e latência real.
 - Boss possui limite de perseguição e reset previsível. Reset provocado repetidamente é abuso detectável.
 - Recompensa é pessoal e calculada pelo servidor; não existe roubo por último golpe.
-- Participação mínima combina atividade e contribuição, sem privilegiar apenas dano bruto.
-- Todo encontro importante entrega um recurso garantido e uma rolagem rara separada.
-- Falhas na rolagem rara acumulam garantia vinculada à conta; o contador e o teto são visíveis.
+- Contribuição considera dano, cura efetiva, mitigação, controle, interrupções, objetivos e presença; MVP não recebe chance rara adicional.
+- Para ser elegível, o jogador precisa permanecer em pelo menos **40% do encontro ou 90 segundos** e contribuir o equivalente a pelo menos **1% da vida do boss**. Pesos exatos por função são baselines de playtest e precisam impedir contribuição passiva.
+- Todo clear elegível garante material básico e uma ficha do boss, além de uma rolagem rara pessoal.
+- A chance rara começa em **5%**, sobe **5 pontos percentuais** por clear elegível sem raro e é garantida no **décimo clear elegível**. O estado de pity é vinculado à conta, ao boss e à tabela; contador e teto são visíveis.
 - Grupo grande reduz ganho marginal individual antes de tornar o boss uma esponja de vida.
 - Reentrada após morte preserva contribuição com decaimento, impedindo tanto perda total quanto retorno infinito sem risco.
 
@@ -209,7 +210,7 @@ Eventos públicos duram o suficiente para chegada após o alerta e apresentam es
 
 ## 8. Recursos, itens e equipamento no mundo
 
-### 8.1 Direção recomendada
+### 8.1 Direção aprovada
 
 O mundo assume equipamento predominantemente **horizontal**: peças modificam comportamento, alcance, custo ou interação de uma habilidade, com uma parcela pequena e limitada de atributos básicos. Status bruto irrestrito cria power creep, invalida conteúdo antigo e torna PvP uma checagem de inventário.
 
@@ -223,11 +224,9 @@ O contrato detalhado de slots e modificadores pertence a `01-GDD.md`. Para distr
 - materiais comuns podem se tornar negociáveis após a economia provar estabilidade;
 - equipamento equipado ou aprimorado fica vinculado, evitando aluguel de poder e circulação infinita.
 
-### 8.2 Aprimoramento com risco controlado
+### 8.2 Forja determinística
 
-Recomendação: manter chance de falha apenas como **consumo de material**, nunca destruição da peça, regressão de nível ou perda de efeito. Cada falha enche uma barra de garantia; no limite, o próximo aprimoramento é certo.
-
-Isso preserva um sumidouro econômico sem criar o pico de frustração de perder um item raro. A alternativa determinística é mais justa e simples; deve substituir a falha caso testes mostrem que a animação de tentativa não acrescenta decisão real.
+A forja possui cinco graus com potência de **60/70/80/90/100%** e custos relativos de **1/2/3/5/8**. Toda operação válida conclui o grau escolhido: não há chance de falha, destruição, rebaixamento, consumo parcial ou pity de forja. Falha técnica ou retry não consome materiais e precisa retornar o mesmo recibo idempotente. O único pity de item permanece no loot pessoal de bosses.
 
 ## 9. Modelo econômico
 
@@ -236,7 +235,7 @@ Isso preserva um sumidouro econômico sem criar o pico de frustração de perder
 | Recurso | Propriedade | Fontes | Usos | Negociação |
 |---|---|---|---|---|
 | **Marcas** | moeda comum | missões, PvE, eventos e bounties válidos | forja, respec, viagem, criação de clã e taxas | não transferível diretamente |
-| **Fragmentos** | material por categoria | coleta, contratos e elites | receitas e tentativas de aprimoramento | mercado futuro, com limites |
+| **Fragmentos** | material por categoria | coleta, contratos e elites | receitas e graus de aprimoramento | mercado futuro, com limites |
 | **Catalisadores** | material raro | cadeia, boss e garantia de drop | modificadores e marcos de maestria | vinculado à conta |
 | **Insígnias competitivas** | prova de participação | torneio e temporada | cosméticos ou rota alternativa para material já obtível em PvE | vinculado à conta |
 | **Suprimentos de clã** | recurso coletivo sazonal | guerra, território e contribuição validada | manutenção, perks horizontais e cosméticos | somente banco do clã |
@@ -253,7 +252,7 @@ Insígnia competitiva não compra poder exclusivo. Dar material de aprimoramento
 | Elite/boss | fonte de material e pequena moeda | média | crédito de contribuição, garantia e bloqueio por ocorrência |
 | Evento | fonte de material e cosmético | média | recompensa por conta/ocorrência e escala por população |
 | Bounty | fonte de Marcas | variável | teto diário, divisão por participação e análise de relação repetida |
-| Forja/aprimoramento | sumidouro de Marcas e Fragmentos | alta | custo cresce por marco, sem destruir equipamento |
+| Forja/aprimoramento | sumidouro de Marcas e Fragmentos | alta | custo determinístico cresce por grau, sem destruir equipamento |
 | Respec | sumidouro de Marcas | ocasional | primeiro respec barato; custo tem teto e espera, nunca vira prisão |
 | Viagem rápida | sumidouro leve de Marcas | frequente | preço por distância, gratuito no onboarding |
 | Criação/manutenção de clã | sumidouro de Marcas/Suprimentos | média | custo previsível; atraso não apaga o clã imediatamente |
@@ -270,7 +269,7 @@ Antes de ajustar preços, acompanhar por faixa de progressão:
 - tempo mediano para um aprimoramento e um respec;
 - concentração de riqueza e materiais nas contas superiores;
 - preço mediano, dispersão e velocidade de venda por item;
-- taxa de falha/garantia e abandono após tentativa;
+- tempo, custo e abandono antes/depois de cada grau determinístico;
 - recursos perdidos por morte versus recursos obtidos na mesma sessão;
 - proporção de recompensa vinda de PvE, PvP, evento e comércio.
 
@@ -278,7 +277,7 @@ Meta inicial: sumidouros voluntários devem remover a maior parte da emissão re
 
 ### 9.4 Troca e mercado
 
-**Decisão recomendada:** não liberar troca direta na fatia vertical nem junto do primeiro sistema de equipamento. Primeiro registrar emissão, consumo e duplicação em ambiente sem comércio. Depois liberar um mercado em custódia pelo servidor.
+**Decisão aprovada:** não existe troca, presente, empréstimo ou drop de item entre jogadores no lançamento. Primeiro registrar emissão, consumo e duplicação em ambiente sem comércio. Um mercado futuro pode operar somente por custódia do servidor e começar por materiais e projetos ainda não vinculados.
 
 Regras do mercado futuro:
 
@@ -291,6 +290,8 @@ Regras do mercado futuro:
 - todas as transações têm identificador e trilha de auditoria;
 - convite, chat ou promessa externa nunca fazem parte do contrato de troca;
 - sem empréstimo, aposta, presente de alto valor ou leilão na primeira versão.
+
+O gate mínimo para habilitar o mercado exige **30 dias sem dupe crítico**, retries e reconexões reconciliados e menos de **0,1%** das operações exigindo reparo manual. Cumprir o gate autoriza teste controlado; não autoriza troca direta livre.
 
 Preço mínimo/máximo imposto pelo sistema pode bloquear descoberta de preço e só deve ser usado temporariamente diante de exploração comprovada. Alertas de preço muito fora da mediana são preferíveis.
 
@@ -328,14 +329,14 @@ As fases devem ser consolidadas com `06-ROADMAP.md`; esta sequência expressa de
 ### Fase 2 — progressão e equipamento
 
 - primeira cadeia de habilidade completa;
-- forja, uma família de modificador e aprimoramento com garantia;
-- boss regional controlado;
+- forja determinística e seis arquétipos reutilizáveis de modificador;
+- harness de recompensa sobre o objetivo PvE existente, sem produzir boss novo nesta fase;
 - economia ainda fechada à troca entre jogadores.
 
 ### Fase 3 — mundo e economia
 
-- Bosque dos Ecos e Garganta de Cinzas, se as regiões anteriores atingirem densidade alvo;
-- contratos, boss de mundo, eventos e maestria de família;
+- Bosque dos Ecos como única região mista nova, se as regiões anteriores atingirem densidade alvo;
+- contratos, um boss, eventos e maestria de família;
 - consolidação e perda limitada de recurso por risco da zona;
 - economia fechada a jogadores, com mercado NPC, simulação e telemetria; sem troca ou mercado entre contas.
 
@@ -356,10 +357,10 @@ As fases devem ser consolidadas com `06-ROADMAP.md`; esta sequência expressa de
 - premiação competitiva é não exclusiva e entra nos mesmos controles econômicos;
 - não criar nova área aberta para justificar o modo competitivo.
 
-### Fase 7 — território, troca e live operations
+### Fase 7 opcional e pós-lançamento — território, mercado e live operations
 
 - guerra e território só entram após clãs e economia auditável passarem seus gates;
-- mercado em custódia pode ser testado separadamente; troca direta livre continua não recomendada;
+- mercado em custódia pode ser testado separadamente; troca direta livre continua fora de escopo;
 - Arquipélago da Tormenta só avança se a densidade atual justificar expansão;
 - Cratera do Véu e sua economia endgame ficam para depois dos gates de território, população e retenção.
 
@@ -380,18 +381,18 @@ O plano de mundo só avança se os testes demonstrarem:
 
 ## 13. Decisões e trade-offs
 
-| Tema | Recomendação adotada no plano | Custo aceito | Gatilho para rever |
+| Tema | Decisão adotada no plano | Custo aceito | Gatilho para rever |
 |---|---|---|---|
-| Topologia | mundo contínuo em rede | streaming e balanceamento de população mais difíceis | orçamento de memória ou servidores vazios por região |
+| Topologia | `World Place` compacto para 16 e `Arena Place` separado | streaming e teleporte reservado exigem validação | profiling autorizar 20/24 ou exigir nova divisão |
 | Fronteira | confirmação física, visual e textual | mais atrito ao atravessar | teste comprovar fadiga sem reduzir acidentes |
 | Equipamento | modificador horizontal, pouco status bruto | mais conteúdo e QA por efeito | builds sem sensação de crescimento |
-| Falha de upgrade | perde material, ganha garantia | menos tensão que destruir item | falha não gerar decisão nem sumidouro útil |
-| Loot de boss | pessoal, contribuição ampla e garantia | menos disputa por último golpe | exploração de contribuição passiva |
+| Forja | cinco graus determinísticos | custo precisa sustentar o sumidouro sem RNG | economia não sustentar progressão previsível |
+| Loot de boss | pessoal, contribuição ampla e pity no décimo clear | menos disputa por último golpe | exploração de contribuição passiva |
 | Troca | adiada; depois mercado em custódia | menos interação econômica no início | estabilidade e auditoria comprovadas |
 | Torneio e material | rota alternativa, nunca poder exclusivo | prêmio competitivo menos agressivo | participação baixa sem motivação cosmética |
 | Mapa futuro | regiões são plano, não escopo de lançamento | menos promessa de escala | retenção e densidade justificarem expansão |
 
-## 14. Dependências e questões para consolidação
+## 14. Dependências e decisões consolidadas
 
 Dependências obrigatórias:
 
@@ -403,10 +404,10 @@ Dependências obrigatórias:
 - `07-SECURITY.md`: duplicação, teleporte, spoof de contribuição e repetição de recompensa;
 - produção de arte/áudio: linguagem original, marcos de fronteira e telégrafos acessíveis.
 
-Questões que devem aparecer em `09-OPEN-QUESTIONS.md`:
+Decisões antes abertas agora consolidadas:
 
-1. Aprovar ou substituir nomes provisórios das regiões após revisão de originalidade.
-2. Confirmar se a proteção de novato termina por tempo ativo, marco de onboarding ou ambos.
-3. Confirmar percentuais e tetos de perda somente após medir ganho por minuto.
-4. Autorizar mercado apenas depois do teste econômico fechado; troca direta continua não recomendada.
-5. Definir se a falha com garantia tem valor emocional suficiente ou se o upgrade será totalmente determinístico.
+1. nomes provisórios das regiões aprovados para planejamento e condicionados ao Gate P1;
+2. proteção de novato combina onboarding, 30 minutos ativos, expiração em 90 minutos e saída voluntária, conforme `03-SOCIAL.md`;
+3. percentuais de morte são baselines aprovados com caps por minutos de ganho;
+4. mercado fica pós-lançamento e condicionado ao gate econômico; troca direta continua fora;
+5. forja é totalmente determinística; pity existe somente no loot pessoal de bosses.

@@ -2,7 +2,7 @@
 
 ## 1. Contrato deste documento
 
-Este documento define regras sociais e competitivas em nível de produto. Não contém implementação. Valores de tempo, faixas, perdas e tamanhos de equipe são **hipóteses de teste**, explicitadas para que não virem decisões silenciosas.
+Este documento define regras sociais e competitivas em nível de produto. Não contém implementação. Políticas marcadas como aprovadas são vinculantes para o planejamento; percentuais, tempos e limiares operacionais são **baselines de teste** e só mudam por decisão registrada com evidência.
 
 Objetivos:
 
@@ -26,13 +26,14 @@ As regras não podem vazar de um contexto para outro.
 | Duelo casual | build própria | não | não | histórico casual, sem MMR principal |
 | Arena ranqueada | loadout próprio com números normalizados | não | não | MMR sazonal |
 | Torneio oficial | regra ranqueada normalizada | não | não | pontos de torneio e colocação |
-| Guerra territorial | loadout próprio com teto de poder de guerra | não | não | classificação de clã |
+| Evento de clã 8v8 | loadout próprio com teto de poder | não | não | classificação de clã |
+| Guerra territorial pós-lançamento | loadout próprio com teto de poder de guerra | não | não | classificação de clã |
 
 Separar reputação de MMR é deliberado: reputação mede conduta no mundo; MMR mede desempenho em regras competitivas. Um grande caçador de bounty não recebe rating de arena, e um jogador procurado não recebe bônus nem penalidade de MMR.
 
 ## 3. Proteção de novato
 
-### 3.1 Regra recomendada
+### 3.1 Regra aprovada
 
 Na região inicial, proteção permanece até o jogador concluir o onboarding **e** acumular pelo menos 30 minutos ativos; ela expira automaticamente com 90 minutos ativos ou ao entrar voluntariamente em alto risco. Os tempos serão calibrados por testes.
 
@@ -46,19 +47,33 @@ Enquanto protegida, a pessoa:
 
 Tentar iniciar ação hostil abre a confirmação de saída. A ação só ocorre após confirmar; isso evita tanto agressão invulnerável quanto perda acidental da proteção.
 
-Depois da proteção, ataques iniciados contra alguém duas faixas efetivas abaixo geram punição forte, salvo autodefesa, guerra válida ou bounty. “Poder efetivo” combina progressão, maestria e orçamento de equipamento; nível bruto sozinho seria fácil de manipular e classificaria mal builds.
+Depois da proteção, ataques iniciados contra alguém muito abaixo em poder efetivo geram punição forte, salvo autodefesa, bounty, duelo aceito, guerra válida ou evento formal.
 
-### 3.2 Trade-off
+### 3.2 Poder efetivo
+
+O servidor deriva um score de **0 a 100**; o cliente nunca envia nem persiste um valor autoritativo. A composição aprovada é:
+
+| Componente normalizado | Peso |
+|---|---:|
+| progressão da zona | 30% |
+| completude do loadout | 25% |
+| maestria | 20% |
+| equipamento | 15% |
+| desempenho PvP com incerteza | 10% |
+
+Ao avaliar agressão em grupo, o lado agressor recebe até **30 pontos adicionais** conforme superioridade numérica e coordenação recente. Um alvo é “muito abaixo” quando a diferença ajustada é de pelo menos **25 pontos** e o agressor possui pelo menos **1,35×** seu poder efetivo. Nível bruto isolado não autoriza a classificação. Pesos, bônus de grupo e limiares são baselines iniciais; a política permanente é derivação server-side, explicável e resistente a manipulação.
+
+### 3.3 Trade-off
 
 Proteção absoluta reduz a fantasia de mundo totalmente livre e pode ser explorada para observação segura. Por isso ela vale apenas no corredor inicial, impede interação com recompensas contestadas e possui expiração. A alternativa — só reputação — é mais aberta, porém não impede o primeiro abuso e tende a perder jogadores antes de a punição alcançar o agressor.
 
 ## 4. Reputação e lei
 
-### 4.1 Escala recomendada
+### 4.1 Escala aprovada
 
 Reputação varia de **-1.000 a +1.000** e começa em 0. As faixas são públicas; a fórmula exata de cada evento pode ser ajustada sem renomeá-las.
 
-Neste plano, a reputação acompanha o perfil da conta dentro da experiência, não o loadout. Trocar build não limpa consequência. Essa recomendação permanece sujeita à aprovação da questão correspondente em `09-OPEN-QUESTIONS.md`.
+A reputação acompanha persistentemente o perfil da conta dentro da experiência e é compartilhada entre estilos e loadouts. Trocar build não limpa consequência. O score público permanece entre -1.000 e +1.000; estado recente pode decair, enquanto o histórico privado do servidor sustenta antiabuso e investigação.
 
 | Pontuação | Estado | Consequência |
 |---:|---|---|
@@ -73,7 +88,7 @@ O desconto máximo é pequeno para não transformar boa reputação em vantagem 
 
 ### 4.2 Eventos de reputação
 
-| Ação | Efeito inicial recomendado | Observação |
+| Ação | Efeito inicial (baseline) | Observação |
 |---|---:|---|
 | Matar alvo não hostil duas ou mais faixas abaixo | -120 a -250 | cresce com diferença de poder e reincidência |
 | Matar repetidamente a mesma vítima | perda duplicada, depois sem recompensa | janela inicial de 30 min |
@@ -123,7 +138,7 @@ O leaderboard de bounty deve classificar **bounties legítimos capturados**, nã
 
 ## 6. Morte, respawn e desconexão no mundo
 
-### 6.1 Penalidade recomendada
+### 6.1 Penalidade aprovada como baseline operacional
 
 | Contexto | XP não consolidado | Material comum elegível | Respawn | Equipamento/moeda/progresso permanente |
 |---|---:|---:|---:|---|
@@ -162,7 +177,7 @@ Os valores precisam ser testados em conexões móveis reais. Desconexão isolada
 
 ### 7.1 Uma entidade, não duas
 
-“Clã” e “guilda” representam o mesmo sistema. Criar duas entidades dividiria chat, banco, guerra e progressão sem benefício claro. O nome público recomendado é **Clã**.
+“Clã” e “guilda” representam o mesmo sistema. Criar duas entidades dividiria chat, banco, guerra e progressão sem benefício claro. O nome público aprovado é **Clã**.
 
 Criação exige:
 
@@ -172,37 +187,35 @@ Criação exige:
 - custo em Marcas equivalente a algumas sessões intermediárias, não a dezenas de horas;
 - nome e tag aprovados pelo filtro da plataforma.
 
-Capacidade inicial proposta: 20 membros, crescendo até 40 por progressão de clã. Vender aumento de membros por Robux não é recomendado porque altera capacidade de guerra e geração econômica.
+Capacidade inicial: **20 membros**, crescendo até **40** por progressão de clã. Aumento de membros por Robux é proibido porque altera capacidade de evento e geração econômica.
 
 ### 7.2 Cargos e permissões
 
 | Cargo padrão | Capacidades iniciais |
 |---|---|
-| Líder | propriedade, cargos, guerra, território e dissolução protegida |
-| Oficial | moderação, escalação de guerra e convite conforme permissão |
-| Tesoureiro | gestão limitada do banco e receitas |
-| Recrutador | convite e avaliação de candidatos |
+| Líder | propriedade, matriz de permissões, eventos e dissolução protegida |
+| Oficial | capacidades granulares delegadas, como moderação, convite e gastos predeterminados |
 | Membro | chat, contribuição e participação |
 
-Permissões são granulares; título não concede poder implícito fora da matriz. Ações sensíveis exigem confirmação, cooldown e log. Transferência de liderança tem espera e pode ser cancelada; dissolução exige confirmação reforçada e período de arrependimento.
+Permissões são granulares; título não concede poder implícito fora da matriz. Transferência de liderança espera **72 horas** e pode ser cancelada; dissolução espera **7 dias** com confirmação reforçada; gasto superior a **25% dos Suprimentos** espera **24 horas** e permanece visível no log.
 
 ### 7.3 Banco e auditoria
 
-- Aceita Marcas autorizadas e materiais de clã; não aceita itens vinculados.
+- Na Fase 5, aceita somente Suprimentos e materiais de clã vinculados; não aceita Marcas, bens pessoais ou itens negociáveis.
 - Depósitos são imediatos e registrados.
-- Saques têm limite por cargo, por dia e por categoria.
-- Operação de alto valor exige aprovação de duas pessoas na versão com tesouraria avançada.
-- Convite recente, promoção recente e saída programada reduzem temporariamente limite de saque.
+- Na F5, gastos predeterminados têm limite por permissão, por dia e por categoria; não são saques livres.
+- Uma versão futura com tesouraria avançada exige duas aprovações para operação de alto valor.
+- Nessa versão futura, convite recente, promoção recente e saída programada reduzem temporariamente o limite de saque.
 - Histórico mostra ator, item, quantidade, antes/depois e motivo por pelo menos uma temporada.
 - Não existe “desfazer” silencioso; recuperação administrativa cria uma transação compensatória auditável.
 
-Na Fase 5, somente depósito de materiais vinculados/Suprimentos e gastos em opções predeterminadas reduz o risco de roubo e duplicação. Banco livre de itens e saques avançados fica adiado para a Fase 7 ou posterior e ainda depende de auditoria, suporte e recuperação comprovados.
+Na Fase 5, não há saque livre: contribuições alimentam Suprimentos vinculados ao clã e gastos predeterminados. Banco livre de itens e saques avançados são subprojetos opcionais pós-lançamento e dependem de auditoria, suporte e recuperação comprovados.
 
 ### 7.4 Progressão e perks
 
 Clã ganha renome por participação distinta em missões coletivas, guerras e eventos. Repetir o mesmo conteúdo trivial ou alimentar alts tem retorno decrescente e teto por membro.
 
-Perks recomendados:
+Perks aprovados para planejamento:
 
 - capacidade, cargos e opções de emblema;
 - decoração e salão;
@@ -222,23 +235,33 @@ Perks não aumentam dano, defesa, cooldown ou recurso em arena ranqueada. Buff d
 - Chat usa filtragem nativa da plataforma; não há transporte de texto bruto nem link externo.
 - Nome, tag e descrição são filtrados na criação e em toda edição.
 
-## 8. Guerra e território
+## 8. Evento de clã e território pós-lançamento
 
-### 8.1 Problema de bola de neve
+### 8.1 Gate obrigatório de território
 
-Dar mais recurso e chance de drop irrestrita ao clã já dominante faz o vencedor ficar progressivamente mais forte. A recomendação adapta a proposta original:
+Território fica fora do lançamento. Só pode avançar depois de **quatro semanas de eventos de clã estáveis** e quando, simultaneamente, houver:
+
+- pelo menos 20 clãs elegíveis e 200 participantes semanais;
+- pelo menos 80% dos eventos formando no mínimo 6v6;
+- no-show abaixo de 10%;
+- teleporte bem-sucedido acima de 99%;
+- 30 dias sem incidente econômico crítico.
+
+Cumprir o gate autoriza desenvolvimento e teste controlado, não lançamento automático. Para impedir bola de neve no corte futuro:
 
 - proprietário recebe Suprimentos de clã e até 5% de ganho extra de material comum na região, com teto diário;
-- chance adicional se aplica a cosmético ou cache utilitário, nunca a item de poder exclusivo;
+- território nunca concede item raro, chance rara adicional ou poder exclusivo;
 - nenhum bônus territorial funciona em arena ranqueada;
-- cada clã controla no máximo um território na primeira versão;
+- cada clã controla no máximo um território no primeiro corte pós-lançamento;
 - território volta a ser disputável e sofre reset sazonal.
 
 Isso mantém motivo econômico e prestígio sem transformar derrota em exclusão permanente.
 
-### 8.2 Declaração e agenda
+### 8.2 Evento inicial e fluxo territorial futuro
 
-Fluxo recomendado:
+O primeiro evento de clã é **8v8 por objetivos**, sem posse persistente. O baseline é até 5 reservas, partida de 20 minutos, três objetivos de mapa e pontuação por captura/manutenção. Mortes ajudam a abrir espaço, mas não são o placar principal. Esse formato valida população, matchmaking, teleporte e clareza antes de qualquer território.
+
+Somente depois do gate da seção 8.1, o fluxo territorial planejado é:
 
 1. clã elegível paga Suprimentos para declarar;
 2. sistema oferece três janelas regionais dentro dos próximos dias;
@@ -249,9 +272,7 @@ Fluxo recomendado:
 
 Não existe captura offline. Um defensor não pode adiar indefinidamente, e um atacante não pode escolher madrugada local como surpresa.
 
-Esse fluxo completo pertence à Fase 7. Na Fase 5, o mesmo formato pode ser prototipado como evento competitivo sem declaração, posse persistente, bônus regional ou banco livre.
-
-Hipótese de primeiro formato: 8 contra 8, até 5 reservas, partida de 20 minutos, três objetivos de mapa e pontuação por captura/manutenção. Mortes ajudam a abrir espaço, mas não são o placar principal. Tamanho maior fica para depois de desempenho, matchmaking e clareza visual comprovarem capacidade.
+Esse fluxo completo pertence à Fase 7 opcional e pós-lançamento. Na Fase 5, não há declaração, posse persistente, bônus regional ou banco livre. Tamanho maior que 8v8 fica para depois de desempenho, matchmaking e clareza visual comprovarem capacidade.
 
 ### 8.3 Elegibilidade e equilíbrio
 
@@ -261,7 +282,7 @@ Hipótese de primeiro formato: 8 contra 8, até 5 reservas, partida de 20 minuto
 - itens pagos não alteram orçamento de combate;
 - abandono deliberado, alimentação de placar e acordo de resultado anulam recompensa;
 - clã em desvantagem recebe opção de objetivo defensivo e recuperação logística, não dano artificial;
-- uma semana de proteção após captura é hipótese inicial para evitar guerra diária e exaustão.
+- uma semana de proteção após captura é baseline inicial para evitar guerra diária e exaustão.
 
 Alianças formais, tributo, empréstimo entre clãs e múltiplos territórios ficam fora da primeira versão. São sistemas políticos e econômicos grandes o bastante para uma fase própria.
 
@@ -269,52 +290,42 @@ Alianças formais, tributo, empréstimo entre clãs e múltiplos territórios fi
 
 ### 9.1 Cadência
 
-Realizar um torneio a cada duas horas desde o lançamento fragmentaria uma população pequena. Recomendação:
+Durante a pré-temporada Brasil-first, há três janelas semanais em horário de Brasília: **quarta às 20h, sábado às 15h e sábado às 21h**. A UI converte sempre para o horário local e mostra contagem regressiva.
 
-- começar com quatro janelas regionais por dia e um evento maior no fim de semana;
-- mostrar horário local e contagem regressiva global;
-- abrir inscrição antecipada e check-in próximo da partida;
-- exigir mínimo de 8 e limitar a 16 participantes na primeira versão;
-- aumentar para cadência de duas horas apenas quando concorrência por região sustentar brackets completos.
+- O torneio oficial exige e limita a **8 participantes**.
+- Check-in abre 10 minutos antes e fecha 2 minutos antes do início.
+- Com menos de 8 confirmados, o torneio oficial é cancelado e os presentes recebem opção de evento casual sem MMR; bots nunca completam o bracket.
+- Expandir para 16 exige quatro semanas com pelo menos 80% dos brackets completos e no-show abaixo de 10%.
 
-Se não atingir o mínimo, participantes escolhem reembolso/saída ou conversão para evento casual sem MMR. O sistema não preenche torneio oficial com bots.
+Cadência maior depende de população e operação comprovadas; torneio a cada duas horas não é meta de lançamento.
 
-### 9.2 Normalização recomendada
-
-Adotar o meio-termo:
+### 9.2 Normalização aprovada
 
 - **duelo casual:** usa loadout, maestria e equipamento construídos no mundo;
-- **ranqueado e torneio oficial:** mantém apenas habilidades já desbloqueadas e escolhas de loadout, mas normaliza nível numérico da habilidade, atributos e orçamento de equipamento;
+- **ranqueado e torneio oficial:** normalizam HP, dano, guarda, recurso, ganhos numéricos de nível e refinamento; removem atributos brutos; preservam habilidades desbloqueadas, loadout, Dissonância e variantes comportamentais legais;
 - modificadores comportamentais têm custo competitivo e lista de legalidade; efeito impossível de equilibrar pode ficar fora da temporada;
-- uma rotação de loadouts de empréstimo permite experimentar o modo, mas não concede desbloqueio no mundo.
+- modificadores comportamentais legais são normalizados ao grau 3;
+- dois loadouts de empréstimo versionados permitem experimentar o modo, mas não concedem desbloqueio no mundo.
 
-Normalizar tudo mediria execução, porém apagaria o produto de progressão. Não normalizar nada transformaria ranking em inventário. A regra proposta preserva identidade e fecha a maior diferença de poder.
+Normalizar tudo apagaria o produto de progressão; não normalizar nada transformaria ranking em inventário. A regra aprovada preserva identidade e fecha a maior diferença de poder.
 
 ### 9.3 Bracket e partida
 
-- Primeira versão: 1v1, eliminação simples, semente por faixa de MMR.
+- Primeira versão: 1v1, eliminação simples, exatamente 8 participantes e semente por faixa de MMR.
 - Jogadores do mesmo clã são separados nas primeiras rodadas quando possível, sem adulterar a semente inteira.
 - Bye não conta como vitória jogada nem gera recompensa de atividade.
-- Cada confronto usa melhor de três rounds curtos; empate vai para objetivo de desempate, não dano total bruto.
+- Cada confronto usa melhor de três rounds de **90 segundos**; empate vai para objetivo de desempate, não dano total bruto.
 - Arena dedicada é simétrica, sem vantagem de spawn e com limites visíveis.
 - Espectador tem atraso de 15 segundos e chat separado para reduzir coaching.
 - Não há aposta, bolsa de prêmio financiada por jogadores nem troca no servidor de arena.
 
-Premiação:
-
-- cosmético, título temporário, Insígnia competitiva e rota alternativa para material existente;
-- participação só premia após atividade mínima;
-- poder exclusivo e melhoria paga não entram;
-- resultados superiores melhoram prestígio e quantidade, não desbloqueiam uma categoria de atributo inacessível.
+Premiação de torneio é cosmética e de prestígio. Participação só premia após atividade mínima; poder, item negociável e melhoria paga não entram.
 
 ## 10. Matchmaking e ranking
 
 ### 10.1 Filas
 
-Haverá duas filas separadas quando a população justificar:
-
-- **Duelo ranqueado contínuo:** alimenta MMR individual.
-- **Torneio agendado:** usa MMR para seeding e gera pontos de torneio separados.
+Há uma fila ranqueada 1v1 por região. Casual ocorre por desafio direto; fila de equipe fica fora da primeira temporada. Torneio é evento agendado, usa rating para seeding e não cria outra fila contínua.
 
 Primeira busca considera região de baixa latência, MMR e preferência de entrada. A faixa de MMR expande com o tempo; preferência de teclado/controle/toque pode relaxar antes do limite de latência. O jogador é avisado e pode cancelar, nunca é forçado a uma partida claramente inviável.
 
@@ -331,14 +342,13 @@ Evitar o mesmo oponente em sequência e o mesmo clã quando houver alternativa. 
 
 ### 10.2 Rating
 
-Recomendação: **Glicko-2 ou equivalente com incerteza**, em vez de Elo puro. Ele trata conta nova, pouca amostra e retorno após inatividade melhor, ao custo de implementação e explicação maiores. O MMR permanece oculto; a divisão e seu progresso são a representação pública.
+O rating aprovado é **Glicko-2**, com rating inicial **1.500**, RD **350**, volatilidade **0,06**, `tau` **0,5** e **10 partidas de colocação**. Ele trata conta nova, pouca amostra e retorno após inatividade melhor que Elo puro. O rating permanece interno; divisão e progresso são a representação pública.
 
-Contrato proposto:
+Contrato aprovado:
 
-- 10 partidas de colocação com divisão provisória;
 - rating e incerteza independentes por modo e temporada;
-- divisão visível: Bronze, Prata, Ouro, Platina, Diamante, Ascendente e Lenda;
-- limites numéricos definidos após observar a distribuição, não fixados por estética;
+- divisão provisória durante as 10 colocações;
+- divisões: Bronze `<1200`, Prata `1200–1399`, Ouro `1400–1599`, Platina `1600–1799`, Diamante `1800–1999`, Ascendente `2000–2199` e Lenda `≥2200`;
 - topo exige mínimo de partidas válidas e baixa incerteza;
 - UI mostra divisão, progresso e motivo das mudanças; parâmetros antifraude internos não são expostos.
 
@@ -357,25 +367,29 @@ Atualização pública pode ocorrer em lotes a cada poucos minutos. Não gastar 
 
 ## 11. Temporadas
 
-Hipótese inicial: 8 semanas competitivas e uma pré-temporada curta de validação.
+A pré-temporada dura **4 semanas** e as temporadas regulares duram **8 semanas**.
 
 - MMR sofre compressão de 25% em direção ao centro, não reset total.
-- Recompensa usa maior divisão alcançada com mínimo de partidas e conduta válida.
-- Recompensas são cosméticas, título e Insígnias; nunca status ranqueado.
+- Recompensa de divisão usa a maior divisão alcançada e exige pelo menos **20 partidas válidas** e conduta elegível.
+- Recompensas são banner, cores, aura/finalização legível e títulos; Top 100 recebe título numerado. Nunca incluem poder ou item negociável.
 - Após 14 dias sem jogar, apenas faixas altas começam a perder posição visível; incerteza sobe para todos.
 - Decaimento tem teto de uma divisão por semana e não empurra jogador casual indefinidamente para baixo.
 - Mudança grande de balanceamento entra entre temporadas. Correção de exploit pode entrar imediatamente com comunicação e, se necessário, congelamento de rating.
 - Territórios são neutralizados ou comprimidos no fim da temporada; campeão mantém registro e cosmético, não domínio permanente.
 - Histórico preserva temporada, divisão de pico, rating final e sanções que afetaram elegibilidade.
 
+### 11.1 Operação Brasil-first
+
+O acesso técnico é global, mas o soft launch tem suporte e agenda operacional focados no Brasil. PT-BR e inglês recebem revisão manual; outros idiomas podem usar tradução automática sem promessa inicial de suporte. Datas são armazenadas em UTC e exibidas no horário local do jogador.
+
 ## 12. Reconexão, no-show e forfeit em arena
 
 ### 12.1 Antes da partida
 
-- Check-in abre 2 minutos antes do fechamento.
+- Check-in abre 10 minutos antes do início e fecha 2 minutos antes.
 - Não fazer check-in remove do bracket sem derrota de MMR, mas repetição aplica cooldown de inscrição.
-- Depois de o confronto ser criado, ausência passa a ser no-show e conta como derrota.
-- Bye gerado por número ímpar não pune ninguém.
+- Com menos de 8 confirmados no fechamento, o torneio oficial é cancelado e pode virar evento casual sem MMR.
+- Depois de o bracket oficial ser criado, ausência passa a ser no-show e conta como derrota.
 
 ### 12.2 Durante a partida
 
@@ -385,7 +399,7 @@ Hipótese inicial: 8 semanas competitivas e uma pré-temporada curta de validaç
 - Reconectar restaura apenas o estado confirmado pelo servidor, sem refazer cooldown ou recurso.
 - Desconexões repetidas aplicam perda normal e cooldown de fila, não banimento automático.
 
-Pausa é mais justa que deixar um avatar indefeso, mas pode ser usada para quebrar ritmo. Limitá-la a uma ocorrência curta por jogador é o meio-termo recomendado.
+Pausa é mais justa que deixar um avatar indefeso, mas pode ser usada para quebrar ritmo. A regra adotada limita-a a uma ocorrência curta por jogador.
 
 ### 12.3 Desistência e falha de serviço
 
@@ -491,20 +505,21 @@ As fases devem ser sincronizadas com `06-ROADMAP.md`.
 ### Fase 5 — clãs sem território persistente
 
 - primeiro clã: convite, cargos, chat filtrado e contribuição;
-- banco somente de materiais vinculados, se a auditoria estiver pronta;
-- evento competitivo de clã sem posse persistente;
+- três cargos públicos com permissões granulares e Suprimentos sem saque livre;
+- evento competitivo de clã 8v8 sem posse persistente;
 - sem banco livre, guerra agendada, alianças, territórios ou política econômica avançada.
 
 ### Fase 6 — torneio, ranking e temporada
 
 - primeiro duelo ranqueado 1v1 com pré-temporada;
-- torneio de 8–16 participantes em janelas regionais;
+- torneio de 8 participantes nas três janelas semanais Brasil-first;
 - Glicko-2, leaderboards separados, soft reset e prêmios cosméticos;
 - cadência maior somente após população, reconexão e antifraude passarem os gates.
 
-### Fase 7 — guerra, território e banco avançado
+### Fase 7 opcional e pós-lançamento — território e sistemas avançados
 
-- guerra agendada 8v8 e no máximo um território por clã no primeiro corte;
+- território só começa após todos os gates de população, formação, no-show, teleporte e economia;
+- guerra territorial usa o formato 8v8 já validado e no máximo um território por clã no primeiro corte;
 - posse sazonal, bônus capados, catch-up e proteção contra captura offline;
 - banco livre e saque avançado são subprojeto independente e podem continuar adiados;
 - alianças formais, múltiplos territórios e tributo continuam fora até existir justificativa própria.
@@ -527,7 +542,7 @@ As fases devem ser sincronizadas com `06-ROADMAP.md`.
 
 ## 17. Decisões e trade-offs
 
-| Tema | Recomendação adotada | Custo aceito | Gatilho para rever |
+| Tema | Decisão adotada | Custo aceito | Gatilho para rever |
 |---|---|---|---|
 | Proteção de novato | proteção real no corredor, com expiração | mundo menos livre no onboarding | abuso de observador protegido ou confusão alta |
 | Reputação | lei gradual + recuperação ativa | mais estado e suporte | punição não reduzir vitimização |
@@ -536,13 +551,13 @@ As fases devem ser sincronizadas com `06-ROADMAP.md`.
 | Clã/guilda | uma entidade chamada Clã | menos opções de fantasia | necessidade real de organizações distintas |
 | Buff de território | recurso comum limitado, sem poder exclusivo | território menos dominante | guerras sem motivação apesar de prestígio |
 | Guerra | agendada, 8v8 por objetivos | menos espontaneidade | população e infraestrutura suportarem escala maior |
-| Torneio | janelas regionais, não a cada 2h no início | menos eventos diários | brackets lotados e fila saudável |
+| Torneio | 8 jogadores em três janelas semanais Brasil-first | menos eventos diários | quatro semanas com 80% completos e no-show abaixo de 10% |
 | Competitivo | loadout próprio, números normalizados | inventário raro não vale integralmente | progressão perder identidade na arena |
 | Rating | Glicko-2 com incerteza | maior complexidade que Elo | equipe não conseguir explicar/testar corretamente |
 | Temporada | 8 semanas e soft reset | calendário operacional contínuo | população ou cadência de conteúdo não sustentar |
 | Emblema | construtor aprovado | menos liberdade visual | moderação e revisão de imagem maduras |
 
-## 18. Dependências e questões para consolidação
+## 18. Dependências e decisões consolidadas
 
 Dependências obrigatórias:
 
@@ -555,13 +570,13 @@ Dependências obrigatórias:
 - operação/moderação: política de sanção, revisão, contestação e resposta a incidentes;
 - jurídico e criação: revisão de nomes, tags, emblemas, cosméticos e comunicação pública.
 
-Questões que devem aparecer em `09-OPEN-QUESTIONS.md`:
+Decisões antes abertas agora consolidadas:
 
-1. Aprovar proteção de novato por marco + tempo, incluindo expiração de 90 minutos.
-2. Aprovar a escala de reputação, os benefícios máximos e o acampamento neutro.
-3. Confirmar percentuais de morte só depois de medir ganho por minuto e retenção.
-4. Aprovar limite inicial de 20–40 membros e guerra 8v8.
-5. Aprovar bônus territorial limitado em vez de chance irrestrita de item raro.
-6. Aprovar janelas regionais antes da meta de torneio a cada duas horas.
-7. Aprovar normalização parcial e Glicko-2 para a primeira pré-temporada.
-8. Decidir duração final de temporada após a pré-temporada e a capacidade de produção de conteúdo.
+1. proteção de novato por onboarding + 30 minutos ativos, com expiração em 90 minutos ou saída voluntária;
+2. reputação persistente por conta entre -1.000 e +1.000, desconto máximo de 5% e acampamento neutro;
+3. perdas de morte com percentuais aprovados como baseline e caps de 5/10 minutos de ganho;
+4. clãs de 20–40 membros, três cargos públicos e primeiro evento 8v8;
+5. território apenas pós-lançamento, limitado a 5% de material comum e sem item raro ou poder;
+6. três janelas semanais Brasil-first, torneio de 8 e expansão condicionada a métricas;
+7. normalização parcial e Glicko-2 com parâmetros definidos para a pré-temporada;
+8. pré-temporada de 4 semanas e temporadas regulares de 8 semanas.

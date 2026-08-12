@@ -1,300 +1,416 @@
-# Questões abertas e registro de decisões
+# Questões abertas e registro canônico de decisões
 
 ## 1. Como usar este documento
 
-Este arquivo concentra decisões que exigem resposta do responsável pelo produto, validação jurídica, confirmação técnica posterior ou dados de teste. Nenhuma pergunta abaixo bloqueou a elaboração do plano. Algumas, porém, bloqueiam o início da implementação ou a produção de assets caros.
+Este arquivo é a fonte canônica das decisões de produto. Os demais documentos detalham
+as regras, mas não podem alterar silenciosamente o que está registrado aqui.
 
-Cada item possui:
+Cada decisão distingue:
 
-- **gate:** último momento seguro para decidir;
-- **dono recomendado:** papel responsável por obter a resposta;
-- **recomendação provisória:** hipótese usada nos demais documentos;
-- **impacto:** o que muda quando a resposta muda.
+- **política aprovada:** direção que só muda por nova decisão registrada;
+- **baseline de protótipo:** número inicial a implementar e medir;
+- **gate de evidência:** condição necessária antes de promover a regra ao lançamento.
 
-Uma recomendação provisória não vira decisão silenciosamente. Ao aprovar, registrar responsável, data e justificativa na seção 5.
+As decisões de Q-009 a Q-030 foram selecionadas pelo Codex por delegação explícita de
+Álvaro em 2026-08-12. Isso não substitui validação jurídica, teste de jogo, profiling,
+economia observada ou políticas vigentes da Roblox quando esses gates forem citados.
 
-## 2. Bloqueadores antes da Fase 0
+## 2. Decisões anteriores à Fase 0
 
 ### Q-001 — Qual é a identidade original final do produto?
 
-- **Gate:** P1, antes de concept art, áudio, animações e marketing.
-- **Dono recomendado:** direção criativa + assessoria jurídica especializada.
-- **Questão:** até que ponto nome, roster, fantasias, silhuetas e kits serão redesenhados para não depender do reconhecimento de franquias existentes?
-- **✅ DECIDIDO (2026-08-12 — Álvaro):** manter visual, silhuetas e kits **próximos dos animes de referência**, trocando apenas nomes públicos (personagens, franquias e técnicas). O risco jurídico de obra derivada/trade dress é **aceito conscientemente** pelo dono do produto. Consequência: o pipeline de redesign visual é reduzido, mas o Gate P1 (revisão jurídica) ganha peso crítico e a lista de "elementos a redesenhar" tende a ser maior.
-- **Impacto:** pode alterar nome do jogo, roster, famílias de energia, direção visual, custo de arte e campanha de lançamento.
-- **Observação:** trocar nomes isoladamente não elimina risco de obra derivada ou conjunto visual reconhecível — o dono do produto está ciente e aceita o risco.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro.
+- **Política aprovada:** manter visual, silhuetas e kits próximos dos animes de
+  referência, trocando os nomes públicos.
+- **Risco aceito:** renomear não elimina risco de obra derivada ou trade dress.
+- **Justificativa:** preserva a direção criativa já aprovada sem apresentar a simples
+  troca de nomes como proteção jurídica suficiente.
+- **Gate:** P1 continua obrigatório antes de concept art, áudio, animações, marketing
+  ou publicação. Licenciamento formal ou parecer especializado pode exigir redesign.
 
 ### Q-002 — O nome “Anime Verse Battlegrounds” será mantido?
 
-- **Gate:** P1, antes de publicar a experiência ou encomendar identidade visual.
-- **Dono recomendado:** produto + jurídico + marketing.
-- **Opções:** manter após busca de marca; adotar nome original sem “Anime”; usar nome provisório internamente e decidir após teste de posicionamento.
-- **✅ DECIDIDO (2026-08-12 — Álvaro):** **manter** “Anime Verse Battlegrounds”, condicionado a busca de marca (registro/colisões no Roblox e fora dele). O termo “Battlegrounds” pode atrair público esperando arena imediata; mitigar com store page, primeiro contato e material de marketing deixando clara a progressão MMO.
-- **Impacto:** store page, logo, aquisição, expectativa do público e documentação.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro.
+- **Política aprovada:** manter o nome, condicionado a busca de marca e colisões na
+  Roblox e fora dela.
+- **Justificativa:** mantém o reconhecimento do briefing enquanto a validação de marca
+  ainda pode exigir mudança antes da publicação.
+- **Mitigação:** gênero e store page devem comunicar Action RPG persistente, evitando
+  a expectativa de arena descartável.
 
-### Q-003 — Qual público e classificação indicativa orientam o design?
+### Q-003 — Qual público e classificação orientam o design?
 
-- **Gate:** P0.
-- **Dono recomendado:** produto + trust & safety.
-- **✅ DECIDIDO (2026-08-12 — Álvaro):** público **mais velho (13+)**, tom **sombrio** e **gore leve** permitido dentro das políticas da Roblox (sem gore extremo, sem linguagem imprópria, sem monetização que explore urgência). A classificação indicativa pretendida passa a ser 13+; o design de efeitos, narrativa e ambiente pode ser mais agressivo que o público amplo padrão.
-- **Impacto:** efeitos, narrativa, chat/social, monetização, privacidade, moderação e aquisição.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro.
+- **Política aprovada:** público 13+, tom sombrio e gore leve dentro das políticas da
+  Roblox; sem gore extremo, linguagem imprópria ou monetização por urgência.
+- **Justificativa:** sustenta a fantasia de ação sem ampliar desnecessariamente o risco
+  de maturidade, moderação e acesso do público principal.
+- **Gate:** preencher e manter correto o questionário de maturidade da experiência.
 
-### Q-004 — Qual equipe, orçamento e horizonte existem de verdade?
+### Q-004 — Qual equipe, orçamento e horizonte existem?
 
-- **Gate:** P0.
-- **Dono recomendado:** produtor/executive owner.
-- **✅ DECIDIDO (2026-08-12 — Álvaro):** equipe **solo/dupla pequena (1-3 pessoas)**. Consequência direta: **reduzir conteúdo em todas as fases** e manter os gates técnicos intactos. Roster, regiões, quantidade de assets e escopo de sistemas sociais devem ser enxutos; a Fase 0 permanece como fatia vertical mínima e as fases seguintes priorizam sistemas dirigidos por dados e reuso de assets. Prazos estimados no roadmap devem ser relidos com velocidade de equipe pequena.
-- **Impacto:** quantidade de regiões, roster, qualidade de assets, prazo, terceirização, suporte e live operations.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro.
+- **Política aprovada:** equipe de 1–3 pessoas; reduzir conteúdo, nunca autoridade,
+  integridade do save, QA multiplataforma, telemetria ou segurança.
+- **Justificativa:** conteúdo é o corte reversível; retirar fundações técnicas criaria
+  dívida e risco operacional desproporcionais para uma equipe pequena.
+- **Planejamento:** estimativas são expressas em pessoa-meses e recalibradas após F0.
 
-### Q-005 — Qual é a meta de dispositivos de baixa performance?
+### Q-005 — Qual é a matriz mínima de dispositivos?
 
-- **Gate:** primeira semana da F0.
-- **Dono recomendado:** engenharia + produto.
-- **Questão:** quais telefones, consoles, resoluções, memória e condições de rede compõem a matriz mínima?
-- **✅ DECIDIDO (2026-08-12 — Álvaro):** matriz mínima completa — 1 Android de entrada, 1 telefone mediano, PC com gráficos integrados e gamepad. Budgets definidos após benchmark da fatia.
-- **Impacto:** tamanho do mundo, quantidade de jogadores, efeitos, streaming, UI, física e custo de QA.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro.
+- **Política aprovada:** Android de entrada, telefone mediano, PC com gráficos
+  integrados e gamepad.
+- **Justificativa:** cobre os contextos de acesso mais relevantes sem confundir uma
+  categoria de dispositivo com prova de desempenho real.
+- **Gate:** modelos, memória, resolução e condições de rede são registrados depois do
+  benchmark da fatia; a categoria sozinha não prova desempenho.
 
 ### Q-006 — Qual câmera e modelo de alvo definem o combate?
 
-- **Gate:** antes do primeiro protótipo de combate da F0.
-- **Dono recomendado:** combat designer + UX.
-- **Opções:** soft lock contextual; lock-on manual; direção livre com aim assist; híbrido por habilidade.
-- **✅ DECIDIDO (2026-08-12 — Álvaro):** soft lock contextual para ataques básicos e assistência configurável para toque/gamepad, mantendo habilidades de área direcionáveis. Lock-on rígido tende a piorar lutas com muitos participantes.
-- **Impacto:** controles, câmera, hit validation, mobilidade, acessibilidade e balanceamento entre plataformas.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro.
+- **Política aprovada:** soft lock contextual para ataques básicos, assistência
+  configurável em toque/gamepad e habilidades de área direcionáveis.
+- **Justificativa:** mantém leitura e agência no PC, reduz atrito de precisão no toque
+  e evita automação que decida o combate pelo jogador.
 
-### Q-007 — Quantos jogadores por servidor e qual topologia de places?
+### Q-007 — Quantos jogadores e quais places?
 
-- **Gate:** arquitetura da F0, antes de comprometer mapa e rede.
-- **Dono recomendado:** engenharia de plataforma.
-- **Recomendação provisória:** testar o mundo com alvo inicial conservador de 16 a 24 jogadores e arenas em places/servidores reservados separados. Ajustar somente após profiling real.
-- **✅ DECIDIDO (2026-08-12 — Álvaro):** alvo de **16 a 24 jogadores por servidor**, arenas em places/servidores reservados. Ajuste somente após profiling real.
-- **Impacto:** densidade do mapa, bosses, streaming, rede, fila, teleport, custo operacional e sensação de MMO.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro.
+- **Política aprovada:** faixa-alvo de 16–24 jogadores; arena em place e servidor
+  reservado.
+- **Justificativa:** servidores compactos favorecem legibilidade e custo previsível;
+  separar a arena isola regras competitivas e recuperação de partidas.
+- **Baseline:** iniciar testes com 16 e promover 20/24 somente após profiling.
 
 ### Q-008 — Qual conjunto mínimo prova a fatia vertical?
 
-- **Gate:** P0.
-- **Dono recomendado:** produto + game design.
-- **Recomendação provisória:** 1 estilo original, ataque básico, dash, guarda e 3 habilidades; 1 recurso; 1 vila segura; 1 área livre; 1 inimigo simples; 1 objetivo; PvP e save. Ultimate é stretch goal.
-- **✅ DECIDIDO (2026-08-12 — Álvaro):** fatia vertical padrão — 1 estilo original, ataque básico, dash, guarda e 3 habilidades; 1 recurso; 1 vila segura; 1 área livre; 1 inimigo simples; 1 objetivo; PvP e save. **Ultimate permanece como stretch goal** da F0.
-- **Impacto:** duração da F0, quantidade de arte e superfície de teste.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro.
+- **Política aprovada:** uma identidade, ataque básico, dash, guarda, três técnicas,
+  um recurso, vila segura, área livre, inimigo simples, objetivo, PvP e save.
+- **Justificativa:** é o menor corte que testa o loop ponta a ponta e os riscos de rede,
+  persistência e transição PvE/PvP antes de multiplicar conteúdo.
+- **Corte:** ultimate é stretch goal da F0.
 
-## 3. Decisões necessárias durante as fases 1 e 2
+## 3. Build, progressão e equipamento
 
-### Q-009 — Ressonância, orçamento de pontos ou modelo combinado?
+### Q-009 — Ressonância, pontos ou modelo combinado?
 
-- **Gate:** início da F1.
-- **Dono recomendado:** systems designer, após simulação e playtest.
-- **Recomendação provisória:** modelo combinado: orçamento de slots/complexidade limita poder absoluto; afinidade/ressonância aplica bônus suaves e decrescentes por coerência de família. Evitar punição multiplicativa grande só por hibridizar.
-- **Impacto:** liberdade de build, legibilidade, meta, dados de habilidade e UX.
-- **Experimento:** comparar as seis builds de papel do GDD e pelo menos 20 builds geradas por busca, medindo burst, sobrevivência, mobilidade, controle e sustentabilidade.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro (seleção delegada ao Codex).
+- **Política aprovada:** Ressonância 2.0 combina quatro unidades de capacidade, uma
+  ultimate, impacto máximo 12, no máximo uma técnica `Definidora` e Dissonância.
+- **Validação:** calcular `rawD`; `rawD > 3` invalida o loadout. Não fazer clamp
+  para transformar mistura excessiva em D = 3.
+- **Justificativa:** capacidade e impacto limitam poder absoluto, enquanto Dissonância
+  preserva identidade de família sem permitir uma build com todas as melhores respostas.
+- **Baseline:** manter os multiplicadores D = 0–3 do GDD durante F1.
+- **Regra comercial:** nenhum produto pago reduz slot, impacto ou Dissonância.
 
-### Q-010 — As famílias de energia serão públicas com os nomes atuais?
+### Q-010 — Os nomes atuais das famílias serão públicos?
 
-- **Gate:** P1 para nomes; F1 para mecânicas.
-- **Dono recomendado:** direção criativa + jurídico + systems design.
-- **Recomendação provisória:** usar os nomes originais provisórios definidos no GDD — **Fluxo Vital**, **Éter Umbral**, **Contrafluxo** e **Ímpeto Metamórfico** — com lore própria, preservando os quatro padrões mecânicos: reserva/regen, fluxo por precisão, carga por anulação e medidor de transformação. Os quatro nomes ainda passam pelo Gate P1.
-- **Impacto:** narrativa, UI, roster, efeitos, quests e comunicação de build.
+- **Estado:** ✅ DIREÇÃO APROVADA PARA PLANEJAMENTO — 2026-08-12 — Álvaro
+  (seleção delegada ao Codex).
+- **Política aprovada:** Fluxo Vital, Éter Umbral, Contrafluxo e Ímpeto Metamórfico.
+  HUD compacto usa Fluxo, Umbral, Contra e Ímpeto, sempre com ícones distintos.
+- **Justificativa:** o vocabulário diferencia recursos no HUD e mantém IDs estáveis,
+  sem antecipar a aprovação jurídica dos nomes públicos.
+- **Gate:** nomes públicos continuam condicionados ao P1; IDs internos não mudam por
+  renomeação pública.
 
 ### Q-011 — Progressão altera números, comportamento ou ambos?
 
-- **Gate:** design detalhado da F2.
-- **Dono recomendado:** progression designer.
-- **Recomendação provisória:** marcos comportamentais nos níveis principais e pequenos ajustes capados entre eles. Desbloqueios devem criar escolha lateral, não upgrade obrigatório cumulativo.
-- **Impacto:** retenção, balanceamento, quantidade de animação/VFX, formato de habilidade e respec.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro (seleção delegada ao Codex).
+- **Política aprovada:** comportamento é dominante. Níveis 3, 6 e 9 liberam mudanças
+  laterais; níveis 2, 5 e 8 concedem até 2% cada, com teto de 6%; nível 10 entrega
+  cosmético ou qualidade de vida.
+- **Justificativa:** variantes sustentam expressão e aprendizado; o teto numérico baixo
+  impede que tempo de conta substitua habilidade, sobretudo fora do ranked.
+- **Competitivo:** ranked remove ganhos numéricos e preserva variantes legais.
 
 ### Q-012 — Qual teto e duração da maestria?
 
-- **Gate:** F2 antes de popular os dados.
-- **Dono recomendado:** progression/economy designer.
-- **Recomendação provisória:** poucos níveis significativos por habilidade, primeira mutação na primeira sessão longa e domínio em dezenas — não centenas — de horas distribuídas pela conta. Validar por tempo mediano real, não por melhor jogador.
-- **Impacto:** conteúdo necessário, grind, catch-up, valor de item e boost de XP.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro (seleção delegada ao Codex).
+- **Política aprovada:** técnica com 10 níveis; família com 20.
+- **Baseline:** técnica nível 10 em 3,4–4,9 h de uso significativo; família em
+  18–24 h com build pura e 24–32 h com XP dividida em híbrida.
+- **Justificativa:** a técnica entrega progresso perceptível em poucas sessões, enquanto
+  a família sustenta uma meta longa sem atrasar a diversão inicial.
+- **Curva de entrada:** combate até 60 s, objetivo visível até 3 min, primeira técnica
+  permanente até 5 min, primeiro breakpoint em 15–20 min, três técnicas em 45–60 min,
+  ultimate/build pura em 8–10 h e alternativa híbrida em 16–20 h.
+- **Gate:** tempos são metas de coorte, não bloqueios rígidos; ajustar por retenção.
 
-### Q-013 — Como funciona o respec gratuito e o ticket pago?
+### Q-013 — Como funciona o respec?
 
-- **Gate:** F2 antes de monetização.
-- **Dono recomendado:** produto + economy designer.
-- **Recomendação provisória:** primeiro respec guiado gratuito; moeda de jogo com custo previsível para os seguintes; cooldown curto contra abuso. Ticket pago é conveniência opcional e jamais a única rota.
-- **Impacto:** confiança, experimentação, economia e percepção de pay-to-win.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro (seleção delegada ao Codex).
+- **Política aprovada:** desfazer gratuito durante 30 min e primeira troca permanente
+  gratuita por técnica; nível e XP são preservados.
+- **Justificativa:** experimentar não deve punir o novato, mas mudanças repetidas ainda
+  precisam de um sumidouro leve e proteção contra troca oportunista em combate.
+- **Baseline:** `500 + 150 × nível + 250 × respecs nos últimos 7 dias`, máximo
+  3.000 Marcas, com cooldown de 5 min por técnica.
+- **Contexto:** somente zona segura/treino ou antes de confirmar fila.
+- **Monetização:** ticket pago fica fora do soft launch; se existir depois, apenas
+  substitui moeda e não ignora cooldown ou contexto.
 
-### Q-014 — Quanto atributo bruto um equipamento pode conceder?
+### Q-014 — Quanto atributo bruto um equipamento concede?
 
-- **Gate:** F2.
-- **Dono recomendado:** combat/economy design.
-- **Recomendação provisória:** equipamento majoritariamente modifica comportamento; orçamento bruto pequeno e capado por categoria. Ranked normaliza atributos, mas mantém escolhas de modificador previamente aprovadas.
-- **Impacto:** power creep, loot, forja, PvP aberto e normalização.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro (seleção delegada ao Codex).
+- **Política aprovada:** três slots e sidegrades comportamentais como valor principal.
+- **Justificativa:** poucos slots e caps pequenos mantêm equipamento desejável sem
+  transformar drop em vantagem obrigatória ou dupla de ataque e sobrevivência.
+- **Baseline:** no máximo um bônus bruto de 2% por item; conjunto limitado a 5 pontos
+  percentuais positivos e um atributo limitado a +3%.
+- **Invariante:** item não aumenta ataque e sobrevivência ao mesmo tempo.
+- **Competitivo:** ranked remove bônus brutos e normaliza modificadores ao grau 3.
 
 ### Q-015 — A forja terá falha aleatória?
 
-- **Gate:** F2.
-- **Dono recomendado:** economy design + produto.
-- **Opções:** determinística; chance com medidor de garantia; risco apenas em material bônus; destruição/rebaixamento.
-- **Recomendação provisória:** determinística no lançamento. Se testes pedirem tensão, usar garantia crescente e nunca destruir o item principal.
-- **Impacto:** inflação, frustração, monetização, suporte e confiança.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro (seleção delegada ao Codex).
+- **Política aprovada:** forja totalmente determinística, sem falha, pity, destruição
+  ou rebaixamento.
+- **Justificativa:** progresso previsível reduz frustração e suporte, preserva confiança
+  econômica e elimina a pressão de monetizar proteção contra azar.
+- **Baseline:** cinco graus com potência 60/70/80/90/100% e custo relativo
+  1/2/3/5/8.
+- **Atomicidade:** falha técnica não consome materiais.
+- **Separação:** pity existe apenas em loot pessoal de boss, nunca em aprimoramento.
 
-### Q-016 — Quantos presets/loadouts são gratuitos?
+### Q-016 — Quantos presets são gratuitos?
 
-- **Gate:** F2.
-- **Dono recomendado:** produto.
-- **Recomendação provisória:** ao menos 3 presets gratuitos para permitir experimentação entre PvE, mundo aberto e arena; vender expansão de conveniência, não acesso básico a builds.
-- **Impacto:** UX, monetização e disposição para experimentar.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro (seleção delegada ao Codex).
+- **Política aprovada:** três presets gratuitos — PvE, Mundo e Arena — e máximo de
+  seis.
+- **Justificativa:** três contextos cobrem o uso principal sem atrito; os adicionais
+  vendem conveniência sem ampliar poder ou quantidade de ações equipadas.
+- **Monetização:** o pacote opcional do soft launch pode acrescentar três presets; nunca altera slots
+  ativos ou impacto.
 
-## 4. Decisões necessárias durante as fases 3 a 7
+## 4. Mundo, economia e sistemas sociais
 
 ### Q-017 — Qual formato de mundo será usado?
 
-- **Gate:** pré-produção da F3.
-- **Dono recomendado:** world design + engenharia.
-- **Opções:** um place com streaming; múltiplas regiões por teleport; hubs instanciados; híbrido.
-- **Recomendação provisória:** híbrido: região inicial coesa e pequena com streaming, regiões/arenas de escala ou regra distinta em places próprios. Escolher após profiling, não pela fantasia de “mundo sem loading”.
-- **Impacto:** sensação de MMO, party, persistência transitória, eventos, custo de mapa e falhas de teleporte.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro (seleção delegada ao Codex).
+- **Política aprovada:** topologia híbrida enxuta: um `World Place` com streaming
+  para vila/região inicial/zona livre e um `Arena Place` reservado.
+- **Justificativa:** um mundo compacto preserva continuidade e reduz operação, enquanto
+  o place separado permite isolamento e recuperação das regras competitivas.
+- **Gate:** região futura só ganha place próprio quando profiling ou regra distinta
+  justificar a divisão.
 
-### Q-018 — Qual perda de morte é justa em cada zona?
+### Q-018 — Qual perda de morte é justa?
 
-- **Gate:** F3 antes de abrir PvP de risco.
-- **Dono recomendado:** economy + PvP design.
-- **Recomendação provisória:** segura: nenhuma perda; livre: parte do recurso não consolidado com teto; alto risco: fração maior e respawn mais distante. Nunca equipamento, nível consolidado ou moeda premium.
-- **Impacto:** tensão, abandono, camping, inflação e valor da escolta/party.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro (seleção delegada ao Codex).
+- **Baseline:** segura/treino 0; livre PvE perde 10% do XP não consolidado; livre PvP
+  perde 15% do XP e 5% de material comum; alto risco perde 30% e 15%.
+- **Justificativa:** a perda comunica risco e cria sumidouro sem apagar progresso
+  permanente; caps por tempo impedem que uma morte encerre a sessão.
+- **Caps:** equivalente a 5 min de ganho na zona livre e 10 min no alto risco.
+- **Invariante:** equipamento, moeda, maestria, missão, cosmético e item pago nunca
+  caem; material perdido sai da economia e não vai ao agressor.
 
-### Q-019 — O jogo terá troca entre jogadores no lançamento?
+### Q-019 — Haverá troca no lançamento?
 
-- **Gate:** decisão de escopo do soft launch.
-- **Dono recomendado:** produto + economia + segurança + suporte.
-- **Recomendação provisória:** não. Estabilizar inventário/economia primeiro; depois testar mercado mediado com escrow, bind, imposto, limites, logs e reversão.
-- **Impacto:** retenção social, scam, RMT, duplicação, suporte e inflação.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro (seleção delegada ao Codex).
+- **Política aprovada:** não há troca, presente, empréstimo nem drop no chão no
+  lançamento.
+- **Justificativa:** adiar transferência entre contas reduz superfície de dupe, fraude,
+  mercado cinza e suporte até a economia provar reconciliação confiável.
+- **Futuro:** mercado somente por escrow para materiais/projetos não vinculados.
+- **Gate:** 30 dias sem dupe crítico, retries/reconexões reconciliados e menos de
+  0,1% das operações exigindo reparo manual. Taxas finais dependem da economia real.
 
 ### Q-020 — Como bosses distribuem recompensa?
 
-- **Gate:** F3.
-- **Dono recomendado:** PvE/economy design.
-- **Recomendação provisória:** participação elegível por contribuição multidimensional e presença, com proteção a suporte e piso/teto; recompensa pessoal rollada no servidor, não drop físico disputado.
-- **Impacto:** leeching, toxicidade, party, anti-cheat e economia.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro (seleção delegada ao Codex).
+- **Política aprovada:** loot pessoal server-side por dano, cura efetiva, mitigação,
+  controle, interrupção, objetivo e presença; MVP não melhora chance rara.
+- **Justificativa:** contribuição multidimensional inclui suporte e objetivos, evita
+  disputa por último golpe e não recompensa burst excessivo com odds melhores.
+- **Baseline:** presença mínima equivalente a 40% do encontro ou 90 s, o que ocorrer
+  primeiro; contribuição efetiva
+  mínima de 1% da vida; material e ficha garantidos; raro começa em 5%, soma
+  5 pontos percentuais por falha e é garantido no décimo clear elegível.
+- **Gate:** thresholds e odds são versionados e recalibrados por participação real.
 
-### Q-021 — Reputação é conta, personagem ou temporada?
+### Q-021 — Reputação é conta, estilo ou temporada?
 
-- **Gate:** F4.
-- **Dono recomendado:** social systems design.
-- **Recomendação provisória:** reputação principal por conta, com estado recente decaindo e histórico de infrações usado apenas pelo servidor. Evita escapar da consequência trocando build/personagem.
-- **Impacto:** persistência, recuperação, privacidade e smurfing.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro (seleção delegada ao Codex).
+- **Política aprovada:** persistente por conta, compartilhada entre estilos e
+  loadouts; faixa pública de -1.000 a +1.000.
+- **Justificativa:** reputação por conta impede escapar de consequências trocando build,
+  enquanto o histórico privado sustenta antiabuso sem expor dados desnecessários.
+- **Privacidade:** histórico agregado de infrações fica privado no servidor e tem
+  retenção limitada; reputação não substitui sanção de moderação.
 
-### Q-022 — Como comparar “jogador muito abaixo” para punir caça a novato?
+### Q-022 — Como identificar caça a jogador muito abaixo?
 
-- **Gate:** F4.
-- **Dono recomendado:** data + PvP design.
-- **Recomendação provisória:** poder efetivo composto por progresso, equipamento normalizado, MMR incerto e contexto de grupo; nunca usar apenas nível exibido. Excluir autodefesa comprovável e guerra/evento formal.
-- **Impacto:** justiça da reputação, exploração e clareza para o jogador.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro (seleção delegada ao Codex).
+- **Política aprovada:** Effective Power Score derivado pelo servidor, de 0–100:
+  progressão 30, completude do loadout 25, maestria 20, equipamento 15 e desempenho
+  PvP com incerteza 10.
+- **Justificativa:** combinar progressão, build, equipamento e habilidade estimada é
+  mais resistente a abuso do que usar apenas nível ou rating competitivo.
+- **Grupo:** o lado agressor recebe até 30 pontos adicionais conforme superioridade
+  numérica e coordenação recente; a função exata é baseline versionado de playtest.
+- **Classificação:** alvo muito abaixo quando a diferença ajustada é ≥25 e o lado
+  agressor possui ≥1,35× o poder.
+- **Exceções:** autodefesa, bounty, duelo aceito, guerra e evento formal.
 
-### Q-023 — Quais poderes um líder de clã pode exercer?
+### Q-023 — Quais poderes um líder de clã exerce?
 
-- **Gate:** F5.
-- **Dono recomendado:** social design + trust & safety.
-- **Recomendação provisória:** permissões granulares; espera e confirmação para ações críticas; bens pessoais nunca confiscáveis; transferência de liderança recuperável; trilha de auditoria visível aos cargos adequados.
-- **Impacto:** abuso interno, suporte, banco e retenção social.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro (seleção delegada ao Codex).
+- **Política aprovada:** três cargos públicos — Líder, Oficial e Membro — com
+  permissões granulares e auditáveis.
+- **Justificativa:** poucos cargos reduzem confusão e suporte; atrasos e auditoria
+  protegem decisões irreversíveis sem exigir uma hierarquia extensa no F5.
+- **Proteções:** transferência espera 72 h; dissolução espera 7 dias; gasto acima de
+  25% dos suprimentos espera 24 h.
+- **Escopo F5:** sem saque livre, cargos customizados ou bens pessoais no banco.
 
 ### Q-024 — Território é necessário antes do lançamento?
 
-- **Gate:** fim da F5.
-- **Dono recomendado:** produto.
-- **Recomendação provisória:** não. Primeiro validar eventos competitivos de clã; território sazonal entra somente se houver população, cobertura de fusos e anticolusão suficientes.
-- **Impacto:** prazo, concentração de poder, mapa, economia e operação.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro (seleção delegada ao Codex).
+- **Política aprovada:** não; território é F7 opcional e pós-lançamento.
+- **Justificativa:** território depende de população, teleporte e economia estáveis e
+  não deve bloquear o núcleo Action RPG ou o primeiro lançamento público.
+- **Gate:** quatro semanas de eventos estáveis, 20 clãs elegíveis, 200 participantes
+  semanais, 80% dos eventos formando ao menos 6v6, no-show <10%, teleporte >99% e
+  30 dias sem incidente econômico crítico.
 
-### Q-025 — O que é normalizado em torneios?
+## 5. Competitivo, monetização e operação
 
-- **Gate:** início da F6.
-- **Dono recomendado:** competitive design.
-- **Recomendação provisória:** casual usa build/equipamento próprios; ranked e torneio de topo preservam loadout, maestrias comportamentais elegíveis e identidade, mas normalizam atributos brutos e qualidade do item. Lista de modificadores banidos/capados é versionada.
-- **Impacto:** valor da progressão, integridade competitiva e entendimento do espectador.
+### Q-025 — O que é normalizado?
 
-### Q-026 — Qual formato de torneio cabe na população real?
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro (seleção delegada ao Codex).
+- **Política aprovada:** ranked/torneio normaliza HP, dano, guarda, recurso, níveis
+  numéricos e refinamento; remove atributos brutos.
+- **Justificativa:** preserva expressão de build e conhecimento conquistado, mas remove
+  a vantagem estatística que impediria comparação competitiva justa.
+- **Preservado:** habilidades desbloqueadas, loadout, Dissonância e variantes legais.
+- **Acesso:** dois loadouts de empréstimo versionados, sem unlock no mundo.
 
-- **Gate:** F6 após dados de concorrência.
-- **Dono recomendado:** live ops + competitive design.
-- **Opções:** eliminação simples curta; suíço; grupos + bracket; torneios por região/plataforma.
-- **Recomendação provisória:** eliminação simples com check-in e brackets pequenos no primeiro corte; expandir só com concorrência e teleporte confiáveis.
-- **Impacto:** tempo de espera, no-show, justiça, servidor e operação.
+### Q-026 — Qual formato de torneio?
 
-### Q-027 — Qual sistema de rating e quais filas existem?
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro (seleção delegada ao Codex).
+- **Baseline:** 1v1, eliminação simples, 8 participantes, melhor de três rounds de
+  90 s; check-in abre 10 min antes e fecha 2 min antes.
+- **Justificativa:** o bracket curto cabe na população e na capacidade operacional
+  inicial, com duração previsível e espaço para adaptação entre rounds.
+- **População:** abaixo de 8 cancela o oficial e oferece casual sem MMR.
+- **Expansão:** 16 participantes só após quatro semanas com 80% dos brackets completos
+  e no-show <10%.
 
-- **Gate:** F6.
-- **Dono recomendado:** data/competitive design.
-- **Recomendação provisória:** rating com incerteza (família Glicko/TrueSkill-like) em vez de ELO puro; uma fila principal por região no início para não fragmentar população; divisão visível suavizada.
-- **Impacto:** qualidade de partida, smurfing, decay, leaderboard e tempo de fila.
+### Q-027 — Qual rating e quais filas?
+
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro (seleção delegada ao Codex).
+- **Política aprovada:** Glicko-2 e uma fila ranked 1v1 por região; casual por desafio.
+- **Justificativa:** Glicko-2 modela incerteza de contas novas/inativas, e uma única fila
+  evita fragmentar a população de um soft launch regionalmente focado.
+- **Baseline:** rating 1.500, RD 350, volatilidade 0,06, `tau` 0,5 e 10 colocações.
+- **Divisões provisórias:** Bronze <1200; Prata 1200–1399; Ouro 1400–1599;
+  Platina 1600–1799; Diamante 1800–1999; Ascendente 2000–2199; Lenda ≥2200.
+- **Gate:** limites visíveis são recalibrados depois da pré-temporada.
 
 ### Q-028 — Quais recompensas sazonais são aceitáveis?
 
-- **Gate:** antes da primeira temporada.
-- **Dono recomendado:** produto + economy design.
-- **Recomendação provisória:** cosméticos, títulos e material comum capado; nada exclusivo que aumente poder. Recompensa de participação não deve incentivar bot/AFK.
-- **Impacto:** motivação, FOMO, economia e anti-boost.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro (seleção delegada ao Codex).
+- **Política aprovada:** banner, cores, aura/finalização legível e títulos; Top 100
+  recebe título numerado. Nada negociável ou com poder.
+- **Justificativa:** prestígio visual reconhece desempenho sem criar vantagem futura,
+  liquidez especulativa ou obrigação de grind competitivo.
+- **Elegibilidade:** recompensa de divisão exige 20 partidas válidas e conduta válida.
+- **Baseline:** pré-temporada de 4 semanas; temporadas regulares de 8 semanas, sujeitas
+  a revisão formal depois da evidência de população e retorno.
 
 ### Q-029 — Quais produtos pagos entram primeiro?
 
-- **Gate:** antes do soft launch monetizado.
-- **Dono recomendado:** produto + jurídico/plataforma + economy design.
-- **Recomendação provisória:** cosméticos e slots de preset/inventário após UX gratuita adequada. Adiar boost e respec pago até medir impacto; excluir poder, moeda competitiva exclusiva e bypass de risco.
-- **Impacto:** receita, percepção de justiça, público menor e balanceamento.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro (seleção delegada ao Codex).
+- **Soft launch:** cosméticos de compra direta, emotes/finalizadores, pacote de três
+  presets e servidor privado de treino sem progresso.
+- **Justificativa:** compra direta e conveniência delimitada tornam valor e preço claros,
+  sem atrelar receita a poder, moeda, inventário funcional ou aleatoriedade.
+- **Fora:** boost, respec pago, expansão funcional de inventário, moeda, gacha,
+  materiais, personagem, técnica ou proteção de RNG.
+- **Gate futuro:** aleatoriedade paga exigiria odds reais e PolicyService, mas não
+  pertence à direção inicial.
 
 ### Q-030 — O jogo operará globalmente desde o início?
 
-- **Gate:** planejamento do soft launch.
-- **Dono recomendado:** produto + operações.
-- **Questão:** idiomas, regiões, fusos, suporte e capacidade de moderação estão cobertos?
-- **Recomendação provisória:** soft launch limitado aos idiomas/regiões que a equipe consegue suportar; arquitetura de texto e horários preparada para localização desde F0.
-- **Impacto:** torneios, clãs, suporte, conteúdo, UI e conformidade.
+- **Estado:** ✅ DECIDIDO — 2026-08-12 — Álvaro (seleção delegada ao Codex).
+- **Política aprovada:** acesso técnico global; aquisição, suporte e calendário do
+  soft launch focados no Brasil.
+- **Justificativa:** concentra aquisição e suporte para obter sinal operacional útil,
+  mantendo acesso amplo e regras de tempo independentes de idioma ou fuso.
+- **Idiomas:** PT-BR e inglês revisados manualmente; outros podem usar tradução
+  automática sem promessa inicial de suporte.
+- **Tempo:** persistir UTC e exibir no horário local; matchmaking prioriza latência.
 
-## 5. Decisões recomendadas pelo plano, aguardando aprovação
+## 6. Decisões adicionais consolidadas
 
-| ID | Decisão proposta | Estado | Gate de aprovação |
+| ID | Decisão | Estado |
+|---|---|---|
+| A-001 | Nomes atuais das regiões aprovados para planejamento, sujeitos ao P1 | Aprovada — 2026-08-12 — seleção delegada |
+| A-002 | Proteção de novato até onboarding + 30 min, expira em 90 min ou saída voluntária | Aprovada — 2026-08-12 — seleção delegada |
+| A-003 | Escala de reputação atual, desconto máximo 5% e acampamento neutro | Aprovada — 2026-08-12 — seleção delegada |
+| A-004 | Clã começa em 20 membros, cresce até 40; primeiro evento usa 8v8 | Aprovada — 2026-08-12 — seleção delegada |
+| A-005 | Território futuro concede até 5% de material comum, nunca poder/raridade exclusiva | Aprovada — 2026-08-12 — seleção delegada |
+| A-006 | Pré-temporada: quarta 20h, sábado 15h e 21h de Brasília, exibidos localmente | Aprovada — 2026-08-12 — seleção delegada |
+
+## 7. Registro D-001 a D-020
+
+| ID | Decisão | Estado | Gate |
 |---|---|---|---|
-| D-001 | Construir MMO de progressão; arena é contexto competitivo, não produto principal | Proposta | P0 |
-| D-002 | F0 contém apenas uma fatia ponta a ponta; sem roster grande | Proposta | P0 |
-| D-003 | Arquitetura server-authoritative; cliente prevê apenas apresentação | Proposta | P0 |
-| D-004 | Habilidade, recurso, item e conteúdo são dirigidos por dados versionados | Proposta | P0 |
-| D-005 | Modelo combinado de slots + afinidade/ressonância suave | Proposta | F1 |
-| D-006 | Progressão usa marcos comportamentais e ganhos numéricos pequenos/capados | Proposta | F2 |
-| D-007 | Equipamento prioriza modificadores laterais; atributo bruto é mínimo | Proposta | F2 |
-| D-008 | Falha de forja não destrói equipamento principal | Proposta | F2 |
-| D-009 | Morte nunca derruba equipamento equipado | Proposta | F3 |
-| D-010 | Troca direta e território ficam fora do lançamento inicial | Proposta | F5/soft launch |
-| D-011 | Ranked preserva build, mas normaliza atributo bruto de equipamento | Proposta | F6 |
-| D-012 | Monetização não vende poder e mantém rotas gratuitas de respec/progresso | Proposta | Soft launch |
-| D-013 | Identidade visual mantém silhuetas/kits próximos dos animes; só nomes públicos são trocados (risco jurídico aceito) | Aprovada — 2026-08-12 — Álvaro | P1 |
-| D-014 | Nome “Anime Verse Battlegrounds” mantido, condicionado a busca de marca | Aprovada — 2026-08-12 — Álvaro | P1 |
-| D-015 | Público 13+, tom sombrio, gore leve (dentro das políticas Roblox) | Aprovada — 2026-08-12 — Álvaro | P0 |
-| D-016 | Equipe 1-3 pessoas; conteúdo reduzido em todas as fases, gates técnicos mantidos | Aprovada — 2026-08-12 — Álvaro | P0 |
-| D-017 | Matriz mínima: Android entrada + mediano + PC integrado + gamepad | Aprovada — 2026-08-12 — Álvaro | P0 |
-| D-018 | Combate com soft lock contextual + aim assist configurável | Aprovada — 2026-08-12 — Álvaro | P0 |
-| D-019 | 16-24 jogadores por servidor; arenas em places reservados | Aprovada — 2026-08-12 — Álvaro | P0 |
-| D-020 | Fatia vertical padrão na F0; ultimate é stretch goal | Aprovada — 2026-08-12 — Álvaro | P0 |
+| D-001 | RPG / Action RPG de progressão; arena é contexto competitivo | Aprovada — 2026-08-12 — Álvaro (seleção delegada ao Codex) | P0 |
+| D-002 | F0 é fatia ponta a ponta sem roster grande | Aprovada — 2026-08-12 — Álvaro (seleção delegada ao Codex) | P0 |
+| D-003 | Servidor autoritativo; cliente prevê apresentação | Aprovada — 2026-08-12 — Álvaro (seleção delegada ao Codex) | P0 |
+| D-004 | Conteúdo dirigido por dados versionados | Aprovada — 2026-08-12 — Álvaro (seleção delegada ao Codex) | P0 |
+| D-005 | Slots + impacto + Ressonância suave, com rawD > 3 inválido | Aprovada — 2026-08-12 — Álvaro (seleção delegada ao Codex) | F1 |
+| D-006 | Marcos comportamentais e ganhos numéricos capados | Aprovada — 2026-08-12 — Álvaro (seleção delegada ao Codex) | F2 |
+| D-007 | Equipamento lateral, teto agregado 5 pp e +3% por atributo | Aprovada — 2026-08-12 — Álvaro (seleção delegada ao Codex) | F2 |
+| D-008 | Forja inicial determinística; nunca destrói nem rebaixa | Aprovada — 2026-08-12 — Álvaro (seleção delegada ao Codex) | F2 |
+| D-009 | Morte nunca derruba equipamento equipado | Aprovada — 2026-08-12 — Álvaro (seleção delegada ao Codex) | F3 |
+| D-010 | Troca e território ficam fora do lançamento; F7 é pós-lançamento | Aprovada — 2026-08-12 — Álvaro (seleção delegada ao Codex) | pós-lançamento |
+| D-011 | Ranked preserva build legal e normaliza números/equipamento | Aprovada — 2026-08-12 — Álvaro (seleção delegada ao Codex) | F6 |
+| D-012 | Monetização não vende poder e mantém rotas gratuitas | Aprovada — 2026-08-12 — Álvaro (seleção delegada ao Codex) | soft launch |
+| D-013 | Visual/kits próximos das referências, só nomes trocados; risco aceito | Aprovada — 2026-08-12 — Álvaro | P1 |
+| D-014 | Nome Anime Verse Battlegrounds mantido, sujeito a busca de marca | Aprovada — 2026-08-12 — Álvaro | P1 |
+| D-015 | Público 13+, sombrio, gore leve dentro das políticas | Aprovada — 2026-08-12 — Álvaro | P0 |
+| D-016 | Equipe 1–3; reduzir conteúdo e preservar gates técnicos | Aprovada — 2026-08-12 — Álvaro | P0 |
+| D-017 | Matriz: Android entrada/mediano, PC integrado e gamepad | Aprovada — 2026-08-12 — Álvaro | F0 |
+| D-018 | Soft lock contextual e aim assist configurável | Aprovada — 2026-08-12 — Álvaro | F0 |
+| D-019 | Alvo 16–24 jogadores; arenas reservadas | Aprovada — 2026-08-12 — Álvaro | F0 |
+| D-020 | F0 padrão; ultimate é stretch goal | Aprovada — 2026-08-12 — Álvaro | F0 |
 
-Ao aprovar uma decisão, substituir “Proposta” por `Aprovada — AAAA-MM-DD — responsável` e acrescentar uma nota curta se a decisão divergir da recomendação.
+## 8. Perguntas de pesquisa, não de preferência
 
-## 6. Perguntas de pesquisa, não de preferência
-
-Estas respostas devem vir de evidência:
-
-| ID | Pergunta | Método recomendado | Fase |
+| ID | Pergunta | Método | Fase |
 |---|---|---|---:|
-| R-001 | O combate continua responsivo com autoridade total? | teste com latência/perda + análise de correções | F0 |
-| R-002 | Jogadores percebem a fronteira PvP antes de sofrer dano? | teste cego de navegação | F0 |
-| R-003 | Soft lock favorece demais uma plataforma? | comparação PC/toque/gamepad | F0/F1 |
-| R-004 | Híbridos são viáveis sem dominar? | simulação + torneio interno de builds | F1 |
-| R-005 | Quanto custa produzir e validar uma habilidade? | medir ciclo completo de três habilidades | F1 |
-| R-006 | Progressão muda decisão ou só aumenta número? | teste A/B qualitativo de marcos | F2 |
-| R-007 | Quais faucets geram inflação? | simulação e coortes de teste | F2/F3 |
-| R-008 | A morte incentiva tensão ou abandono? | abandono pós-morte + entrevistas | F3/F4 |
-| R-009 | Reputação reduz caça a novato sem punir autodefesa? | cenários adversariais + dados de encontros | F4 |
-| R-010 | Há população para dividir filas/torneios? | concorrência por região, hora e rank | F6 |
+| R-001 | Autoridade continua responsiva? | latência/perda e correções | F0 |
+| R-002 | Fronteira PvP é percebida? | teste cego | F0 |
+| R-003 | Soft lock favorece plataforma? | PC/toque/gamepad | F0/F1 |
+| R-004 | Híbridos são viáveis sem dominar? | simulação + torneio interno | F1 |
+| R-005 | Quanto custa produzir habilidade? | medir três ciclos completos | F1 |
+| R-006 | Marcos mudam decisão? | teste qualitativo/A-B | F2 |
+| R-007 | Quais faucets inflam a economia? | simulação + coortes | F2/F3 |
+| R-008 | Morte cria tensão ou abandono? | abandono + entrevista | F3/F4 |
+| R-009 | Reputação reduz caça a novato? | cenários adversariais + dados | F4 |
+| R-010 | Há população para filas/torneios? | concorrência por região/hora/rank | F6 |
+| R-011 | FTUE entrega ação e identidade? | funil 60 s/3 min/5 min | F0 |
+| R-012 | Pity de boss reduz frustração sem inundar economia? | clears, abandono e emissão | F3 |
 
-## 7. Questões que não devem ser decididas cedo demais
+## 9. Valores deliberadamente não finais
 
-- número final de regiões e personagens;
-- cadência pública permanente de conteúdo;
-- valor de bônus territoriais;
-- taxas e limites de mercado entre jogadores;
-- fórmula final de MMR;
-- duração definitiva de temporada;
+Continuam dependentes de playtest, profiling, economia ou população:
+
+- dano, cooldown, regen, alcance, hitbox e drop finais;
+- máximo definitivo de servidor acima do baseline 16;
+- taxas futuras de mercado;
+- duração permanente de temporada depois da pré-temporada;
 - preços em Robux;
-- tamanho máximo de servidor;
-- números finais de dano, cooldown, regen e drop.
+- quantidade final de regiões, identidades e conteúdo por atualização;
+- limites finais de MMR/divisões;
+- budgets de frame, memória e rede por dispositivo real.
 
-Esses itens dependem de custo real de produção, profiling, economia observada e população. Fixá-los agora produziria falsa precisão.
+Mudar um baseline exige versão, hipótese, evidência e registro. Não exige reabrir a
+política inteira quando o objetivo aprovado permanece igual.

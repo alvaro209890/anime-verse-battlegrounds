@@ -1,10 +1,24 @@
 # Anime Verse Battlegrounds
 
-Action MMO de mundo aberto no Roblox (Luau) — combate estilo battlegrounds com progressão,
-loadout customizável e ressonância de famílias de energia.
+RPG / Action RPG de mundo aberto no Roblox (Luau) — combate estilo battlegrounds com
+progressão persistente, loadout customizável e ressonância de famílias de energia.
 
-> **Status:** planejamento + esqueleto F0 (fatia vertical). Documentos de produto em
-> `docs/00` a `docs/12`. Código inicial em `src/`.
+> **Status em 2026-08-12:** decisões de produto consolidadas + esqueleto técnico F0.
+> O repositório ainda não contém uma fatia jogável completa.
+
+## Estado comprovado
+
+| Camada | Estado |
+|---|---|
+| Produto | Q-001 a Q-030 decididas; `docs/09-OPEN-QUESTIONS.md` é o registro canônico |
+| Planejamento | visão, GDD, mundo, social, arquitetura, schemas, segurança, roster, roadmap e benchmark documentados |
+| Implementado | catálogos iniciais, resource/ability/combat services, gateway de remotes, sessão/save adapter, bootstrap e cliente mínimo |
+| Validado automaticamente | 22 testes Lune + Selene + StyLua check + Wally + build Rojo no CI |
+| Ainda não comprovado | feeling/runtime no Studio, servidor publicado, DataStore real, latência, mobile, gamepad, performance e UX visual |
+
+O CI do commit `33eca73` passou em
+[2026-08-12](https://github.com/alvaro209890/anime-verse-battlegrounds/actions/runs/31618843968).
+Um build verde valida contratos headless e a árvore Rojo; não substitui playtest.
 
 ## Stack
 
@@ -39,15 +53,20 @@ src/
   server/            services (bootstrap, recurso, habilidade, combate, rede, sessão)
   client/            controllers (bootstrap de apresentação)
 tests/               harness Lune + 22 testes unitários
-docs/                planejamento (00-VISION a 09-OPEN-QUESTIONS) + implementação
+docs/                produto, arquitetura, decisões, benchmark e testes (00 a 12)
 lib/                 bibliotecas pinadas (ProfileStore)
 ```
 
 ## Docs principais
 
-- `docs/00-VISION.md` — visão, pilares, público, curva de poder
-- `docs/04-ARCHITECTURE.md` — arquitetura service/controller, ADRs
-- `docs/05-DATA-SCHEMA.md` — schemas de dados e de definição
-- `docs/06-ROADMAP.md` — fases e gates
-- `docs/11-ABILITY-SPEC.md` — como adicionar habilidade (spec do formato)
-- `docs/12-TESTING.md` — como rodar e o que cobre os testes
+- [docs/00-VISION.md](docs/00-VISION.md) — visão, pilares, público, curva de poder
+- [docs/04-ARCHITECTURE.md](docs/04-ARCHITECTURE.md) — arquitetura service/controller, ADRs
+- [docs/05-DATA-SCHEMA.md](docs/05-DATA-SCHEMA.md) — schemas de dados e de definição
+- [docs/06-ROADMAP.md](docs/06-ROADMAP.md) — fases e gates
+- [docs/09-OPEN-QUESTIONS.md](docs/09-OPEN-QUESTIONS.md) — fonte canônica de decisões
+- [docs/10-MARKET-BENCHMARKS.md](docs/10-MARKET-BENCHMARKS.md) — evidência de mercado datada e limites de uso
+- [docs/11-ABILITY-SPEC.md](docs/11-ABILITY-SPEC.md) — como adicionar habilidade (spec do formato)
+- [docs/12-TESTING.md](docs/12-TESTING.md) — como rodar e o que cobre os testes
+
+`PROMPT_AnimeVerseBattlegrounds_v2.md` é o briefing histórico que originou o
+planejamento. Em conflito, os documentos canônicos em `docs/` prevalecem.

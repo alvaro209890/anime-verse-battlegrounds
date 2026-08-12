@@ -14,7 +14,7 @@ Princípios:
 6. **Economia auditável.** Criação, transferência e consumo têm origem e operationId.
 7. **Operação reversível.** Sistemas de risco possuem kill switch e modo somente leitura.
 
-Este é um plano. Limites e ferramentas citados precisam ser medidos e implementados em fases.
+Este documento combina baseline existente e alvo. O repositório já possui registry de remotes, validações iniciais de catálogo/serviços e CI com StyLua, Selene, 22 testes Lune, Wally e build Rojo. Esses checks não provam DataStore real, teleporte, network ownership, múltiplos servidores, Studio ou dispositivos; os controles restantes precisam ser implementados e medidos por fase.
 
 ## 2. Ativos e fronteiras de confiança
 
@@ -81,22 +81,24 @@ Nomes são contratos lógicos; a implementação futura pode agrupá-los sem enf
 | GuardIntent | begin/end | Estado, stamina/recurso, transição mínima, rate | Bloqueio retroativo ou dano negado |
 | MovementAbilityIntent | abilityId/direção quantizada | Estado, cooldown, recurso, velocidade/deslocamento máximo, colisão, zona | CFrame final, distância livre, invulnerabilidade |
 | InteractionIntent | entityId, action enum | Entidade server-side, distância, linha de visão, estado, zona, permissão | Recompensa, preço, quest progress |
-| LoadoutCommand | IDs de slots, ultimate, equipamento, revisão | Posse, unlock, custo de slots, ressonância recalculada, fora de combate, local permitido | Stats calculados, bônus, família declarada |
+| LoadoutCommand | IDs de 4 slots, ultimate, técnica Definidora opcional, equipamento, revisão | Posse, unlock, capacidade 4, impacto ≤12, no máximo uma Definidora, `rawD` recalculado e ≤3, fora de combate, local permitido | Stats calculados, bônus, família ou Dissonância declarada |
 | InventoryCommand.Equip | itemInstanceId, slot, revisão | Propriedade, estado Owned, compatibilidade, trade lock, modo, revisão | Modificadores e atributos finais |
-| Craft/UpgradeCommand | recipeId, itemInstanceId, quantidade, operationId | Receita, materiais, saldo, cap, lock, RNG server-side, idempotência | Chance/roll, resultado, custo |
-| TradeCommand | tradeId, ação, oferta por IDs/quantidades, revisão | Participante, proximidade/contexto se exigido, ownership, escrow, confirmação exata, lock, idempotência | Novo proprietário, saldo final, commit unilateral |
+| Craft/UpgradeCommand | recipeId, itemInstanceId, grau, operationId | Receita, grau determinístico, materiais, saldo, caps, lock, idempotência | Roll, resultado escolhido, custo ou grau fora da receita |
+| TradeCommand (F7 pós-lançamento) | tradeId, ação, oferta por IDs/quantidades, revisão | Feature gate, participante, ownership, escrow, confirmação exata, lock, idempotência | Novo proprietário, saldo final, commit unilateral |
 | QuestCommand.Accept | questId, NPC/entityId | Pré-requisito, distância, janela, capacidade, estado | Quest arbitrária/etapa concluída |
 | QuestCommand.Claim | questId, stepRevision, operationId | Objetivos derivados, não reclamado, recompensa de catálogo, idempotência | Contadores, itemId/quantidade desejada |
 | ClanCommand.Invite/Role | clanId, targetUserId, roleId, revisão | Membership atual, permissão do ClanRecord, caps, filtro, cooldown | Cargo do emissor ou permissão declarada |
 | ClanBankCommand | operação, IDs/quantidades, revisão, operationId | Membership/cargo atuais, saldo/posse, bankRevision, limites, ledger | Saldo final ou saque sem recibo |
-| ClanWarCommand | adversário, janela/objetivo permitido | Cargo, temporada, custos, conflito, janela e território válidos | Vencedor, score ou território final |
+| ClanWarCommand (F7 pós-lançamento) | adversário, janela/objetivo permitido | Feature gate, cargo, temporada, custos, conflito, janela e território válidos | Vencedor, score ou território final |
 | TournamentCommand.Register | tournamentId/loadoutId, requestId | Janela, elegibilidade, rank, ausência de conflito, loadout reconstruído | MMR, seed, equipamento normalizado |
 | TournamentCommand.Ready/Forfeit | matchId, token/contexto | Participante, servidor/estado, janela, sequência | Resultado arbitrário ou prêmio |
 | SpectateCommand | matchId/targetUserId | Match visível, alvo participante, atraso/política competitiva | Câmera/posição usada como ação de jogo |
 | SettingsCommand | campos permitidos e revisão | Schema, tamanho, frequência, filtro quando texto | Qualquer campo de perfil fora de settings |
 | ClientTelemetry | enum e medidas limitadas | Allowlist, tamanho, rate; nunca vira prova isolada | Sanção, recompensa ou estado de jogo |
 
-Não criar remote genérico de “UpdateProfile”, “DealDamage”, “GiveItem”, “SetPosition”, “CompleteQuest” ou “SetRank”.
+Não criar remote genérico de “UpdateProfile”, “DealDamage”, “GiveItem”, “SetPosition”, “CompleteQuest” ou “SetRank”. `rawD > 3` sempre rejeita o loadout; aplicar `min(3, rawD)` esconderia uma composição inválida e é proibido.
+
+O servidor também limita presets a três gratuitos e seis com entitlement verificado. Entitlement não amplia os quatro slots, impacto, quantidade de Definidoras ou Dissonância.
 
 ## 6. Rate limits conceituais
 
@@ -132,14 +134,14 @@ Controles complementares:
 | Recurso/cooldown | Energia infinita, regen acelerada, reset de cooldown | Pools/timers no servidor, modifiers com fonte, caps absolutos, snapshots/deltas | Dessync visual requer resync claro |
 | Zona/PvP | Entrar em alto nível, atacar da zona segura, evitar penalidade cruzando borda | Zona calculada no servidor, grace/telegraph confirmado, regra fixada no instante do evento | Geometria de borda precisa de teste extensivo |
 | Progressão/quest | Completar etapa, farm por macro, repetir reward, falso boss contribution | Objetivos por eventos server-side, elegibilidade, operationId, contribuição limitada, padrões de automação | Bots podem imitar humanos; exigir sinais combinados |
-| Inventário/forja | GiveItem, saldo negativo, roll escolhido, item fantasma, overflow | IDs únicos, caps, revisão, RNG server-side, ledger, schema e reconciliação | Falhas cross-profile exigem operação manual segura |
+| Inventário/forja | GiveItem, saldo negativo, grau/custo adulterado, item fantasma, overflow, retry duplo | IDs únicos, caps, revisão, receita determinística, ledger, schema e reconciliação | Bugs de commit exigem reparo auditado; não existe RNG/pity de forja |
 | Trade | Dupe por retry/disconnect, troca de oferta após confirmação, item em duas trades, scam de UI | Escrow, revision, confirmação invalidada, idempotência, resumo final explícito, cooldown, logs | Scam social fora do contrato; UX precisa mostrar oferta final claramente |
 | Persistência | Dupla sessão, overwrite por default, replay de receipt, save antigo | Session lock, fencing, migração validada, revisão, hash da intenção, quarentena | Indisponibilidade pode exigir modo restrito |
-| Bounty/reputação | Kill trading, contas alt, farm de novato, spawn camping, suicídio combinado | Diminishing returns por par/janela, diferença de poder, proteção de spawn, grafo de reciprocidade, recompensa pendente | Grupos legítimos podem se enfrentar repetidamente |
+| Bounty/reputação | Kill trading, contas alt, farm de novato, spawn camping, suicídio combinado | Poder efetivo derivado, diminishing returns, proteção de novato/spawn, grafo de reciprocidade, recompensa pendente | Grupos legítimos podem se enfrentar repetidamente |
 | Clã/banco | Escalada de cargo, saque concorrente, convite forjado, dois donos de território | ClanRecord autoriza, revisão, ledger, cooldown de cargo/saque, fencing, TerritoryRecord único | Conta de líder comprometida; considerar dupla aprovação para grandes saques |
 | Guerra/território | Roster de última hora, contas alt, score fabricado, dupla ocupação | Roster congelado, eventos server-side, janela UTC, operationId de settlement | Coordenação fora do jogo não é totalmente evitável |
 | Torneio/ranking | Win trading, disconnect tático, token replay, arena falsa, spectator info | Token de uso único, match state, reconexão, forfeit formal, detecção de pares/grupos, atraso de espectador | Conluio sofisticado exige revisão de temporada |
-| Boss/loot | Tag-and-leave, clone de contribuição, reward múltiplo, server hopping | Contribution ledger em sessão, thresholds, killId único, claim idempotente, cooldown compartilhado em evento raro | Server hopping precisa de estado compartilhado bem dimensionado |
+| Boss/loot | Tag-and-leave, clone de contribuição, reward múltiplo, pity adulterado, server hopping | Contribution ledger em sessão, thresholds, killId único, claim idempotente e pity separado por conta/boss/tabela | Estado compartilhado precisa ser bem dimensionado |
 | Chat/social | Texto não filtrado, phishing, spam de convite, emblema impróprio | TextChatService/filtro Roblox, rate limit, allowlist de assets, report/block | Moderação de contexto continua necessária |
 | Admin/operação | GiveItem acidental/malicioso, vazamento de token, kill switch sem auditoria | Menor privilégio, ações assinadas/auditadas, dupla confirmação, ambientes separados | Insider com acesso amplo; revisar permissões regularmente |
 
@@ -174,6 +176,11 @@ Controles complementares:
 - rotina de reconciliação procura item com dois donos, estado impossível, saldo negativo e saga expirada;
 - ativo em conflito vai para `Quarantined`; não é deletado nem liberado automaticamente;
 - kill switch permite congelar trade, banco, forja, claims ou uma fonte específica sem derrubar combate.
+- forja calcula grau, potência e custo pela receita server-side (60/70/80/90/100%; custos 1/2/3/5/8), sem chance, falha de design, rebaixamento ou pity;
+- falha técnica antes do commit não consome material; retry do mesmo `operationId` devolve o recibo existente;
+- pity de raro nunca fica no item: usa registro separado por conta/boss/tabela, incrementado apenas após claim elegível e zerado ao conceder o raro.
+- claim de boss exige atingir primeiro 40% da duração do encontro ou 90 segundos de presença, além de contribuição equivalente a pelo menos 1% da vida; dano, cura efetiva, mitigação, controle, interrupções e objetivos vêm de eventos server-side;
+- não existe troca, presente, empréstimo ou drop de item entre jogadores no lançamento; remotes futuros permanecem ausentes ou atrás de feature gate server-side fechado.
 
 ### 8.4 Bounty, kill trading e spawn camping
 
@@ -186,6 +193,8 @@ Sinais planejados:
 - concentração de bounty/MMR por poucos oponentes;
 - contas novas transferindo valor para a mesma rede comportamental.
 
+O poder efetivo é calculado pelo servidor em 0–100 e não é persistido nem recebido do cliente: 30% progressão da zona, 25% completude do loadout, 20% maestria, 15% equipamento e 10% desempenho PvP com incerteza. O grupo agressor acrescenta até 30 pontos. A regra de alvo muito inferior exige diferença ajustada ≥25 e razão ≥1,35×; autodefesa, bounty, duelo aceito, guerra e evento formal são exceções auditáveis.
+
 Resposta de reward:
 
 - primeira kill elegível usa valor normal;
@@ -195,9 +204,14 @@ Resposta de reward:
 - reputação por atacar novato é calculada independentemente de haver bounty;
 - nenhuma heurística individual bane automaticamente.
 
+A proteção de novato termina após onboarding + 30 minutos ativos, aos 90 minutos totais ou por saída voluntária inequívoca. Relógio e flags são server-side. Equipamento, moeda, maestria, item de missão, cosmético e item pago nunca entram na penalidade de morte.
+
 ### 8.5 Win trading e ranking
 
 - matchmaking evita pares recentes quando população permite;
+- arena reconstrói snapshot e registra `normalizationVersion`; cliente e teleportData não fornecem stats finais;
+- ranked/torneio normalizam HP, dano, guarda, recurso, ganhos numéricos de maestria, atributos brutos e refinamento, preservando habilidades, loadout, Dissonância e variantes comportamentais legais;
+- equipamento comportamental preservado é normalizado ao grau 3; dois loadouts de empréstimo versionados evitam bloqueio por progressão;
 - resultado carrega matchId, roster, duração, rounds e motivo de término;
 - forfeit e disconnect têm regras previsíveis; reconexão possui janela e token;
 - partidas anormalmente curtas, alternadas ou concentradas reduzem confiança e podem reter projeção de leaderboard;
@@ -207,11 +221,14 @@ Resposta de reward:
 ### 8.6 Clã e banco
 
 - cada ação lê cargo/permissão atuais do ClanRecord;
-- promoção, remoção e saque têm cooldown e revisionamento;
-- saque de alto valor pode exigir proposta e segunda aprovação por cargo distinto;
+- apenas Líder, Oficial e Membro são cargos públicos; permissões continuam de enum fechado;
+- transferência de liderança espera 72 horas, dissolução sete dias e gasto acima de 25% dos suprimentos 24 horas;
+- F5 não permite saque livre nem bens pessoais no banco; somente suprimentos vinculados e auditados;
 - líder não pode apagar ledger; transferência de liderança tem janela de segurança;
-- território é liquidado no registro da região antes de atualizar caches dos clãs;
+- território só existe na F7 opcional, depois dos gates de população/estabilidade; então é liquidado no registro da região antes de atualizar caches;
 - falha parcial não concede bônus a dois donos.
+
+O feature gate territorial só pode abrir depois de quatro semanas estáveis, 20 clãs elegíveis, 200 participantes semanais, 80% dos eventos formando pelo menos 6v6, no-show abaixo de 10%, teleporte acima de 99% e 30 dias sem incidente econômico crítico. Mesmo habilitado, o bônus é limitado a 5% de material comum e nunca concede item raro ou poder.
 
 ### 8.7 Chat, nomes e conteúdo do jogador
 
@@ -220,6 +237,13 @@ Resposta de reward:
 - emblemas e assets são allowlisted/revisados;
 - UI de troca e convite mostra UserId/display name vindo do servidor e evita links externos;
 - report e block precisam ser acessíveis em PC, mobile e console.
+
+### 8.8 Localização, fusos e operação Brasil-first
+
+- PT-BR e inglês passam por revisão manual; tradução automática de outros idiomas não pode alterar IDs, preços, permissões ou regras;
+- agenda e recibos usam UTC server-side, exibidos no locale/fuso do jogador; timestamp ou timezone do cliente nunca autorizam inscrição, check-in ou reward;
+- as janelas iniciais brasileiras (quarta 20h, sábado 15h e 21h de Brasília) são convertidas a partir da agenda autoritativa, não codificadas como relógio local do cliente;
+- mensagens de risco, compra, perda, normalização e consentimento precisam ter fallback revisado; ausência de tradução não pode resultar em aceite implícito.
 
 ## 9. Sinais, enforcement e falsos positivos
 
@@ -264,12 +288,12 @@ Payload integral e conteúdo pessoal não são coletados por padrão. Acesso, re
 
 Ataque de spam não deve consumir budget de save. Rejeições repetidas são amostradas em logs para evitar que a própria telemetria vire DoS.
 
-## 11. Segredos, dependências e CI — plano futuro
+## 11. Segredos, dependências e CI
 
 - nenhum segredo, token de place, chave de API ou credencial em repositório, atributo replicado ou log;
-- CI usa permissões mínimas, dependências fixadas e revisão de atualização;
+- a CI atual usa permissões mínimas e executa StyLua, Selene, 22 testes Lune, Wally e build Rojo;
 - Wally packages passam por revisão de licença, manutenção e superfície de código;
-- build falha em lint/type/schema/test; publicação não é automática na Fase 0;
+- a evolução da CI adicionará type/schema/migrações; publicação continua não automática e sem credenciais de produção;
 - ambientes de desenvolvimento, staging e produção usam identificadores e stores separados;
 - ferramentas administrativas não rodam por remote público genérico;
 - mudanças de regra econômica e segurança exigem revisão de outro responsável.
@@ -319,7 +343,7 @@ Kill switch não pode conceder fallback recompensador. Toda ativação é audita
 | Replay/idempotência | Mesmo request/operationId antes, durante e depois de disconnect | Um único efeito e mesmo recibo |
 | Combate hostil | Dano/targets falsos, ataque fora de fase/range/LOS, cancel spam | Zero efeito não autorizado |
 | Movimento | Speed, fly, noclip, teleporte e física legítima extrema | Correção/rejeição com tolerância; sem ban por caso isolado |
-| Economia com crash | Crash em cada passo de craft, reward, trade, banco e torneio | Commit único ou compensação/quarentena |
+| Economia com crash | Crash em cada passo de forja determinística, reward, trade futuro, banco e torneio | Commit único ou compensação/quarentena; forja não consome em falha pré-commit |
 | Concorrência | Dois servidores no mesmo perfil/clã/território | Um escritor válido; conflito não duplica |
 | Bounty/ranking | Pares repetidos, alternância, alts, disconnect tático | Reward reduzido/retido e sinal correlacionado |
 | Disponibilidade | Spam distribuído e budget baixo | Gameplay essencial preservado; função de risco degrada segura |
@@ -344,10 +368,12 @@ Testes de exploit em experiência publicada privada e contas de teste são obrig
 
 - IDs únicos, caps, revisão e invariantes são testados;
 - emissão/consumo têm operationId e ledger apropriado;
-- upgrade sob retry/crash não duplica nem perde item silenciosamente;
+- forja determinística sob retry/crash não duplica, não consome duas vezes e não contém pity;
 - combinação de modifiers respeita ordem e caps absolutos.
 
 ### Gate antes de trade ou banco de clã
+
+Trade permanece desabilitado no lançamento. Além dos controles abaixo, sua F7 exige 30 dias sem dupe crítico, retries/reconexões reconciliados e menos de 0,1% das operações com reparo manual:
 
 - saga/escrow passa por crash injection em todas as transições;
 - concorrência multi-servidor e fencing são demonstrados;
@@ -371,9 +397,9 @@ Testes de exploit em experiência publicada privada e contas de teste são obrig
 - dependências e versões de protocolo são inventariadas;
 - incidentes geram teste de regressão e ação preventiva, não apenas banimentos.
 
-## 15. Riscos e decisões pendentes
+## 15. Riscos e controles a validar
 
-| Risco/decisão | Recomendação |
+| Risco | Direção aprovada / validação |
 |---|---|
 | Network ownership produzir falsos positivos | Correção e score gradual; nunca ban automático por um salto |
 | Lag compensation ampliar alcance injusto | Histórico curto, clamp e telemetria por ping; validar em playtest |
@@ -383,4 +409,3 @@ Testes de exploit em experiência publicada privada e contas de teste são obrig
 | Admin concentrar poder | Menor privilégio, dupla aprovação e ledger imutável |
 | Logging excessivo criar risco de privacidade/DoS | Amostragem, schema mínimo e retenção explícita |
 | Kill switch virar estado permanente não documentado | Dono, motivo, métrica de saída e prazo de revisão |
-

@@ -3,6 +3,6 @@
 registry = "test"
 
 [[package]]
-name = "teste/teste"
+name = "alvaro209890/anime-verse-battlegrounds"
 version = "0.1.0"
 dependencies = []

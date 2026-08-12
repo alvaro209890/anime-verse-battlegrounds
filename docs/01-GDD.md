@@ -6,14 +6,16 @@ Este documento define os contratos de experiência de combate, recursos, loadout
 
 | ID | Decisão | Estado |
 |---|---|---|
-| GDD-DEC-001 | Um único núcleo energético governa o loadout; técnica estrangeira converte seu custo para esse recurso. | recomendada |
-| GDD-DEC-002 | Loadout usa quatro unidades de capacidade, uma ultimate e orçamento de impacto 12. | hipótese de playtest |
-| GDD-DEC-003 | Ressonância 2.0 combina slots, impacto e dissonância graduada. | recomendada |
-| GDD-DEC-004 | Build pura recebe consistência e passiva; não recebe redução global de cooldown. | recomendada |
-| GDD-DEC-005 | Maestria libera comportamento; ganho numérico total por técnica não passa de 6%. | hipótese de playtest |
-| GDD-DEC-006 | Equipamento é sidegrade, com status bruto mínimo e normalização no topo. | recomendada |
+| GDD-DEC-001 | Um único núcleo energético governa o loadout; técnica estrangeira converte seu custo para esse recurso. | aprovada — 2026-08-12 — Álvaro (seleção delegada ao Codex) |
+| GDD-DEC-002 | Loadout usa quatro unidades de capacidade, uma ultimate e orçamento de impacto 12. | aprovada — 2026-08-12 — Álvaro (seleção delegada ao Codex) |
+| GDD-DEC-003 | Ressonância 2.0 combina slots, impacto e Dissonância; `rawD > 3` invalida o loadout. | aprovada — 2026-08-12 — Álvaro (seleção delegada ao Codex) |
+| GDD-DEC-004 | Build pura recebe consistência e passiva; não recebe redução global de cooldown. | aprovada — 2026-08-12 — Álvaro (seleção delegada ao Codex) |
+| GDD-DEC-005 | Técnica tem 10 níveis, família tem 20; comportamento domina e bônus numérico por técnica não passa de 6%. | aprovada como política; curvas de XP são baseline de playtest |
+| GDD-DEC-006 | Equipamento é sidegrade em três slots, com caps de status e normalização competitiva. | aprovada como política; efeitos são baseline de playtest |
 | GDD-DEC-007 | Monetização permanece somente no plano e não vende poder. | fechada pelo briefing |
-| GDD-DEC-008 | Números de combate, recurso, progressão e equipamento são baselines para teste, não valores finais. | obrigatória |
+| GDD-DEC-008 | Somente números explicitamente marcados como baseline podem ser recalibrados por playtest; políticas estruturais exigem nova decisão. | obrigatória |
+| GDD-DEC-009 | Forja possui cinco graus determinísticos, sem falha, destruição, rebaixamento ou pity. | aprovada — 2026-08-12 — Álvaro (seleção delegada ao Codex) |
+| GDD-DEC-010 | Há três presets gratuitos e no máximo seis com entitlement; quatro slots ativos não mudam. | aprovada — 2026-08-12 — Álvaro (seleção delegada ao Codex) |
 
 ## 2. Modelo de combate
 
@@ -103,7 +105,7 @@ Uma técnica de custo dois ocupa duas unidades de capacidade, mas usa um único 
 
 ## 4. Famílias de recurso
 
-Os nomes abaixo são os rótulos públicos. A identidade visual de cada barra precisa ser distinguível também sem cor.
+As quatro famílias aprovadas para planejamento são **Fluxo Vital**, **Éter Umbral**, **Contrafluxo** e **Ímpeto Metamórfico**, ainda condicionadas ao Gate jurídico P1. O HUD compacto usa **Fluxo**, **Umbral**, **Contra** e **Ímpeto**. A identidade visual de cada barra precisa ser distinguível também sem cor.
 
 ### 4.1 Fluxo Vital
 
@@ -173,6 +175,8 @@ Exemplo: Guarda Dissipadora custa zero quando alimenta Contrafluxo nativo. Impor
 - No máximo uma técnica normal com tag `Definidora`.
 - No máximo duas técnicas do mesmo grupo de controle forte.
 - Troca de loadout apenas em zona segura, ponto de descanso ou fila antes da confirmação. Nunca durante combate, perseguição ou bracket.
+- Três presets são gratuitos: **PvE**, **Mundo** e **Arena**. O entitlement opcional aprovado para o soft launch pode adicionar três, respeitando o máximo absoluto de seis.
+- Preset adicional só salva composição; não aumenta as quatro unidades ativas, o espaço de ultimate nem o orçamento de impacto.
 
 “Impacto” mede o quanto uma ação comprime poder, segurança e cobertura: 1 para ferramenta estreita, 2 para ação padrão, 3 para mobilidade/controle forte, 4 para definidora e 4–6 para ultimate. Impacto não aparece como dano; é um orçamento de composição revisado por telemetria.
 
@@ -204,7 +208,7 @@ Cada técnica consome capacidade e impacto; limites por tag impedem excesso de m
 
 **Conclusão:** resolve melhor o pico de poder, mas não sustenta sozinho a identidade pretendida.
 
-### 6.3 Recomendação — Ressonância 2.0
+### 6.3 Decisão — Ressonância 2.0
 
 Combinar as duas abordagens:
 
@@ -219,12 +223,15 @@ Isso mantém a leitura “pura = sustentação; híbrida = respostas” sem gara
 
 ### 6.4 Cálculo reproduzível
 
-Para um loadout, defina:
+Para um loadout, calcule primeiro `rawD`:
 
-- `D` = soma do custo de slot de cada técnica normal fora do núcleo;
-- ultimate fora do núcleo acrescenta 2 a `D`;
-- cada família estrangeira além da primeira acrescenta 1 a `D`;
-- máximo permitido: `D = 3`.
+- `rawD` começa com a soma do custo de capacidade de cada técnica normal fora do núcleo;
+- ultimate fora do núcleo acrescenta 2 a `rawD`;
+- cada família estrangeira além da primeira acrescenta 1 a `rawD`;
+- se `rawD > 3`, o loadout é inválido e deve ser rejeitado pelo servidor;
+- somente após essa validação, `D = rawD` seleciona os modificadores da tabela.
+
+Não se usa `min(3, rawD)`, clamp ou qualquer normalização que transforme uma composição acima do teto em válida. Cliente pode explicar o erro, mas não autoriza a build.
 
 Modificadores:
 
@@ -239,7 +246,7 @@ Cada custo final é arredondado para cima após multiplicadores. A penalidade ad
 
 Para técnica estrangeira, “base” sempre significa seu custo-base estrangeiro declarado conforme GDD-DEC-001, nunca um custo nativo zero.
 
-O teto de Dissonância impede misturas sem identidade. Uma técnica estrangeira definidora usa D = 2 sozinha; uma ultimate estrangeira também. Nenhum modificador pago reduz Dissonância.
+O teto de Dissonância impede misturas sem identidade. Uma técnica estrangeira definidora usa `rawD = 2` sozinha; uma ultimate estrangeira também. Nenhum produto ou modificador pago reduz impacto, `rawD` ou Dissonância.
 
 ### 6.5 Protótipo em papel
 
@@ -279,10 +286,15 @@ O jogador ganha experiência geral por missão, exploração, evento, boss e obj
 
 Progressão geral abre regiões, receitas, capacidade social e cadeias de descoberta. Ela não adiciona dano infinito. O estado funcional esperado é:
 
-- primeira técnica em 30–45 min;
-- três técnicas iniciais em cerca de 2 h;
-- primeira ultimate e build pura em 10–12 h;
-- build completa com alternativa híbrida em 18–22 h.
+- primeiro combate em até 60 segundos;
+- objetivo de progressão visível em até 3 minutos;
+- primeira técnica permanente em até 5 minutos;
+- primeiro breakpoint comportamental em 15–20 minutos;
+- três técnicas iniciais em 45–60 minutos;
+- primeira ultimate e build pura em 8–10 horas;
+- alternativa híbrida funcional em 16–20 horas.
+
+Esses tempos são metas de onboarding e baselines de playtest, não promessas comerciais. A política permanente é entregar combate funcional imediatamente e fazer progressão mudar comportamento antes de acumular poder bruto.
 
 ### 7.2 Maestria de técnica
 
@@ -325,6 +337,8 @@ Níveis 2, 5 e 8 podem conceder até 2% de eficiência cada, com teto total de 6
 - Benefícios: acesso a instrutores, receitas, cosméticos e redução de 2% no custo de materiais de desbloqueio a cada 5 níveis, máximo 8%.
 - Não concede dano, vida ou regen direta.
 
+O baseline de conclusão da família é **18–24 horas** para uma build pura e **24–32 horas** para uma híbrida. Essa meta mede uso significativo e pode ser recalibrada sem mudar a estrutura de 20 níveis.
+
 Isso incentiva especialização sem tornar a família já dominada objetivamente mais forte no duelo.
 
 ### 7.4 Respec e edição de build
@@ -333,7 +347,7 @@ Isso incentiva especialização sem tornar a família já dominada objetivamente
 - Respec altera a escolha comportamental do nível 6; nível e XP da técnica são preservados.
 - Primeira troca de cada técnica é gratuita e há uma janela de teste de 30 min após escolher uma variante.
 - Depois disso, custo em moeda: **500 + 150 × nível da técnica + 250 × respecs feitos nos últimos 7 dias**, máximo 3.000.
-- Um catalisador conquistável pode substituir a moeda. Ticket pago, se lançado, apenas substitui esse mesmo custo; não oferece variante exclusiva nem uso durante partida.
+- Há cooldown de 5 minutos entre respecs pagos com Marcas.
 - Respec é bloqueado em combate, perseguição, arena, guerra ou fila confirmada.
 
 O jogador nunca perde técnica, maestria ou equipamento ao corrigir uma build. A taxa impede troca a cada duelo, não pune experimentação legítima.
@@ -351,7 +365,7 @@ Cada item deve responder “como meu estilo muda?”. Exemplos de sidegrade:
 - técnica de avanço ganha curva manual, mas perde magnetismo de alvo;
 - cura atua em área pequena, mas cura o usuário 30% menos.
 
-Status bruto total de equipamento é limitado a 5% por atributo no mundo aberto e removido no ranqueado de topo. Nenhum item aumenta simultaneamente dano e sobrevivência sem desvantagem.
+Cada item concede no máximo **2%** de bônus bruto. O conjunto dos três slots é limitado a **5 pontos percentuais positivos**, e um mesmo atributo não pode receber mais de **3%**. Nenhum item aumenta simultaneamente ataque e sobrevivência, mesmo com desvantagem declarada. No ranqueado e no torneio, bônus brutos são removidos e modificadores comportamentais são normalizados ao grau 3.
 
 ### 8.2 Slots e raridade
 
@@ -371,16 +385,19 @@ Status bruto total de equipamento é limitado a 5% por atributo no mundo aberto 
 | forja | escolha de modificador e conversão de duplicatas | receita conhecida, sem resultado secreto |
 | torneio | material e aparência de prestígio | nunca item de poder exclusivo |
 
-### 8.4 Upgrade com risco controlado
+### 8.4 Forja determinística
 
-Cinco graus de refinamento. Chance base de sucesso: 100%, 90%, 75%, 60% e 40% para graus 1–5. Falha:
+Há cinco graus de refinamento. Cada operação válida sempre conclui o grau escolhido; não existe rolagem de sucesso, destruição, rebaixamento, perda parcial nem pity de forja.
 
-- não destrói nem rebaixa o item;
-- consome 50% dos materiais previstos;
-- acrescenta 15 pontos percentuais de garantia à próxima tentativa daquele grau;
-- garante sucesso quando a soma alcançar 100%.
+| Grau | Potência do modificador | Custo relativo |
+|---:|---:|---:|
+| 1 | 60% | 1 |
+| 2 | 70% | 2 |
+| 3 | 80% | 3 |
+| 4 | 90% | 5 |
+| 5 | 100% | 8 |
 
-Refinamento leva um modificador de 60% a 100% de sua potência planejada, mas preserva a desvantagem proporcional. No ranqueado de topo, todos os modificadores são normalizados ao grau 3; a escolha continua relevante, o investimento não decide a luta.
+A desvantagem do modificador acompanha sua potência planejada. Uma falha técnica ou transacional não consome Marcas nem materiais; retry idempotente retorna o mesmo recibo. Pity existe somente no loot pessoal de bosses. No ranqueado e no torneio, todos os modificadores comportamentais são normalizados ao grau 3; a escolha continua relevante, o investimento não decide a luta.
 
 ### 8.5 Troca e economia
 
@@ -394,34 +411,35 @@ Para reduzir scam e inflação:
 - preço mediano e faixa recente aparecem na interface; mensagens não prometem “valor futuro”;
 - kill trading, contas relacionadas e transferência circular alimentam revisão antiabuso.
 
-Comércio de item equipado só deve ser reconsiderado depois de a F7 e o suporte provarem rastreabilidade. Equipamento nunca cai na morte.
+O mercado só pode ser habilitado após **30 dias sem dupe crítico**, retries e reconexões reconciliados e menos de **0,1%** das operações exigindo reparo manual. Comércio de item equipado só deve ser reconsiderado depois de a F7 e o suporte provarem rastreabilidade. Equipamento nunca cai na morte.
 
 ## 9. Relação entre mundo aberto e competitivo
 
 - Mundo aberto usa progressão construída, dentro de faixas de nível e proteção contra diferença extrema.
 - Arena casual usa loadout e equipamento do jogador para validar a fantasia de construção.
-- Ranqueado de topo mantém loadout, variantes e modificadores escolhidos, mas normaliza status e refinamento ao grau 3.
+- Ranqueado e torneio normalizam HP, dano, guarda, recurso, ganhos numéricos de nível e refinamento; removem bônus brutos; preservam técnicas desbloqueadas, loadout, Dissonância e variantes comportamentais legais.
+- Modificadores comportamentais legais são normalizados ao grau 3. Dois loadouts de empréstimo versionados permitem entrada competitiva sem desbloquear conteúdo no mundo.
 - Ultimate, tags, orçamento de impacto e Dissonância permanecem iguais nos três contextos.
 - Ajuste exclusivo por modo é último recurso e precisa aparecer na descrição da técnica; regras invisíveis quebram aprendizado.
 
-## 10. Monetização — plano, não implementação
+## 10. Monetização — produtos aprovados para o soft launch
 
-| Oferta possível | Regra | Risco e mitigação |
+| Oferta inicial | Regra | Risco e mitigação |
 |---|---|---|
-| cosméticos e skins | silhueta e telegraph funcionais preservados | revisão de legibilidade e propriedade intelectual |
-| slots de preset | salva mais builds; capacidade ativa continua 4 + ultimate | texto nunca chama de “slot de habilidade” |
-| expansão de inventário | conveniência, sem aumentar slots equipados | caminho por moeda e limite razoável gratuito |
-| boost de XP geral | máximo 20%; não afeta maestria, drop, MMR ou recompensa ranqueada | medir correlação gasto/vitória e suspender se houver vantagem |
-| ticket de respec | substitui custo conquistável, com as mesmas restrições | primeira troca grátis e preço em moeda sempre disponível |
-| passe cosmético sazonal | aparência, emote, título e moeda cosmética | sem material raro ou técnica |
+| cosméticos e skins de compra direta | silhueta e telegraph funcionais preservados | revisão de legibilidade e propriedade intelectual |
+| emotes e finalizadores | não alteram duração, hitbox ou leitura da ação | versão funcional padrão permanece igualmente legível |
+| pacote de três presets | eleva presets salvos de 3 para no máximo 6; capacidade ativa continua 4 + ultimate | texto nunca chama de “slot de habilidade” |
+| servidor privado de treino | sem progresso, recompensa, drop, MMR ou economia | estado de treino nunca é persistido como ganho |
 
 Itens proibidos:
 
 - personagem, técnica, ultimate ou variante exclusiva paga;
 - recurso, dano, vida, guarda, cooldown, slot ativo ou orçamento de impacto;
-- material de upgrade competitivo, proteção paga de falha ou chance de drop;
+- material de upgrade competitivo, redução paga de custo da forja ou chance de drop;
 - reputação, MMR, remoção de bounty ou recuperação de penalidade;
 - loot box de poder ou vantagem temporária em PvP.
+
+Boost, respec pago, expansão funcional de inventário, moeda, gacha e material ficam fora do soft launch. Qualquer aleatoriedade paga futura exigiria odds reais, verificação de política por jogador e uma nova decisão formal; não faz parte da direção atual.
 
 O plano de monetização só avança após a fatia vertical demonstrar retenção sem compra, combate justo e persistência confiável.
 
@@ -461,16 +479,16 @@ Um sistema desta GDD está pronto para implementação somente quando:
 - nomes, silhuetas, VFX, áudio e narrativa passam por revisão de originalidade;
 - um teste em papel reproduzível antecede teste em jogo.
 
-## 13. Hipóteses que exigem playtest
+## 13. Baselines que exigem playtest
 
 Não bloqueiam o planejamento, mas não devem virar verdade permanente sem teste:
 
-- teto 12 de impacto e máximo D = 3;
+- multiplicadores de pool, regeneração e custo associados a `D = 0–3`;
 - bônus puro de 10% de regen e 5% de economia;
 - TTK de 12–18 s;
 - magnetismo de 8°;
 - curva de 3,4–4,9 h para maestria completa de uma técnica;
 - normalização de equipamento no grau 3;
-- limite de status bruto em 5% no mundo aberto.
+- curva de custo relativo 1/2/3/5/8 da forja.
 
-Cada hipótese deve ter teste isolado, amostra por plataforma e decisão registrada antes de expansão de conteúdo.
+Os limites estruturais — quatro unidades, uma ultimate, impacto 12, `rawD <= 3`, três slots, caps de 2%/5 pontos/3%, forja determinística e três/seis presets — são políticas aprovadas. Seus números de balanceamento podem ser revistos formalmente após playtest, mas não são alternativas abertas. Cada baseline deve ter teste isolado, amostra por plataforma e decisão registrada antes de expansão de conteúdo.
