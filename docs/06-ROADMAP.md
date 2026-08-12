@@ -2,7 +2,9 @@
 
 ## 1. Objetivo e estado deste documento
 
-Este roadmap transforma a visão do jogo em uma sequência de entregas verificáveis e passa a ser a referência de escopo para uma equipe de 1–3 pessoas. A implementação **já começou**: existe um esqueleto F0 com serviços, catálogos alinhados ao Punho do Eclipse (incl. zonas/âncoras, objetivos e locale), `ZoneService` com a fronteira PvP e `QuestService` com o objetivo 1 e o XP da sessão como domínio headless, além de CI com StyLua, Selene, 91 testes Lune, Wally e build Rojo. Esse estado não equivale a F0 concluída e ainda não comprova Roblox Studio, DataStore real, servidor publicado, mobile ou gamepad.
+Este roadmap transforma a visão do jogo em uma sequência de entregas verificáveis e passa a ser a referência de escopo para uma equipe de 1–3 pessoas. A implementação **já começou**: os itens 1–7 do backlog de `docs/13-F0-SLICE.md` estão fechados no domínio — catálogos, `ZoneService` com a fronteira PvP, `QuestService` com o objetivo 1 e o XP da sessão, e a camada espacial (`Geometry`, `SpatialService`, `EnemyService` e o greybox construído por `WorldService`) — além de CI com StyLua, Selene, 109 testes Lune, Wally e build Rojo.
+
+Esse estado **não** equivale a F0 concluída. O código nunca foi executado no Roblox Studio: não há evidência de runtime, DataStore real, servidor publicado, mobile ou gamepad. O próximo marco do programa não é mais código de domínio — é a primeira sessão medida no Studio, que também recalibra a estimativa da fase (§2).
 
 O projeto é um **RPG / Action RPG** persistente; “Battlegrounds” permanece como nome de marketing, não como arquitetura de arena exclusiva. A ordem abaixo prioriza combate em rede, persistência e progressão antes de multiplicar conteúdo ou construir sistemas sociais caros.
 

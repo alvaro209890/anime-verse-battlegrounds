@@ -1,11 +1,15 @@
 # 12 — Testes e evidências
 
-> **Snapshot:** 2026-08-12. `tests/run.luau` declara 91 testes F0 alinhados a `docs/13-F0-SLICE.md`. O HEAD `a5e6dc8` cobria 74 testes (Estilhaço Errante headless); esta revisão fecha o domínio do item 7 — Locale, objetivo 1, XP e unlock do Ombro Cometa no 3º kill.
+> **Snapshot:** 2026-08-12. `tests/run.luau` declara 109 testes F0 alinhados a `docs/13-F0-SLICE.md`. O commit `7a09262` cobria 91 testes (objetivo 1 e XP); esta revisão acrescenta a camada espacial — geometria, volumes do greybox, hitbox, lunge do Ombro Cometa e AI dos Estilhaços.
 > **Limite da evidência:** não há prova registrada de execução no Roblox Studio, servidor publicado privado, Android, gamepad ou múltiplos clientes reais.
 
 ### Evidência local desta revisão
 
-Em 2026-08-12, no worktree Windows, foram executados: Selene 0.31.0 (0 erros, 0 warnings); StyLua 2.5.2 sobre cópias LF dos arquivos alterados (0 diffs); 91 testes Lune 0.10.5 (0 falhas); `rojo build -o build.rbxl` (exit 0). Essa evidência valida o domínio headless do objetivo 1: aceite pelo NPC ou por tempo, progresso por kill, XP com retorno decrescente por âncora e teto de sessão, e unlock do Ombro Cometa no 3º Estilhaço. Não substitui o CI do commit nem playtest no Studio. Spawn/AI dos Estilhaços no mundo, persistência entre sessões, pathfinding e HUD continuam **não comprovados**.
+Em 2026-08-12, no worktree Windows, foram executados: Selene 0.31.0 (0 erros, 0 warnings); StyLua 2.5.2 sobre cópias LF dos arquivos alterados (0 diffs); 109 testes Lune 0.10.5 (0 falhas); `rojo build -o build.rbxl` (exit 0).
+
+Essa evidência valida a **regra** espacial: distância, lado do golpe, cápsula do trajeto, avanço de 7 studs com cap 8 e parada na guarda, perseguição a 12 studs/s, telegraph de 400 ms, respawn de 45 s e coerência entre os volumes do greybox e todas as âncoras.
+
+Ela **não** valida a **execução**. O `WorldService` constrói o mundo por código e nunca rodou: nenhuma part foi vista, nenhum collision group foi exercitado, nenhum `HumanoidRootPart` foi lido. A afirmação honesta desta revisão é "a camada espacial existe, é coerente e é testada headless" — não "o greybox está no Studio".
 
 ## 1. Gates reproduzíveis
 
@@ -25,28 +29,34 @@ O CI executa StyLua, Selene, os testes Lune, a instalação Wally e o build Rojo
 
 Em checkout Windows com `core.autocrlf=true`, os arquivos de trabalho podem estar em CRLF enquanto `stylua.toml` exige `Unix`; nesse caso, o check direto acusa somente final de linha. Para reproduzir o CI, use uma cópia com bytes LF canônicos do Git (`git -c core.autocrlf=false archive ...`) ou execute o diagnóstico local equivalente com `stylua --check --line-endings Windows src tests`. Não reformatar código só para mascarar essa conversão do checkout.
 
-## 2. Cobertura existente: exatamente 91 testes
+## 2. Cobertura existente: exatamente 109 testes
 
 | Área | Cobertura |
 |---|---|
-| **Dados** (12) | Punho do Eclipse 3+1; `comet_shoulder`; Umbral baseline; 4 famílias; remotes incl. `SessionSnapshot`, `InteractionIntent` e `StateDelta`; dummy 10000 HP / dano 4; Estilhaço Errante 40/6/4; zonas: 3 zonas, PvP só na livre, 6 âncoras, spawn no bastião; Locale PT-BR/EN das chaves §16 e formatação de `{n}`; `quest_hunt` 3 kills / +40 XP / unlock Cometa |
+| **Dados** (13) | Punho do Eclipse 3+1; `comet_shoulder`; Umbral baseline; 4 famílias; remotes incl. `SessionSnapshot`, `InteractionIntent`, `StateDelta` e `EnemyEvent`; dummy 10000 HP / dano 4; Estilhaço Errante 40/6/4; zonas: 3 zonas, PvP só na livre, âncoras persistidas + pontos de Estilhaço, spawn no bastião; Locale PT-BR/EN das chaves §16 e formatação de `{n}`; `quest_hunt` 3 kills / +40 XP / unlock Cometa |
+| **Geometria** (5) | distância no plano ignora altura; normalize de vetor nulo não vira NaN; costas vs. frente vs. perpendicular; cápsula do trajeto dentro/fora do raio e além do fim; lunge de 7 com cap 8 e parada antes do contato; `moveToward` a 12 studs/s parando no alcance |
+| **Greybox** (2) | o volume de cada zona resolve a zona declarada por todas as âncoras, o plano do portão resolve como transição e fora de todo volume devolve nil; 6 pontos de Estilhaço ≥ 24 studs entre si e ≥ 20 dos portões |
+| **SpatialService** (4) | hitbox à frente acerta 1 e ignora quem está atrás/longe; Ombro Cometa avança 7, commita a posição e acerta 1 alvo na cápsula; guarda inimiga trava o avanço; avanço sem alvo é resultado válido |
+| **EnemyService** (5) | spawn até o teto de 4 com a âncora no id e sem duplicar; persegue, para no alcance, telegraph de 400 ms sem dano e 6 depois; sem aggro para jogador na zona segura; respawn de 45 s bloqueado por jogador a menos de 20 studs; kill reporta âncora e autor |
 | **CooldownService** (3) | inicia zerado; `start` aplica e expira; `clear` zera |
 | **CombatService** (24) | applyDamage legado; cadeia 5+5+6+10; reset 0,65 s; guarda 40%; aparo 120 ms; costas; pesado 10/28/2; quebra+overflow; miss bloqueia leve; dash i-frame/CD; dummy alcance/período; comet 9 aberto; guarda para avanço (4 HP + 9 guarda); aparo; i-frame; Estilhaço telegraph+dano 6; sem aggro na fronteira; alcance 4; recovery; respawn 45 s; cap 4 vivos; `killed` só na transição vivo → morto e `diedAt` não é re-carimbado |
 | **ResourceService** (6) | pool; `trySpend`; `grantFlowGain`; família desconhecida; `tryGrantFlow` 6+3 e cap 1,5 s; regen 2 / atraso 3 s / 6 |
 | **AbilityService** (12) | Ombro Cometa em `ServerPlayerState`; recusas; ultimate `disabled`; `locked`; Cadência+Fluxo; Pulso; comet no fighter dummy + `CombatHit` |
-| **CatalogService** (5) | dados reais (incl. dummy, instrutor e cadeia de objetivos); personagem sem habilidade falha; zona/âncora inválida falha; objetivo com alvo/ofertante desconhecido, `requiredCount = 0` ou `acceptFlag` vazia falha; `displayNameKey` sem entrada no Locale falha |
+| **CatalogService** (6) | dados reais (incl. dummy, instrutor e cadeia de objetivos); personagem sem habilidade falha; zona/âncora inválida falha; objetivo com alvo/ofertante desconhecido, `requiredCount = 0` ou `acceptFlag` vazia falha; `displayNameKey` sem entrada no Locale falha; âncora que declara uma zona mas cai no volume de outra falha |
 | **PlayerSessionService / fatia** (4) | join/leave; snapshot Ready sem unlocks e, após grant, lista `unlock_comet_shoulder`; join Ready → comet `locked` até grant, depois 18 Umbral e dummy 9991 HP; roteiro 0–5 min ponta a ponta (aceite → travessia → 3 kills → 115 XP → Cometa liberado) |
 | **ProgressionService** (7) | cadência/pulso locked no spawn; grant comet idempotente e flag desconhecida recusa; leave limpa flags; kill do Estilhaço credita 25 e dummy não credita; retorno decrescente 6×25 → 6×12 → 0; decréscimo por âncora, não global; teto de 800 por sessão, valor negativo e jogador desconhecido |
 | **QuestService** (5) | aceite no Instrutor marca `quest_hunt_accepted` e abre o tracker; kill antes do aceite não conta; tracker forçado após 90 s e `tick` idempotente; 3º kill completa com +40 XP e `unlock_comet_shoulder`; kill após completo não repete prêmio e alvo fora do objetivo não conta |
 | **Zonas/fronteira** (13) | join na `zone_bastion_safe` sem PvP; `hold_required`; transição 5 s; hostil encerra proteção; hostil na segura **não** marca lockout; voltar da transição é livre; 5 sinais; `ZoneEvent` completo; lockout 15 s com timer no evento; projétil não cruza; `ZoneEvent` S→C; `ZoneCrossingIntent` C→S; fatia Ready + comet após unlock |
 
-Esses testes cobrem o catálogo e o domínio F0 atualmente implementados. Eles não cobrem hitbox espacial, lunge de 7 studs, spawn/AI dos Estilhaços no mundo, geometria do mapa no Studio, volumes de transição, collision groups reais, HUD, os 5 sinais visíveis/audíveis, save real, streaming, arena ou competitivo.
+Esses testes cobrem o catálogo, o domínio F0 e a **regra** da camada espacial. Eles **não** cobrem nada que dependa do runtime Roblox: as parts que o `WorldService` cria, collision groups reais, leitura do `HumanoidRootPart`, física, câmera, HUD, os 5 sinais visíveis/audíveis, hold 0,6 s no toque, save real, streaming, arena ou competitivo.
+
+A divisão é deliberada: matemática e decisão ficam em módulos puros (`Geometry`, `Zones`, `SpatialService`, `EnemyService`), e só o `WorldService` toca Instances. Um teste que precisasse de `Vector3` ou `workspace` é sinal de que a regra vazou para a camada errada.
 
 ## 3. Arquitetura do harness
 
 - **`tests/harness.luau`** simula o mínimo que o Lune não fornece: `_G.game`, `_G.Instance`, `_G.task` e resolução de `require(script.Parent.X)` no filesystem.
-- **`tests/run.luau`** contém os 91 casos e usa módulos reais de `src/`, com um miniframework de asserts.
-- **Services testáveis por injeção** recebem dependências em `init()`: `CatalogService`, `AbilityService`, `ResourceService`, `PlayerSessionService`, `ZoneService`, `ProgressionService` e `QuestService`. O bootstrap Roblox monta o grafo real.
+- **`tests/run.luau`** contém os 109 casos e usa módulos reais de `src/`, com um miniframework de asserts.
+- **Services testáveis por injeção** recebem dependências em `init()`: `CatalogService`, `AbilityService`, `ResourceService`, `PlayerSessionService`, `ZoneService`, `ProgressionService`, `QuestService`, `SpatialService` e `EnemyService`. O bootstrap Roblox monta o grafo real.
 - **`src/shared/TaskCompat.luau`** usa `task` nativo no Roblox e o polyfill somente no harness.
 
 Os módulos de dados declaram tipos inline porque o Lune não resolve `script.Parent` como o Roblox. `src/shared/Types.luau` continua sendo o contrato canônico para tooling, mas a duplicação precisa ser comparada em revisão sempre que o tipo evoluir.
@@ -55,7 +65,7 @@ Os módulos de dados declaram tipos inline porque o Lune não resolve `script.Pa
 
 | Camada | O que demonstra | O que não demonstra |
 |---|---|---|
-| lint + 91 testes Lune | sintaxe, estilo e comportamento unitário coberto no ambiente simulado | física, replicação, UI, input ou serviços Roblox reais |
+| lint + 109 testes Lune | sintaxe, estilo e comportamento unitário coberto no ambiente simulado | física, replicação, UI, input ou serviços Roblox reais |
 | Wally + build Rojo | dependências resolvidas e árvore de projeto montável | que o place abre sem erro ou que um fluxo é jogável |
 | Studio | bootstrap, UI/input, câmera, física e replicação no cenário testado | DataStore/teleport/rede pública com fidelidade total |
 | publicado privado | serviços reais, múltiplos servidores, reconnect, teleport e condições reais de rede | cobertura de dispositivo que não foi executada |
@@ -64,7 +74,7 @@ Uma entrega deve dizer explicitamente quais camadas foram executadas, em vez de 
 
 ## 5. Casos obrigatórios antes de F1/F2
 
-Os testes abaixo são backlog, não parte dos 91 existentes:
+Os testes abaixo são backlog, não parte dos 109 existentes:
 
 - catálogo rejeita `impactCost` ausente, não inteiro ou fora do intervalo;
 - validador de loadout aceita capacidade 4/impacto 12 e rejeita qualquer excesso;
@@ -87,7 +97,9 @@ A spec de execução da fatia (`docs/13-F0-SLICE.md` §19–§21) lista os teste
 
 Até essas execuções existirem, a formulação correta é **“esqueleto F0 com testes unitários e build de árvore”**, não “runtime validado”. Para o item 6 especificamente: **comprovado** são as regras de zona/PvP/transição/lockout/sinais como dados + testes Lune; **não comprovado** são geometria no Studio, os 5 sinais visíveis/audíveis, o hold de 0,6 s no toque, iluminação, collision groups reais e playtest cego da fronteira.
 
-Para o item 7: **comprovado** são o catálogo de objetivos, a máquina de estado do objetivo 1 (oferta → aceite por NPC ou 90 s → progresso → prêmio), o ledger de XP com retorno decrescente por âncora e teto de 800/sessão, o unlock do Ombro Cometa no 3º kill e a validação de Locale no boot. **Não comprovado** são o spawn e a AI dos Estilhaços no mundo (a camada espacial precisa criar os fighters como `<npcId>@<anchorId>#<n>` e chamar `creditKill`), a persistência de XP e flags entre sessões (item 11), o tracker na tela e o `InteractionIntent` disparado por um jogador real.
+Para o item 7: **comprovado** são o catálogo de objetivos, a máquina de estado do objetivo 1 (oferta → aceite por NPC ou 90 s → progresso → prêmio), o ledger de XP com retorno decrescente por âncora e teto de 800/sessão, o unlock do Ombro Cometa no 3º kill, a validação de Locale no boot e o ciclo completo do Estilhaço (spawn nas 6 âncoras, perseguição, telegraph, respawn, teto de 4). **Não comprovado** são a persistência de XP e flags entre sessões (item 11), o tracker na tela e o `InteractionIntent` disparado por um jogador real.
+
+Para a camada espacial (greybox, hitbox, lunge, AI): **comprovado** é toda a regra — os volumes concordam com as âncoras, a hitbox à frente seleciona um alvo, o lunge respeita 7/8 studs e para na guarda, o lado do golpe se mede da origem do avanço, a perseguição respeita 12 studs/s. **Não comprovado** é qualquer coisa que exija abrir o place: as parts existirem e estarem no lugar certo, os collision groups se comportarem, o `Heartbeat` conseguir ler o personagem, o desempenho do tick de AI com 8 jogadores e o feeling do lunge com latência.
 
 ## 7. Checklist de consistência documental
 
@@ -114,5 +126,5 @@ rg -n "\\x{FFFD}" README.md docs
 - `task.wait` real em teste cria loop infinito se o polyfill síncrono for usado no `spawn`; o harness injeta `spawn = noop` para o loop de regen. `ZoneService` usa relógio injetado (`fakeNow`), nunca `task.wait`, para as janelas de 5 s e 15 s.
 - Busy-wait curto com `os.clock` substitui `task.wait` nos testes de expiração de cooldown.
 - Selene permite `global_usage` e `empty_loop` no `selene.toml` porque o harness usa `_G` e busy-waits deliberadamente.
-- Contar casos pelo resumo pode mascarar erro: a fonte é a quantidade real de chamadas `test(...)` em `tests/run.luau`; nesta versão são 91.
+- Contar casos pelo resumo pode mascarar erro: a fonte é a quantidade real de chamadas `test(...)` em `tests/run.luau`; nesta versão são 109.
 - Lua patterns não têm alternação (`a|b` é literal): validar IDs de sinal por pertencimento a uma tabela, não com regex no teste.

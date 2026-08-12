@@ -3,8 +3,8 @@
 RPG / Action RPG de mundo aberto no Roblox (Luau) — combate estilo battlegrounds com
 progressão persistente, loadout customizável e ressonância de famílias de energia.
 
-> **Status em 2026-08-12:** spec F0 + combate + Ombro Cometa + ZoneService + técnicas locked no spawn + Estilhaço Errante + objetivo 1, XP e unlock do Cometa (tudo headless).
-> O repositório ainda não contém uma fatia jogável completa (mapa, HUD, save real, spawn/AI dos Estilhaços no mundo, lunge espacial, geometria do greybox no Studio).
+> **Status em 2026-08-12:** itens 1–7 do backlog F0 fechados no domínio, incluindo a camada espacial (greybox por código, hitbox, lunge de 7 studs, AI dos Estilhaços).
+> **O jogo nunca rodou.** Nenhuma linha deste repositório foi executada no Roblox Studio: não há evidência de feeling, HUD, save real, mobile, gamepad ou das parts do greybox existirem de fato.
 
 ## Estado comprovado
 
@@ -12,9 +12,9 @@ progressão persistente, loadout customizável e ressonância de famílias de en
 |---|---|
 | Produto | Q-001 a Q-030 decididas; `docs/09-OPEN-QUESTIONS.md` é o registro canônico |
 | Planejamento | visão, GDD, mundo, social, arquitetura, schemas, segurança, roster, roadmap e benchmark documentados |
-| Implementado | catálogo F0, Umbral, SessionSnapshot, combate universal, dummy, Ombro Cometa, ZoneService, técnicas locked no spawn, Estilhaço Errante headless (telegraph/dano 6/sem aggro na fronteira/respawn 45 s/cap 4), Locale PT-BR/EN, objetivo 1 (aceite por NPC ou 90 s → 3 kills → +40 XP → unlock do Cometa) e XP não consolidado com retorno decrescente por âncora e teto de 800/sessão |
-| Validado automaticamente | 91 testes Lune + Selene + StyLua check + Wally + build Rojo no CI |
-| Ainda não comprovado | feeling/runtime no Studio, geometria do mapa (parts/volumes/collision groups), spawn e AI dos Estilhaços no mundo, persistência de XP/flags entre sessões, os 5 sinais visíveis/audíveis, hold 0,6 s no toque, servidor publicado, DataStore real, latência, mobile, gamepad, performance e UX visual |
+| Implementado | catálogo F0, Umbral, SessionSnapshot, combate universal com hitbox real, dummy, Ombro Cometa com lunge de 7 studs, ZoneService, técnicas locked no spawn, Locale PT-BR/EN, objetivo 1 (aceite por NPC ou 90 s → 3 kills → +40 XP → unlock do Cometa), XP com retorno decrescente por âncora e teto de 800/sessão, greybox construído por código e Estilhaços com spawn/perseguição/telegraph/respawn |
+| Validado automaticamente | 109 testes Lune + Selene + StyLua check + Wally + build Rojo no CI |
+| Ainda não comprovado | **qualquer execução no Roblox Studio**: as parts do greybox existirem, collision groups, leitura do personagem, feeling do combate, os 5 sinais visíveis/audíveis, hold 0,6 s no toque, HUD, persistência de XP/flags entre sessões, servidor publicado, DataStore real, latência, mobile, gamepad, performance e UX visual |
 
 O CI do commit `33eca73` passou em
 [2026-08-12](https://github.com/alvaro209890/anime-verse-battlegrounds/actions/runs/31618843968).
@@ -36,7 +36,7 @@ Um build verde valida contratos headless e a árvore Rojo; não substitui playte
 
 ```bash
 aftman install        # instala o toolchain (rojo, wally, selene, stylua, lune, luau-lsp)
-lune run tests/run.luau   # testes unitários (91)
+lune run tests/run.luau   # testes unitários (109)
 selene src tests      # lint
 stylua --check src tests  # formatação
 rojo build -o build.rbxl  # valida a árvore de instâncias
@@ -48,11 +48,11 @@ O CI (`.github/workflows/ci.yml`) roda lint + format + testes + build em todo pu
 
 ```
 src/
-  shared/            módulos compartilhados (dados, contratos, tipos)
+  shared/            módulos compartilhados (dados, contratos, tipos, geometria)
     Data/            catálogos dirigidos por dados (personagens, habilidades, famílias, NPCs, zonas, objetivos, locale)
-  server/            services (bootstrap, recurso, habilidade, combate, zona, objetivo, progressão, rede, sessão)
+  server/            services (bootstrap, recurso, habilidade, combate, espaço, mundo, inimigos, zona, objetivo, progressão, rede, sessão)
   client/            controllers (bootstrap de apresentação)
-tests/               harness Lune + 91 testes unitários
+tests/               harness Lune + 109 testes unitários
 docs/                produto, arquitetura, decisões, benchmark, testes e spec F0 (00 a 13)
 lib/                 bibliotecas pinadas (ProfileStore)
 ```

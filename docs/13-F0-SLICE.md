@@ -24,17 +24,21 @@ P1 (revisão jurídica) continua obrigatório antes de concept art, áudio final
 
 ## 2. Divergências do código atual
 
-O esqueleto em `src/` **não** implementa o loop jogável no Studio. Itens 1–6 no domínio + item 7 headless completo. Ainda falta:
+Itens 1–7 fechados no domínio, com a camada espacial construída por código (greybox, hitbox, lunge, AI). O que **não** está comprovado é execução real no Studio: o código existe e é testado headless, mas ninguém abriu o place. Ainda falta:
 
 | Onde | Estado atual | Alvo desta spec |
 |---|---|---|
 | `src/shared/Data/Abilities.luau` | `comet_shoulder`, `broken_cadence`, `pulse_return`; `eclipse_beat` desligada | feito |
 | `src/shared/Data/EnergyFamilies.luau` | Umbral regen 2/6, Fluxo 6 / 120 ms, cap 1,5 s | feito |
 | `src/shared/Data/Npcs.luau` | dummy 10000 HP; `enemy_wandering_shard` 40 HP / dano 6 / alcance 4 / telegraph 400 ms; `npc_threshold_instructor` (ofertante) | pathfinding/Studio pendente |
-| `src/shared/Data/Zones.luau` | 3 zonas, 6 âncoras, greybox F0-BASELINE como dados (collision groups `Safe`/`Transition`/`Free`/`GateBlock`) | feito no domínio; geometria Studio pendente |
+| `src/shared/Data/Zones.luau` | 3 zonas com volumes (AABB), 6 âncoras persistidas + 6 pontos de Estilhaço, greybox F0-BASELINE | feito |
+| `src/shared/Geometry.luau` | distância, costas, esfera, cápsula, caixa, lunge e passo de perseguição | feito |
+| `SpatialService` | registro de posição/olhar; hitbox à frente, cápsula do trajeto, `resolveCometShoulder` | feito no domínio; leitura do `HumanoidRootPart` só roda no Studio |
+| `EnemyService` | spawn nas 6 âncoras, perseguição 12 studs/s, ciclo de ataque, respawn 45 s, teto 4 | feito no domínio; nunca rodou em Studio |
+| `WorldService` | constrói chão, muros, portões, volumes, cratera, pilares, âncoras e collision groups | **código escrito, execução não verificada** |
 | `src/shared/Data/Quests.luau` | `quest_hunt`: 3 Estilhaços, +40 XP, unlock Cometa, aceite forçado em 90 s | itens 9/10 acrescentam linhas (elite e Fluxo) |
 | `src/shared/Data/Locale.luau` | chaves §16 em PT-BR e EN; validado no boot contra os catálogos | copy final e P1 |
-| `CombatService` | cadeia leve, guarda, aparo, pesado, quebra, dash, dummy, comet, Estilhaço (telegraph → 6 HP, sem aggro na fronteira, respawn 45 s, cap 4), `killed` na transição vivo → morto | hitbox espacial, lunge de 7 studs, movimento 12 studs/s no Studio |
+| `CombatService` | cadeia leve, guarda, aparo, pesado, quebra, dash, dummy, comet, Estilhaço, `killed` na transição vivo → morto; alvo e lado do golpe agora vêm do `SpatialService` | feito no domínio |
 | `AbilityService` | comet resolve o fighter do dummy; `CombatHit` no acerto; unlock via `ProgressionService` no bootstrap | Cadência/Pulso contra dummy (itens 8/10) |
 | `ProgressionService` | spawn sem técnicas; grant idempotente; XP não consolidado com retorno decrescente por âncora e teto de 800/sessão | consolidação, perda na morte e persistência (item 11) |
 | `QuestService` | oferta → aceite (NPC ou 90 s) → progresso por kill → +40 XP e `unlock_comet_shoulder` no 3º | objetivos do elite e do Fluxo (itens 9/10) |
@@ -44,9 +48,25 @@ O esqueleto em `src/` **não** implementa o loop jogável no Studio. Itens 1–6
 | `SaveService` | stub em memória; persiste `wallet` | ProfileRoot v1 sem wallet; ProfileStore no place de teste |
 | Mapa/HUD | greybox como dados (`Zones.luau`); ausentes no Studio | §8 e §12 |
 
-Testes Lune: 91 casos em `tests/run.luau` (`docs/12-TESTING.md`).
+Testes Lune: 109 casos em `tests/run.luau` (`docs/12-TESTING.md`).
 
-**Comprovado neste recorte:** técnicas locked no spawn; Estilhaço Errante headless (telegraph 400 ms, dano 6, alcance 4, sem aggro através da fronteira, respawn 45 s se ninguém em combate a 20 studs, no máximo 4 vivos); XP do kill com retorno decrescente por âncora e teto de sessão; objetivo 1 do aceite ao prêmio; unlock do Ombro Cometa no 3º kill. **Não comprovado:** spawn/pathfinding dos Estilhaços no mundo, persistência do XP e das flags entre sessões, Studio, HUD.
+**Comprovado neste recorte:** técnicas locked no spawn; Estilhaço Errante completo (spawn nas 6 âncoras, perseguição a 12 studs/s, telegraph 400 ms, dano 6, alcance 4, sem aggro através da fronteira, respawn 45 s, teto de 4); XP com retorno decrescente por âncora e teto de sessão; objetivo 1 do aceite ao prêmio; unlock do Ombro Cometa no 3º kill; geometria do greybox coerente com as âncoras; hitbox à frente; lunge de 7 studs com cap 8 e parada na guarda.
+
+**Não comprovado — e esta é a linha que importa:** nada disso rodou no Roblox Studio. O `WorldService` constrói o greybox por código, mas ninguém abriu o place para ver as parts, medir o feeling, testar o hold de 0,6 s no toque, conferir os collision groups ou fazer o teste cego da fronteira. Persistência entre sessões (item 11) também segue ausente. Um `rojo build` verde prova que a árvore monta, não que o jogo roda.
+
+**Arquitetura da camada espacial (2026-08-12).** A regra fica em módulos puros e testáveis; só a tradução para Instances é intocada por teste.
+
+| Camada | Módulo | Testado no Lune |
+|---|---|---|
+| Matemática | `src/shared/Geometry.luau` | sim |
+| Volumes e âncoras | `src/shared/Data/Zones.luau` | sim |
+| Consultas de combate | `SpatialService` | sim |
+| AI e spawn | `EnemyService` | sim |
+| Parts, muros e collision groups | `WorldService` | **não** — é a fronteira Roblox |
+
+Regra de manutenção: se o `WorldService` precisar de um `if` de gameplay, o `if` está no lugar errado. Ele traduz dados em parts e nada mais.
+
+**Inferência de layout do Portão Oeste.** §8.1 dimensiona a planície em 160 × 120 ao norte, mas não diz onde o Portão Oeste desemboca. `Zones.luau` acrescenta um braço oeste à zona livre para o portão não dar em lugar nenhum. É F0-BASELINE, revisável no greybox do Studio.
 
 **Interpretação registrada do retorno decrescente (§9.2).** A spec diz “retorno decrescente após 6 kills da mesma âncora na sessão (12, depois 0)” sem fechar onde o 12 termina. A implementação adota **6 kills a 25, os 6 seguintes a 12, o resto a 0**, expresso como dados em `Npcs.luau` (`xpFullKills` / `xpReducedKills` / `xpReducedValue`). É F0-BASELINE: muda com evidência de playtest, sem reabrir política.
 
@@ -495,7 +515,7 @@ Cheat de unlock: remote **inexistente** no cliente. Flag `StudioDebugUnlock` só
 
 ## 19. Testes da mudança de catálogo
 
-Os casos abaixo estão em `tests/run.luau` (91 no total; fonte: chamadas `test(...)`):
+Os casos abaixo estão em `tests/run.luau` (109 no total; fonte: chamadas `test(...)`):
 
 - roster `eclipse_fist` com 3 skills enabled + 1 ultimate disabled
 - `comet_shoulder` custo 18, CD 7, runner registrado
@@ -555,7 +575,28 @@ Objetivo 1, XP e Locale (item 7, 2026-08-12):
 - remote: `InteractionIntent` C→S e `StateDelta` S→C (version 1); `SessionSnapshot` carrega o objetivo
 - fatia: roteiro 0–5 min ponta a ponta — spawn locked → aceite → travessia → 3 kills → 115 XP → Ombro Cometa cobrado a 18 Umbral; Cadência e Pulso continuam locked
 
-Integração Lune não cobre Studio. Evidência runtime: `12-TESTING.md` §6. Geometria do greybox, volumes de transição, collision groups reais, sinais visíveis/audíveis, hold 0,6 s no toque e o spawn/AI dos Estilhaços no mundo permanecem como trabalho de Studio.
+Camada espacial (greybox, hitbox, lunge e AI — 2026-08-12):
+
+- geometria: distância no plano ignora altura; normalize de vetor nulo não vira NaN
+- geometria: costas ignoram guarda; perpendicular conta como frente; sem olhar conhecido assume frente
+- geometria: cápsula do trajeto acerta no eixo e no raio, erra fora do raio e depois do fim
+- geometria: lunge anda 7, respeita o cap absoluto de 8 e para antes de encostar no bloqueador
+- geometria: `moveToward` respeita 12 studs/s e para exatamente no alcance, sem ultrapassar
+- greybox: o volume de cada zona resolve a zona declarada por **todas** as âncoras; fora de todo volume devolve nil; o plano exato do portão resolve como transição
+- greybox: 6 pontos de Estilhaço, ≥ 24 studs entre si e ≥ 20 de cada portão
+- catálogo: âncora que declara uma zona mas cai no volume de outra falha validação
+- espaço: hitbox à frente acerta 1 alvo e ignora quem está atrás ou longe
+- espaço: Ombro Cometa avança 7, commita a posição no servidor e acerta 1 alvo na cápsula
+- espaço: guarda inimiga trava o avanço antes dos 7 studs
+- espaço: avanço sem ninguém no trajeto é resultado válido (sem alvo, sem bloqueio)
+- inimigo: spawn até o teto de 4, id com a âncora embutida, sem duplicar na segunda chamada
+- inimigo: persegue, para no alcance, abre telegraph, não causa dano dentro dos 400 ms e aplica 6 depois
+- inimigo: jogador na zona segura não gera aggro nem perseguição
+- inimigo: respawn de 45 s bloqueado com jogador a menos de 20 studs da âncora, liberado quando ele se afasta
+- inimigo: kill reporta âncora e autor para o crédito de XP
+- remote: `EnemyEvent` S→C (version 1) com telegraph no payload
+
+Integração Lune não cobre Studio. Evidência runtime: `12-TESTING.md` §6. O que segue **sem nenhuma evidência de execução**: abrir o place, ver as parts do `WorldService`, feeling do combate, sinais visíveis/audíveis, hold 0,6 s no toque, collision groups reais, latência, mobile e gamepad.
 
 ## 20. Backlog priorizado
 
@@ -565,9 +606,9 @@ Ordem de implementação; cada item fecha com teste automatizado **ou** evidênc
 2. ~~Tirar `FireServer` do boot; `SessionSnapshot` mínimo~~ (feito 2026-08-12; domínio + remote)
 3. ~~Spawn + movimento + leve/guarda/dash contra dummy~~ (domínio headless 2026-08-12; movimento/Studio pendente)
 4. ~~Pesado + quebra de guarda~~ (feito 2026-08-12; 43 testes)
-5. ~~Ombro Cometa~~ (feito 2026-08-12; 49 testes; domínio headless — lunge espacial no Studio pendente)
-6. ~~Greybox + `ZoneService` + 5 sinais~~ (feito 2026-08-12; revisão 64 testes — `ZoneCrossingIntent`, lockout não dispara em treino, catálogo não envenena deps; domínio headless — geometria Studio pendente: parts/volumes de transição, collision groups `Safe`/`Transition`/`Free`/`GateBlock`, sinais visíveis/audíveis, iluminação, hold 0,6 s no toque e playtest cego da fronteira)
-7. ~~Estilhaços + objetivo 1 + unlock Cometa~~ (domínio headless completo 2026-08-12; 91 testes — Locale, `Quests.luau`, `QuestService`, XP com retorno decrescente e teto de sessão, unlock no 3º kill, `InteractionIntent` + `StateDelta`. **Pendente**: spawn/AI dos Estilhaços no mundo do Studio — a camada espacial cria os fighters no formato `<npcId>@<anchorId>#<n>` e chama o mesmo `creditKill` do bootstrap — e a persistência do XP/flags, que é o item 11)
+5. ~~Ombro Cometa~~ (feito 2026-08-12; lunge espacial de 7 studs com cap 8, parada na guarda e cápsula do trajeto entraram em 2026-08-12 via `SpatialService.resolveCometShoulder`)
+6. ~~Greybox + `ZoneService` + 5 sinais~~ (feito 2026-08-12; regras headless em 64 testes; geometria construída por código em 2026-08-12 — `Zones.luau` ganhou volumes, `WorldService` constrói parts/muros/portões/collision groups e `zoneAtPosition` reconcilia a zona no heartbeat. **Sem execução em Studio**: sinais visíveis/audíveis, iluminação, hold 0,6 s no toque e playtest cego da fronteira continuam pendentes)
+7. ~~Estilhaços + objetivo 1 + unlock Cometa~~ (completo 2026-08-12; 109 testes — Locale, `Quests.luau`, `QuestService`, XP com retorno decrescente e teto de sessão, unlock no 3º kill, `InteractionIntent` + `StateDelta`, e o `EnemyService` com spawn nas 6 âncoras, perseguição, telegraph e respawn. **Pendente**: persistência do XP/flags, que é o item 11, e execução em Studio)
 8. Cadência + Fluxo
 9. Elite + unlock Cadência
 10. Pulso + objetivo 45–60 min

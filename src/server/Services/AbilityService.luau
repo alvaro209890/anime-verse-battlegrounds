@@ -36,6 +36,11 @@ export type AbilityDeps = {
 	getAbilityTarget: ((number) -> any?)?,
 	tryCometShoulder: ((any, any, number, string) -> any)?,
 	onCombatHit: ((number, string, number, string) -> ())?,
+	-- Camada espacial (item 5): resolve o avanço de 7 studs, commita a posição
+	-- e devolve alvo + lado do golpe. Ausente = fatia headless usa
+	-- `getAbilityTarget` (dummy fixo), que é o comportamento anterior.
+	resolveCometShoulder: ((number) -> any)?,
+	getFighterById: ((string) -> any?)?,
 }
 
 local AbilityService = {
@@ -57,6 +62,24 @@ local function cometShoulderRunner(attacker: ServerPlayerState, target: ServerPl
 	local deps = AbilityService.deps
 	if not deps then
 		return
+	end
+	-- Caminho espacial: avança de fato e acerta quem estiver na cápsula.
+	-- Avanço sem alvo é resultado válido (custo e cooldown já foram pagos).
+	if deps.resolveCometShoulder and deps.tryCometShoulder and deps.getAttackerFighter and deps.getFighterById then
+		local attackerFighter = deps.getAttackerFighter(attacker.userId)
+		if attackerFighter then
+			local resolution = deps.resolveCometShoulder(attacker.userId)
+			if resolution and resolution.targetId then
+				local targetFighter = deps.getFighterById(resolution.targetId)
+				if targetFighter then
+					local hit = deps.tryCometShoulder(attackerFighter, targetFighter, now(), resolution.facing)
+					if deps.onCombatHit and hit and hit.ok then
+						deps.onCombatHit(attacker.userId, targetFighter.id, hit.damage, "comet_shoulder")
+					end
+				end
+			end
+			return
+		end
 	end
 	if deps.tryCometShoulder and deps.getAttackerFighter and deps.getAbilityTarget then
 		local attackerFighter = deps.getAttackerFighter(attacker.userId)

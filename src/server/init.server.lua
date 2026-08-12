@@ -13,7 +13,10 @@ local AbilityService = require(script.Parent.Services.AbilityService)
 local CatalogService = require(script.Parent.Services.CatalogService)
 local CooldownService = require(script.Parent.Services.CooldownService)
 local CombatService = require(script.Parent.Services.CombatService)
+local EnemyService = require(script.Parent.Services.EnemyService)
 local PlayerSessionService = require(script.Parent.Services.PlayerSessionService)
+local SpatialService = require(script.Parent.Services.SpatialService)
+local WorldService = require(script.Parent.Services.WorldService)
 local ProgressionService = require(script.Parent.Services.ProgressionService)
 local QuestService = require(script.Parent.Services.QuestService)
 local RemoteGateway = require(script.Parent.Services.RemoteGateway)
@@ -24,6 +27,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Abilities = require(ReplicatedStorage.Shared.Data.Abilities)
 local Characters = require(ReplicatedStorage.Shared.Data.Characters)
 local EnergyFamilies = require(ReplicatedStorage.Shared.Data.EnergyFamilies)
+local Geometry = require(ReplicatedStorage.Shared.Geometry)
 local Locale = require(ReplicatedStorage.Shared.Data.Locale)
 local Npcs = require(ReplicatedStorage.Shared.Data.Npcs)
 local Quests = require(ReplicatedStorage.Shared.Data.Quests)
@@ -42,6 +46,17 @@ CatalogService.init({
 print("[Bootstrap] catálogo validado")
 
 ProgressionService.init()
+
+-- 1.1. Mundo — greybox, collision groups e marcadores de âncora (§8).
+-- Constrói a partir dos mesmos números que `zoneAtPosition` usa.
+WorldService.init({
+	zones = Zones,
+	greybox = Zones.greybox,
+})
+print("[Bootstrap] greybox construído")
+
+-- 1.2. Espaço — produz distância, costas e hitbox para o combate.
+SpatialService.init({ geometry = Geometry })
 
 -- 2. Persistência (stub seguro até ProfileStore entrar no build)
 SaveService.init()
@@ -110,6 +125,14 @@ CombatService.clear()
 local dummyDef = CatalogService.getNpc("npc_training_dummy")
 if dummyDef then
 	CombatService.createFighter(dummyDef.id, "npc", dummyDef.maxHealth, dummyDef.maxGuard)
+	local trainingAnchor = CatalogService.getAnchor("anchor_training")
+	if trainingAnchor then
+		SpatialService.setTransform(dummyDef.id, {
+			x = trainingAnchor.position.x,
+			y = trainingAnchor.position.y,
+			z = trainingAnchor.position.z,
+		}, { x = 0, y = 0, z = 1 })
+	end
 end
 
 AbilityService.init({
@@ -148,6 +171,27 @@ AbilityService.init({
 		})
 	end,
 	isAbilityUnlocked = ProgressionService.isAbilityUnlocked,
+	getFighterById = CombatService.getFighter,
+	-- Ombro Cometa espacial (§6.1): 7 studs, cap 8, para em parede e em guarda
+	-- inimiga, cápsula 4×4×8 no trajeto e no máximo 1 alvo.
+	resolveCometShoulder = function(userId: number)
+		local attackerId = CombatService.playerFighterId(userId)
+		return SpatialService.resolveCometShoulder(attackerId, {
+			distance = 7,
+			hardCap = 8,
+			capsuleRadius = 2,
+			blockerRadius = 2,
+			blocks = function(fighterId: string): boolean
+				local fighter = CombatService.getFighter(fighterId)
+				-- Guarda ativa para o avanço; corpo morto não bloqueia.
+				return fighter ~= nil and fighter.health > 0 and fighter.guarding == true
+			end,
+			targets = function(fighterId: string): boolean
+				local fighter = CombatService.getFighter(fighterId)
+				return fighter ~= nil and fighter.health > 0
+			end,
+		})
+	end,
 })
 
 -- 7. Ciclo de sessão — injeta o grafo
@@ -178,6 +222,77 @@ local function requireReady(player: Player): boolean
 	return PlayerSessionService.isReady(player.UserId)
 end
 
+-- Zona de um fighter qualquer. Jogador: ZoneService. Inimigo: a âncora onde
+-- nasceu. Dummy e instrutor: a zona segura. Usado para a regra de dano que não
+-- atravessa a fronteira (§8.2).
+local function zoneOfFighter(fighterId: string, selfUserId: number?): string
+	if selfUserId and fighterId == CombatService.playerFighterId(selfUserId) then
+		return ZoneService.getPlayerZone(selfUserId)
+	end
+	local userIdText = string.match(fighterId, "^player:(%d+)$")
+	if userIdText then
+		return ZoneService.getPlayerZone(tonumber(userIdText) :: number)
+	end
+	local npcId, anchorId = string.match(fighterId, "^([^@#]+)@([^@#]+)#%d+$")
+	if npcId and anchorId then
+		local anchor = CatalogService.getAnchor(anchorId)
+		if anchor then
+			return anchor.zoneId
+		end
+	end
+	local npcDef = CatalogService.getNpc(fighterId)
+	if npcDef and npcDef.zoneId then
+		return npcDef.zoneId
+	end
+	return "zone_bastion_safe"
+end
+
+-- Jogadores elegíveis a aggro: prontos, vivos e com posição conhecida.
+local function listAggroTargets(): { any }
+	local out: { any } = {}
+	for _, player in game.Players:GetPlayers() do
+		local userId = player.UserId
+		if PlayerSessionService.isReady(userId) then
+			local fighterId = CombatService.playerFighterId(userId)
+			local fighter = CombatService.getFighter(fighterId)
+			if fighter and fighter.health > 0 and SpatialService.getPosition(fighterId) then
+				table.insert(out, {
+					fighterId = fighterId,
+					userId = userId,
+					zoneId = ZoneService.getPlayerZone(userId),
+				})
+			end
+		end
+	end
+	return out
+end
+
+-- 6.1. Inimigos — spawn nas 6 âncoras, perseguição e respawn (§9.2).
+EnemyService.init({
+	getNpc = CatalogService.getNpc,
+	getAnchor = CatalogService.getAnchor,
+	shardAnchors = CatalogService.shardAnchors,
+	spatial = SpatialService,
+	combat = CombatService,
+	geometry = Geometry,
+	listTargets = listAggroTargets,
+	onEnemyEvent = function(fighterId: string, event: { any })
+		-- Telegraph precisa chegar ao cliente para o contorno branco (§17).
+		for _, player in game.Players:GetPlayers() do
+			if PlayerSessionService.isReady(player.UserId) then
+				RemoteGateway.fireClient(player, Remotes.Names.EnemyEvent, {
+					fighterId = fighterId,
+					kind = event.kind,
+					targetId = event.targetId,
+					damage = event.damage,
+				})
+			end
+		end
+	end,
+})
+EnemyService.spawnInitial()
+print("[Bootstrap] Estilhaços no mundo")
+
 -- Convenção de id do fighter de inimigo: "<npcId>@<anchorId>#<n>".
 -- A âncora vem no id porque o retorno decrescente de XP é por ponto de spawn
 -- (docs/13 §9.2). A camada de spawn/AI no Studio cria os fighters com este
@@ -197,6 +312,7 @@ local function creditKill(player: Player, fighterId: string, now: number): ()
 	if not npcDef then
 		return
 	end
+	EnemyService.reportKill(player.UserId, fighterId)
 	local award = ProgressionService.creditNpcKill(player.UserId, npcDef, anchorId)
 	local events = QuestService.creditKill(player.UserId, npcId, now)
 	-- QuestService já emitiu StateDelta com o XP atualizado; sem evento de
@@ -236,24 +352,49 @@ RemoteGateway.onClientIntent(Remotes.Names.BasicAttackIntent, function(player: P
 	if not requireReady(player) then
 		return
 	end
-	local attacker = CombatService.getFighter(CombatService.playerFighterId(player.UserId))
-	local dummy = CombatService.getFighter("npc_training_dummy")
-	if not attacker or not dummy then
+	local attackerId = CombatService.playerFighterId(player.UserId)
+	local attacker = CombatService.getFighter(attackerId)
+	if not attacker then
 		return
 	end
 	local kind = payload.kind
 	local now = os.clock()
-	local result = if kind == "heavy"
-		then CombatService.tryHeavy(attacker, dummy, now, "front")
-		else CombatService.tryLight(attacker, dummy, now, "front")
-	if result.ok then
+
+	-- Hitbox de verdade (§5.1/§5.2): esfera à frente para a cadeia leve,
+	-- cápsula mais longa para o pesado. Máx. 1 alvo por golpe.
+	local isHeavy = kind == "heavy"
+	local step = math.clamp(attacker.lightStep + 1, 1, 4)
+	local radius = if isHeavy then 2.5 else ({ 4, 4, 4.5, 5 })[step]
+	local forward = if isHeavy then 3.5 else 2
+	local hits = SpatialService.overlapInFront(attackerId, forward, radius, function(fighterId: string): boolean
+		local other = CombatService.getFighter(fighterId)
+		if not other or other.health <= 0 then
+			return false
+		end
+		-- Dano não atravessa a fronteira (§8.2).
+		return ZoneService.canDamageCrossBoundary(
+			ZoneService.getPlayerZone(player.UserId),
+			zoneOfFighter(fighterId, player.UserId)
+		)
+	end, 1)
+
+	local targetId = hits[1]
+	local target = if targetId then CombatService.getFighter(targetId) else nil
+	local facing = if targetId then SpatialService.facingOf(targetId, attackerId) else "front"
+
+	local result = if isHeavy
+		then CombatService.tryHeavy(attacker, target, now, facing)
+		else (if target then CombatService.tryLight(attacker, target, now, facing) else nil)
+
+	if result and result.ok and target then
+		ZoneService.markHostileAction(player.UserId, now)
 		RemoteGateway.fireClient(player, Remotes.Names.CombatHit, {
-			targetId = dummy.id,
+			targetId = target.id,
 			damage = result.damage,
-			abilityId = if kind == "heavy" then "heavy" else "light",
+			abilityId = if isHeavy then "heavy" else "light",
 		})
 		if result.killed then
-			creditKill(player, dummy.id, now)
+			creditKill(player, target.id, now)
 		end
 	end
 end)
@@ -312,8 +453,18 @@ game.Players.PlayerAdded:Connect(function(player: Player)
 	QuestService.registerPlayer(player.UserId, os.clock())
 	ProgressionService.grantUnlock(player.UserId, "ftue_spawned")
 	PlayerSessionService.onPlayerJoined(player)
+	-- Posição inicial na âncora de spawn até o Heartbeat ler o personagem.
+	local spawnAnchor = CatalogService.getAnchor("anchor_bastion_spawn")
+	if spawnAnchor then
+		SpatialService.setTransform(CombatService.playerFighterId(player.UserId), {
+			x = spawnAnchor.position.x,
+			y = spawnAnchor.position.y,
+			z = spawnAnchor.position.z,
+		}, { x = 0, y = 0, z = -1 })
+	end
 end)
 game.Players.PlayerRemoving:Connect(function(player: Player)
+	SpatialService.remove(CombatService.playerFighterId(player.UserId))
 	PlayerSessionService.onPlayerLeft(player)
 	QuestService.unregisterPlayer(player.UserId)
 	ZoneService.unregisterPlayer(player.UserId)
@@ -332,6 +483,48 @@ task.spawn(function()
 			end
 		end
 	end
+end)
+
+-- Heartbeat espacial: lê a posição autoritativa do personagem, reconcilia a
+-- zona pela geometria e roda a AI dos Estilhaços.
+--
+-- O cliente NUNCA informa posição para efeito de dano — o que se lê aqui é o
+-- HumanoidRootPart replicado, e a fronteira é decidida pelo mesmo
+-- `zoneAtPosition` que gerou os volumes no Studio.
+local RunService = game:GetService("RunService")
+local lastTick = os.clock()
+
+RunService.Heartbeat:Connect(function()
+	local now = os.clock()
+	local delta = now - lastTick
+	lastTick = now
+
+	for _, player in game.Players:GetPlayers() do
+		local userId = player.UserId
+		if PlayerSessionService.isReady(userId) then
+			local character = player.Character
+			local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
+			if root and root:IsA("BasePart") then
+				local position = { x = root.Position.X, y = root.Position.Y, z = root.Position.Z }
+				local look = root.CFrame.LookVector
+				SpatialService.setTransform(
+					CombatService.playerFighterId(userId),
+					position,
+					{ x = look.X, y = look.Y, z = look.Z }
+				)
+
+				-- Reconciliação de zona. Fora de qualquer volume mantém a zona
+				-- anterior; recusa (hold ou lockout) já emite ZoneEvent, e
+				-- empurrar o jogador de volta fisicamente é trabalho de Studio.
+				local geometric = CatalogService.zoneAtPosition(position)
+				if geometric and geometric ~= ZoneService.getPlayerZone(userId) then
+					ZoneService.tryEnterZone(userId, geometric, now, {})
+				end
+			end
+		end
+	end
+
+	EnemyService.tick(now, delta)
 end)
 
 print("[Bootstrap] servidor pronto (F0)")

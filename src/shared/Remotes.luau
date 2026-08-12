@@ -28,6 +28,7 @@ export type RemoteName =
 	| "ZoneCrossingIntent"
 	| "InteractionIntent"
 	| "StateDelta"
+	| "EnemyEvent"
 
 local REMOTES = {
 	AbilityActivate = "AbilityActivate",
@@ -43,6 +44,7 @@ local REMOTES = {
 	ZoneCrossingIntent = "ZoneCrossingIntent",
 	InteractionIntent = "InteractionIntent",
 	StateDelta = "StateDelta",
+	EnemyEvent = "EnemyEvent",
 }
 
 local RemoteContracts = {
@@ -125,6 +127,14 @@ local RemoteContracts = {
 		direction = "ServerToClient",
 		version = 1,
 		payload = "{ objective: { questId: string, trackerKey: string, progress: number, required: number, state: string, xpGranted: number?, unlockFlag: string? }?, unlocks: { string }?, unconsolidatedXp: number? }",
+	} :: NetworkContract,
+	-- Telegraph, ataque, spawn e morte de inimigo. O telegraph é o que permite
+	-- o contorno branco de perigo (§17); o cliente não decide se acertou.
+	[REMOTES.EnemyEvent] = {
+		name = REMOTES.EnemyEvent,
+		direction = "ServerToClient",
+		version = 1,
+		payload = '{ fighterId: string, kind: "spawn" | "telegraph" | "attack" | "died" | "respawn", targetId: string?, damage: number? }',
 	} :: NetworkContract,
 }
 

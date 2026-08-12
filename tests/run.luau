@@ -51,6 +51,9 @@ local ProgressionService = require("../src/server/Services/ProgressionService")
 local QuestService = require("../src/server/Services/QuestService")
 local Quests = require("../src/shared/Data/Quests")
 local Locale = require("../src/shared/Data/Locale")
+local Geometry = require("../src/shared/Geometry")
+local SpatialService = require("../src/server/Services/SpatialService")
+local EnemyService = require("../src/server/Services/EnemyService")
 
 -- ── Relógio injetável (janela de reentrada / cap de Fluxo) ──────────────────
 local fakeNow = 1000
@@ -1092,14 +1095,26 @@ local function makeZoneDeps(events: { any }?)
 	}
 end
 
-test("dados: 3 zonas, PvP só na livre, 6 âncoras, spawn no bastião", function()
+test("dados: 3 zonas, PvP só na livre, âncoras da spec, spawn no bastião", function()
 	assertEq(#Zones.all(), 3, "3 zonas")
 	for _, zone in Zones.all() do
 		if zone.pvp then
 			assertEq(zone.id, "zone_plain_free", "PvP só na planície")
 		end
 	end
-	assertEq(#Zones.allAnchors(), 6, "6 âncoras")
+	-- 6 âncoras persistidas de §8.3 + os 6 pontos de Estilhaço de §8.1.
+	local required = {
+		"anchor_bastion_spawn",
+		"anchor_bastion_return",
+		"anchor_training",
+		"anchor_gate_north",
+		"anchor_gate_west",
+		"anchor_elite",
+	}
+	for _, anchorId in required do
+		assertTrue(Zones.getAnchor(anchorId) ~= nil, "âncora obrigatória " .. anchorId)
+	end
+	assertEq(#Zones.allAnchors(), #required + #Zones.shardAnchors(), "âncoras persistidas + pontos de Estilhaço")
 	local spawn = Zones.getAnchor("anchor_bastion_spawn")
 	assertTrue(spawn ~= nil, "anchor_bastion_spawn existe")
 	if spawn then
@@ -1877,6 +1892,420 @@ test("fatia: roteiro 0–5 min — spawn locked, objetivo, 3 kills e Cometa libe
 	ProgressionService.unregisterPlayer(320)
 	assertEq(ProgressionService.getUnconsolidatedXp(320), 0, "sem persistência ainda")
 	assertEq(QuestService.getProgress(320, "quest_hunt"), nil, "estado do objetivo limpo")
+end)
+
+-- ══ Testes: camada espacial (greybox, hitbox, lunge, AI) ────────────────────
+local function vec(x: number, y: number, z: number): any
+	return { x = x, y = y, z = z }
+end
+
+test("geometria: distância, distância horizontal e normalize", function()
+	assertEq(Geometry.distance(vec(0, 0, 0), vec(3, 4, 0)), 5, "distância 3-4-5")
+	assertEq(Geometry.horizontalDistance(vec(0, 0, 0), vec(3, 99, 4)), 5, "altura é ignorada no plano")
+	local unit = Geometry.normalize(vec(0, 0, -8))
+	assertEq(unit.z, -1, "unitário aponta ao norte")
+	local zero = Geometry.normalize(vec(0, 0, 0))
+	assertEq(zero.x, 0, "vetor nulo não vira NaN")
+	assertEq(zero.z, 0, "vetor nulo não vira NaN")
+end)
+
+test("geometria: costas ignoram guarda, frente não", function()
+	local targetPos = vec(0, 0, 0)
+	local look = vec(0, 0, -1) -- olhando para o norte
+	assertEq(Geometry.facing(targetPos, look, vec(0, 0, -5)), "front", "atacante ao norte está de frente")
+	assertEq(Geometry.facing(targetPos, look, vec(0, 0, 5)), "back", "atacante ao sul está pelas costas")
+	assertEq(Geometry.facing(targetPos, look, vec(5, 0, 0)), "front", "perpendicular conta como frente")
+	assertEq(Geometry.facing(targetPos, vec(0, 0, 0), vec(0, 0, 5)), "front", "sem olhar conhecido assume frente")
+end)
+
+test("geometria: cápsula do trajeto acerta no meio e erra fora do raio", function()
+	local from = vec(0, 0, 0)
+	local to = vec(0, 0, -8)
+	assertTrue(Geometry.capsuleContains(from, to, 2, vec(0, 0, -4)), "no eixo do trajeto")
+	assertTrue(Geometry.capsuleContains(from, to, 2, vec(1.9, 0, -4)), "dentro do raio")
+	assertFalse(Geometry.capsuleContains(from, to, 2, vec(2.5, 0, -4)), "fora do raio")
+	assertFalse(Geometry.capsuleContains(from, to, 2, vec(0, 0, -11)), "além do fim do trajeto")
+	assertEq(Geometry.distanceToSegment(from, from, vec(0, 0, -3)), 3, "segmento degenerado vira ponto")
+end)
+
+test("geometria: lunge anda 7, respeita o cap 8 e para no bloqueio", function()
+	local origin = vec(0, 0, 0)
+	local north = vec(0, 0, -1)
+	local free = Geometry.resolveLunge(origin, north, 7, 8, {})
+	assertEq(free.traveled, 7, "anda os 7 studs")
+	assertEq(free.blocked, false, "sem bloqueio")
+	assertTrue(math.abs(free.position.z + 7) < 1e-6, "para em z = -7")
+
+	local capped = Geometry.resolveLunge(origin, north, 20, 8, {})
+	assertEq(capped.traveled, 8, "cap absoluto de 8 studs")
+
+	local wall = { { id = "wall", position = vec(0, 0, -5), radius = 2 } }
+	local blocked = Geometry.resolveLunge(origin, north, 7, 8, wall)
+	assertEq(blocked.blocked, true, "bloqueado")
+	assertEq(blocked.blockedBy, "wall", "quem bloqueou")
+	assertTrue(blocked.traveled < 3.1, "para antes do contato: " .. tostring(blocked.traveled))
+	assertTrue(blocked.traveled > 0, "mas avança até encostar")
+end)
+
+test("geometria: moveToward respeita a velocidade e para no alcance", function()
+	local from = vec(0, 0, 0)
+	local to = vec(0, 0, -30)
+	local step = Geometry.moveToward(from, to, 12, 0.5, 4)
+	assertTrue(math.abs(step.z + 6) < 1e-6, "12 studs/s por 0,5 s = 6 studs")
+	local arrived = Geometry.moveToward(vec(0, 0, -25), to, 12, 1, 4)
+	assertTrue(math.abs(arrived.z + 26) < 1e-6, "para a 4 studs do alvo, sem ultrapassar")
+	local touching = Geometry.moveToward(vec(0, 0, -27), to, 12, 1, 4)
+	assertEq(touching.z, -27, "já dentro do alcance não anda")
+end)
+
+test("greybox: volumes resolvem a zona de cada âncora", function()
+	for _, anchor in Zones.allAnchors() do
+		local resolved = Zones.zoneAtPosition(anchor.position)
+		assertEq(resolved, anchor.zoneId, "âncora " .. anchor.id)
+	end
+	assertEq(Zones.zoneAtPosition(vec(0, 0, 0)), "zone_bastion_safe", "centro do Bastião")
+	assertEq(Zones.zoneAtPosition(vec(0, 0, -36)), "zone_threshold_transition", "vão do Portão Norte")
+	assertEq(Zones.zoneAtPosition(vec(0, 0, -80)), "zone_plain_free", "planície")
+	assertEq(Zones.zoneAtPosition(vec(0, 0, 500)), nil, "fora de todo volume")
+	-- A transição vence a borda compartilhada: no plano do portão o jogador
+	-- já está na fronteira, não mais na zona segura.
+	assertEq(Zones.zoneAtPosition(vec(0, 0, -32)), "zone_threshold_transition", "plano exato do portão")
+end)
+
+test("greybox: 6 pontos de Estilhaço, 24 studs entre si e 20 do portão", function()
+	local shardIds = Zones.shardAnchors()
+	assertEq(#shardIds, 6, "6 pontos")
+	for i = 1, #shardIds do
+		local a = Zones.getAnchor(shardIds[i])
+		assertTrue(a ~= nil, "ponto existe: " .. shardIds[i])
+		if a then
+			assertEq(a.zoneId, "zone_plain_free", "ponto na planície: " .. shardIds[i])
+			for j = i + 1, #shardIds do
+				local b = Zones.getAnchor(shardIds[j])
+				if b then
+					local d = Geometry.horizontalDistance(a.position, b.position)
+					assertTrue(d >= 24, ("%s→%s = %.1f studs"):format(shardIds[i], shardIds[j], d))
+				end
+			end
+			for _, gateId in Zones.gateAnchors() do
+				local gate = Zones.getAnchor(gateId)
+				if gate then
+					local d = Geometry.horizontalDistance(a.position, gate.position)
+					assertTrue(d >= 20, ("%s a %.1f do portão %s"):format(shardIds[i], d, gateId))
+				end
+			end
+		end
+	end
+end)
+
+test("catálogo: âncora fora do volume da zona declarada falha validação", function()
+	local ok = pcall(function()
+		CatalogService.init({
+			Abilities = Abilities,
+			Characters = Characters,
+			EnergyFamilies = EnergyFamilies,
+			Npcs = Npcs,
+			Zones = {
+				get = Zones.get,
+				all = Zones.all,
+				getAnchor = Zones.getAnchor,
+				allAnchors = function()
+					local out: { any } = {}
+					for _, anchor in Zones.allAnchors() do
+						table.insert(out, anchor)
+					end
+					-- Declara zona segura mas fica no meio da planície.
+					table.insert(out, {
+						id = "anchor_mentiroso",
+						zoneId = "zone_bastion_safe",
+						position = { x = 0, y = 0, z = -90 },
+					})
+					return out
+				end,
+				zoneAtPosition = Zones.zoneAtPosition,
+				shardAnchors = Zones.shardAnchors,
+				gateAnchors = Zones.gateAnchors,
+			},
+		})
+	end)
+	assertFalse(ok, "âncora incoerente com a geometria deveria falhar")
+end)
+
+test("espaço: hitbox à frente acerta o alvo e ignora quem está atrás", function()
+	SpatialService.init({ geometry = Geometry })
+	SpatialService.setTransform("player:900", vec(0, 0, 0), vec(0, 0, -1))
+	SpatialService.setTransform("alvo_frente", vec(0, 0, -3), vec(0, 0, 1))
+	-- Está ao sul do atacante e olha para o sul (+z): de costas para ele.
+	SpatialService.setTransform("alvo_atras", vec(0, 0, 6), vec(0, 0, 1))
+	SpatialService.setTransform("alvo_longe", vec(0, 0, -30), vec(0, 0, 1))
+
+	local hits = SpatialService.overlapInFront("player:900", 2, 4, nil, 1)
+	assertEq(#hits, 1, "máx. 1 alvo")
+	assertEq(hits[1], "alvo_frente", "acerta quem está à frente")
+
+	local todos = SpatialService.overlapInFront("player:900", 2, 4, nil)
+	assertEq(#todos, 1, "quem está atrás e longe fica fora")
+
+	assertEq(SpatialService.facingOf("alvo_frente", "player:900"), "front", "alvo encara o atacante")
+	assertEq(SpatialService.facingOf("alvo_atras", "player:900"), "back", "atacante pelas costas")
+	assertEq(SpatialService.distanceBetween("player:900", "alvo_frente"), 3, "distância")
+	assertEq(SpatialService.distanceBetween("player:900", "fantasma"), nil, "sem transform devolve nil")
+end)
+
+test("espaço: Ombro Cometa avança 7, commita a posição e acerta 1 alvo", function()
+	SpatialService.init({ geometry = Geometry })
+	SpatialService.setTransform("player:901", vec(0, 0, 0), vec(0, 0, -1))
+	SpatialService.setTransform("inimigo", vec(0, 0, -6), vec(0, 0, 1))
+
+	local resolution = SpatialService.resolveCometShoulder("player:901", {
+		distance = 7,
+		hardCap = 8,
+		capsuleRadius = 2,
+		blockerRadius = 2,
+		blocks = function(): boolean
+			return false
+		end,
+	})
+	assertEq(resolution.traveled, 7, "avanço de 7 studs")
+	assertEq(resolution.targetId, "inimigo", "alvo na cápsula do trajeto")
+	-- O alvo encara a origem do avanço. Medir na posição final diria "back",
+	-- porque o lunge de 7 ultrapassa quem está a 6 — e furaria a guarda.
+	assertEq(resolution.facing, "front", "lado do golpe medido da origem")
+	local committed = SpatialService.getPosition("player:901")
+	assertTrue(committed ~= nil, "posição commitada")
+	if committed then
+		assertTrue(math.abs(committed.z + 7) < 1e-6, "servidor moveu o atacante")
+	end
+end)
+
+test("espaço: guarda inimiga para o avanço do Cometa", function()
+	SpatialService.init({ geometry = Geometry })
+	SpatialService.setTransform("player:902", vec(0, 0, 0), vec(0, 0, -1))
+	SpatialService.setTransform("guardiao", vec(0, 0, -5), vec(0, 0, 1))
+
+	local resolution = SpatialService.resolveCometShoulder("player:902", {
+		distance = 7,
+		hardCap = 8,
+		capsuleRadius = 2,
+		blockerRadius = 2,
+		blocks = function(fighterId: string): boolean
+			return fighterId == "guardiao"
+		end,
+	})
+	assertEq(resolution.blocked, true, "avanço travado")
+	assertEq(resolution.blockedBy, "guardiao", "quem travou")
+	assertTrue(resolution.traveled < 7, "não completou os 7 studs")
+	local committed = SpatialService.getPosition("player:902")
+	if committed then
+		assertTrue(committed.z > -7, "parou antes do destino")
+	end
+end)
+
+test("espaço: Cometa sem ninguém no trajeto avança e não acerta", function()
+	SpatialService.init({ geometry = Geometry })
+	SpatialService.setTransform("player:903", vec(0, 0, 0), vec(0, 0, -1))
+	local resolution = SpatialService.resolveCometShoulder("player:903", {
+		distance = 7,
+		hardCap = 8,
+		capsuleRadius = 2,
+		blockerRadius = 2,
+	})
+	assertEq(resolution.traveled, 7, "avança")
+	assertEq(resolution.targetId, nil, "sem alvo")
+	assertEq(resolution.blocked, false, "sem bloqueio")
+end)
+
+-- Monta EnemyService + CombatService + SpatialService reais.
+local function makeEnemyWorld(targets: { any }): ()
+	CombatService.clear()
+	SpatialService.init({ geometry = Geometry })
+	EnemyService.init({
+		getNpc = Npcs.get,
+		getAnchor = Zones.getAnchor,
+		shardAnchors = Zones.shardAnchors,
+		spatial = SpatialService,
+		combat = CombatService,
+		geometry = Geometry,
+		listTargets = function(): { any }
+			return targets
+		end,
+	})
+end
+
+test("inimigo: spawn respeita o teto de 4 vivos e usa as âncoras", function()
+	makeEnemyWorld({})
+	local spawned = EnemyService.spawnInitial()
+	assertEq(spawned, 4, "spawna até o teto de 4")
+	assertEq(#EnemyService.list(), 4, "4 registrados")
+	assertEq(EnemyService.spawnInitial(), 0, "segunda chamada não duplica")
+	local first = EnemyService.list()[1]
+	assertEq(first.fighterId, "enemy_wandering_shard@anchor_shard_1#1", "id carrega a âncora")
+	assertEq(first.zoneId, "zone_plain_free", "vive na planície")
+	local position = SpatialService.getPosition(first.fighterId)
+	local anchor = Zones.getAnchor("anchor_shard_1")
+	assertTrue(position ~= nil and anchor ~= nil, "posicionado na âncora")
+	if position and anchor then
+		assertEq(position.x, anchor.position.x, "x da âncora")
+		assertEq(position.z, anchor.position.z, "z da âncora")
+	end
+end)
+
+test("inimigo: persegue a 12 studs/s e ataca só depois do telegraph", function()
+	local playerId = "player:910"
+	local targets = { { fighterId = playerId, userId = 910, zoneId = "zone_plain_free" } }
+	makeEnemyWorld(targets)
+	EnemyService.spawnInitial()
+
+	local shardId = "enemy_wandering_shard@anchor_shard_1#1"
+	local anchor = Zones.getAnchor("anchor_shard_1")
+	assertTrue(anchor ~= nil, "âncora")
+	if not anchor then
+		return
+	end
+	-- Jogador 10 studs ao norte da âncora, na planície.
+	local playerPos = vec(anchor.position.x, anchor.position.y, anchor.position.z - 10)
+	CombatService.createFighter(playerId, "player", 100, 100)
+	SpatialService.setTransform(playerId, playerPos, vec(0, 0, 1))
+
+	-- 1º tick: 12 studs/s por 0,5 s = 6 studs, parando a 4 (o alcance).
+	-- Chegando ao alcance no mesmo tick, o ciclo abre o telegraph.
+	EnemyService.tick(1000, 0.5)
+	local afterMove = SpatialService.getPosition(shardId)
+	assertTrue(afterMove ~= nil, "moveu")
+	if afterMove then
+		local d = Geometry.horizontalDistance(afterMove, playerPos)
+		assertTrue(math.abs(d - 4) < 1e-6, "parou no alcance de 4: " .. tostring(d))
+	end
+	local player = CombatService.getFighter(playerId)
+	local shard = CombatService.getFighter(shardId)
+	assertTrue(player ~= nil and shard ~= nil, "fighters")
+	if not player or not shard then
+		return
+	end
+	assertEq(shard.aiPhase, "telegraph", "abre o telegraph ao alcançar")
+	assertEq(player.health, 100, "telegraph não causa dano")
+
+	-- Dentro dos 400 ms o golpe ainda não sai.
+	EnemyService.tick(1000.2, 0.1)
+	assertEq(player.health, 100, "telegraph de 400 ms ainda correndo")
+
+	-- Passados os 400 ms, o golpe conecta com 6 de dano.
+	EnemyService.tick(1000.5, 0.1)
+	assertEq(player.health, 94, "dano 6 após o telegraph")
+	assertEq(shard.aiPhase, "recovery", "entra em recovery")
+end)
+
+test("inimigo: sem aggro através da fronteira", function()
+	local playerId = "player:911"
+	-- Mesmo perto, um jogador na zona segura não é alvo.
+	local targets = { { fighterId = playerId, userId = 911, zoneId = "zone_bastion_safe" } }
+	makeEnemyWorld(targets)
+	EnemyService.spawnInitial()
+	local shardId = "enemy_wandering_shard@anchor_shard_1#1"
+	local anchor = Zones.getAnchor("anchor_shard_1")
+	if not anchor then
+		return
+	end
+	CombatService.createFighter(playerId, "player", 100, 100)
+	SpatialService.setTransform(
+		playerId,
+		vec(anchor.position.x, anchor.position.y, anchor.position.z - 2),
+		vec(0, 0, 1)
+	)
+
+	EnemyService.tick(2000, 0.5)
+	EnemyService.tick(2001, 0.5)
+	local player = CombatService.getFighter(playerId)
+	assertTrue(player ~= nil and player.health == 100, "jogador na segura não leva dano")
+	local shard = CombatService.getFighter(shardId)
+	assertTrue(shard ~= nil and shard.aiPhase == "idle", "Estilhaço fica em idle")
+	local moved = SpatialService.getPosition(shardId)
+	if moved then
+		assertEq(moved.z, anchor.position.z, "nem persegue")
+	end
+end)
+
+test("inimigo: respawn de 45 s bloqueia com jogador perto da âncora", function()
+	local playerId = "player:912"
+	local targets = { { fighterId = playerId, userId = 912, zoneId = "zone_plain_free" } }
+	makeEnemyWorld(targets)
+	EnemyService.spawnInitial()
+	local shardId = "enemy_wandering_shard@anchor_shard_1#1"
+	local anchor = Zones.getAnchor("anchor_shard_1")
+	if not anchor then
+		return
+	end
+	CombatService.createFighter(playerId, "player", 100, 100)
+	-- Jogador a 5 studs da âncora: dentro do raio de 20.
+	SpatialService.setTransform(
+		playerId,
+		vec(anchor.position.x + 5, anchor.position.y, anchor.position.z),
+		vec(0, 0, 1)
+	)
+
+	local shard = CombatService.getFighter(shardId)
+	assertTrue(shard ~= nil, "estilhaço")
+	if not shard then
+		return
+	end
+	shard.health = 0
+	shard.diedAt = 3000
+
+	EnemyService.tick(3000 + 50, 0.5)
+	assertEq(shard.health, 0, "combate perto bloqueia o respawn")
+
+	-- Jogador se afasta para além dos 20 studs.
+	SpatialService.setTransform(
+		playerId,
+		vec(anchor.position.x + 40, anchor.position.y, anchor.position.z),
+		vec(0, 0, 1)
+	)
+	EnemyService.tick(3000 + 51, 0.5)
+	assertEq(shard.health, 40, "respawn com a área limpa")
+	local back = SpatialService.getPosition(shardId)
+	if back then
+		assertEq(back.z, anchor.position.z, "volta para a mesma âncora")
+	end
+end)
+
+test("inimigo: kill reporta a âncora para o crédito de XP", function()
+	local kills: { any } = {}
+	CombatService.clear()
+	SpatialService.init({ geometry = Geometry })
+	EnemyService.init({
+		getNpc = Npcs.get,
+		getAnchor = Zones.getAnchor,
+		shardAnchors = Zones.shardAnchors,
+		spatial = SpatialService,
+		combat = CombatService,
+		geometry = Geometry,
+		listTargets = function(): { any }
+			return {}
+		end,
+		onKill = function(userId: number, fighterId: string)
+			table.insert(kills, { userId = userId, fighterId = fighterId })
+		end,
+	})
+	EnemyService.spawnInitial()
+	local shardId = "enemy_wandering_shard@anchor_shard_1#1"
+	assertTrue(EnemyService.isEnemy(shardId), "registrado como inimigo")
+	assertEq(EnemyService.reportKill(920, shardId), true, "kill reportado")
+	assertEq(#kills, 1, "callback disparado")
+	assertEq(kills[1].userId, 920, "autor")
+	assertEq(kills[1].fighterId, shardId, "fighter")
+	assertFalse(EnemyService.reportKill(920, "fighter_inexistente"), "id desconhecido não reporta")
+	EnemyService.despawnAll()
+	assertEq(#EnemyService.list(), 0, "despawn limpa")
+end)
+
+test("dados: EnemyEvent registrado como remote S→C", function()
+	local contract = Remotes.Contracts.get(Remotes.Names.EnemyEvent)
+	assertTrue(contract ~= nil, "EnemyEvent deveria ter contrato")
+	if contract then
+		assertEq(contract.direction, "ServerToClient", "direção")
+		assertEq(contract.version, 1, "versão")
+		assertTrue(contract.payload:find("telegraph") ~= nil, "payload com telegraph")
+	end
 end)
 
 -- ══ Runner ─────────────────────────────────────────────────────────────────

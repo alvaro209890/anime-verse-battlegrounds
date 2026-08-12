@@ -11,7 +11,15 @@ export type CatalogDeps = {
 	Characters: { get: (string) -> any?, all: () -> { any } },
 	EnergyFamilies: { get: (string) -> any?, all: () -> { any } },
 	Npcs: { get: (string) -> any?, all: () -> { any } }?,
-	Zones: { get: (string) -> any?, all: () -> { any }, getAnchor: (string) -> any?, allAnchors: () -> { any } }?,
+	Zones: {
+		get: (string) -> any?,
+		all: () -> { any },
+		getAnchor: (string) -> any?,
+		allAnchors: () -> { any },
+		zoneAtPosition: ((any) -> string?)?,
+		shardAnchors: (() -> { string })?,
+		gateAnchors: (() -> { string })?,
+	}?,
 	Quests: { get: (string) -> any?, all: () -> { any }, chain: () -> { string } }?,
 	Locale: { hasKey: (string) -> boolean, get: (string, any?) -> string }?,
 }
@@ -181,6 +189,93 @@ function CatalogService.validate(): ()
 				fail(("anchor obrigatória %s ausente"):format(anchorId))
 			end
 		end
+
+		-- Volumes: toda zona precisa de pelo menos uma caixa bem formada.
+		for _, zone in deps.Zones.all() do
+			if zone.volumes == nil or #zone.volumes == 0 then
+				fail(("zone %s → sem volume físico"):format(zone.id))
+			end
+			for index, b in zone.volumes do
+				if b.min.x >= b.max.x or b.min.y >= b.max.y or b.min.z >= b.max.z then
+					fail(("zone %s → volume %d invertido ou degenerado"):format(zone.id, index))
+				end
+			end
+		end
+
+		-- A geometria e os dados de âncora precisam concordar: cada âncora tem
+		-- de cair dentro do volume da zona que ela declara. Isto pega deriva
+		-- entre §8.1 (medidas) e §8.3 (âncoras) na hora do boot.
+		if deps.Zones.zoneAtPosition then
+			for _, anchor in deps.Zones.allAnchors() do
+				local resolved = deps.Zones.zoneAtPosition(anchor.position)
+				if resolved ~= anchor.zoneId then
+					fail(
+						("anchor %s declara %s mas a geometria resolve %s"):format(
+							anchor.id,
+							anchor.zoneId,
+							tostring(resolved)
+						)
+					)
+				end
+			end
+		end
+
+		-- Pontos de Estilhaço (§8.1): 6 âncoras, no mínimo 24 studs entre si e
+		-- nenhuma a menos de 20 de um portão.
+		if deps.Zones.shardAnchors then
+			local shardIds = deps.Zones.shardAnchors()
+			if #shardIds ~= 6 then
+				fail(("pontos de Estilhaço: esperado 6, encontrado %d"):format(#shardIds))
+			end
+			local function positionOf(anchorId: string): any
+				local anchor = deps.Zones.getAnchor(anchorId)
+				if not anchor then
+					fail(("ponto de Estilhaço %s ausente"):format(anchorId))
+				end
+				return anchor
+			end
+			local function planarDistance(a: any, b: any): number
+				local dx = a.x - b.x
+				local dz = a.z - b.z
+				return math.sqrt(dx * dx + dz * dz)
+			end
+			for i = 1, #shardIds do
+				local anchorA = positionOf(shardIds[i])
+				if anchorA.zoneId ~= "zone_plain_free" then
+					fail(("ponto de Estilhaço %s fora da planície"):format(shardIds[i]))
+				end
+				for j = i + 1, #shardIds do
+					local anchorB = positionOf(shardIds[j])
+					local d = planarDistance(anchorA.position, anchorB.position)
+					if d < 24 then
+						fail(
+							("pontos de Estilhaço %s e %s a %.1f studs (mínimo 24)"):format(
+								shardIds[i],
+								shardIds[j],
+								d
+							)
+						)
+					end
+				end
+				if deps.Zones.gateAnchors then
+					for _, gateId in deps.Zones.gateAnchors() do
+						local gate = deps.Zones.getAnchor(gateId)
+						if gate then
+							local d = planarDistance(anchorA.position, gate.position)
+							if d < 20 then
+								fail(
+									("ponto de Estilhaço %s a %.1f studs do portão %s (mínimo 20)"):format(
+										shardIds[i],
+										d,
+										gateId
+									)
+								)
+							end
+						end
+					end
+				end
+			end
+		end
 	end
 
 	if deps.Quests then
@@ -313,6 +408,24 @@ function CatalogService.getZone(zoneId: string): any?
 	end
 	CatalogService.validate()
 	return deps.Zones.get(zoneId)
+end
+
+function CatalogService.zoneAtPosition(position: any): string?
+	local deps = CatalogService.deps
+	if not deps or not deps.Zones or not deps.Zones.zoneAtPosition then
+		return nil
+	end
+	CatalogService.validate()
+	return deps.Zones.zoneAtPosition(position)
+end
+
+function CatalogService.shardAnchors(): { string }
+	local deps = CatalogService.deps
+	if not deps or not deps.Zones or not deps.Zones.shardAnchors then
+		return {}
+	end
+	CatalogService.validate()
+	return deps.Zones.shardAnchors()
 end
 
 function CatalogService.getQuest(questId: string): any?

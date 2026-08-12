@@ -71,5 +71,17 @@ if stateDeltaRemote then
 	end)
 end
 
+-- Telegraph de inimigo (docs/13 §17: contorno branco + ícone, não só vermelho).
+-- Aqui só o log; o VFX entra com o CombatFeedbackController (item 12).
+local enemyRemote = getRemote(Remotes.Names.EnemyEvent)
+if enemyRemote then
+	enemyRemote.OnClientEvent:Connect(function(payload: { any })
+		if not ready or payload.kind ~= "telegraph" then
+			return
+		end
+		print(("[Client] perigo: %s vai atacar"):format(tostring(payload.fighterId)))
+	end)
+end
+
 -- TODO F0 item 12: InputController só dispara se ready == true.
 -- Previsão visual e reconciliação com o servidor.
