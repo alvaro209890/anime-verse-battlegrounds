@@ -1,15 +1,20 @@
 --!strict
 -- CombatService (server) — F0
 -- Dano, guarda e morte. Autoridade total; cliente nunca informa dano.
+-- Puro (sem Instances) — testável.
 -- TODO F1: hitbox por shape, quebra de guarda, stun, validação de distância refinada.
-
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local Types = require(ReplicatedStorage.Shared.Types)
 
 local CombatService = {}
 
-export type ServerPlayerState = Types.ServerPlayerState
+export type ServerPlayerState = {
+	userId: number,
+	characterId: string,
+	health: number,
+	resource: number,
+	familyId: string,
+	combat: boolean,
+	lastCombatAt: number,
+}
 
 -- Aplica dano confirmado. Retorna true se o alvo morreu.
 -- _sourceUserId: mantido no contrato para atribuição futura (sourceAttribution).

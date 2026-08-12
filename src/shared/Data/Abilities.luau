@@ -2,12 +2,34 @@
 -- Habilidades — F0 (docs/05 §5.3)
 -- Spec do formato: ver docs/11-ABILITY-SPEC.md
 -- TODO: masteryTiers, rangePolicy completo, securityLimits (F2)
+--
+-- Tipos declarados inline (export type é compile-time) para manter o módulo
+-- carregável em testes Lune (que não resolvem require(script.Parent.X)).
+-- Contrato canônico: src/shared/Types.luau.
 
-local Types = require(script.Parent.Parent.Types)
+export type AbilityDefinition = {
+	id: string,
+	contentVersion: number,
+	displayNameKey: string,
+	descriptionKey: string,
+	sourceCharacterId: string,
+	energyFamilyId: string,
+	kind: "Basic" | "Skill" | "Ultimate",
+	slotCost: number,
+	tags: { string },
+	inputMode: "Press" | "Hold" | "Release",
+	startupMs: number,
+	activeMs: number,
+	recoveryMs: number,
+	resourceCost: { amount: number },
+	cooldown: { baseSeconds: number },
+	range: number,
+	maxTargets: number,
+	serverRunnerId: string,
+	enabled: boolean,
+}
 
-export type AbilityDefinition = Types.AbilityDefinition
-
-local Abilities: { [Types.AbilityId]: Types.AbilityDefinition } = {
+local Abilities: { [string]: AbilityDefinition } = {
 	-- dash-strike — habilidade de exemplo completa (molde das demais)
 	-- codinome interno: yuji dash-strike (soco avançado com timing)
 	dash_strike = {
@@ -104,12 +126,12 @@ local Abilities: { [Types.AbilityId]: Types.AbilityDefinition } = {
 
 local AbilityCatalog = {}
 
-function AbilityCatalog.get(abilityId: Types.AbilityId): Types.AbilityDefinition?
+function AbilityCatalog.get(abilityId: string): AbilityDefinition?
 	return Abilities[abilityId]
 end
 
-function AbilityCatalog.all(): { Types.AbilityDefinition }
-	local out: { Types.AbilityDefinition } = {}
+function AbilityCatalog.all(): { AbilityDefinition }
+	local out: { AbilityDefinition } = {}
 	for _, def in Abilities do
 		table.insert(out, def)
 	end

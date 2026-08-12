@@ -1,6 +1,7 @@
 --!strict
 -- CooldownService (server) — F0
 -- Cooldowns por habilidade, autoridade do servidor.
+-- Puro (sem Instances) — testável.
 -- TODO F1: cooldowns por grupo e por personagem.
 
 local CooldownService = {}

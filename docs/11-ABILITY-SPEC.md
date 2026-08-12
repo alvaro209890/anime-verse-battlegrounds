@@ -30,15 +30,20 @@ Toda habilidade é um registro Luau em `src/shared/Data/Abilities.luau`, validad
 ## 2. Como adicionar uma habilidade (checklist)
 
 1. **Criar a entrada de dado** em `src/shared/Data/Abilities.luau` com todos os campos acima.
-2. **Registrar o runner** em `src/server/Services/AbilityService.luau`:
+2. **Registrar o runner** em `src/server/Services/AbilityService.luau` (função local
+   registrada no `init()`):
    ```lua
-   runners.minha_skill_runner = function(attacker, target, payload)
-       -- valida alvo/alcance (F1: SpatialQuery) e aplica efeitos via CombatService
+   local function minhaSkillRunner(attacker, target, _payload)
+       -- valida alvo/alcance (F1: SpatialQuery) e aplica efeitos via deps.applyDamage
    end
+   -- dentro do init(): runners.minha_skill_runner = minhaSkillRunner
    ```
    O runner **nunca** confia em valor do cliente: dano, custo, cooldown e acerto vêm do servidor.
+   Efeitos usam as dependências injetadas (`deps.applyDamage`, `deps.grantFlowGain`...),
+   nunca require direto — assim o runner é testável (docs/12-TESTING.md).
 3. **Referenciar** em `Characters.luau` → `abilityIds` do personagem fonte.
-4. Rodar `selene src && stylua --check src && rojo build` (CI faz o mesmo no push).
+4. Rodar `selene src tests && stylua --check src tests && lune run tests/run.luau && rojo build`
+   (CI faz o mesmo no push).
 
 ## 3. Invariantes validadas no boot (CatalogService.validate)
 

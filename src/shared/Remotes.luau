@@ -2,10 +2,17 @@
 -- Contratos de rede registrados — F0 (docs/04 §6)
 -- Todo remote é declarado aqui com direção, versão e payload.
 -- RemoteGateway (server) e client usam este registro; nada de remotes soltos.
+--
+-- Tipos declarados inline (export type é compile-time) para manter o módulo
+-- carregável em testes Lune (que não resolvem require(script.Parent.X)).
+-- Contrato canônico: src/shared/Types.luau.
 
-local Types = require(script.Parent.Types)
-
-export type NetworkContract = Types.NetworkContract
+export type NetworkContract = {
+	name: string,
+	direction: "ClientToServer" | "ServerToClient",
+	version: number,
+	payload: string,
+}
 
 -- Nomes de remote. Convenção: <Direção>_<Caso>_<Nome>.
 export type RemoteName = "AbilityActivate" | "AbilityRejected" | "ResourceChanged" | "CombatHit" | "PlayerDied"
@@ -29,41 +36,41 @@ local RemoteContracts = {
 		direction = "ClientToServer",
 		version = 1,
 		payload = "{ abilityId: string, targetPosition: Vector3?, timestamp: number }",
-	} :: Types.NetworkContract,
+	} :: NetworkContract,
 	[REMOTES.AbilityRejected] = {
 		name = REMOTES.AbilityRejected,
 		direction = "ServerToClient",
 		version = 1,
 		payload = "{ abilityId: string, reason: string }",
-	} :: Types.NetworkContract,
+	} :: NetworkContract,
 	[REMOTES.ResourceChanged] = {
 		name = REMOTES.ResourceChanged,
 		direction = "ServerToClient",
 		version = 1,
 		payload = "{ familyId: string, current: number, max: number, depleted: boolean }",
-	} :: Types.NetworkContract,
+	} :: NetworkContract,
 	[REMOTES.CombatHit] = {
 		name = REMOTES.CombatHit,
 		direction = "ServerToClient",
 		version = 1,
 		payload = "{ targetUserId: number, damage: number, abilityId: string }",
-	} :: Types.NetworkContract,
+	} :: NetworkContract,
 	[REMOTES.PlayerDied] = {
 		name = REMOTES.PlayerDied,
 		direction = "ServerToClient",
 		version = 1,
 		payload = "{ userId: number, killerUserId: number? }",
-	} :: Types.NetworkContract,
+	} :: NetworkContract,
 }
 
 local Contracts = {}
 
-function Contracts.get(name: RemoteName): Types.NetworkContract?
+function Contracts.get(name: RemoteName): NetworkContract?
 	return RemoteContracts[name]
 end
 
-function Contracts.all(): { Types.NetworkContract }
-	local out: { Types.NetworkContract } = {}
+function Contracts.all(): { NetworkContract }
+	local out: { NetworkContract } = {}
 	for _, c in RemoteContracts do
 		table.insert(out, c)
 	end

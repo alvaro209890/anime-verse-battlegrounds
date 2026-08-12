@@ -1,12 +1,24 @@
 --!strict
 -- Personagens — F0 (docs/08-ROSTER.md)
 -- Codinomes canônicos APENAS em comentário (referência de balanceamento).
+--
+-- Tipos declarados inline (export type é compile-time) para manter o módulo
+-- carregável em testes Lune (que não resolvem require(script.Parent.X)).
+-- Contrato canônico: src/shared/Types.luau.
 
-local Types = require(script.Parent.Parent.Types)
+export type CharacterDefinition = {
+	id: string,
+	contentVersion: number,
+	displayNameKey: string,
+	descriptionKey: string,
+	energyFamilyId: string,
+	combatArchetype: string,
+	baseHealth: number,
+	abilityIds: { string },
+	enabled: boolean,
+}
 
-export type CharacterDefinition = Types.CharacterDefinition
-
-local Characters: { [Types.CharacterId]: Types.CharacterDefinition } = {
+local Characters: { [string]: CharacterDefinition } = {
 	-- codinome interno: yuji (inspiração: bruiser de combos rápidos)
 	eclipse_fist = {
 		id = "eclipse_fist",
@@ -23,12 +35,12 @@ local Characters: { [Types.CharacterId]: Types.CharacterDefinition } = {
 
 local CharacterCatalog = {}
 
-function CharacterCatalog.get(characterId: Types.CharacterId): Types.CharacterDefinition?
+function CharacterCatalog.get(characterId: string): CharacterDefinition?
 	return Characters[characterId]
 end
 
-function CharacterCatalog.all(): { Types.CharacterDefinition }
-	local out: { Types.CharacterDefinition } = {}
+function CharacterCatalog.all(): { CharacterDefinition }
+	local out: { CharacterDefinition } = {}
 	for _, def in Characters do
 		table.insert(out, def)
 	end

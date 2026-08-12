@@ -1,12 +1,23 @@
 --!strict
 -- Famílias de energia — F0 (docs/05 §2.1)
 -- Conteúdo dirigido por dados: sistemas nunca fazem `if` por família.
+--
+-- Tipos declarados inline (export type é compile-time) para manter o módulo
+-- carregável em testes Lune (que não resolvem require(script.Parent.X)).
+-- Contrato canônico: src/shared/Types.luau.
 
-local Types = require(script.Parent.Parent.Types)
+export type EnergyFamilyDefinition = {
+	id: string,
+	displayNameKey: string,
+	poolBase: number,
+	poolCap: number,
+	regenInCombatPerSec: number,
+	regenOutOfCombatPerSec: number,
+	flowTimingWindowMs: number,
+	flowGainOnTimedHit: number,
+}
 
-export type EnergyFamilyDefinition = Types.EnergyFamilyDefinition
-
-local EnergyFamilies: { [Types.EnergyFamilyId]: Types.EnergyFamilyDefinition } = {
+local EnergyFamilies: { [string]: EnergyFamilyDefinition } = {
 	-- Éter Umbral (inspiração: energia amaldiçoada) — pool menor, regen lenta em
 	-- combate e rápida fora. Fluxo: acertar no timing devolve energia (premia
 	-- jogador bom, pune spam).
@@ -60,12 +71,12 @@ local EnergyFamilies: { [Types.EnergyFamilyId]: Types.EnergyFamilyDefinition } =
 
 local EnergyFamilyCatalog = {}
 
-function EnergyFamilyCatalog.get(familyId: Types.EnergyFamilyId): Types.EnergyFamilyDefinition?
+function EnergyFamilyCatalog.get(familyId: string): EnergyFamilyDefinition?
 	return EnergyFamilies[familyId]
 end
 
-function EnergyFamilyCatalog.all(): { Types.EnergyFamilyDefinition }
-	local out: { Types.EnergyFamilyDefinition } = {}
+function EnergyFamilyCatalog.all(): { EnergyFamilyDefinition }
+	local out: { EnergyFamilyDefinition } = {}
 	for _, def in EnergyFamilies do
 		table.insert(out, def)
 	end

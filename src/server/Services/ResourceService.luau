@@ -2,16 +2,37 @@
 -- ResourceService (server) — F0 (docs/04 §4.1)
 -- Pool de energia por jogador, autoridade 100% do servidor.
 -- Custo/regen vêm das definições; zero número mágico.
--- Expõe eventos observáveis (ResourceChanged, ResourceDepleted) sem polling.
+-- Expõe eventos observáveis (ResourceChanged) sem polling.
+--
+-- Dependências injetadas no init() — sem require de Instances (testável).
+-- task injetado via deps (Roblox nativo / polyfill Lune nos testes).
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+export type ServerPlayerState = {
+	userId: number,
+	characterId: string,
+	health: number,
+	resource: number,
+	familyId: string,
+	combat: boolean,
+	lastCombatAt: number,
+}
 
-local CatalogService = require(script.Parent.CatalogService)
-local Types = require(ReplicatedStorage.Shared.Types)
+export type ResourceDeps = {
+	getFamily: (string) -> any?,
+	-- broadcast opcional (nil em testes unitários)
+	onResourceChanged: ((number, number, number, boolean) -> ())?,
+	-- task impl (Roblox nativo ou polyfill de teste)
+	taskImpl: {
+		spawn: ((() -> ()) -> ())?,
+		defer: ((() -> ()) -> ())?,
+		wait: ((number) -> number)?,
+	},
+}
 
-export type ServerPlayerState = Types.ServerPlayerState
-
-local ResourceService = {}
+local ResourceService = {
+	states = {} :: { [number]: ServerPlayerState },
+	deps = nil :: ResourceDeps?,
+}
 
 -- Fila de eventos para broadcast (evita spam de remote por tick)
 local pendingDirty: { [number]: boolean } = {}
@@ -21,18 +42,22 @@ local function broadcastResource(playerUserId: number)
 		return
 	end
 	pendingDirty[playerUserId] = true
-	task.defer(function()
+	local taskImpl = ResourceService.deps and ResourceService.deps.taskImpl or task
+	local deferFn = taskImpl.defer or function(fn)
+		fn()
+	end
+	deferFn(function()
 		pendingDirty[playerUserId] = nil
-		local player = game.Players:GetPlayerByUserId(playerUserId)
-		if not player then
-			return
-		end
 		local state = ResourceService.states[playerUserId]
 		if not state then
 			return
 		end
-		-- TODO: broadcast via RemoteGateway (F0 já entrega o gateway)
-		-- RemoteGateway.fireClient(player, "ResourceChanged", {...})
+		local onChanged = ResourceService.deps and ResourceService.deps.onResourceChanged
+		if onChanged then
+			local family = ResourceService.deps and ResourceService.deps.getFamily(state.familyId)
+			local poolCap = family and family.poolCap or 100
+			onChanged(playerUserId, state.resource, poolCap, state.resource <= 0)
+		end
 	end)
 end
 
@@ -42,7 +67,8 @@ local function regenTick()
 		if not state then
 			continue
 		end
-		local family = CatalogService.getFamily(state.familyId)
+		local deps = ResourceService.deps
+		local family = deps and deps.getFamily(state.familyId)
 		if not family then
 			continue
 		end
@@ -59,21 +85,30 @@ local function regenTick()
 	end
 end
 
-function ResourceService.init(): ()
-	task.spawn(function()
+function ResourceService.init(deps: ResourceDeps): ()
+	ResourceService.deps = deps
+	local taskImpl = deps.taskImpl or task
+	local spawnFn = taskImpl.spawn or function(fn)
+		fn()
+	end
+	local waitFn = taskImpl.wait or function()
+		return 0
+	end
+	spawnFn(function()
 		while true do
-			task.wait(0.5)
+			waitFn(0.5)
 			regenTick()
 		end
 	end)
 end
 
-function ResourceService.createState(playerUserId: number, familyId: string): Types.ServerPlayerState?
-	local family = CatalogService.getFamily(familyId)
+function ResourceService.createState(playerUserId: number, familyId: string): ServerPlayerState?
+	local deps = ResourceService.deps
+	local family = deps and deps.getFamily(familyId)
 	if not family then
 		return nil
 	end
-	local state = {
+	local state: ServerPlayerState = {
 		userId = playerUserId,
 		characterId = "",
 		health = 100,
@@ -81,13 +116,19 @@ function ResourceService.createState(playerUserId: number, familyId: string): Ty
 		familyId = familyId,
 		combat = false,
 		lastCombatAt = 0,
-	} :: Types.ServerPlayerState
+	}
 	ResourceService.states[playerUserId] = state
 	return state
 end
 
-function ResourceService.getState(playerUserId: number): Types.ServerPlayerState?
+function ResourceService.getState(playerUserId: number): ServerPlayerState?
 	return ResourceService.states[playerUserId]
+end
+
+-- Remove o estado no leave do jogador.
+function ResourceService.removeState(playerUserId: number): ()
+	ResourceService.states[playerUserId] = nil
+	pendingDirty[playerUserId] = nil
 end
 
 -- Tenta gastar `amount` do pool. Retorna true se conseguiu (e deduz).
@@ -110,7 +151,8 @@ function ResourceService.grantFlowGain(playerUserId: number, amount: number): ()
 	if not state then
 		return
 	end
-	local family = CatalogService.getFamily(state.familyId)
+	local deps = ResourceService.deps
+	local family = deps and deps.getFamily(state.familyId)
 	if not family then
 		return
 	end
@@ -128,7 +170,5 @@ function ResourceService.setCombat(playerUserId: number, inCombat: boolean): ()
 		state.lastCombatAt = os.clock()
 	end
 end
-
-ResourceService.states = {} :: { [number]: Types.ServerPlayerState }
 
 return ResourceService

@@ -2,23 +2,40 @@
 -- PlayerSessionService (server) — F0 (docs/04 §4.1)
 -- Ciclo join/leave: cria estado de sessão, spawna personagem e limpa no leave.
 -- TODO F1: readiness do perfil (save carregado) antes de expor a sessão.
+--
+-- Dependências injetadas no init() — sem require de Instances (testável).
 
-local CatalogService = require(script.Parent.CatalogService)
-local ResourceService = require(script.Parent.ResourceService)
+export type SessionDeps = {
+	getCharacter: (string) -> any?,
+	createResourceState: (number, string) -> any?,
+	removeResourceState: (number) -> (),
+	clearCooldowns: (number) -> (),
+	releaseProfile: (number) -> (),
+}
 
-local PlayerSessionService = {}
+local PlayerSessionService = {
+	deps = nil :: SessionDeps?,
+}
 
 -- personagem padrão da F0 (único do roster)
 local DEFAULT_CHARACTER_ID = "eclipse_fist"
 
+function PlayerSessionService.init(deps: SessionDeps): ()
+	PlayerSessionService.deps = deps
+end
+
 function PlayerSessionService.onPlayerJoined(player: Player): ()
-	local characterDef = CatalogService.getCharacter(DEFAULT_CHARACTER_ID)
+	local deps = PlayerSessionService.deps
+	if not deps then
+		return
+	end
+	local characterDef = deps.getCharacter(DEFAULT_CHARACTER_ID)
 	if not characterDef then
 		warn(("[PlayerSessionService] personagem padrão %s ausente"):format(DEFAULT_CHARACTER_ID))
 		return
 	end
 
-	local state = ResourceService.createState(player.UserId, characterDef.energyFamilyId)
+	local state = deps.createResourceState(player.UserId, characterDef.energyFamilyId)
 	if not state then
 		warn(("[PlayerSessionService] falha ao criar estado de recurso para %d"):format(player.UserId))
 		return
@@ -32,8 +49,13 @@ function PlayerSessionService.onPlayerJoined(player: Player): ()
 end
 
 function PlayerSessionService.onPlayerLeft(player: Player): ()
-	-- TODO: salvar perfil (SaveService.release), limpar cooldowns e sessão
-	ResourceService.states[player.UserId] = nil
+	local deps = PlayerSessionService.deps
+	if not deps then
+		return
+	end
+	deps.removeResourceState(player.UserId)
+	deps.clearCooldowns(player.UserId)
+	deps.releaseProfile(player.UserId)
 end
 
 return PlayerSessionService
