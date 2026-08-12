@@ -18,9 +18,9 @@ O projeto é um action MMO de mundo aberto, não um battleground de arena com co
 
 ## 2. Premissas de estimativa
 
-As faixas abaixo são referências para uma equipe estável de 7 a 10 pessoas com experiência em Roblox: 2 a 3 engenheiros, 2 artistas técnicos/3D, 1 animador/VFX, 1 game designer/economy designer, 1 UI/UX e QA compartilhado. Áudio, moderação, localização e assessoria jurídica podem ser serviços externos.
+**Decisão de equipe (2026-08-12 — Álvaro):** equipe **solo/dupla pequena (1 a 3 pessoas)**. As faixas abaixo foram originalmente calibradas para uma equipe experiente de 7 a 10 pessoas (2-3 engenheiros, 2 artistas técnicos/3D, 1 animador/VFX, 1 game/economy designer, 1 UI/UX e QA compartilhado; áudio, moderação, localização e jurídico como serviços externos). Com equipe de 1-3 pessoas, o **conteúdo é reduzido em todas as fases** (roster, regiões, assets) e as **durações precisam ser relidas com fator realista** — a Fase 0 (fatia vertical) permanece o primeiro marco, mas o cronograma deve refletir velocidade de equipe pequena.
 
-As durações são faixas de planejamento, não promessas. Devem ser recalculadas ao final da Fase 0 com velocidade real da equipe, qualidade de rede observada e custo real de produção de uma habilidade. Equipe menor não deve tentar compensar removendo segurança, QA multiplataforma ou persistência; deve reduzir conteúdo.
+Regras que não mudam com equipe pequena: **não** compensar removendo segurança, QA multiplataforma ou persistência; reduzir conteúdo. As durações são faixas de planejamento, não promessas; recalculadas ao final da Fase 0 com velocidade real, qualidade de rede observada e custo real de produção de uma habilidade.
 
 ## 3. Gates antes de qualquer código
 

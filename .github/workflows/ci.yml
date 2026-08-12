@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    name: Lint e format (Selene + StyLua)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar toolchain (Aftman)
+        uses: ok-nick/setup-aftman@v0.4.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: StyLua — verificar formatação
+        run: stylua --check src tests
+
+      - name: Selene — lint
+        run: selene src tests
+
+      - name: Testes unitários (Lune)
+        run: lune run tests/run.luau
+
+      - name: Wally — instalar dependências
+        run: |
+          wally install
+          mkdir -p Packages
+
+      - name: Rojo — build do projeto (valida a árvore)
+        run: rojo build -o /tmp/build.rbxl

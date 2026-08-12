@@ -17,6 +17,10 @@ O nome comunica ação competitiva, mas o produto não é um arena fighter de pa
 | VISION-DEC-003 | A Fase 0 contém uma identidade, uma família, uma zona pequena, PvP e save ponta a ponta. | fechada para planejamento |
 | VISION-DEC-004 | Poder competitivo não é monetizável; técnicas são conquistadas em jogo. | fechada pelo briefing |
 | VISION-DEC-005 | Todo nome público e conceito de roster permanece provisório até o Gate jurídico P1. | obrigatória |
+| VISION-DEC-006 | Visual, silhuetas e kits permanecem próximos dos animes de referência; só nomes públicos são trocados (risco jurídico aceito). | aprovada — 2026-08-12 — Álvaro |
+| VISION-DEC-007 | Nome do jogo mantido: "Anime Verse Battlegrounds", condicionado a busca de marca. | aprovada — 2026-08-12 — Álvaro |
+| VISION-DEC-008 | Público 13+, tom sombrio, gore leve dentro das políticas da Roblox. | aprovada — 2026-08-12 — Álvaro |
+| VISION-DEC-009 | Equipe de 1-3 pessoas; conteúdo reduzido em todas as fases, gates técnicos mantidos. | aprovada — 2026-08-12 — Álvaro |
 
 ## 2. Fantasia do jogador
 
@@ -66,10 +70,12 @@ Clãs, reputação, bounty, territórios, torneios e rankings dão contexto à f
 
 ### Público principal
 
-- Jogadores de Roblox que gostam de ação responsiva, progressão persistente e descoberta de builds.
+- Jogadores de Roblox com **13+** que gostam de ação responsiva, progressão persistente e descoberta de builds.
 - Pessoas que alternam entre sessões curtas de 20–30 minutos e sessões sociais de 1–2 horas.
 - Grupos que procuram objetivos cooperativos e rivalidade territorial, não somente duelos.
 - Jogadores de PC, celular e console; nenhuma plataforma é tratada como versão secundária.
+
+**Classificação e tom (decidido 2026-08-12):** público-alvo mais velho (13+), tom **sombrio**, gore leve permitido dentro das políticas da Roblox — sem gore extremo, sem linguagem imprópria e sem monetização que explore urgência. O design de efeitos, narrativa, ambiente e personagens pode ser mais agressivo que o padrão de público amplo.
 
 ### Público secundário
 
@@ -173,7 +179,9 @@ Planejar treze identidades não significa produzi-las para lançamento. Tentar l
 
 ## 10. Identidade própria e segurança de propriedade intelectual
 
-Os documentos usam nomes públicos mais afastados das referências e rótulos energéticos próprios: **Éter Umbral**, **Fluxo Vital**, **Contrafluxo** e **Ímpeto Metamórfico**. Todos continuam provisórios até o Gate jurídico P1. Referências canônicas, quando indispensáveis ao trabalho interno de balanceamento, ficam exclusivamente em coluna interna marcada como não exportável no roster.
+**Direção aprovada (2026-08-12):** manter **visual, silhuetas e kits próximos dos animes de referência**, trocando apenas os nomes públicos (personagens, franquias e técnicas). O risco jurídico de obra derivada/trade dress é aceito conscientemente pelo dono do produto. Os documentos usam nomes públicos afastados das referências e rótulos energéticos próprios: **Éter Umbral**, **Fluxo Vital**, **Contrafluxo** e **Ímpeto Metamórfico**. Referências canônicas, quando indispensáveis ao trabalho interno de balanceamento, ficam exclusivamente em coluna interna marcada como não exportável no roster.
+
+Consequência direta da decisão: o redesign visual é reduzido (silhueta, roupa, paleta e animação podem permanecer reconhecíveis), mas a revisão jurídica do Gate P1 ganha peso crítico e a lista de "elementos a redesenhar" tende a ser maior. Este plano reduz exposição onde dá (nomes, textos, UI), mas **não substitui parecer jurídico** — e o dono do produto está ciente disso.
 
 Antes de uma identidade entrar em produção, uma revisão deve cobrir em conjunto:
 
@@ -202,7 +210,7 @@ Os números finais de retenção, conversão e balanceamento serão definidos ap
 
 ## 12. Não objetivos
 
-- Não é um catálogo de personagens reconhecíveis de outras obras.
+- Não é um catálogo de personagens licenciados; visual e kits são inspirados nos animes de referência, mas nomes públicos são próprios (decisão 2026-08-12 — risco jurídico aceito).
 - Não é um gacha de poder.
 - Não é PvP full-loot; equipamento nunca cai na morte.
 - Não é um simulador de grind automático.
