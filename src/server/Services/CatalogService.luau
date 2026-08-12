@@ -24,9 +24,16 @@ local function fail(reason: string)
 end
 
 function CatalogService.init(deps: CatalogDeps): ()
+	local previousDeps = CatalogService.deps
+	local previousValidated = CatalogService.validated
 	CatalogService.deps = deps
 	CatalogService.validated = false
-	CatalogService.validate()
+	local ok, err = pcall(CatalogService.validate)
+	if not ok then
+		CatalogService.deps = previousDeps
+		CatalogService.validated = previousValidated
+		error(err)
+	end
 end
 
 function CatalogService.validate(): ()
@@ -127,6 +134,19 @@ function CatalogService.validate(): ()
 		end
 		if spawnAnchor.zoneId ~= "zone_bastion_safe" then
 			fail(("spawn default deve estar em zone_bastion_safe (está em %s)"):format(spawnAnchor.zoneId))
+		end
+		local requiredAnchors = {
+			"anchor_bastion_spawn",
+			"anchor_bastion_return",
+			"anchor_training",
+			"anchor_gate_north",
+			"anchor_gate_west",
+			"anchor_elite",
+		}
+		for _, anchorId in requiredAnchors do
+			if not anchors[anchorId] then
+				fail(("anchor obrigatória %s ausente"):format(anchorId))
+			end
 		end
 	end
 

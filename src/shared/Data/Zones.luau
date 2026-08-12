@@ -44,7 +44,7 @@ local Zones: { [string]: ZoneDefinition } = {
 	},
 	zone_threshold_transition = {
 		id = "zone_threshold_transition",
-		displayNameKey = "zone.threshold.name",
+		displayNameKey = "", -- spec: sem nome público; só aviso de fronteira
 		kind = "transition",
 		pvp = false,
 	},

@@ -724,10 +724,13 @@ test("catálogo: dados reais passam na validação", function()
 		Characters = Characters,
 		EnergyFamilies = EnergyFamilies,
 		Npcs = Npcs,
+		Zones = Zones,
 	})
 	assertEq(CatalogService.getAbility("comet_shoulder") ~= nil, true, "habilidade acessível")
 	assertEq(CatalogService.getAbility("eclipse_beat") ~= nil, true, "ultimate no catálogo")
 	assertEq(CatalogService.getNpc("npc_training_dummy") ~= nil, true, "dummy no catálogo")
+	assertEq(CatalogService.getZone("zone_bastion_safe") ~= nil, true, "zona segura")
+	assertEq(CatalogService.getAnchor("anchor_bastion_spawn") ~= nil, true, "âncora de spawn")
 end)
 
 test("catálogo: personagem sem habilidade falha", function()
@@ -1014,8 +1017,8 @@ test("zona: com hold entra em transição 5 s e canPvp false", function()
 	assertEq(ZoneService.canPvp(220), false, "proteção de 5 s ainda ativa")
 	fakeNow = 7000 + 5
 	assertEq(ZoneService.canPvp(220), true, "PvP ligado após 5 s")
-	assertEq(ZoneService.canPvpBetween(220, 221), false, "parceiro ainda na segura")
 	ZoneService.registerPlayer(221)
+	assertEq(ZoneService.canPvpBetween(220, 221), false, "parceiro ainda na segura")
 	ZoneService.tryEnterZone(221, "zone_threshold_transition", fakeNow, { holdConfirmed = true })
 	ZoneService.tryEnterZone(221, "zone_plain_free", fakeNow + 1, {})
 	fakeNow = 7011
@@ -1032,6 +1035,27 @@ test("zona: ação hostil na transição encerra a proteção na hora", function
 	ZoneService.markHostileAction(230, fakeNow + 1)
 	assertEq(ZoneService.getPlayerZone(230), "zone_plain_free", "ativa PvP indo à livre")
 	assertEq(ZoneService.canPvp(230), true, "ação hostil encerra a proteção")
+end)
+
+test("zona: ação hostil na segura não marca lockout PvP", function()
+	fakeNow = 8500
+	ZoneService.init(makeZoneDeps())
+	ZoneService.registerPlayer(232)
+	ZoneService.markHostileAction(232, fakeNow)
+	local res = ZoneService.tryEnterZone(232, "zone_threshold_transition", fakeNow, { holdConfirmed = true })
+	assertEq(res.ok, true, "treino no dummy não bloqueia a fronteira: " .. tostring(res.reason))
+	assertEq(ZoneService.getPlayerZone(232), "zone_threshold_transition", "entrou na transição")
+end)
+
+test("zona: voltar da transição sem hostil é livre", function()
+	fakeNow = 8600
+	ZoneService.init(makeZoneDeps())
+	ZoneService.registerPlayer(233)
+	ZoneService.tryEnterZone(233, "zone_threshold_transition", fakeNow, { holdConfirmed = true })
+	local back = ZoneService.tryEnterZone(233, "zone_bastion_safe", fakeNow + 1, {})
+	assertEq(back.ok, true, "voltar é livre: " .. tostring(back.reason))
+	assertEq(ZoneService.getPlayerZone(233), "zone_bastion_safe", "de volta")
+	assertEq(ZoneService.canPvp(233), false, "sem PvP")
 end)
 
 test("zona: sinais da fronteira retornam os 5 IDs juntos", function()
@@ -1084,6 +1108,7 @@ test("zona: combate PvP recente bloqueia reentrada na segura por 15 s", function
 	local blocked = ZoneService.tryEnterZone(240, "zone_threshold_transition", fakeNow, {})
 	assertEq(blocked.ok, false, "bloqueado")
 	assertEq(blocked.reason, "combat_lockout", "motivo")
+	assertTrue(blocked.event ~= nil and blocked.event.lockoutRemaining ~= nil, "evento com timer")
 	assertTrue(
 		blocked.lockoutRemaining ~= nil and blocked.lockoutRemaining > 0 and blocked.lockoutRemaining <= 15,
 		"timer visível"
@@ -1120,6 +1145,17 @@ test("dados: ZoneEvent registrado como remote S→C", function()
 		assertEq(zc.direction, "ServerToClient", "direção")
 		assertEq(zc.version, 1, "versão")
 		assertTrue(zc.payload:find("signals") ~= nil, "payload com signals")
+		assertTrue(zc.payload:find("holdConfirmed") ~= nil, "payload com holdConfirmed")
+	end
+end)
+
+test("dados: ZoneCrossingIntent registrado como remote C→S", function()
+	local zc = Remotes.Contracts.get(Remotes.Names.ZoneCrossingIntent)
+	assertTrue(zc ~= nil, "ZoneCrossingIntent deveria ter contrato")
+	if zc then
+		assertEq(zc.direction, "ClientToServer", "direção")
+		assertEq(zc.version, 1, "versão")
+		assertTrue(zc.payload:find("toZoneId") ~= nil, "payload com toZoneId")
 		assertTrue(zc.payload:find("holdConfirmed") ~= nil, "payload com holdConfirmed")
 	end
 end)

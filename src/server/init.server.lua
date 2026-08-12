@@ -1,6 +1,6 @@
 --!strict
 -- Bootstrap do servidor — F0
--- Valida catálogo → init RemoteGateway → init ResourceService →
+-- Valida catálogo → init RemoteGateway → init ZoneService/ResourceService →
 -- conecta intenções de habilidade/combate → ciclo join/leave.
 -- Ordem importa (grafo acíclico); falha de catálogo derruba o boot.
 --
@@ -35,7 +35,14 @@ CatalogService.init({
 })
 print("[Bootstrap] catálogo validado")
 
--- 2. Zonas/fronteira — regras PvP e eventos de travessia
+-- 2. Persistência (stub seguro até ProfileStore entrar no build)
+SaveService.init()
+
+-- 3. Gateway de rede — cria remotes registrados ANTES de qualquer fireClient
+RemoteGateway.init()
+print("[Bootstrap] RemoteGateway iniciado")
+
+-- 4. Zonas/fronteira — regras PvP e eventos de travessia
 ZoneService.init({
 	getZone = CatalogService.getZone,
 	getAnchor = CatalogService.getAnchor,
@@ -50,14 +57,7 @@ ZoneService.init({
 })
 print("[Bootstrap] ZoneService iniciado")
 
--- 2. Persistência (stub seguro até ProfileStore entrar no build)
-SaveService.init()
-
--- 3. Gateway de rede — cria remotes registrados
-RemoteGateway.init()
-print("[Bootstrap] RemoteGateway iniciado")
-
--- 4. Recurso — inicia regen loop com broadcast real via gateway
+-- 5. Recurso — inicia regen loop com broadcast real via gateway
 ResourceService.init({
 	getFamily = CatalogService.getFamily,
 	taskImpl = task,
@@ -76,7 +76,7 @@ ResourceService.init({
 	end,
 })
 
--- 5. Combate/Cooldown/Ability — grafo de dependências
+-- 6. Combate/Cooldown/Ability — grafo de dependências
 CombatService.clear()
 local dummyDef = CatalogService.getNpc("npc_training_dummy")
 if dummyDef then
@@ -120,7 +120,7 @@ AbilityService.init({
 	end,
 })
 
--- 6. Ciclo de sessão — injeta o grafo
+-- 7. Ciclo de sessão — injeta o grafo
 PlayerSessionService.init({
 	getCharacter = CatalogService.getCharacter,
 	getFamily = CatalogService.getFamily,
@@ -211,6 +211,19 @@ RemoteGateway.onClientIntent(Remotes.Names.DashIntent, function(player: Player, 
 		return
 	end
 	CombatService.tryDash(fighter, os.clock())
+end)
+
+RemoteGateway.onClientIntent(Remotes.Names.ZoneCrossingIntent, function(player: Player, payload: { any })
+	if not requireReady(player) then
+		return
+	end
+	local toZoneId = payload.toZoneId
+	if type(toZoneId) ~= "string" then
+		return
+	end
+	ZoneService.tryEnterZone(player.UserId, toZoneId, os.clock(), {
+		holdConfirmed = payload.holdConfirmed == true,
+	})
 end)
 
 -- 8. Ciclo de sessão

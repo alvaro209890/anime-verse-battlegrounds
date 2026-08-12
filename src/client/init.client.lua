@@ -31,5 +31,22 @@ if rejectedRemote then
 	end)
 end
 
--- TODO F0 item 10: InputController só dispara se ready == true.
+local zoneRemote = getRemote(Remotes.Names.ZoneEvent)
+if zoneRemote then
+	zoneRemote.OnClientEvent:Connect(function(payload: { any })
+		if not ready then
+			return
+		end
+		print(
+			("[Client] zona %s → %s pvp=%s lockout=%s"):format(
+				tostring(payload.from),
+				tostring(payload.to),
+				tostring(payload.pvp),
+				tostring(payload.lockoutRemaining)
+			)
+		)
+	end)
+end
+
+-- TODO F0 item 12: InputController só dispara se ready == true.
 -- Previsão visual e reconciliação com o servidor.

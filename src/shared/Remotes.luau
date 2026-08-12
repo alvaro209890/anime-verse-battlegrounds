@@ -25,6 +25,7 @@ export type RemoteName =
 	| "GuardIntent"
 	| "DashIntent"
 	| "ZoneEvent"
+	| "ZoneCrossingIntent"
 
 local REMOTES = {
 	AbilityActivate = "AbilityActivate",
@@ -37,6 +38,7 @@ local REMOTES = {
 	GuardIntent = "GuardIntent",
 	DashIntent = "DashIntent",
 	ZoneEvent = "ZoneEvent",
+	ZoneCrossingIntent = "ZoneCrossingIntent",
 }
 
 local RemoteContracts = {
@@ -99,6 +101,12 @@ local RemoteContracts = {
 		direction = "ServerToClient",
 		version = 1,
 		payload = "{ from: string, to: string, pvp: boolean, signals: { string }, holdConfirmed: boolean, lockoutRemaining: number?, instant: number }",
+	} :: NetworkContract,
+	[REMOTES.ZoneCrossingIntent] = {
+		name = REMOTES.ZoneCrossingIntent,
+		direction = "ClientToServer",
+		version = 1,
+		payload = "{ toZoneId: string, holdConfirmed: boolean?, requestId: string }",
 	} :: NetworkContract,
 }
 

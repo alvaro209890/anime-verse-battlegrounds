@@ -177,21 +177,29 @@ function ZoneService.getFrontierSignals(fromZoneId: string, toZoneId: string): {
 	if not isFrontierCrossing(fromZoneId, toZoneId) then
 		return nil
 	end
-	return FRONTIER_SIGNALS
+	return table.clone(FRONTIER_SIGNALS)
 end
 
 function ZoneService.markPvpCombat(userId: number, now: number): ()
 	ZoneService.pvpCombatAt[userId] = now
 end
 
--- Ação hostil durante a proteção: encerra a transição na hora e ativa PvP
--- se o destino da travessia for a livre (docs/13-F0-SLICE.md §8.2).
+-- Ação hostil durante a proteção de saída: encerra a transição na hora e
+-- ativa PvP se o destino for a livre (docs/13-F0-SLICE.md §8.2).
+-- Treino na segura (dummy) NÃO marca combate PvP — senão o lockout de 15 s
+-- bloquearia o retorno ao Bastião depois de bater no boneco.
 function ZoneService.markHostileAction(userId: number, now: number): ()
 	local transition = ZoneService.transitions[userId]
-	ZoneService.transitions[userId] = nil
-	ZoneService.pvpCombatAt[userId] = now
-	if transition and transition.to == ZONE_FREE then
-		ZoneService.zones[userId] = ZONE_FREE
+	if transition then
+		ZoneService.transitions[userId] = nil
+		if transition.to == ZONE_FREE then
+			ZoneService.zones[userId] = ZONE_FREE
+			ZoneService.pvpCombatAt[userId] = now
+		end
+		return
+	end
+	if ZoneService.getPlayerZone(userId) == ZONE_FREE then
+		ZoneService.pvpCombatAt[userId] = now
 	end
 end
 
@@ -235,6 +243,29 @@ local function emit(
 		deps.onZoneEvent(userId, event)
 	end
 	return event
+end
+
+local function rejectLockout(
+	userId: number,
+	fromZoneId: string,
+	toZoneId: string,
+	now: number,
+	remaining: number
+): EnterZoneResult
+	local event: ZoneEventPayload = {
+		from = fromZoneId,
+		to = toZoneId,
+		pvp = false,
+		signals = {},
+		holdConfirmed = false,
+		lockoutRemaining = remaining,
+		instant = now,
+	}
+	local deps = ZoneService.deps
+	if deps and deps.onZoneEvent then
+		deps.onZoneEvent(userId, event)
+	end
+	return { ok = false, reason = "combat_lockout", lockoutRemaining = remaining, event = event }
 end
 
 -- Cruzamento de zona. `opts.holdConfirmed` é o flag do prompt "manter
@@ -298,7 +329,7 @@ function ZoneService.tryEnterZone(
 	if toZoneId == ZONE_TRANSITION and fromZoneId == ZONE_FREE then
 		local remaining = lockoutRemaining(userId, now)
 		if remaining then
-			return { ok = false, reason = "combat_lockout", lockoutRemaining = remaining }
+			return rejectLockout(userId, fromZoneId, toZoneId, now, remaining)
 		end
 		ZoneService.zones[userId] = ZONE_TRANSITION
 		ZoneService.transitions[userId] = nil
@@ -310,7 +341,7 @@ function ZoneService.tryEnterZone(
 	if toZoneId == ZONE_SAFE then
 		local remaining = lockoutRemaining(userId, now)
 		if remaining then
-			return { ok = false, reason = "combat_lockout", lockoutRemaining = remaining }
+			return rejectLockout(userId, fromZoneId, toZoneId, now, remaining)
 		end
 		ZoneService.zones[userId] = ZONE_SAFE
 		ZoneService.transitions[userId] = nil

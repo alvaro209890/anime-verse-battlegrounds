@@ -34,13 +34,13 @@ O esqueleto em `src/` **não** implementa o loop jogável no Studio. Catálogo, 
 | `src/shared/Data/Zones.luau` | 3 zonas, 6 âncoras, greybox F0-BASELINE como dados (collision groups `Safe`/`Transition`/`Free`/`GateBlock`) | feito no domínio; geometria Studio pendente |
 | `CombatService` | cadeia leve, guarda, aparo, pesado, quebra, dash, dummy, comet 9/guarda 9/HP 4 | hitbox espacial e lunge de 7 studs no Studio ainda faltam |
 | `AbilityService` | comet resolve o fighter do dummy; `CombatHit` no acerto | Cadência/Pulso contra dummy (itens 8/10); unlock por missão (item 7) |
-| `ZoneService` | zona atual, `canPvp`, transição 5 s, lockout 15 s, `ZoneEvent` com os 5 sinais | 5 sinais visíveis/audíveis, volumes e collision groups no Studio |
+| `ZoneService` | zona atual, `canPvp`, transição 5 s, lockout 15 s, `ZoneEvent` + `ZoneCrossingIntent`; hostil na segura não marca PvP | 5 sinais visíveis/audíveis, volumes e collision groups no Studio |
 | `PlayerSessionService` | snapshot Ready lê a zona do `ZoneService`; intenções só após Ready | feito no domínio |
 | `src/client/init.client.lua` | espera `SessionSnapshot`; não dispara no boot | InputController (item 12) |
 | `SaveService` | stub em memória; persiste `wallet` | ProfileRoot v1 sem wallet; ProfileStore no place de teste |
 | Mapa/HUD | greybox como dados (`Zones.luau`); ausentes no Studio | §8 e §12 |
 
-Testes Lune: 61 casos em `tests/run.luau` (`docs/12-TESTING.md`).
+Testes Lune: 64 casos em `tests/run.luau` (`docs/12-TESTING.md`).
 
 **Comprovado neste recorte:** join → Ready → `comet_shoulder` gasta 18 Umbral, tira 9 HP do dummy (9991), sem Fluxo; guarda para o avanço (4 HP + 9 guarda); aparo e i-frame zeram o dano; zona/PvP/transição 5 s/lockout 15 s/5 sinais como dados + `ZoneEvent` (item 6). **Não comprovado:** deslocamento espacial, overlap de hitbox, geometria do greybox no Studio, sinais visíveis/audíveis, hold 0,6 s no toque, iluminação, collision groups reais, playtest cego da fronteira, Studio, DataStore, mapa, HUD.
 
@@ -400,7 +400,8 @@ Envelope: `protocolVersion`, `requestId`, `clientSequence`, `action`, `payload`.
 | `DashIntent` | C→S | direção unitária limitada | distância final |
 | `AbilityIntent` | C→S | `abilityId`, `inputMode`, `executionId?`, `phase?`, ponto/alvo só se a def exigir | dano, vítimas, custo |
 | `CombatEvent` | S→C | `executionId`, `abilityId`, hit/guarda/morte | fórmulas |
-| `ZoneEvent` | S→C | de, para, regra PvP, instante | — |
+| `ZoneEvent` | S→C | de, para, regra PvP, instante, sinais, lockoutRemaining | — |
+| `ZoneCrossingIntent` | C→S | `toZoneId`, `holdConfirmed?`, `requestId` | posição, “já cruzei” |
 | `InteractionIntent` | C→S | `anchorId` / `npcId` | recompensa |
 | `AbilityRejected` | S→C | `abilityId`, `reason` estável | — |
 
@@ -488,7 +489,7 @@ Cheat de unlock: remote **inexistente** no cliente. Flag `StudioDebugUnlock` só
 
 ## 19. Testes da mudança de catálogo
 
-Os casos abaixo estão em `tests/run.luau` (61 no total; fonte: chamadas `test(...)`):
+Os casos abaixo estão em `tests/run.luau` (64 no total; fonte: chamadas `test(...)`):
 
 - roster `eclipse_fist` com 3 skills enabled + 1 ultimate disabled
 - `comet_shoulder` custo 18, CD 7, runner registrado
@@ -509,10 +510,12 @@ Item 6 (zona/fronteira) adicionou os casos abaixo:
 - zona: sem `holdConfirmed`, recusa primeira ida à livre (`hold_required`)
 - zona: com hold, entra em transição 5 s; `canPvp` false durante a transição
 - zona: ação hostil na transição encerra a proteção na hora
+- zona: ação hostil na segura (treino) **não** marca lockout PvP
+- zona: voltar da transição sem hostil é livre
 - zona: 5 sinais sempre juntos ao cruzar segura↔livre; evento `ZoneEvent` com payload completo
 - zona: `markPvpCombat` recente bloqueia reentrada na segura por 15 s (`combat_lockout`, timer no evento); após 15 s libera
 - zona: `canDamageCrossBoundary` false cruzando segura↔livre; true dentro do mesmo lado
-- remote: `ZoneEvent` registrado S→C (version 1)
+- remote: `ZoneEvent` S→C e `ZoneCrossingIntent` C→S (version 1)
 - fatia: sessão Ready lê a zona do `ZoneService` (`zone_bastion_safe`); dummy/comet intactos
 
 Integração Lune não cobre Studio. Evidência runtime: `12-TESTING.md` §6. Geometria do greybox, volumes de transição, collision groups reais, sinais visíveis/audíveis e hold 0,6 s no toque permanecem como trabalho de Studio.
@@ -526,7 +529,7 @@ Ordem de implementação; cada item fecha com teste automatizado **ou** evidênc
 3. ~~Spawn + movimento + leve/guarda/dash contra dummy~~ (domínio headless 2026-08-12; movimento/Studio pendente)
 4. ~~Pesado + quebra de guarda~~ (feito 2026-08-12; 43 testes)
 5. ~~Ombro Cometa~~ (feito 2026-08-12; 49 testes; domínio headless — lunge espacial no Studio pendente)
-6. ~~Greybox + `ZoneService` + 5 sinais~~ (feito 2026-08-12; 61 testes; domínio headless — geometria Studio pendente: parts/volumes de transição, collision groups `Safe`/`Transition`/`Free`/`GateBlock`, sinais visíveis/audíveis, iluminação, hold 0,6 s no toque e playtest cego da fronteira)
+6. ~~Greybox + `ZoneService` + 5 sinais~~ (feito 2026-08-12; revisão 64 testes — `ZoneCrossingIntent`, lockout não dispara em treino, catálogo não envenena deps; domínio headless — geometria Studio pendente: parts/volumes de transição, collision groups `Safe`/`Transition`/`Free`/`GateBlock`, sinais visíveis/audíveis, iluminação, hold 0,6 s no toque e playtest cego da fronteira)
 7. Estilhaços + objetivo 1 + unlock Cometa
 8. Cadência + Fluxo
 9. Elite + unlock Cadência

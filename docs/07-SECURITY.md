@@ -14,7 +14,7 @@ Princípios:
 6. **Economia auditável.** Criação, transferência e consumo têm origem e operationId.
 7. **Operação reversível.** Sistemas de risco possuem kill switch e modo somente leitura.
 
-Este documento combina baseline existente e alvo. O repositório já possui registry de remotes, validações iniciais de catálogo/serviços (incl. zonas/âncoras no `CatalogService` e as regras de fronteira no `ZoneService`) e CI com StyLua, Selene, 61 testes Lune, Wally e build Rojo. Esses checks não provam DataStore real, teleporte, network ownership, múltiplos servidores, Studio ou dispositivos; os controles restantes precisam ser implementados e medidos por fase.
+Este documento combina baseline existente e alvo. O repositório já possui registry de remotes, validações iniciais de catálogo/serviços (incl. zonas/âncoras no `CatalogService` e as regras de fronteira no `ZoneService`) e CI com StyLua, Selene, 64 testes Lune, Wally e build Rojo. Esses checks não provam DataStore real, teleporte, network ownership, múltiplos servidores, Studio ou dispositivos; os controles restantes precisam ser implementados e medidos por fase.
 
 ## 2. Ativos e fronteiras de confiança
 
@@ -291,7 +291,7 @@ Ataque de spam não deve consumir budget de save. Rejeições repetidas são amo
 ## 11. Segredos, dependências e CI
 
 - nenhum segredo, token de place, chave de API ou credencial em repositório, atributo replicado ou log;
-- a CI atual usa permissões mínimas e executa StyLua, Selene, 61 testes Lune, Wally e build Rojo;
+- a CI atual usa permissões mínimas e executa StyLua, Selene, 64 testes Lune, Wally e build Rojo;
 - Wally packages passam por revisão de licença, manutenção e superfície de código;
 - a evolução da CI adicionará type/schema/migrações; publicação continua não automática e sem credenciais de produção;
 - ambientes de desenvolvimento, staging e produção usam identificadores e stores separados;
