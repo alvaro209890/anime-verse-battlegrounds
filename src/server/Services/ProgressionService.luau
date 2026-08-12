@@ -1,7 +1,11 @@
 --!strict
--- ProgressionService (server) — F0 mínimo (docs/04 §4.1, docs/13-F0-SLICE.md §10)
--- Flags de unlock da fatia. Spawn sem técnicas; grant é idempotente.
--- XP, objetivo 1 e Estilhaços entram no restante do item 7. Sem ProfileStore.
+-- ProgressionService (server) — F0 mínimo (docs/04 §4.1, docs/13-F0-SLICE.md §10, §11.1)
+-- Flags de unlock + ledger de XP não consolidado da sessão.
+-- Spawn sem técnicas; grant é idempotente.
+--
+-- FORA deste serviço (item 11 do backlog): consolidação em
+-- `anchor_bastion_return`, perda de XP na morte e ProfileStore. O XP aqui vive
+-- na sessão e some no leave — nada é persistido ainda.
 --
 -- Puro (sem Instances) — testável.
 
@@ -15,23 +19,55 @@ local KNOWN_FLAGS: { [string]: boolean } = {
 	unlock_comet_shoulder = true,
 	unlock_broken_cadence = true,
 	unlock_pulse_return = true,
+	quest_hunt_accepted = true,
+	ftue_spawned = true,
+	ftue_dummy_hit = true,
+}
+
+-- Teto de emissão por sessão (docs/13 §11.1).
+local SESSION_XP_CAP = 800
+
+export type XpLedger = {
+	unconsolidated: number,
+	consolidated: number,
+	-- Total já emitido nesta sessão; o teto conta emissão, não saldo.
+	emitted: number,
+	-- anchorId → kills desta sessão (retorno decrescente por âncora).
+	killsByAnchor: { [string]: number },
+}
+
+export type XpAward = {
+	granted: number,
+	-- Quanto foi recusado por teto de sessão ou retorno decrescente.
+	withheld: number,
+	reason: string?,
 }
 
 local ProgressionService = {
 	-- userId → flag → true
 	flags = {} :: { [number]: { [string]: boolean } },
+	-- userId → ledger
+	xp = {} :: { [number]: XpLedger },
 }
 
 function ProgressionService.init(): ()
 	table.clear(ProgressionService.flags)
+	table.clear(ProgressionService.xp)
 end
 
 function ProgressionService.registerPlayer(userId: number): ()
 	ProgressionService.flags[userId] = {}
+	ProgressionService.xp[userId] = {
+		unconsolidated = 0,
+		consolidated = 0,
+		emitted = 0,
+		killsByAnchor = {},
+	}
 end
 
 function ProgressionService.unregisterPlayer(userId: number): ()
 	ProgressionService.flags[userId] = nil
+	ProgressionService.xp[userId] = nil
 end
 
 function ProgressionService.hasUnlock(userId: number, flag: string): boolean
@@ -74,6 +110,95 @@ function ProgressionService.isAbilityUnlocked(userId: number, abilityId: string)
 		return false
 	end
 	return ProgressionService.hasUnlock(userId, flag)
+end
+
+-- ── XP ─────────────────────────────────────────────────────────────────────
+
+function ProgressionService.getLedger(userId: number): XpLedger?
+	return ProgressionService.xp[userId]
+end
+
+function ProgressionService.getUnconsolidatedXp(userId: number): number
+	local ledger = ProgressionService.xp[userId]
+	return if ledger then ledger.unconsolidated else 0
+end
+
+-- Emite XP não consolidado respeitando o teto de sessão. Valor negativo ou
+-- jogador desconhecido não credita nada.
+function ProgressionService.awardXp(userId: number, amount: number): XpAward
+	local ledger = ProgressionService.xp[userId]
+	if not ledger then
+		return { granted = 0, withheld = 0, reason = "unknown_player" }
+	end
+	if amount <= 0 then
+		return { granted = 0, withheld = 0, reason = "invalid_amount" }
+	end
+	local room = SESSION_XP_CAP - ledger.emitted
+	if room <= 0 then
+		return { granted = 0, withheld = amount, reason = "session_cap" }
+	end
+	local granted = math.min(amount, room)
+	ledger.emitted += granted
+	ledger.unconsolidated += granted
+	local withheld = amount - granted
+	return {
+		granted = granted,
+		withheld = withheld,
+		reason = if withheld > 0 then "session_cap" else nil,
+	}
+end
+
+-- XP de um kill, aplicando o retorno decrescente por âncora antes do teto.
+-- `npcDef` vem do catálogo; `anchorId` identifica o ponto de spawn.
+function ProgressionService.creditNpcKill(userId: number, npcDef: any, anchorId: string): XpAward
+	local ledger = ProgressionService.xp[userId]
+	if not ledger then
+		return { granted = 0, withheld = 0, reason = "unknown_player" }
+	end
+	if not npcDef or not npcDef.grantsXp then
+		return { granted = 0, withheld = 0, reason = "no_xp_source" }
+	end
+	local base = npcDef.xpUnconsolidated or 0
+	if base <= 0 then
+		return { granted = 0, withheld = 0, reason = "no_xp_source" }
+	end
+
+	local kills = (ledger.killsByAnchor[anchorId] or 0) + 1
+	ledger.killsByAnchor[anchorId] = kills
+
+	local value = base
+	local fullKills = npcDef.xpFullKills
+	if fullKills and kills > fullKills then
+		local reducedKills = npcDef.xpReducedKills or 0
+		if kills <= fullKills + reducedKills then
+			value = npcDef.xpReducedValue or 0
+		else
+			value = 0
+		end
+	end
+
+	if value <= 0 then
+		return { granted = 0, withheld = base, reason = "diminished" }
+	end
+	local award = ProgressionService.awardXp(userId, value)
+	if award.granted < base then
+		award.withheld = base - award.granted
+		award.reason = award.reason or "diminished"
+	end
+	return award
+end
+
+-- Kills desta sessão na âncora (telemetria e testes).
+function ProgressionService.getAnchorKills(userId: number, anchorId: string): number
+	local ledger = ProgressionService.xp[userId]
+	if not ledger then
+		return 0
+	end
+	return ledger.killsByAnchor[anchorId] or 0
+end
+
+function ProgressionService.sessionXpCap(): number
+	return SESSION_XP_CAP
 end
 
 return ProgressionService

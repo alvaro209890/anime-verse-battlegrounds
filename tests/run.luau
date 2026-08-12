@@ -48,6 +48,9 @@ local CatalogService = require("../src/server/Services/CatalogService")
 local PlayerSessionService = require("../src/server/Services/PlayerSessionService")
 local ZoneService = require("../src/server/Services/ZoneService")
 local ProgressionService = require("../src/server/Services/ProgressionService")
+local QuestService = require("../src/server/Services/QuestService")
+local Quests = require("../src/shared/Data/Quests")
+local Locale = require("../src/shared/Data/Locale")
 
 -- ── Relógio injetável (janela de reentrada / cap de Fluxo) ──────────────────
 local fakeNow = 1000
@@ -829,7 +832,12 @@ test("catálogo: dados reais passam na validação", function()
 		EnergyFamilies = EnergyFamilies,
 		Npcs = Npcs,
 		Zones = Zones,
+		Quests = Quests,
+		Locale = Locale,
 	})
+	assertEq(CatalogService.getQuest("quest_hunt") ~= nil, true, "objetivo 1 no catálogo")
+	assertEq(#CatalogService.questChain(), 1, "cadeia com o objetivo 1")
+	assertEq(CatalogService.getNpc("npc_threshold_instructor") ~= nil, true, "instrutor no catálogo")
 	assertEq(CatalogService.getAbility("comet_shoulder") ~= nil, true, "habilidade acessível")
 	assertEq(CatalogService.getAbility("eclipse_beat") ~= nil, true, "ultimate no catálogo")
 	assertEq(CatalogService.getNpc("npc_training_dummy") ~= nil, true, "dummy no catálogo")
@@ -1403,6 +1411,472 @@ test("fatia: sessão Ready com ZoneService e comet intacto", function()
 	PlayerSessionService.onPlayerLeft({ UserId = 250, Name = "Zona" })
 	ZoneService.unregisterPlayer(250)
 	ProgressionService.unregisterPlayer(250)
+end)
+
+-- ══ Testes: item 7 — Locale, XP e objetivo 1 ────────────────────────────────
+local function makeQuestDeps(events: { any }?): any
+	return {
+		getQuest = Quests.get,
+		chain = Quests.chain,
+		awardXp = ProgressionService.awardXp,
+		grantUnlock = ProgressionService.grantUnlock,
+		now = clockNow,
+		onQuestEvent = function(userId: number, event: any)
+			if events then
+				table.insert(events, { userId = userId, event = event })
+			end
+		end,
+	}
+end
+
+test("dados: Locale cobre as chaves da fatia em PT-BR e EN", function()
+	local required = {
+		"character.eclipse_fist.name",
+		"family.umbral_aether.name",
+		"ability.comet_shoulder.name",
+		"ability.broken_cadence.name",
+		"ability.pulse_return.name",
+		"zone.bastion.name",
+		"zone.plain.name",
+		"hud.zone_safe",
+		"hud.pvp_active",
+		"hud.pvp_hold",
+		"ftue.dummy_hint",
+		"quest.hunt.tracker",
+		"npc.threshold_instructor.name",
+	}
+	for _, key in required do
+		assertTrue(Locale.hasKey(key), "chave ausente: " .. key)
+		assertTrue(Locale.get(key, "en") ~= key, "sem tradução EN: " .. key)
+	end
+	assertEq(Locale.defaultLocale(), "pt-br", "default PT-BR")
+	assertEq(Locale.get("character.eclipse_fist.name"), "Punho do Eclipse", "nome público")
+	assertEq(Locale.get("chave.inexistente"), "chave.inexistente", "chave desconhecida devolve a própria chave")
+end)
+
+test("dados: tracker formata {n} com o progresso", function()
+	assertEq(Locale.format("quest.hunt.tracker", { n = 0 }), "Derrote Estilhaços: 0/3", "0/3")
+	assertEq(Locale.format("quest.hunt.tracker", { n = 2 }), "Derrote Estilhaços: 2/3", "2/3")
+end)
+
+test("dados: objetivo 1 é 3 Estilhaços, +40 XP e unlock do Cometa", function()
+	local def = Quests.get("quest_hunt")
+	assertTrue(def ~= nil, "quest_hunt deveria existir")
+	if not def then
+		return
+	end
+	assertEq(def.kind, "kill", "kind")
+	assertEq(def.targetId, "enemy_wandering_shard", "alvo")
+	assertEq(def.requiredCount, 3, "3 kills")
+	assertEq(def.xpReward, 40, "+40 XP")
+	assertEq(def.unlockFlag, "unlock_comet_shoulder", "unlock")
+	assertEq(def.acceptFlag, "quest_hunt_accepted", "flag de aceite")
+	assertEq(def.giverNpcId, "npc_threshold_instructor", "ofertante")
+	assertEq(def.autoAcceptAfterSeconds, 90, "aceite forçado em 90 s")
+end)
+
+test("catálogo: objetivo com alvo ou ofertante desconhecido falha validação", function()
+	local function withQuests(all: any)
+		return pcall(function()
+			CatalogService.init({
+				Abilities = Abilities,
+				Characters = Characters,
+				EnergyFamilies = EnergyFamilies,
+				Npcs = Npcs,
+				Zones = Zones,
+				Quests = {
+					get = Quests.get,
+					all = all,
+					chain = Quests.chain,
+				},
+			})
+		end)
+	end
+	local base = {
+		id = "quest_bad",
+		trackerKey = "quest.hunt.tracker",
+		kind = "kill",
+		targetId = "enemy_wandering_shard",
+		requiredCount = 3,
+		giverNpcId = "npc_threshold_instructor",
+		autoAcceptAfterSeconds = 90,
+		xpReward = 40,
+		unlockFlag = "unlock_comet_shoulder",
+		acceptFlag = "quest_hunt_accepted",
+		enabled = true,
+	}
+	local function variant(overrides: { [string]: any }): any
+		local copy: { [string]: any } = table.clone(base)
+		for k, v in overrides do
+			copy[k] = v
+		end
+		return function()
+			return { copy }
+		end
+	end
+	assertFalse(withQuests(variant({ targetId = "enemy_que_nao_existe" })), "alvo desconhecido deveria falhar")
+	assertFalse(withQuests(variant({ giverNpcId = "npc_fantasma" })), "ofertante desconhecido deveria falhar")
+	assertFalse(withQuests(variant({ requiredCount = 0 })), "requiredCount 0 deveria falhar")
+	assertFalse(withQuests(variant({ acceptFlag = "" })), "acceptFlag vazia deveria falhar")
+end)
+
+test("catálogo: chave de UI sem entrada no Locale falha validação", function()
+	local badNpcs = {
+		get = Npcs.get,
+		all = function()
+			local out: { any } = {}
+			for _, npc in Npcs.all() do
+				table.insert(out, npc)
+			end
+			table.insert(out, {
+				id = "npc_sem_locale",
+				displayNameKey = "npc.sem_locale.name",
+				kind = "instructor",
+				maxHealth = 1,
+				maxGuard = 0,
+				attackDamage = 0,
+				attackRange = 0,
+				attackPeriodSeconds = 0,
+				telegraphMs = 0,
+				grantsXp = false,
+				enabled = true,
+			})
+			return out
+		end,
+	}
+	local ok = pcall(function()
+		CatalogService.init({
+			Abilities = Abilities,
+			Characters = Characters,
+			EnergyFamilies = EnergyFamilies,
+			Npcs = badNpcs,
+			Zones = Zones,
+			Locale = Locale,
+		})
+	end)
+	assertFalse(ok, "displayNameKey sem tradução deveria falhar")
+end)
+
+test("XP: kill do Estilhaço credita 25 não consolidado", function()
+	ProgressionService.init()
+	ProgressionService.registerPlayer(300)
+	local shard = Npcs.get("enemy_wandering_shard")
+	assertTrue(shard ~= nil, "estilhaço no catálogo")
+	local award = ProgressionService.creditNpcKill(300, shard, "anchor_gate_north")
+	assertEq(award.granted, 25, "XP do kill")
+	assertEq(ProgressionService.getUnconsolidatedXp(300), 25, "não consolidado")
+	assertEq(ProgressionService.getAnchorKills(300, "anchor_gate_north"), 1, "kills na âncora")
+	-- Dummy não dá XP
+	local dummy = Npcs.get("npc_training_dummy")
+	local none = ProgressionService.creditNpcKill(300, dummy, "anchor_training")
+	assertEq(none.granted, 0, "dummy não credita")
+	assertEq(none.reason, "no_xp_source", "motivo")
+end)
+
+test("XP: retorno decrescente por âncora — 6×25, depois 12, depois 0", function()
+	ProgressionService.init()
+	ProgressionService.registerPlayer(301)
+	local shard = Npcs.get("enemy_wandering_shard")
+	for i = 1, 6 do
+		local award = ProgressionService.creditNpcKill(301, shard, "anchor_gate_north")
+		assertEq(award.granted, 25, ("kill %d ainda paga cheio"):format(i))
+	end
+	assertEq(ProgressionService.getUnconsolidatedXp(301), 150, "6 kills = 150")
+	for i = 7, 12 do
+		local award = ProgressionService.creditNpcKill(301, shard, "anchor_gate_north")
+		assertEq(award.granted, 12, ("kill %d paga reduzido"):format(i))
+	end
+	assertEq(ProgressionService.getUnconsolidatedXp(301), 222, "12 kills = 150 + 72")
+	local zeroed = ProgressionService.creditNpcKill(301, shard, "anchor_gate_north")
+	assertEq(zeroed.granted, 0, "13º kill não paga")
+	assertEq(zeroed.reason, "diminished", "motivo")
+	assertEq(ProgressionService.getUnconsolidatedXp(301), 222, "saldo intacto")
+end)
+
+test("XP: o decréscimo é por âncora, não global", function()
+	ProgressionService.init()
+	ProgressionService.registerPlayer(302)
+	local shard = Npcs.get("enemy_wandering_shard")
+	for _ = 1, 6 do
+		ProgressionService.creditNpcKill(302, shard, "anchor_gate_north")
+	end
+	local other = ProgressionService.creditNpcKill(302, shard, "anchor_gate_west")
+	assertEq(other.granted, 25, "outra âncora paga cheio")
+	local same = ProgressionService.creditNpcKill(302, shard, "anchor_gate_north")
+	assertEq(same.granted, 12, "âncora esgotada continua reduzida")
+end)
+
+test("XP: teto de emissão da sessão é 800", function()
+	ProgressionService.init()
+	ProgressionService.registerPlayer(303)
+	assertEq(ProgressionService.sessionXpCap(), 800, "teto")
+	local first = ProgressionService.awardXp(303, 790)
+	assertEq(first.granted, 790, "primeira emissão")
+	local partial = ProgressionService.awardXp(303, 40)
+	assertEq(partial.granted, 10, "corta no teto")
+	assertEq(partial.withheld, 30, "recusado")
+	assertEq(partial.reason, "session_cap", "motivo")
+	local blocked = ProgressionService.awardXp(303, 25)
+	assertEq(blocked.granted, 0, "nada além do teto")
+	assertEq(ProgressionService.getUnconsolidatedXp(303), 800, "saldo no teto")
+	assertEq(ProgressionService.awardXp(303, -5).granted, 0, "valor negativo não credita")
+	assertEq(ProgressionService.awardXp(999, 25).reason, "unknown_player", "jogador desconhecido")
+end)
+
+test("objetivo: aceite no Instrutor marca a flag e abre o tracker", function()
+	fakeNow = 20000
+	ProgressionService.init()
+	local events: { any } = {}
+	QuestService.init(makeQuestDeps(events))
+	ProgressionService.registerPlayer(310)
+	QuestService.registerPlayer(310, fakeNow)
+	assertEq(QuestService.getTracker(310), nil, "sem tracker antes do aceite")
+	local ok, reason = QuestService.tryAcceptFromNpc(310, "npc_threshold_instructor", fakeNow)
+	assertTrue(ok, "aceite: " .. tostring(reason))
+	assertTrue(ProgressionService.hasUnlock(310, "quest_hunt_accepted"), "flag de aceite")
+	local tracker = QuestService.getTracker(310)
+	assertTrue(tracker ~= nil, "tracker visível")
+	if tracker then
+		assertEq(tracker.trackerKey, "quest.hunt.tracker", "chave do tracker")
+		assertEq(tracker.progress, 0, "0/3")
+		assertEq(tracker.required, 3, "3 kills")
+	end
+	assertEq(#events, 1, "um evento de aceite")
+	assertEq(events[1].event.acceptSource, "npc", "aceite pelo NPC")
+	local again, againReason = QuestService.tryAcceptFromNpc(310, "npc_threshold_instructor", fakeNow)
+	assertFalse(again, "segundo aceite não repete")
+	assertEq(againReason, "no_offer", "sem oferta pendente")
+	assertFalse(QuestService.tryAcceptFromNpc(310, "npc_desconhecido", fakeNow), "NPC errado não oferta")
+end)
+
+test("objetivo: kill antes do aceite não conta", function()
+	fakeNow = 21000
+	ProgressionService.init()
+	QuestService.init(makeQuestDeps())
+	ProgressionService.registerPlayer(311)
+	QuestService.registerPlayer(311, fakeNow)
+	local events = QuestService.creditKill(311, "enemy_wandering_shard", fakeNow + 1)
+	assertEq(#events, 0, "sem progresso sem objetivo ativo")
+	local progress = QuestService.getProgress(311, "quest_hunt")
+	assertTrue(progress ~= nil, "estado existe")
+	if progress then
+		assertEq(progress.state, "offered", "ainda ofertado")
+		assertEq(progress.progress, 0, "sem progresso")
+	end
+end)
+
+test("objetivo: tracker aparece sozinho 90 s depois de ignorar o NPC", function()
+	fakeNow = 22000
+	ProgressionService.init()
+	local events: { any } = {}
+	QuestService.init(makeQuestDeps(events))
+	ProgressionService.registerPlayer(312)
+	QuestService.registerPlayer(312, fakeNow)
+	QuestService.tick(312, fakeNow + 89)
+	assertEq(QuestService.getTracker(312), nil, "antes de 90 s o tracker não aparece")
+	QuestService.tick(312, fakeNow + 90)
+	local tracker = QuestService.getTracker(312)
+	assertTrue(tracker ~= nil, "tracker forçado após 90 s")
+	assertTrue(ProgressionService.hasUnlock(312, "quest_hunt_accepted"), "flag do aceite forçado")
+	assertEq(#events, 1, "um evento")
+	assertEq(events[1].event.acceptSource, "timeout", "origem timeout")
+	QuestService.tick(312, fakeNow + 200)
+	assertEq(#events, 1, "tick é idempotente")
+end)
+
+test("objetivo: 3º kill completa, dá +40 XP e destrava o Ombro Cometa", function()
+	fakeNow = 23000
+	ProgressionService.init()
+	local events: { any } = {}
+	QuestService.init(makeQuestDeps(events))
+	ProgressionService.registerPlayer(313)
+	QuestService.registerPlayer(313, fakeNow)
+	QuestService.tryAcceptFromNpc(313, "npc_threshold_instructor", fakeNow)
+
+	local first = QuestService.creditKill(313, "enemy_wandering_shard", fakeNow + 1)
+	assertEq(#first, 1, "evento de progresso")
+	assertEq(first[1].progress, 1, "1/3")
+	assertEq(first[1].state, "active", "ainda ativo")
+	assertFalse(ProgressionService.hasUnlock(313, "unlock_comet_shoulder"), "sem unlock em 1/3")
+
+	QuestService.creditKill(313, "enemy_wandering_shard", fakeNow + 2)
+	local third = QuestService.creditKill(313, "enemy_wandering_shard", fakeNow + 3)
+	assertEq(#third, 1, "evento de conclusão")
+	assertEq(third[1].state, "completed", "completo")
+	assertEq(third[1].progress, 3, "3/3")
+	assertEq(third[1].xpGranted, 40, "+40 XP do objetivo")
+	assertEq(third[1].unlockFlag, "unlock_comet_shoulder", "flag no evento")
+	assertTrue(ProgressionService.hasUnlock(313, "unlock_comet_shoulder"), "Cometa destravado")
+	assertEq(ProgressionService.getUnconsolidatedXp(313), 40, "só o XP do objetivo (kills entram pelo NPC)")
+	assertEq(QuestService.getTracker(313), nil, "tracker some ao completar")
+end)
+
+test("objetivo: kill depois de completo não repete prêmio", function()
+	fakeNow = 24000
+	ProgressionService.init()
+	QuestService.init(makeQuestDeps())
+	ProgressionService.registerPlayer(314)
+	QuestService.registerPlayer(314, fakeNow)
+	QuestService.tryAcceptFromNpc(314, "npc_threshold_instructor", fakeNow)
+	for i = 1, 3 do
+		QuestService.creditKill(314, "enemy_wandering_shard", fakeNow + i)
+	end
+	assertEq(ProgressionService.getUnconsolidatedXp(314), 40, "prêmio pago uma vez")
+	local extra = QuestService.creditKill(314, "enemy_wandering_shard", fakeNow + 10)
+	assertEq(#extra, 0, "sem evento novo")
+	assertEq(ProgressionService.getUnconsolidatedXp(314), 40, "XP não dobra")
+	local progress = QuestService.getProgress(314, "quest_hunt")
+	if progress then
+		assertEq(progress.progress, 3, "progresso não passa do requerido")
+	end
+	-- Alvo fora do objetivo não conta
+	QuestService.init(makeQuestDeps())
+	ProgressionService.registerPlayer(315)
+	QuestService.registerPlayer(315, fakeNow)
+	QuestService.tryAcceptFromNpc(315, "npc_threshold_instructor", fakeNow)
+	assertEq(#QuestService.creditKill(315, "npc_training_dummy", fakeNow + 1), 0, "dummy não conta no objetivo")
+end)
+
+test("combate: killed só na transição vivo → morto", function()
+	CombatService.clear()
+	local attacker = CombatService.createFighter("player:400", "player", 100, 100)
+	local shard = CombatService.createFighter("enemy_wandering_shard@anchor_gate_north#1", "npc", 10, 0)
+	local hit = CombatService.tryLight(attacker, shard, 100, "front")
+	assertEq(hit.damage, 5, "primeiro golpe")
+	assertEq(hit.killed, nil, "ainda vivo")
+	local kill = CombatService.tryLight(attacker, shard, 100.2, "front")
+	assertEq(shard.health, 0, "morto")
+	assertEq(kill.killed, true, "kill sinalizado")
+	assertEq(shard.diedAt, 100.2, "instante da morte")
+	local corpse = CombatService.tryLight(attacker, shard, 100.4, "front")
+	assertEq(corpse.killed, nil, "golpe em morto não repete o kill")
+	assertEq(shard.diedAt, 100.2, "diedAt não é re-carimbado (não empurra o respawn)")
+end)
+
+test("dados: InteractionIntent C→S e StateDelta S→C", function()
+	local interaction = Remotes.Contracts.get(Remotes.Names.InteractionIntent)
+	assertTrue(interaction ~= nil, "InteractionIntent deveria ter contrato")
+	if interaction then
+		assertEq(interaction.direction, "ClientToServer", "direção")
+		assertEq(interaction.version, 1, "versão")
+		assertTrue(interaction.payload:find("npcId") ~= nil, "payload com npcId")
+		assertFalse(interaction.payload:find("reward") ~= nil, "cliente não informa recompensa")
+	end
+	local delta = Remotes.Contracts.get(Remotes.Names.StateDelta)
+	assertTrue(delta ~= nil, "StateDelta deveria ter contrato")
+	if delta then
+		assertEq(delta.direction, "ServerToClient", "direção")
+		assertTrue(delta.payload:find("objective") ~= nil, "payload com objective")
+		assertTrue(delta.payload:find("unconsolidatedXp") ~= nil, "payload com XP")
+	end
+	local snapshot = Remotes.Contracts.get(Remotes.Names.SessionSnapshot)
+	assertTrue(snapshot ~= nil and snapshot.payload:find("objective") ~= nil, "snapshot carrega objetivo")
+end)
+
+test("fatia: roteiro 0–5 min — spawn locked, objetivo, 3 kills e Cometa liberado", function()
+	CombatService.clear()
+	CooldownService.clear(320)
+	fakeNow = 25000
+	ProgressionService.init()
+	QuestService.init(makeQuestDeps())
+	ZoneService.init(makeZoneDeps())
+	ResourceService.init(makeResourceDeps())
+	CombatService.createFighter("npc_training_dummy", "npc", 10000, 0)
+	local deps = makeAbilityDeps()
+	deps.getAttackerFighter = function(userId: number)
+		return CombatService.getFighter(CombatService.playerFighterId(userId))
+	end
+	deps.getAbilityTarget = function(_userId: number)
+		return CombatService.getFighter("npc_training_dummy")
+	end
+	deps.tryCometShoulder = CombatService.tryCometShoulder
+	deps.isAbilityUnlocked = ProgressionService.isAbilityUnlocked
+	AbilityService.init(deps)
+
+	local snapshots: { any } = {}
+	PlayerSessionService.init({
+		getCharacter = function(id: string): any
+			return Characters.get(id)
+		end,
+		getFamily = function(id: string): any
+			return EnergyFamilies.get(id)
+		end,
+		createResourceState = function(userId: number, familyId: string)
+			return ResourceService.createState(userId, familyId)
+		end,
+		removeResourceState = ResourceService.removeState,
+		getResourceState = ResourceService.getState,
+		clearCooldowns = function(userId: number)
+			CooldownService.clear(userId)
+		end,
+		releaseProfile = function() end,
+		createFighter = CombatService.createFighter,
+		removeFighter = CombatService.removeFighter,
+		getFighter = CombatService.getFighter,
+		playerFighterId = CombatService.playerFighterId,
+		onSnapshot = function(_player: any, snap: { any })
+			table.insert(snapshots, snap)
+		end,
+		getPlayerZone = ZoneService.getPlayerZone,
+		getUnlocks = ProgressionService.listUnlocks,
+		getObjective = QuestService.getTracker,
+		getUnconsolidatedXp = ProgressionService.getUnconsolidatedXp,
+	})
+
+	-- 0–15 s: spawn na segura, sem técnicas e sem objetivo aceito
+	ProgressionService.registerPlayer(320)
+	ZoneService.registerPlayer(320)
+	QuestService.registerPlayer(320, fakeNow)
+	ProgressionService.grantUnlock(320, "ftue_spawned")
+	PlayerSessionService.onPlayerJoined({ UserId = 320, Name = "Roteiro" })
+	assertEq(#snapshots, 1, "snapshot")
+	assertEq(snapshots[1].objective, nil, "sem objetivo no spawn")
+	assertEq(snapshots[1].unconsolidatedXp, 0, "sem XP no spawn")
+	local attacker = ResourceService.getState(320)
+	assertTrue(attacker ~= nil, "estado de recurso")
+	if not attacker then
+		return
+	end
+	local locked, lockedReason = AbilityService.tryActivate(attacker, "comet_shoulder", nil)
+	assertFalse(locked, "Cometa locked no spawn")
+	assertEq(lockedReason, "locked", "motivo")
+
+	-- ~60 s–3 min: NPC oferece o objetivo 1
+	assertTrue(QuestService.tryAcceptFromNpc(320, "npc_threshold_instructor", fakeNow + 60), "aceite no NPC")
+
+	-- 3–5 min: cruzar a fronteira e matar 3 Estilhaços
+	ZoneService.tryEnterZone(320, "zone_threshold_transition", fakeNow + 70, { holdConfirmed = true })
+	ZoneService.tryEnterZone(320, "zone_plain_free", fakeNow + 71, {})
+	assertEq(ZoneService.getPlayerZone(320), "zone_plain_free", "na planície")
+	local shardDef = Npcs.get("enemy_wandering_shard")
+	for i = 1, 3 do
+		ProgressionService.creditNpcKill(320, shardDef, "anchor_gate_north")
+		QuestService.creditKill(320, "enemy_wandering_shard", fakeNow + 100 + i)
+	end
+	-- 3 × 25 (kills) + 40 (objetivo)
+	assertEq(ProgressionService.getUnconsolidatedXp(320), 115, "XP dos kills + objetivo")
+	assertTrue(ProgressionService.hasUnlock(320, "unlock_comet_shoulder"), "Cometa destravado no 3º kill")
+	assertEq(QuestService.getTracker(320), nil, "tracker some")
+
+	-- 5 min: Cometa utilizável e cobrado
+	local ok, reason = AbilityService.tryActivate(attacker, "comet_shoulder", nil)
+	assertTrue(ok, "Cometa após o objetivo: " .. tostring(reason))
+	assertEq(attacker.resource, 82, "custo 18")
+	local dummy = CombatService.getFighter("npc_training_dummy")
+	if dummy then
+		assertEq(dummy.health, 9991, "dano 9 no alvo")
+	end
+	-- As outras duas técnicas continuam trancadas
+	assertFalse(ProgressionService.hasUnlock(320, "unlock_broken_cadence"), "Cadência ainda locked (item 9)")
+	assertFalse(ProgressionService.hasUnlock(320, "unlock_pulse_return"), "Pulso ainda locked (item 10)")
+
+	-- leave: XP da sessão some (persistência é o item 11)
+	PlayerSessionService.onPlayerLeft({ UserId = 320, Name = "Roteiro" })
+	QuestService.unregisterPlayer(320)
+	ZoneService.unregisterPlayer(320)
+	ProgressionService.unregisterPlayer(320)
+	assertEq(ProgressionService.getUnconsolidatedXp(320), 0, "sem persistência ainda")
+	assertEq(QuestService.getProgress(320, "quest_hunt"), nil, "estado do objetivo limpo")
 end)
 
 -- ══ Runner ─────────────────────────────────────────────────────────────────

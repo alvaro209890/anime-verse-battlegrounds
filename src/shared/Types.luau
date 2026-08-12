@@ -98,6 +98,40 @@ export type SessionSnapshot = {
 	familyId: EnergyFamilyId,
 	unlocks: { string },
 	dummyId: string,
+	objective: QuestTracker?,
+	unconsolidatedXp: number,
+}
+
+-- Objetivos da fatia (docs/13-F0-SLICE.md §10)
+export type QuestId = string
+
+export type QuestDefinition = {
+	id: QuestId,
+	trackerKey: string,
+	kind: "kill",
+	targetId: string,
+	requiredCount: number,
+	giverNpcId: string,
+	autoAcceptAfterSeconds: number,
+	xpReward: number,
+	unlockFlag: string?,
+	acceptFlag: string,
+	enabled: boolean,
+}
+
+export type QuestState = "offered" | "active" | "completed"
+
+-- Tracker enviado no SessionSnapshot e no StateDelta. O cliente resolve o
+-- texto pela `trackerKey`; nunca calcula progresso nem recompensa.
+export type QuestTracker = {
+	questId: QuestId,
+	state: QuestState,
+	trackerKey: string,
+	progress: number,
+	required: number,
+	xpGranted: number?,
+	unlockFlag: string?,
+	acceptSource: string?,
 }
 
 -- Contratos de rede (docs/04 §6) — payloads com versão

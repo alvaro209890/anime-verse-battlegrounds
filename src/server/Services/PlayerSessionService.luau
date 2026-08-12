@@ -20,6 +20,9 @@ export type SessionDeps = {
 	onSnapshot: ((any, { any }) -> ())?,
 	getPlayerZone: ((number) -> string)?,
 	getUnlocks: ((number) -> { string })?,
+	-- Tracker do objetivo ativo (docs/13 §13 — SessionSnapshot carrega objetivo).
+	getObjective: ((number) -> any?)?,
+	getUnconsolidatedXp: ((number) -> number)?,
 }
 
 export type SessionSnapshot = {
@@ -36,6 +39,9 @@ export type SessionSnapshot = {
 	familyId: string,
 	unlocks: { string },
 	dummyId: string,
+	-- nil quando não há objetivo aceito (HUD esconde a linha).
+	objective: any?,
+	unconsolidatedXp: number,
 }
 
 local PlayerSessionService = {
@@ -91,6 +97,8 @@ function PlayerSessionService.buildSnapshot(userId: number, characterId: string,
 	if deps.getUnlocks then
 		unlocks = deps.getUnlocks(userId)
 	end
+	local objective = if deps.getObjective then deps.getObjective(userId) else nil
+	local unconsolidatedXp = if deps.getUnconsolidatedXp then deps.getUnconsolidatedXp(userId) else 0
 	return {
 		protocolVersion = 1,
 		ready = true,
@@ -105,6 +113,8 @@ function PlayerSessionService.buildSnapshot(userId: number, characterId: string,
 		familyId = familyId,
 		unlocks = unlocks,
 		dummyId = DUMMY_ID,
+		objective = objective,
+		unconsolidatedXp = unconsolidatedXp,
 	}
 end
 

@@ -48,6 +48,8 @@ export type HitResult = {
 	iframe: boolean?,
 	stoppedOnGuard: boolean?,
 	phase: string?,
+	-- true só na transição vivo → morto (crédito de XP/objetivo é idempotente).
+	killed: boolean?,
 }
 
 local LIGHT_DAMAGE = { 5, 5, 6, 10 }
@@ -166,11 +168,14 @@ local function applyHit(
 	if now < target.iframeUntil then
 		return { ok = true, damage = 0, iframe = true }
 	end
+	-- Golpe em alvo já morto não re-carimba diedAt (não empurra o respawn).
+	local wasAlive = target.health > 0
 	local guarding = target.guarding and now >= target.cannotGuardUntil and facing ~= "back"
 	if not guarding then
 		target.health = math.max(0, target.health - rawHp)
-		if target.health <= 0 then
+		if target.health <= 0 and wasAlive then
 			target.diedAt = now
+			return { ok = true, damage = rawHp, killed = true }
 		end
 		return { ok = true, damage = rawHp }
 	end
@@ -190,10 +195,12 @@ local function applyHit(
 		target.guard = nextGuard
 	end
 	target.health = math.max(0, target.health - hp)
-	if target.health <= 0 then
+	local killed = false
+	if target.health <= 0 and wasAlive then
 		target.diedAt = now
+		killed = true
 	end
-	return { ok = true, damage = hp, broken = broken }
+	return { ok = true, damage = hp, broken = broken, killed = killed or nil }
 end
 
 function CombatService.tryLight(attacker: FighterState, target: FighterState, now: number, facing: HitFacing): HitResult

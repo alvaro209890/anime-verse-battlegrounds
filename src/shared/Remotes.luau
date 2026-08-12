@@ -26,6 +26,8 @@ export type RemoteName =
 	| "DashIntent"
 	| "ZoneEvent"
 	| "ZoneCrossingIntent"
+	| "InteractionIntent"
+	| "StateDelta"
 
 local REMOTES = {
 	AbilityActivate = "AbilityActivate",
@@ -39,6 +41,8 @@ local REMOTES = {
 	DashIntent = "DashIntent",
 	ZoneEvent = "ZoneEvent",
 	ZoneCrossingIntent = "ZoneCrossingIntent",
+	InteractionIntent = "InteractionIntent",
+	StateDelta = "StateDelta",
 }
 
 local RemoteContracts = {
@@ -76,7 +80,7 @@ local RemoteContracts = {
 		name = REMOTES.SessionSnapshot,
 		direction = "ServerToClient",
 		version = 1,
-		payload = "{ protocolVersion: number, ready: boolean, zoneId: string, health: number, guard: number, resource: number, familyId: string, unlocks: { string }, dummyId: string }",
+		payload = "{ protocolVersion: number, ready: boolean, zoneId: string, health: number, guard: number, resource: number, familyId: string, unlocks: { string }, dummyId: string, objective: any?, unconsolidatedXp: number }",
 	} :: NetworkContract,
 	[REMOTES.BasicAttackIntent] = {
 		name = REMOTES.BasicAttackIntent,
@@ -107,6 +111,20 @@ local RemoteContracts = {
 		direction = "ClientToServer",
 		version = 1,
 		payload = "{ toZoneId: string, holdConfirmed: boolean?, requestId: string }",
+	} :: NetworkContract,
+	-- Aceite de objetivo / uso de âncora. O cliente nunca informa recompensa.
+	[REMOTES.InteractionIntent] = {
+		name = REMOTES.InteractionIntent,
+		direction = "ClientToServer",
+		version = 1,
+		payload = "{ npcId: string?, anchorId: string?, requestId: string }",
+	} :: NetworkContract,
+	-- Delta autoritativo de estado; carrega o tracker do objetivo e as flags.
+	[REMOTES.StateDelta] = {
+		name = REMOTES.StateDelta,
+		direction = "ServerToClient",
+		version = 1,
+		payload = "{ objective: { questId: string, trackerKey: string, progress: number, required: number, state: string, xpGranted: number?, unlockFlag: string? }?, unlocks: { string }?, unconsolidatedXp: number? }",
 	} :: NetworkContract,
 }
 

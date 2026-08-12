@@ -5,7 +5,7 @@
 export type NpcDefinition = {
 	id: string,
 	displayNameKey: string,
-	kind: "dummy" | "enemy",
+	kind: "dummy" | "enemy" | "instructor",
 	maxHealth: number,
 	maxGuard: number,
 	attackDamage: number,
@@ -18,12 +18,34 @@ export type NpcDefinition = {
 	respawnSeconds: number?,
 	recoverySeconds: number?,
 	xpUnconsolidated: number?,
+	-- Retorno decrescente por âncora na sessão (docs/13 §9.2): os primeiros
+	-- `xpFullKills` pagam `xpUnconsolidated`, os `xpReducedKills` seguintes
+	-- pagam `xpReducedValue`, e o resto paga 0. Ausentes = sem decréscimo.
+	xpFullKills: number?,
+	xpReducedKills: number?,
+	xpReducedValue: number?,
 	maxAlive: number?,
 	zoneId: string?,
 	combatClearRadius: number?,
 }
 
 local Npcs: { [string]: NpcDefinition } = {
+	-- Instrutor do Limiar — oferece o objetivo 1 (docs/13 §10). Não combate:
+	-- alvo de InteractionIntent, nunca de hitbox.
+	npc_threshold_instructor = {
+		id = "npc_threshold_instructor",
+		displayNameKey = "npc.threshold_instructor.name",
+		kind = "instructor",
+		maxHealth = 1,
+		maxGuard = 0,
+		attackDamage = 0,
+		attackRange = 0,
+		attackPeriodSeconds = 0,
+		telegraphMs = 0,
+		grantsXp = false,
+		enabled = true,
+		zoneId = "zone_bastion_safe",
+	},
 	npc_training_dummy = {
 		id = "npc_training_dummy",
 		displayNameKey = "npc.training_dummy.name",
@@ -53,6 +75,9 @@ local Npcs: { [string]: NpcDefinition } = {
 		respawnSeconds = 45,
 		recoverySeconds = 0.6,
 		xpUnconsolidated = 25,
+		xpFullKills = 6,
+		xpReducedKills = 6,
+		xpReducedValue = 12,
 		maxAlive = 4,
 		zoneId = "zone_plain_free",
 		combatClearRadius = 20,

@@ -12,6 +12,8 @@ export type CatalogDeps = {
 	EnergyFamilies: { get: (string) -> any?, all: () -> { any } },
 	Npcs: { get: (string) -> any?, all: () -> { any } }?,
 	Zones: { get: (string) -> any?, all: () -> { any }, getAnchor: (string) -> any?, allAnchors: () -> { any } }?,
+	Quests: { get: (string) -> any?, all: () -> { any }, chain: () -> { string } }?,
+	Locale: { hasKey: (string) -> boolean, get: (string, any?) -> string }?,
 }
 
 local CatalogService = {
@@ -181,6 +183,90 @@ function CatalogService.validate(): ()
 		end
 	end
 
+	if deps.Quests then
+		local npcIds: { [string]: boolean } = {}
+		if deps.Npcs then
+			for _, npc in deps.Npcs.all() do
+				npcIds[npc.id] = true
+			end
+		end
+		for _, quest in deps.Quests.all() do
+			if quest.requiredCount < 1 then
+				fail(("quest %s → requiredCount inválido"):format(quest.id))
+			end
+			if quest.xpReward < 0 then
+				fail(("quest %s → xpReward negativo"):format(quest.id))
+			end
+			if quest.autoAcceptAfterSeconds < 0 then
+				fail(("quest %s → autoAcceptAfterSeconds negativo"):format(quest.id))
+			end
+			if quest.kind ~= "kill" then
+				fail(("quest %s → kind não suportado na fatia: %s"):format(quest.id, tostring(quest.kind)))
+			end
+			if deps.Npcs then
+				if not npcIds[quest.targetId] then
+					fail(("quest %s → alvo desconhecido %s"):format(quest.id, quest.targetId))
+				end
+				if not npcIds[quest.giverNpcId] then
+					fail(("quest %s → ofertante desconhecido %s"):format(quest.id, quest.giverNpcId))
+				end
+			end
+			if type(quest.acceptFlag) ~= "string" or quest.acceptFlag == "" then
+				fail(("quest %s → acceptFlag ausente"):format(quest.id))
+			end
+		end
+		local chain = deps.Quests.chain()
+		if #chain < 1 then
+			fail("cadeia de objetivos vazia (objetivo 1 é obrigatório na fatia)")
+		end
+		for _, questId in chain do
+			if deps.Quests.get(questId) == nil then
+				fail(("cadeia referencia objetivo ausente %s"):format(questId))
+			end
+		end
+	end
+
+	-- Toda chave de UI de conteúdo habilitado precisa existir no Locale.
+	-- `descriptionKey` entra com a UI (item 12 do backlog).
+	if deps.Locale then
+		local function requireKey(owner: string, key: string?)
+			if key == nil or key == "" then
+				return
+			end
+			if not deps.Locale.hasKey(key) then
+				fail(("%s → chave de locale ausente %s"):format(owner, key))
+			end
+		end
+		for _, char in deps.Characters.all() do
+			if char.enabled then
+				requireKey("character " .. char.id, char.displayNameKey)
+			end
+		end
+		for _, ab in deps.Abilities.all() do
+			requireKey("ability " .. ab.id, ab.displayNameKey)
+		end
+		for _, fam in deps.EnergyFamilies.all() do
+			requireKey("family " .. fam.id, fam.displayNameKey)
+		end
+		if deps.Npcs then
+			for _, npc in deps.Npcs.all() do
+				if npc.enabled then
+					requireKey("npc " .. npc.id, npc.displayNameKey)
+				end
+			end
+		end
+		if deps.Zones then
+			for _, zone in deps.Zones.all() do
+				requireKey("zone " .. zone.id, zone.displayNameKey)
+			end
+		end
+		if deps.Quests then
+			for _, quest in deps.Quests.all() do
+				requireKey("quest " .. quest.id, quest.trackerKey)
+			end
+		end
+	end
+
 	CatalogService.validated = true
 end
 
@@ -227,6 +313,24 @@ function CatalogService.getZone(zoneId: string): any?
 	end
 	CatalogService.validate()
 	return deps.Zones.get(zoneId)
+end
+
+function CatalogService.getQuest(questId: string): any?
+	local deps = CatalogService.deps
+	if not deps or not deps.Quests then
+		return nil
+	end
+	CatalogService.validate()
+	return deps.Quests.get(questId)
+end
+
+function CatalogService.questChain(): { string }
+	local deps = CatalogService.deps
+	if not deps or not deps.Quests then
+		return {}
+	end
+	CatalogService.validate()
+	return deps.Quests.chain()
 end
 
 function CatalogService.getAnchor(anchorId: string): any?
