@@ -32,6 +32,10 @@ export type AbilityDeps = {
 	applyDamage: (ServerPlayerState, number, number?) -> boolean,
 	now: (() -> number)?,
 	isAbilityUnlocked: ((number, string) -> boolean)?,
+	getAttackerFighter: ((number) -> any?)?,
+	getAbilityTarget: ((number) -> any?)?,
+	tryCometShoulder: ((any, any, number, string) -> any)?,
+	onCombatHit: ((number, string, number, string) -> ())?,
 }
 
 local AbilityService = {
@@ -50,11 +54,22 @@ local function now(): number
 end
 
 local function cometShoulderRunner(attacker: ServerPlayerState, target: ServerPlayerState?, _payload: AbilityPayload)
-	if not target then
-		return
-	end
 	local deps = AbilityService.deps
 	if not deps then
+		return
+	end
+	if deps.tryCometShoulder and deps.getAttackerFighter and deps.getAbilityTarget then
+		local attackerFighter = deps.getAttackerFighter(attacker.userId)
+		local targetFighter = deps.getAbilityTarget(attacker.userId)
+		if attackerFighter and targetFighter then
+			local hit = deps.tryCometShoulder(attackerFighter, targetFighter, now(), "front")
+			if deps.onCombatHit and hit and hit.ok then
+				deps.onCombatHit(attacker.userId, targetFighter.id, hit.damage, "comet_shoulder")
+			end
+			return
+		end
+	end
+	if not target then
 		return
 	end
 	deps.applyDamage(target, 9, attacker.userId)

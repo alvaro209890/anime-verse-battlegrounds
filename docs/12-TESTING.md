@@ -1,11 +1,11 @@
 # 12 — Testes e evidências
 
-> **Snapshot:** 2026-08-12. `tests/run.luau` declara 43 testes F0 alinhados a `docs/13-F0-SLICE.md`. O HEAD `c984702` cobria 31 testes de catálogo/Umbral; isso não certifica o worktree atual.
+> **Snapshot:** 2026-08-12. `tests/run.luau` declara 49 testes F0 alinhados a `docs/13-F0-SLICE.md`. O HEAD anterior cobria 43 testes de sessão/combate universal; isso não certifica o worktree atual.
 > **Limite da evidência:** não há prova registrada de execução no Roblox Studio, servidor publicado privado, Android, gamepad ou múltiplos clientes reais.
 
 ### Evidência local desta revisão
 
-Em 2026-08-12, no worktree Windows, foram executados: Selene 0.31.0 (0 erros); StyLua 2.5.2 com `--line-endings Windows` nos arquivos alterados; 43 testes Lune 0.10.5. Todos passaram. Essa evidência valida o domínio headless de sessão e combate universal; não substitui o CI do commit nem playtest no Studio.
+Em 2026-08-12, no worktree Windows, foram executados: Selene 0.31.0 (0 erros); StyLua 2.5.2 com `--line-endings Windows` nos arquivos alterados; 49 testes Lune 0.10.5; build Rojo da árvore. Todos passaram. Essa evidência valida o domínio headless de sessão, combate universal e Ombro Cometa contra o dummy; não substitui o CI do commit nem playtest no Studio.
 
 ## 1. Gates reproduzíveis
 
@@ -25,24 +25,24 @@ O CI executa StyLua, Selene, os testes Lune, a instalação Wally e o build Rojo
 
 Em checkout Windows com `core.autocrlf=true`, os arquivos de trabalho podem estar em CRLF enquanto `stylua.toml` exige `Unix`; nesse caso, o check direto acusa somente final de linha. Para reproduzir o CI, use uma cópia com bytes LF canônicos do Git (`git -c core.autocrlf=false archive ...`) ou execute o diagnóstico local equivalente com `stylua --check --line-endings Windows src tests`. Não reformatar código só para mascarar essa conversão do checkout.
 
-## 2. Cobertura existente: exatamente 43 testes
+## 2. Cobertura existente: exatamente 49 testes
 
 | Área | Cobertura |
 |---|---|
 | **Dados** (6) | Punho do Eclipse 3+1; `comet_shoulder`; Umbral baseline; 4 famílias; remotes incl. `SessionSnapshot`; dummy 10000 HP / dano 4 |
 | **CooldownService** (3) | inicia zerado; `start` aplica e expira; `clear` zera |
-| **CombatService** (13) | applyDamage legado; cadeia 5+5+6+10; reset 0,65 s; guarda 40%; aparo 120 ms; costas; pesado 10/28/2; quebra+overflow; miss bloqueia leve; dash i-frame/CD; dummy alcance/período |
+| **CombatService** (17) | applyDamage legado; cadeia 5+5+6+10; reset 0,65 s; guarda 40%; aparo 120 ms; costas; pesado 10/28/2; quebra+overflow; miss bloqueia leve; dash i-frame/CD; dummy alcance/período; comet 9 aberto; guarda para avanço (4 HP + 9 guarda); aparo; i-frame |
 | **ResourceService** (6) | pool; `trySpend`; `grantFlowGain`; família desconhecida; `tryGrantFlow` 6+3 e cap 1,5 s; regen 2 / atraso 3 s / 6 |
-| **AbilityService** (11) | Ombro Cometa; recusas; ultimate `disabled`; `locked`; Cadência+Fluxo; Pulso |
+| **AbilityService** (12) | Ombro Cometa em `ServerPlayerState`; recusas; ultimate `disabled`; `locked`; Cadência+Fluxo; Pulso; comet no fighter dummy + `CombatHit` |
 | **CatalogService** (2) | dados reais (incl. dummy); personagem sem habilidade falha |
-| **PlayerSessionService** (2) | join/leave; snapshot Ready na zona segura com dummy e sem unlocks |
+| **PlayerSessionService / fatia** (3) | join/leave; snapshot Ready na zona segura com dummy e sem unlocks; join Ready → comet gasta 18 e dummy fica em 9991 HP |
 
-Esses testes cobrem o catálogo e o domínio F0 atualmente implementados. Eles não cobrem hitbox espacial, mapa, HUD, save real, streaming, arena ou competitivo.
+Esses testes cobrem o catálogo e o domínio F0 atualmente implementados. Eles não cobrem hitbox espacial, lunge de 7 studs, mapa, HUD, save real, streaming, arena ou competitivo.
 
 ## 3. Arquitetura do harness
 
 - **`tests/harness.luau`** simula o mínimo que o Lune não fornece: `_G.game`, `_G.Instance`, `_G.task` e resolução de `require(script.Parent.X)` no filesystem.
-- **`tests/run.luau`** contém os 43 casos e usa módulos reais de `src/`, com um miniframework de asserts.
+- **`tests/run.luau`** contém os 49 casos e usa módulos reais de `src/`, com um miniframework de asserts.
 - **Services testáveis por injeção** recebem dependências em `init()`: `CatalogService`, `AbilityService`, `ResourceService` e `PlayerSessionService`. O bootstrap Roblox monta o grafo real.
 - **`src/shared/TaskCompat.luau`** usa `task` nativo no Roblox e o polyfill somente no harness.
 
@@ -52,7 +52,7 @@ Os módulos de dados declaram tipos inline porque o Lune não resolve `script.Pa
 
 | Camada | O que demonstra | O que não demonstra |
 |---|---|---|
-| lint + 43 testes Lune | sintaxe, estilo e comportamento unitário coberto no ambiente simulado | física, replicação, UI, input ou serviços Roblox reais |
+| lint + 49 testes Lune | sintaxe, estilo e comportamento unitário coberto no ambiente simulado | física, replicação, UI, input ou serviços Roblox reais |
 | Wally + build Rojo | dependências resolvidas e árvore de projeto montável | que o place abre sem erro ou que um fluxo é jogável |
 | Studio | bootstrap, UI/input, câmera, física e replicação no cenário testado | DataStore/teleport/rede pública com fidelidade total |
 | publicado privado | serviços reais, múltiplos servidores, reconnect, teleport e condições reais de rede | cobertura de dispositivo que não foi executada |
@@ -109,4 +109,4 @@ rg -n "\\x{FFFD}" README.md docs
 - `task.wait` real em teste cria loop infinito se o polyfill síncrono for usado no `spawn`; o harness injeta `spawn = noop` para o loop de regen.
 - Busy-wait curto com `os.clock` substitui `task.wait` nos testes de expiração de cooldown.
 - Selene permite `global_usage` e `empty_loop` no `selene.toml` porque o harness usa `_G` e busy-waits deliberadamente.
-- Contar casos pelo resumo pode mascarar erro: a fonte é a quantidade real de chamadas `test(...)` em `tests/run.luau`; nesta versão são 43.
+- Contar casos pelo resumo pode mascarar erro: a fonte é a quantidade real de chamadas `test(...)` em `tests/run.luau`; nesta versão são 49.

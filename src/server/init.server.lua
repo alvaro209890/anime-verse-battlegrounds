@@ -48,8 +48,9 @@ ResourceService.init({
 		if not player then
 			return
 		end
+		local resourceState = ResourceService.getState(playerUserId)
 		RemoteGateway.fireClient(player, Remotes.Names.ResourceChanged, {
-			familyId = "?",
+			familyId = if resourceState then resourceState.familyId else "umbral_aether",
 			current = current,
 			max = max,
 			depleted = depleted,
@@ -81,6 +82,24 @@ AbilityService.init({
 		return CombatService.isAlive(state)
 	end,
 	applyDamage = CombatService.applyDamage,
+	getAttackerFighter = function(userId: number)
+		return CombatService.getFighter(CombatService.playerFighterId(userId))
+	end,
+	getAbilityTarget = function(_userId: number)
+		return CombatService.getFighter("npc_training_dummy")
+	end,
+	tryCometShoulder = CombatService.tryCometShoulder,
+	onCombatHit = function(userId: number, targetId: string, damage: number, abilityId: string)
+		local player = game.Players:GetPlayerByUserId(userId)
+		if not player then
+			return
+		end
+		RemoteGateway.fireClient(player, Remotes.Names.CombatHit, {
+			targetId = targetId,
+			damage = damage,
+			abilityId = abilityId,
+		})
+	end,
 })
 
 -- 6. Ciclo de sessão — injeta o grafo
@@ -141,10 +160,15 @@ RemoteGateway.onClientIntent(Remotes.Names.BasicAttackIntent, function(player: P
 		return
 	end
 	local kind = payload.kind
-	if kind == "heavy" then
-		CombatService.tryHeavy(attacker, dummy, os.clock(), "front")
-	else
-		CombatService.tryLight(attacker, dummy, os.clock(), "front")
+	local result = if kind == "heavy"
+		then CombatService.tryHeavy(attacker, dummy, os.clock(), "front")
+		else CombatService.tryLight(attacker, dummy, os.clock(), "front")
+	if result.ok then
+		RemoteGateway.fireClient(player, Remotes.Names.CombatHit, {
+			targetId = dummy.id,
+			damage = result.damage,
+			abilityId = if kind == "heavy" then "heavy" else "light",
+		})
 	end
 end)
 

@@ -330,6 +330,54 @@ test("combate: dummy ataca a 8 studs e recusa longe", function()
 	assertEq(dummy.health, 10000, "dummy não morre no próprio ataque")
 end)
 
+test("combate: comet 9 HP aberto", function()
+	CombatService.clear()
+	local atk = CombatService.createFighter("p:a", "player", 100, 100)
+	local tgt = CombatService.createFighter("npc_training_dummy", "npc", 10000, 0)
+	local result = CombatService.tryCometShoulder(atk, tgt, 1.0, "front")
+	assertEq(result.ok, true, "hit")
+	assertEq(result.damage, 9, "dano aberto")
+	assertEq(tgt.health, 9991, "HP dummy")
+	assertEq(result.stoppedOnGuard, nil, "sem guarda")
+end)
+
+test("combate: comet na guarda para o avanço", function()
+	CombatService.clear()
+	local atk = CombatService.createFighter("p:a", "player", 100, 100)
+	local tgt = CombatService.createFighter("p:b", "player", 100, 100)
+	CombatService.setGuard(tgt, true, 10.0)
+	local result = CombatService.tryCometShoulder(atk, tgt, 10.2, "front")
+	assertEq(result.damage, 4, "HP bloqueado")
+	assertEq(tgt.guard, 91, "9 de guarda")
+	assertEq(tgt.health, 96, "HP")
+	assertEq(result.stoppedOnGuard, true, "avanço interrompe")
+end)
+
+test("combate: comet aparo zera dano", function()
+	CombatService.clear()
+	local atk = CombatService.createFighter("p:a", "player", 100, 100)
+	local tgt = CombatService.createFighter("p:b", "player", 100, 100)
+	CombatService.setGuard(tgt, true, 20.0)
+	local result = CombatService.tryCometShoulder(atk, tgt, 20.1, "front")
+	assertEq(result.parried, true, "aparo")
+	assertEq(result.damage, 0, "sem HP")
+	assertEq(tgt.health, 100, "HP intacto")
+	assertEq(tgt.guard, 100, "guarda intacta")
+	assertEq(result.stoppedOnGuard, true, "para o avanço")
+end)
+
+test("combate: comet i-frame zera dano", function()
+	CombatService.clear()
+	local atk = CombatService.createFighter("p:a", "player", 100, 100)
+	local tgt = CombatService.createFighter("p:b", "player", 100, 100)
+	CombatService.tryDash(tgt, 5.0)
+	local result = CombatService.tryCometShoulder(atk, tgt, 5.05, "front")
+	assertEq(result.iframe, true, "i-frame")
+	assertEq(result.damage, 0, "sem dano")
+	assertEq(tgt.health, 100, "HP intacto")
+	assertEq(result.stoppedOnGuard, nil, "não é guarda")
+end)
+
 -- ══ Testes: ResourceService ─────────────────────────────────────────────────
 local function makeResourceDeps()
 	return {
@@ -628,6 +676,45 @@ test("ability: pulse_return com golpe contra-ataca 8", function()
 	assertEq(target.health, 92, "dano 8")
 end)
 
+test("ability: comet no fighter dummy via deps", function()
+	CombatService.clear()
+	ResourceService.init(makeResourceDeps())
+	CooldownService.clear(94)
+	local hits: { any } = {}
+	local deps = makeAbilityDeps()
+	deps.getAttackerFighter = function(userId: number)
+		return CombatService.getFighter(CombatService.playerFighterId(userId))
+	end
+	deps.getAbilityTarget = function(_userId: number)
+		return CombatService.getFighter("npc_training_dummy")
+	end
+	deps.tryCometShoulder = CombatService.tryCometShoulder
+	deps.onCombatHit = function(userId: number, targetId: string, damage: number, abilityId: string)
+		table.insert(hits, {
+			userId = userId,
+			targetId = targetId,
+			damage = damage,
+			abilityId = abilityId,
+		})
+	end
+	AbilityService.init(deps)
+	CombatService.createFighter(CombatService.playerFighterId(94), "player", 100, 100)
+	local dummy = CombatService.createFighter("npc_training_dummy", "npc", 10000, 0)
+	local attacker = ResourceService.createState(94, "umbral_aether")
+	assertTrue(attacker ~= nil, "attacker criado")
+	if not attacker then
+		return
+	end
+	local ok, reason = AbilityService.tryActivate(attacker, "comet_shoulder", nil)
+	assertTrue(ok, "deveria ativar: " .. tostring(reason))
+	assertEq(dummy.health, 9991, "dummy HP")
+	assertEq(attacker.resource, 82, "custo 18")
+	assertEq(#hits, 1, "CombatHit")
+	assertEq(hits[1].targetId, "npc_training_dummy", "alvo")
+	assertEq(hits[1].damage, 9, "dano")
+	assertEq(hits[1].abilityId, "comet_shoulder", "ability")
+end)
+
 -- ══ Testes: CatalogService (validação) ──────────────────────────────────────
 test("catálogo: dados reais passam na validação", function()
 	CatalogService.init({
@@ -746,6 +833,61 @@ test("sessão: snapshot Ready na zona segura com dummy", function()
 	PlayerSessionService.onPlayerLeft({ UserId = 80, Name = "Snap" })
 	assertEq(PlayerSessionService.isReady(80), false, "ready limpo")
 	assertEq(CombatService.getFighter(CombatService.playerFighterId(80)), nil, "fighter removido")
+end)
+
+test("fatia: ready + comet no dummy gasta 18 e tira 9 HP", function()
+	CombatService.clear()
+	CooldownService.clear(100)
+	ResourceService.init(makeResourceDeps())
+	CombatService.createFighter("npc_training_dummy", "npc", 10000, 0)
+	local deps = makeAbilityDeps()
+	deps.getAttackerFighter = function(userId: number)
+		return CombatService.getFighter(CombatService.playerFighterId(userId))
+	end
+	deps.getAbilityTarget = function(_userId: number)
+		return CombatService.getFighter("npc_training_dummy")
+	end
+	deps.tryCometShoulder = CombatService.tryCometShoulder
+	AbilityService.init(deps)
+	PlayerSessionService.init({
+		getCharacter = function(id: string): any
+			return Characters.get(id)
+		end,
+		getFamily = function(id: string): any
+			return EnergyFamilies.get(id)
+		end,
+		createResourceState = function(userId: number, familyId: string)
+			return ResourceService.createState(userId, familyId)
+		end,
+		removeResourceState = ResourceService.removeState,
+		getResourceState = ResourceService.getState,
+		clearCooldowns = function(userId: number)
+			CooldownService.clear(userId)
+		end,
+		releaseProfile = function() end,
+		createFighter = CombatService.createFighter,
+		removeFighter = CombatService.removeFighter,
+		getFighter = CombatService.getFighter,
+		playerFighterId = CombatService.playerFighterId,
+		onSnapshot = function() end,
+	})
+	assertEq(PlayerSessionService.isReady(100), false, "antes do join")
+	PlayerSessionService.onPlayerJoined({ UserId = 100, Name = "Comet" })
+	assertEq(PlayerSessionService.isReady(100), true, "ready")
+	local attacker = ResourceService.getState(100)
+	assertTrue(attacker ~= nil, "estado de recurso")
+	if not attacker then
+		return
+	end
+	local ok, reason = AbilityService.tryActivate(attacker, "comet_shoulder", nil)
+	assertTrue(ok, "comet: " .. tostring(reason))
+	assertEq(attacker.resource, 82, "custo 18, sem fluxo")
+	local dummy = CombatService.getFighter("npc_training_dummy")
+	assertTrue(dummy ~= nil, "dummy existe")
+	if dummy then
+		assertEq(dummy.health, 9991, "9 de dano")
+	end
+	PlayerSessionService.onPlayerLeft({ UserId = 100, Name = "Comet" })
 end)
 
 -- ══ Runner ─────────────────────────────────────────────────────────────────

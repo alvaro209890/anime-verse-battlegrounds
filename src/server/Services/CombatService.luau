@@ -1,8 +1,8 @@
 --!strict
--- CombatService (server) — F0 (docs/13-F0-SLICE.md §5 e §9)
--- Dano, guarda, aparo, cadeia leve, pesado, dash e dummy. Autoridade total;
--- cliente nunca informa dano. Puro (sem Instances) — testável.
--- applyDamage permanece para AbilityService (estado de recurso).
+-- CombatService (server) — F0 (docs/13-F0-SLICE.md §5, §6.1 e §9)
+-- Dano, guarda, aparo, cadeia leve, pesado, dash, dummy e Ombro Cometa.
+-- Autoridade total; cliente nunca informa dano. Puro (sem Instances) — testável.
+-- applyDamage permanece para AbilityService (estado de recurso / Cadência / Pulso).
 
 export type ServerPlayerState = {
 	userId: number,
@@ -42,6 +42,7 @@ export type HitResult = {
 	parried: boolean?,
 	broken: boolean?,
 	iframe: boolean?,
+	stoppedOnGuard: boolean?,
 }
 
 local LIGHT_DAMAGE = { 5, 5, 6, 10 }
@@ -222,6 +223,23 @@ function CombatService.tryHeavy(
 	if result.ok then
 		attacker.lightStep = 0
 		attacker.lastLightAt = 0
+	end
+	return result
+end
+
+function CombatService.tryCometShoulder(
+	attacker: FighterState,
+	target: FighterState,
+	now: number,
+	facing: HitFacing
+): HitResult
+	if attacker.health <= 0 then
+		return fail("dead")
+	end
+	local wasGuarding = target.guarding and now >= target.cannotGuardUntil and facing ~= "back"
+	local result = applyHit(target, now, 9, 9, 4, facing, true)
+	if result.ok and wasGuarding and not result.iframe then
+		result.stoppedOnGuard = true
 	end
 	return result
 end

@@ -24,20 +24,23 @@ P1 (revisão jurídica) continua obrigatório antes de concept art, áudio final
 
 ## 2. Divergências do código atual
 
-O esqueleto em `src/` **não** implementa o loop jogável no Studio. Catálogo, Umbral, SessionSnapshot e combate universal headless já estão alinhados (itens 1–4 do backlog). Ainda falta:
+O esqueleto em `src/` **não** implementa o loop jogável no Studio. Catálogo, Umbral, SessionSnapshot, combate universal e Ombro Cometa headless já estão alinhados (itens 1–5 do backlog). Ainda falta:
 
 | Onde | Estado atual | Alvo desta spec |
 |---|---|---|
 | `src/shared/Data/Abilities.luau` | `comet_shoulder`, `broken_cadence`, `pulse_return`; `eclipse_beat` desligada | feito |
 | `src/shared/Data/EnergyFamilies.luau` | Umbral regen 2/6, Fluxo 6 / 120 ms, cap 1,5 s | feito |
 | `src/shared/Data/Npcs.luau` | dummy 10000 HP, dano 4, alcance 8 | feito |
-| `CombatService` | cadeia leve, guarda, aparo, pesado, quebra, dash, dummy | hitbox espacial no Studio ainda falta |
+| `CombatService` | cadeia leve, guarda, aparo, pesado, quebra, dash, dummy, comet 9/guarda 9/HP 4 | hitbox espacial e lunge de 7 studs no Studio ainda faltam |
+| `AbilityService` | comet resolve o fighter do dummy; `CombatHit` no acerto | Cadência/Pulso contra dummy (itens 8/10); unlock por missão (item 7) |
 | `PlayerSessionService` | snapshot Ready na zona segura; intenções só após Ready | feito no domínio |
-| `src/client/init.client.lua` | espera `SessionSnapshot`; não dispara no boot | InputController (item 10) |
+| `src/client/init.client.lua` | espera `SessionSnapshot`; não dispara no boot | InputController (item 12) |
 | `SaveService` | stub em memória; persiste `wallet` | ProfileRoot v1 sem wallet; ProfileStore no place de teste |
 | Mapa/HUD | ausentes | §8 e §12 |
 
-Testes Lune: 43 casos em `tests/run.luau` (`docs/12-TESTING.md`).
+Testes Lune: 49 casos em `tests/run.luau` (`docs/12-TESTING.md`).
+
+**Comprovado neste recorte:** join → Ready → `comet_shoulder` gasta 18 Umbral, tira 9 HP do dummy (9991), sem Fluxo; guarda para o avanço (4 HP + 9 guarda); aparo e i-frame zeram o dano. **Não comprovado:** deslocamento espacial, overlap de hitbox, Studio, DataStore, mapa, HUD.
 
 ## 3. Escopo congelado da fatia
 
@@ -483,11 +486,13 @@ Cheat de unlock: remote **inexistente** no cliente. Flag `StudioDebugUnlock` só
 
 ## 19. Testes da mudança de catálogo
 
-Os casos abaixo estão em `tests/run.luau` (31 no total):
+Os casos abaixo estão em `tests/run.luau` (49 no total; fonte: chamadas `test(...)`):
 
 - roster `eclipse_fist` com 3 skills enabled + 1 ultimate disabled
 - `comet_shoulder` custo 18, CD 7, runner registrado
 - ativação gasta 18, dano 9, recusa sem recurso / cooldown / morto
+- comet no fighter dummy: 9 HP aberto; guarda para o avanço (4 HP + 9 guarda); aparo e i-frame zeram
+- join Ready → comet gasta 18 e dummy fica em 9991 HP
 - `broken_cadence` recusa reentrada fora da janela; Fluxo +6 no eco que acerta, respeita cap 1,5 s
 - `pulse_return` sem golpe → não aplica contra
 - `eclipse_beat` `enabled = false` → `disabled`
@@ -504,7 +509,7 @@ Ordem de implementação; cada item fecha com teste automatizado **ou** evidênc
 2. ~~Tirar `FireServer` do boot; `SessionSnapshot` mínimo~~ (feito 2026-08-12; domínio + remote)
 3. ~~Spawn + movimento + leve/guarda/dash contra dummy~~ (domínio headless 2026-08-12; movimento/Studio pendente)
 4. ~~Pesado + quebra de guarda~~ (feito 2026-08-12; 43 testes)
-5. Ombro Cometa
+5. ~~Ombro Cometa~~ (feito 2026-08-12; 49 testes; domínio headless — lunge espacial no Studio pendente)
 6. Greybox + `ZoneService` + 5 sinais
 7. Estilhaços + objetivo 1 + unlock Cometa
 8. Cadência + Fluxo
