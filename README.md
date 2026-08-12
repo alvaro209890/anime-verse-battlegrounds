@@ -3,8 +3,8 @@
 RPG / Action RPG de mundo aberto no Roblox (Luau) — combate estilo battlegrounds com
 progressão persistente, loadout customizável e ressonância de famílias de energia.
 
-> **Status em 2026-08-12:** decisões de produto + spec F0 + catálogo do Punho do Eclipse + combate universal + Ombro Cometa headless contra o dummy + ZoneService (zonas, PvP, transição, lockout, 5 sinais da fronteira) como domínio headless.
-> O repositório ainda não contém uma fatia jogável completa (mapa, HUD, save real, lunge espacial, geometria do greybox no Studio).
+> **Status em 2026-08-12:** decisões de produto + spec F0 + catálogo + combate + Ombro Cometa + ZoneService + técnicas locked no spawn (`ProgressionService` flags).
+> O repositório ainda não contém uma fatia jogável completa (mapa, HUD, save real, Estilhaços, lunge espacial, geometria do greybox no Studio).
 
 ## Estado comprovado
 
@@ -12,8 +12,8 @@ progressão persistente, loadout customizável e ressonância de famílias de en
 |---|---|
 | Produto | Q-001 a Q-030 decididas; `docs/09-OPEN-QUESTIONS.md` é o registro canônico |
 | Planejamento | visão, GDD, mundo, social, arquitetura, schemas, segurança, roster, roadmap e benchmark documentados |
-| Implementado | catálogo F0 (incl. zonas/âncoras/greybox como dados), Umbral, SessionSnapshot, combate universal (leve/guarda/aparo/dash/pesado), dummy de treino, Ombro Cometa no dummy, ZoneService + fronteira PvP (transição 5 s, lockout 15 s, `ZoneEvent` / `ZoneCrossingIntent`), abilities, remotes, sessão/save stub |
-| Validado automaticamente | 64 testes Lune + Selene + StyLua check + Wally + build Rojo no CI |
+| Implementado | catálogo F0, Umbral, SessionSnapshot, combate universal, dummy, Ombro Cometa, ZoneService + fronteira PvP, `ProgressionService` (técnicas locked no spawn; grant idempotente), abilities, remotes, sessão/save stub |
+| Validado automaticamente | 67 testes Lune + Selene + StyLua check + Wally + build Rojo no CI |
 | Ainda não comprovado | feeling/runtime no Studio, geometria do mapa (parts/volumes/collision groups), os 5 sinais visíveis/audíveis, hold 0,6 s no toque, servidor publicado, DataStore real, latência, mobile, gamepad, performance e UX visual |
 
 O CI do commit `33eca73` passou em
@@ -36,7 +36,7 @@ Um build verde valida contratos headless e a árvore Rojo; não substitui playte
 
 ```bash
 aftman install        # instala o toolchain (rojo, wally, selene, stylua, lune, luau-lsp)
-lune run tests/run.luau   # testes unitários (64)
+lune run tests/run.luau   # testes unitários (67)
 selene src tests      # lint
 stylua --check src tests  # formatação
 rojo build -o build.rbxl  # valida a árvore de instâncias
@@ -52,7 +52,7 @@ src/
     Data/            catálogos dirigidos por dados (personagens, habilidades, famílias)
   server/            services (bootstrap, recurso, habilidade, combate, rede, sessão)
   client/            controllers (bootstrap de apresentação)
-tests/               harness Lune + 64 testes unitários
+tests/               harness Lune + 67 testes unitários
 docs/                produto, arquitetura, decisões, benchmark, testes e spec F0 (00 a 13)
 lib/                 bibliotecas pinadas (ProfileStore)
 ```

@@ -14,6 +14,7 @@ local CatalogService = require(script.Parent.Services.CatalogService)
 local CooldownService = require(script.Parent.Services.CooldownService)
 local CombatService = require(script.Parent.Services.CombatService)
 local PlayerSessionService = require(script.Parent.Services.PlayerSessionService)
+local ProgressionService = require(script.Parent.Services.ProgressionService)
 local RemoteGateway = require(script.Parent.Services.RemoteGateway)
 local ResourceService = require(script.Parent.Services.ResourceService)
 local SaveService = require(script.Parent.Services.SaveService)
@@ -34,6 +35,8 @@ CatalogService.init({
 	Zones = Zones,
 })
 print("[Bootstrap] catálogo validado")
+
+ProgressionService.init()
 
 -- 2. Persistência (stub seguro até ProfileStore entrar no build)
 SaveService.init()
@@ -118,6 +121,7 @@ AbilityService.init({
 			abilityId = abilityId,
 		})
 	end,
+	isAbilityUnlocked = ProgressionService.isAbilityUnlocked,
 })
 
 -- 7. Ciclo de sessão — injeta o grafo
@@ -139,6 +143,7 @@ PlayerSessionService.init({
 		RemoteGateway.fireClient(player, Remotes.Names.SessionSnapshot, snapshot)
 	end,
 	getPlayerZone = ZoneService.getPlayerZone,
+	getUnlocks = ProgressionService.listUnlocks,
 })
 
 local function requireReady(player: Player): boolean
@@ -228,12 +233,14 @@ end)
 
 -- 8. Ciclo de sessão
 game.Players.PlayerAdded:Connect(function(player: Player)
+	ProgressionService.registerPlayer(player.UserId)
 	ZoneService.registerPlayer(player.UserId)
 	PlayerSessionService.onPlayerJoined(player)
 end)
 game.Players.PlayerRemoving:Connect(function(player: Player)
 	PlayerSessionService.onPlayerLeft(player)
 	ZoneService.unregisterPlayer(player.UserId)
+	ProgressionService.unregisterPlayer(player.UserId)
 end)
 
 print("[Bootstrap] servidor pronto (F0)")

@@ -19,6 +19,7 @@ export type SessionDeps = {
 	playerFighterId: ((number) -> string)?,
 	onSnapshot: ((any, { any }) -> ())?,
 	getPlayerZone: ((number) -> string)?,
+	getUnlocks: ((number) -> { string })?,
 }
 
 export type SessionSnapshot = {
@@ -86,6 +87,10 @@ function PlayerSessionService.buildSnapshot(userId: number, characterId: string,
 	if deps.getPlayerZone then
 		zoneId = deps.getPlayerZone(userId) or DEFAULT_ZONE_ID
 	end
+	local unlocks: { string } = {}
+	if deps.getUnlocks then
+		unlocks = deps.getUnlocks(userId)
+	end
 	return {
 		protocolVersion = 1,
 		ready = true,
@@ -98,7 +103,7 @@ function PlayerSessionService.buildSnapshot(userId: number, characterId: string,
 		resource = resource,
 		maxResource = maxResource,
 		familyId = familyId,
-		unlocks = {},
+		unlocks = unlocks,
 		dummyId = DUMMY_ID,
 	}
 end

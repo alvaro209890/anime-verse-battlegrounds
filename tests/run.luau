@@ -47,6 +47,7 @@ local AbilityService = require("../src/server/Services/AbilityService")
 local CatalogService = require("../src/server/Services/CatalogService")
 local PlayerSessionService = require("../src/server/Services/PlayerSessionService")
 local ZoneService = require("../src/server/Services/ZoneService")
+local ProgressionService = require("../src/server/Services/ProgressionService")
 
 -- ── Relógio injetável (janela de reentrada / cap de Fluxo) ──────────────────
 local fakeNow = 1000
@@ -798,6 +799,7 @@ end)
 
 test("sessão: snapshot Ready na zona segura com dummy", function()
 	CombatService.clear()
+	ProgressionService.init()
 	ResourceService.init(makeResourceDeps())
 	local snapshots: { any } = {}
 	PlayerSessionService.init({
@@ -823,8 +825,10 @@ test("sessão: snapshot Ready na zona segura com dummy", function()
 		onSnapshot = function(_player: any, snap: { any })
 			table.insert(snapshots, snap)
 		end,
+		getUnlocks = ProgressionService.listUnlocks,
 	})
 	assertEq(PlayerSessionService.isReady(80), false, "antes do join")
+	ProgressionService.registerPlayer(80)
 	PlayerSessionService.onPlayerJoined({ UserId = 80, Name = "Snap" })
 	assertEq(PlayerSessionService.isReady(80), true, "ready após snapshot")
 	assertEq(#snapshots, 1, "um snapshot")
@@ -835,14 +839,23 @@ test("sessão: snapshot Ready na zona segura com dummy", function()
 	assertEq(snap.familyId, "umbral_aether", "família")
 	assertEq(snap.dummyId, "npc_training_dummy", "dummy")
 	assertEq(#snap.unlocks, 0, "sem técnicas no spawn")
+	assertEq(ProgressionService.grantUnlock(80, "unlock_comet_shoulder"), true, "primeira grant")
+	local after = PlayerSessionService.buildSnapshot(80, "eclipse_fist", "umbral_aether")
+	assertTrue(after ~= nil, "snapshot após grant")
+	if after then
+		assertEq(#after.unlocks, 1, "uma flag")
+		assertEq(after.unlocks[1], "unlock_comet_shoulder", "comet")
+	end
 	PlayerSessionService.onPlayerLeft({ UserId = 80, Name = "Snap" })
+	ProgressionService.unregisterPlayer(80)
 	assertEq(PlayerSessionService.isReady(80), false, "ready limpo")
 	assertEq(CombatService.getFighter(CombatService.playerFighterId(80)), nil, "fighter removido")
 end)
 
-test("fatia: ready + comet no dummy gasta 18 e tira 9 HP", function()
+test("fatia: ready + comet locked no spawn; grant libera 9 HP no dummy", function()
 	CombatService.clear()
 	CooldownService.clear(100)
+	ProgressionService.init()
 	ResourceService.init(makeResourceDeps())
 	CombatService.createFighter("npc_training_dummy", "npc", 10000, 0)
 	local deps = makeAbilityDeps()
@@ -853,6 +866,7 @@ test("fatia: ready + comet no dummy gasta 18 e tira 9 HP", function()
 		return CombatService.getFighter("npc_training_dummy")
 	end
 	deps.tryCometShoulder = CombatService.tryCometShoulder
+	deps.isAbilityUnlocked = ProgressionService.isAbilityUnlocked
 	AbilityService.init(deps)
 	PlayerSessionService.init({
 		getCharacter = function(id: string): any
@@ -875,8 +889,10 @@ test("fatia: ready + comet no dummy gasta 18 e tira 9 HP", function()
 		getFighter = CombatService.getFighter,
 		playerFighterId = CombatService.playerFighterId,
 		onSnapshot = function() end,
+		getUnlocks = ProgressionService.listUnlocks,
 	})
 	assertEq(PlayerSessionService.isReady(100), false, "antes do join")
+	ProgressionService.registerPlayer(100)
 	PlayerSessionService.onPlayerJoined({ UserId = 100, Name = "Comet" })
 	assertEq(PlayerSessionService.isReady(100), true, "ready")
 	local attacker = ResourceService.getState(100)
@@ -884,8 +900,13 @@ test("fatia: ready + comet no dummy gasta 18 e tira 9 HP", function()
 	if not attacker then
 		return
 	end
+	local locked, lockedReason = AbilityService.tryActivate(attacker, "comet_shoulder", nil)
+	assertFalse(locked, "spawn sem técnica")
+	assertEq(lockedReason, "locked", "motivo")
+	assertEq(attacker.resource, 100, "não gasta")
+	assertEq(ProgressionService.grantUnlock(100, "unlock_comet_shoulder"), true, "grant")
 	local ok, reason = AbilityService.tryActivate(attacker, "comet_shoulder", nil)
-	assertTrue(ok, "comet: " .. tostring(reason))
+	assertTrue(ok, "comet após unlock: " .. tostring(reason))
 	assertEq(attacker.resource, 82, "custo 18, sem fluxo")
 	local dummy = CombatService.getFighter("npc_training_dummy")
 	assertTrue(dummy ~= nil, "dummy existe")
@@ -893,6 +914,52 @@ test("fatia: ready + comet no dummy gasta 18 e tira 9 HP", function()
 		assertEq(dummy.health, 9991, "9 de dano")
 	end
 	PlayerSessionService.onPlayerLeft({ UserId = 100, Name = "Comet" })
+	ProgressionService.unregisterPlayer(100)
+end)
+
+test("unlock: cadência e pulso também locked no spawn", function()
+	ProgressionService.init()
+	ResourceService.init(makeResourceDeps())
+	CooldownService.clear(101)
+	local deps = makeAbilityDeps()
+	deps.isAbilityUnlocked = ProgressionService.isAbilityUnlocked
+	AbilityService.init(deps)
+	ProgressionService.registerPlayer(101)
+	local attacker = ResourceService.createState(101, "umbral_aether")
+	assertTrue(attacker ~= nil, "attacker")
+	if not attacker then
+		return
+	end
+	local cadOk, cadReason = AbilityService.tryActivate(attacker, "broken_cadence", nil)
+	assertFalse(cadOk, "cadência locked")
+	assertEq(cadReason, "locked", "motivo cadência")
+	local pulseOk, pulseReason = AbilityService.tryActivate(attacker, "pulse_return", nil)
+	assertFalse(pulseOk, "pulso locked")
+	assertEq(pulseReason, "locked", "motivo pulso")
+	assertEq(attacker.resource, 100, "não gasta")
+	ProgressionService.unregisterPlayer(101)
+end)
+
+test("unlock: grant comet é idempotente; flag desconhecida recusa", function()
+	ProgressionService.init()
+	ProgressionService.registerPlayer(102)
+	assertEq(ProgressionService.grantUnlock(102, "unlock_comet_shoulder"), true, "primeira")
+	assertEq(ProgressionService.grantUnlock(102, "unlock_comet_shoulder"), false, "segunda")
+	assertEq(ProgressionService.grantUnlock(102, "nao_existe"), false, "flag desconhecida")
+	assertEq(ProgressionService.hasUnlock(102, "unlock_comet_shoulder"), true, "permanece")
+	assertEq(#ProgressionService.listUnlocks(102), 1, "uma flag")
+	ProgressionService.unregisterPlayer(102)
+end)
+
+test("unlock: leave limpa as flags", function()
+	ProgressionService.init()
+	ProgressionService.registerPlayer(103)
+	ProgressionService.grantUnlock(103, "unlock_comet_shoulder")
+	ProgressionService.unregisterPlayer(103)
+	assertEq(ProgressionService.isAbilityUnlocked(103, "comet_shoulder"), false, "após leave")
+	ProgressionService.registerPlayer(103)
+	assertEq(ProgressionService.isAbilityUnlocked(103, "comet_shoulder"), false, "rejoin sem persistência")
+	ProgressionService.unregisterPlayer(103)
 end)
 
 -- ══ Testes: zonas e fronteira PvP ───────────────────────────────────────────
@@ -1164,6 +1231,7 @@ test("fatia: sessão Ready com ZoneService e comet intacto", function()
 	CombatService.clear()
 	CooldownService.clear(250)
 	fakeNow = 11000
+	ProgressionService.init()
 	ZoneService.init(makeZoneDeps())
 	ResourceService.init(makeResourceDeps())
 	CombatService.createFighter("npc_training_dummy", "npc", 10000, 0)
@@ -1175,6 +1243,7 @@ test("fatia: sessão Ready com ZoneService e comet intacto", function()
 		return CombatService.getFighter("npc_training_dummy")
 	end
 	deps.tryCometShoulder = CombatService.tryCometShoulder
+	deps.isAbilityUnlocked = ProgressionService.isAbilityUnlocked
 	AbilityService.init(deps)
 	local snapshots: { any } = {}
 	PlayerSessionService.init({
@@ -1201,20 +1270,27 @@ test("fatia: sessão Ready com ZoneService e comet intacto", function()
 			table.insert(snapshots, snap)
 		end,
 		getPlayerZone = ZoneService.getPlayerZone,
+		getUnlocks = ProgressionService.listUnlocks,
 	})
+	ProgressionService.registerPlayer(250)
 	ZoneService.registerPlayer(250)
 	PlayerSessionService.onPlayerJoined({ UserId = 250, Name = "Zona" })
 	assertEq(PlayerSessionService.isReady(250), true, "ready")
 	assertEq(#snapshots, 1, "snapshot")
 	local snap = snapshots[1]
 	assertEq(snap.zoneId, "zone_bastion_safe", "zona do snapshot via ZoneService")
+	assertEq(#snap.unlocks, 0, "sem técnicas no spawn")
 	local attacker = ResourceService.getState(250)
 	assertTrue(attacker ~= nil, "estado de recurso")
 	if not attacker then
 		return
 	end
+	local locked, lockedReason = AbilityService.tryActivate(attacker, "comet_shoulder", nil)
+	assertFalse(locked, "locked no spawn")
+	assertEq(lockedReason, "locked", "motivo")
+	assertEq(ProgressionService.grantUnlock(250, "unlock_comet_shoulder"), true, "grant")
 	local ok, reason = AbilityService.tryActivate(attacker, "comet_shoulder", nil)
-	assertTrue(ok, "comet: " .. tostring(reason))
+	assertTrue(ok, "comet após unlock: " .. tostring(reason))
 	local dummy = CombatService.getFighter("npc_training_dummy")
 	assertTrue(dummy ~= nil, "dummy existe")
 	if dummy then
@@ -1222,6 +1298,7 @@ test("fatia: sessão Ready com ZoneService e comet intacto", function()
 	end
 	PlayerSessionService.onPlayerLeft({ UserId = 250, Name = "Zona" })
 	ZoneService.unregisterPlayer(250)
+	ProgressionService.unregisterPlayer(250)
 end)
 
 -- ══ Runner ─────────────────────────────────────────────────────────────────
