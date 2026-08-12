@@ -61,33 +61,33 @@ Os nomes públicos ainda passam pelo gate jurídico P1. Alterá-los troca apenas
 
 MemoryStore pode manter fila, cache, rate limit multi-servidor e lease temporário. Perder MemoryStore não pode criar item, transferir território ou confirmar vitória sem fonte durável.
 
-## 4. ProfileRoot v1
+## 4. ProfileRoot modular
 
-| Campo | Tipo conceitual | Obrigatório | Regras |
-|---|---|---:|---|
-| `schemaVersion` | inteiro | sim | Começa em 1; migrado antes de expor a sessão |
-| `userId` | inteiro | sim | Deve coincidir com a chave carregada |
-| `revision` | inteiro | sim | Monotônico; não vem do cliente |
-| `createdAt` | timestamp | sim | Imutável |
-| `updatedAt` | timestamp | sim | Atualizado somente em commit |
-| `lastServerSessionId` | ID | sim | Diagnóstico de lock, não autorização isolada |
-| `progression` | PlayerProgression | sim | Nível, XP consolidado/não consolidado e pontos |
-| `wallet` | Wallet | sim | Moeda e materiais; inteiros com caps |
-| `familyMastery` | mapa família → MasteryProgress | sim | Somente famílias conhecidas |
-| `characters` | mapa characterId → CharacterProgress | sim | Somente desbloqueados ou entradas justificadas |
-| `abilities` | mapa abilityId → AbilityProgress | sim | Posse e maestria independentes de nome público |
-| `loadouts` | mapa loadoutId → SavedLoadout | sim | Quantidade limitada; referências validadas |
-| `activeLoadoutId` | ID opcional | não | Precisa existir em `loadouts` |
-| `inventory` | InventoryState | sim | Stacks e instâncias, com capacidade |
-| `equipment` | EquipmentState | sim | IDs precisam pertencer ao inventário |
-| `quests` | QuestState | sim | Ativas, concluídas e flags compactas |
-| `reputation` | ReputationState | sim | Valor, estado e cooldowns de recuperação |
-| `ranked` | mapa seasonId → PlayerSeasonState | sim | Histórico limitado às temporadas retidas |
-| `clanMembership` | ClanMembershipRef opcional | não | Referência; clã é fonte de autoridade social |
-| `entitlements` | EntitlementState | sim | Cosméticos/capacidade; nenhum poder ranqueado |
-| `settings` | PlayerSettings | sim | Preferências não sensíveis e schema próprio |
-| `recentOperations` | anel de OperationReceipt | sim | Janela limitada para idempotência/reconciliação |
-| `inFlightOperations` | mapa operationId → PendingOperation | sim | Somente operações críticas interrompíveis |
+Em F0/v1 existem envelope, progressão mínima, personagens/habilidades da fatia, settings e recibos mínimos de save/reward. Os demais blocos são adicionados por migração somente quando a fase correspondente começa; não se persistem contêineres vazios de features distantes apenas para “reservar espaço”.
+
+| Campo | Tipo conceitual | Introdução | Regras |
+|---|---|---|---|
+| `schemaVersion` | inteiro | F0/v1 | Começa em 1; migrado antes de expor a sessão |
+| `userId` | inteiro | F0/v1 | Deve coincidir com a chave carregada |
+| `revision` | inteiro | F0/v1 | Monotônico; não vem do cliente |
+| `createdAt` | timestamp | F0/v1 | Imutável |
+| `updatedAt` | timestamp | F0/v1 | Atualizado somente em commit |
+| `lastServerSessionId` | ID | F0/v1 | Diagnóstico de lock, não autorização isolada |
+| `progression` | PlayerProgression | F0/v1 mínimo; amplia F2 | Nível/XP da fatia; pontos e consolidação entram com progressão |
+| `characters` | mapa characterId → CharacterProgress | F0/v1 | Um estilo em F0; mapa já evita schema descartável |
+| `abilities` | mapa abilityId → AbilityProgress | F0/v1 mínimo; amplia F2 | Três habilidades em F0; maestria entra em F2 |
+| `settings` | PlayerSettings | F0/v1 | Preferências não sensíveis e schema próprio |
+| `recentOperations` | anel de OperationReceipt | F0/v1 mínimo; amplia F2 | Idempotência de save/reward; economia amplia retenção |
+| `loadouts` / `activeLoadoutId` | mapa + ID | F1 | Referências desbloqueadas; Ressonância é recalculada |
+| `wallet` | Wallet | F2 | Moeda e materiais; inteiros com caps |
+| `familyMastery` | mapa família → MasteryProgress | F2 | Somente IDs das quatro famílias aprovadas |
+| `inventory` / `equipment` | estados versionados | F2 | Posse, capacidade e referências coerentes |
+| `inFlightOperations` | mapa operationId → PendingOperation | F2 | Somente operações econômicas interrompíveis |
+| `quests` | QuestState | F3 | Ativas, concluídas e flags compactas |
+| `reputation` | ReputationState | F4 | Valor, estado e cooldowns de recuperação |
+| `clanMembership` | ClanMembershipRef opcional | F5 | Referência; ClanRecord é autoridade social |
+| `ranked` | mapa seasonId → PlayerSeasonState | F6 | Histórico limitado às temporadas retidas |
+| `entitlements` | EntitlementState | F7 | Cosméticos/capacidade; nenhum poder ranqueado |
 
 Não guardar display name, chat, lista completa de kills ou telemetria bruta no perfil. Históricos sem uso transacional têm retenção externa e limitada.
 
@@ -136,6 +136,8 @@ Robux e recibos de Developer Product não são tratados como saldo enviado pelo 
 
 ### 5.2 EnergyFamilyDefinition
 
+O campo `id` aceita somente `umbral_aether`, `vital_flow`, `counterflow` e `metamorphic_drive` no catálogo inicial. Nome público vem de localização e continua sujeito a P1.
+
 | Campo | Tipo | Regra |
 |---|---|---|
 | `id` | ID | Família estável |
@@ -158,21 +160,38 @@ Robux e recibos de Developer Product não são tratados como saldo enviado pelo 
 | `energyFamilyId` | ID | Usado por ressonância e custo |
 | `kind` | enum | Basic, Skill ou Ultimate |
 | `slotCost` | inteiro 1–2 | Ultimate ocupa slot próprio; regra validada |
+| `impactCost` | inteiro 1–12 | Soma do loadout não pode exceder o teto 12 definido pelo GDD |
 | `tags` | conjunto fechado | Movimento, projétil, controle, cancelável etc. |
 | `inputMode` | enum | Press, Hold, Release ou TargetPoint limitado |
 | `phaseTimingsMs` | registro | Startup, active, recovery e cancel windows |
-| `resourceCosts` | lista | Custo por fase e política de reembolso |
+| `resourceCosts` | lista | Custo nativo por fase e política de reembolso |
+| `foreignResourceCost` | inteiro positivo | Custo ao importar a técnica; nunca herda custo nativo zero |
+| `foreignFallbackPolicy` | enum/registro | Converte para o recurso do corpo ou bloqueia importação de forma explícita |
 | `cooldown` | registro | Base, grupo e início da contagem |
 | `rangePolicy` | registro | Distância, ângulo, linha de visão e alvo permitido |
 | `hitPolicy` | registro | Shape, máximo de alvos e hits por alvo |
 | `effectIds` | lista ordenada | Dano, controle e modificadores conhecidos |
-| `masteryTiers` | lista | Unlocks comportamentais e ajustes numéricos limitados |
+| `masteryLevels` | níveis 1–10 | Curva exata de XP; breakpoints comportamentais em 3/6/9 e nível 10 cosmético/QoL |
 | `serverRunnerId` | ID | Implementação server-side permitida |
 | `clientPresentationId` | ID | VFX/animação sem regra de autoridade |
 | `securityLimits` | registro | Deslocamento, duração e frequência máximos absolutos |
 | `enabled` | booleano | Kill switch por habilidade |
 
-Decisão de progressão: cinco tiers de maestria. Tiers 2 e 4 liberam variações comportamentais; tiers 1, 3 e 5 trazem ajustes pequenos, com ganho total numérico limitado. O objetivo é preservar habilidades antigas sem exigir 200 horas para competir. A curva de XP e tempo-alvo será validada por playtest; não deve ser fixada silenciosamente no schema.
+Decisão de progressão alinhada ao GDD: dez níveis de maestria por técnica. Níveis 3, 6 e 9 liberam variações comportamentais; o nível 10 é cosmético ou qualidade de vida, sem pico de poder competitivo. Ajustes numéricos intermediários são pequenos e limitados. Os thresholds exatos de XP pertencem ao catálogo/GDD versionado e serão validados por playtest, preservando a meta de progresso útil sem grind obrigatório de centenas de horas.
+
+### 5.3.1 ResonancePolicyDefinition
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `loadoutImpactCap` | inteiro | 12 no baseline aprovado |
+| `foreignSlotWeight` | inteiro | Cada slot estrangeiro soma 1 a D |
+| `foreignUltimateWeight` | inteiro | Ultimate estrangeira soma mais 2 a D |
+| `extraForeignFamilyWeight` | inteiro | Cada família estrangeira adicional soma 1 a D |
+| `maxDissonance` | inteiro | D é clampado em 3 |
+| `dissonanceProfiles` | mapa D → perfil | Pool, regen e custo de ultimate derivados pelo servidor |
+| `pureResonanceProfileId` | ID | Aplicado somente quando não há técnica estrangeira |
+
+Fórmula autoritativa: `D = min(3, slots estrangeiros + 2 se a ultimate for estrangeira + famílias estrangeiras adicionais)`. “Estrangeiro” é comparado à família nativa do corpo ativo. O servidor soma `slotCost`, `impactCost`, resolve a família de cada técnica e aplica `foreignResourceCost`; o cliente apenas exibe o resumo. Técnica nativa com custo zero precisa de custo estrangeiro positivo ou de política que proíba importação, para não virar utilidade grátis em build híbrida.
 
 ### 5.4 EffectDefinition e ModifierDefinition
 

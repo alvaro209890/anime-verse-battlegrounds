@@ -386,7 +386,7 @@ Refinamento leva um modificador de 60% a 100% de sua potência planejada, mas pr
 
 Para reduzir scam e inflação:
 
-- somente materiais e projetos ainda não vinculados são negociáveis no início;
+- somente materiais e projetos ainda não vinculados serão negociáveis **quando o mercado em custódia for liberado na F7**; antes disso, não há troca entre contas;
 - troca usa custódia atômica, duas confirmações e tela final com nome, quantidade, raridade e vínculo;
 - item alterado reinicia a confirmação; não existe drop no chão;
 - histórico, identificador único, limites de valor/volume e cooldown de conta nova sustentam investigação;
@@ -394,7 +394,7 @@ Para reduzir scam e inflação:
 - preço mediano e faixa recente aparecem na interface; mensagens não prometem “valor futuro”;
 - kill trading, contas relacionadas e transferência circular alimentam revisão antiabuso.
 
-Comércio de item equipado só deve ser reconsiderado depois de economia e suporte provarem rastreabilidade. Equipamento nunca cai na morte.
+Comércio de item equipado só deve ser reconsiderado depois de a F7 e o suporte provarem rastreabilidade. Equipamento nunca cai na morte.
 
 ## 9. Relação entre mundo aberto e competitivo
 

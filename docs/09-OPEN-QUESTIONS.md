@@ -90,7 +90,7 @@ Uma recomendação provisória não vira decisão silenciosamente. Ao aprovar, r
 
 - **Gate:** P1 para nomes; F1 para mecânicas.
 - **Dono recomendado:** direção criativa + jurídico + systems design.
-- **Recomendação provisória:** renomear termos fortemente associados e dar lore original, preservando apenas quatro padrões mecânicos: reserva/regen, fluxo por precisão, carga por anulação e medidor de transformação.
+- **Recomendação provisória:** usar os nomes originais provisórios definidos no GDD — **Fluxo Vital**, **Éter Umbral**, **Contrafluxo** e **Ímpeto Metamórfico** — com lore própria, preservando os quatro padrões mecânicos: reserva/regen, fluxo por precisão, carga por anulação e medidor de transformação. Os quatro nomes ainda passam pelo Gate P1.
 - **Impacto:** narrativa, UI, roster, efeitos, quests e comunicação de build.
 
 ### Q-011 — Progressão altera números, comportamento ou ambos?
@@ -288,4 +288,3 @@ Estas respostas devem vir de evidência:
 - números finais de dano, cooldown, regen e drop.
 
 Esses itens dependem de custo real de produção, profiling, economia observada e população. Fixá-los agora produziria falsa precisão.
-
