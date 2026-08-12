@@ -24,7 +24,9 @@ jobs:
         run: selene src
 
       - name: Wally — instalar dependências
-        run: wally install
+        run: |
+          wally install
+          mkdir -p Packages
 
       - name: Rojo — build do projeto (valida a árvore)
         run: rojo build -o /tmp/build.rbxl
