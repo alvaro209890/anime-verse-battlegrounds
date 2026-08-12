@@ -82,6 +82,8 @@ function CatalogService.validate(): ()
 	end
 
 	if deps.Npcs then
+		local hasDummy = false
+		local hasShard = false
 		for _, npc in deps.Npcs.all() do
 			if npc.maxHealth <= 0 then
 				fail(("npc %s → maxHealth inválido"):format(npc.id))
@@ -89,6 +91,35 @@ function CatalogService.validate(): ()
 			if npc.attackRange < 0 or npc.attackPeriodSeconds < 0 then
 				fail(("npc %s → alcance/período inválido"):format(npc.id))
 			end
+			if npc.kind == "enemy" then
+				if npc.zoneId == nil or npc.maxAlive == nil or npc.telegraphMs == nil then
+					fail(("npc %s → inimigo sem zoneId/maxAlive/telegraphMs"):format(npc.id))
+				end
+				if npc.maxAlive < 1 then
+					fail(("npc %s → maxAlive inválido"):format(npc.id))
+				end
+			end
+			if npc.id == "npc_training_dummy" then
+				hasDummy = true
+			end
+			if npc.id == "enemy_wandering_shard" then
+				hasShard = true
+				if npc.maxHealth ~= 40 or npc.attackDamage ~= 6 or npc.attackRange ~= 4 then
+					fail("enemy_wandering_shard fora do baseline F0 (40 HP / dano 6 / alcance 4)")
+				end
+				if npc.zoneId ~= "zone_plain_free" then
+					fail("enemy_wandering_shard deve viver em zone_plain_free")
+				end
+				if npc.maxAlive > 4 then
+					fail("enemy_wandering_shard maxAlive > 4")
+				end
+			end
+		end
+		if not hasDummy then
+			fail("catálogo de NPCs sem npc_training_dummy")
+		end
+		if not hasShard then
+			fail("catálogo de NPCs sem enemy_wandering_shard")
 		end
 	end
 

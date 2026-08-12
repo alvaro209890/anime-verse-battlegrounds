@@ -24,15 +24,15 @@ P1 (revisão jurídica) continua obrigatório antes de concept art, áudio final
 
 ## 2. Divergências do código atual
 
-O esqueleto em `src/` **não** implementa o loop jogável no Studio. Itens 1–6 no domínio + flags de unlock no spawn (recorte do item 7). Ainda falta:
+O esqueleto em `src/` **não** implementa o loop jogável no Studio. Itens 1–6 no domínio + flags de unlock + Estilhaço Errante headless (recorte do item 7). Ainda falta:
 
 | Onde | Estado atual | Alvo desta spec |
 |---|---|---|
 | `src/shared/Data/Abilities.luau` | `comet_shoulder`, `broken_cadence`, `pulse_return`; `eclipse_beat` desligada | feito |
 | `src/shared/Data/EnergyFamilies.luau` | Umbral regen 2/6, Fluxo 6 / 120 ms, cap 1,5 s | feito |
-| `src/shared/Data/Npcs.luau` | dummy 10000 HP, dano 4, alcance 8 | feito |
+| `src/shared/Data/Npcs.luau` | dummy 10000 HP; `enemy_wandering_shard` 40 HP / dano 6 / alcance 4 / telegraph 400 ms | pathfinding/Studio pendente |
 | `src/shared/Data/Zones.luau` | 3 zonas, 6 âncoras, greybox F0-BASELINE como dados (collision groups `Safe`/`Transition`/`Free`/`GateBlock`) | feito no domínio; geometria Studio pendente |
-| `CombatService` | cadeia leve, guarda, aparo, pesado, quebra, dash, dummy, comet 9/guarda 9/HP 4 | hitbox espacial e lunge de 7 studs no Studio ainda faltam |
+| `CombatService` | cadeia leve, guarda, aparo, pesado, quebra, dash, dummy, comet, Estilhaço (telegraph → 6 HP, sem aggro na fronteira, respawn 45 s, cap 4) | hitbox espacial, lunge de 7 studs, movimento 12 studs/s no Studio |
 | `AbilityService` | comet resolve o fighter do dummy; `CombatHit` no acerto; unlock via `ProgressionService` no bootstrap | Cadência/Pulso contra dummy (itens 8/10); unlock por missão/Estilhaços (resto do item 7) |
 | `ProgressionService` | spawn sem técnicas; `unlock_comet_shoulder` / cadência / pulso; grant idempotente | XP, objetivo 1, Estilhaços |
 | `ZoneService` | zona atual, `canPvp`, transição 5 s, lockout 15 s, `ZoneEvent` + `ZoneCrossingIntent`; hostil na segura não marca PvP | 5 sinais visíveis/audíveis, volumes e collision groups no Studio |
@@ -41,9 +41,9 @@ O esqueleto em `src/` **não** implementa o loop jogável no Studio. Itens 1–6
 | `SaveService` | stub em memória; persiste `wallet` | ProfileRoot v1 sem wallet; ProfileStore no place de teste |
 | Mapa/HUD | greybox como dados (`Zones.luau`); ausentes no Studio | §8 e §12 |
 
-Testes Lune: 67 casos em `tests/run.luau` (`docs/12-TESTING.md`).
+Testes Lune: 74 casos em `tests/run.luau` (`docs/12-TESTING.md`).
 
-**Comprovado neste recorte:** join → Ready **sem** técnicas; `comet_shoulder` recusa `locked` até `unlock_comet_shoulder`; com a flag, gasta 18 Umbral e tira 9 HP do dummy. Combate universal, zona/fronteira e grant idempotente. **Não comprovado:** Estilhaços, objetivo 1, persistência das flags, Studio, HUD.
+**Comprovado neste recorte:** técnicas locked no spawn; Estilhaço Errante headless (telegraph 400 ms, dano 6, alcance 4, sem aggro através da fronteira, respawn 45 s se ninguém em combate a 20 studs, no máximo 4 vivos). **Não comprovado:** XP/objetivo 1, unlock no 3º kill, pathfinding, Studio, HUD.
 
 ## 3. Escopo congelado da fatia
 
@@ -490,7 +490,7 @@ Cheat de unlock: remote **inexistente** no cliente. Flag `StudioDebugUnlock` só
 
 ## 19. Testes da mudança de catálogo
 
-Os casos abaixo estão em `tests/run.luau` (67 no total; fonte: chamadas `test(...)`):
+Os casos abaixo estão em `tests/run.luau` (74 no total; fonte: chamadas `test(...)`):
 
 - roster `eclipse_fist` com 3 skills enabled + 1 ultimate disabled
 - `comet_shoulder` custo 18, CD 7, runner registrado
@@ -526,6 +526,12 @@ Unlock no spawn (recorte do item 7):
 - leave limpa as flags (sem persistência ainda)
 - após grant, comet gasta 18 e dummy fica em 9991 HP; snapshot lista a flag
 
+Estilhaço Errante (recorte do item 7):
+
+- catálogo: 40 HP, dano 6, alcance 4, telegraph 400 ms, respawn 45 s, XP 25, max 4, zona livre
+- combate: telegraph depois dano 6; `no_aggro` através da fronteira; fora de 4 studs recusa
+- combate: recovery bloqueia o próximo golpe; respawn 45 s bloqueia se combate perto; cap 4 vivos
+
 Integração Lune não cobre Studio. Evidência runtime: `12-TESTING.md` §6. Geometria do greybox, volumes de transição, collision groups reais, sinais visíveis/audíveis e hold 0,6 s no toque permanecem como trabalho de Studio.
 
 ## 20. Backlog priorizado
@@ -538,7 +544,7 @@ Ordem de implementação; cada item fecha com teste automatizado **ou** evidênc
 4. ~~Pesado + quebra de guarda~~ (feito 2026-08-12; 43 testes)
 5. ~~Ombro Cometa~~ (feito 2026-08-12; 49 testes; domínio headless — lunge espacial no Studio pendente)
 6. ~~Greybox + `ZoneService` + 5 sinais~~ (feito 2026-08-12; revisão 64 testes — `ZoneCrossingIntent`, lockout não dispara em treino, catálogo não envenena deps; domínio headless — geometria Studio pendente: parts/volumes de transição, collision groups `Safe`/`Transition`/`Free`/`GateBlock`, sinais visíveis/audíveis, iluminação, hold 0,6 s no toque e playtest cego da fronteira)
-7. Estilhaços + objetivo 1 + unlock Cometa (flags de spawn feitas 2026-08-12; 67 testes — falta inimigo, quest e persistência)
+7. Estilhaços + objetivo 1 + unlock Cometa (flags de spawn + Estilhaço headless 2026-08-12; 74 testes — falta XP/objetivo 1, unlock no 3º kill, spawn no mundo e persistência)
 8. Cadência + Fluxo
 9. Elite + unlock Cadência
 10. Pulso + objetivo 45–60 min

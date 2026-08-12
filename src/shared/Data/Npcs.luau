@@ -14,6 +14,13 @@ export type NpcDefinition = {
 	telegraphMs: number,
 	grantsXp: boolean,
 	enabled: boolean,
+	moveSpeed: number?,
+	respawnSeconds: number?,
+	recoverySeconds: number?,
+	xpUnconsolidated: number?,
+	maxAlive: number?,
+	zoneId: string?,
+	combatClearRadius: number?,
 }
 
 local Npcs: { [string]: NpcDefinition } = {
@@ -29,6 +36,26 @@ local Npcs: { [string]: NpcDefinition } = {
 		telegraphMs = 400,
 		grantsXp = false,
 		enabled = true,
+	},
+	enemy_wandering_shard = {
+		id = "enemy_wandering_shard",
+		displayNameKey = "enemy.wandering_shard.name",
+		kind = "enemy",
+		maxHealth = 40,
+		maxGuard = 0,
+		attackDamage = 6,
+		attackRange = 4,
+		attackPeriodSeconds = 1.0,
+		telegraphMs = 400,
+		grantsXp = true,
+		enabled = true,
+		moveSpeed = 12,
+		respawnSeconds = 45,
+		recoverySeconds = 0.6,
+		xpUnconsolidated = 25,
+		maxAlive = 4,
+		zoneId = "zone_plain_free",
+		combatClearRadius = 20,
 	},
 }
 

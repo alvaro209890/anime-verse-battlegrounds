@@ -1,7 +1,8 @@
 --!strict
 -- CombatService (server) — F0 (docs/13-F0-SLICE.md §5, §6.1 e §9)
--- Dano, guarda, aparo, cadeia leve, pesado, dash, dummy e Ombro Cometa.
--- Autoridade total; cliente nunca informa dano. Puro (sem Instances) — testável.
+-- Dano, guarda, aparo, cadeia leve, pesado, dash, dummy, Ombro Cometa e
+-- Estilhaço Errante (idle → telegraph → ataque → recovery). Autoridade total;
+-- cliente nunca informa dano. Puro (sem Instances) — testável.
 -- applyDamage permanece para AbilityService (estado de recurso / Cadência / Pulso).
 
 export type ServerPlayerState = {
@@ -30,6 +31,9 @@ export type FighterState = {
 	dashCooldownUntil: number,
 	iframeUntil: number,
 	lastDummyAttackAt: number,
+	aiPhase: "idle" | "telegraph" | "recovery",
+	aiPhaseUntil: number,
+	diedAt: number,
 }
 
 export type HitFacing = "front" | "back"
@@ -43,6 +47,7 @@ export type HitResult = {
 	broken: boolean?,
 	iframe: boolean?,
 	stoppedOnGuard: boolean?,
+	phase: string?,
 }
 
 local LIGHT_DAMAGE = { 5, 5, 6, 10 }
@@ -94,6 +99,9 @@ function CombatService.createFighter(
 		dashCooldownUntil = 0,
 		iframeUntil = 0,
 		lastDummyAttackAt = 0,
+		aiPhase = "idle",
+		aiPhaseUntil = 0,
+		diedAt = 0,
 	}
 	CombatService.fighters[id] = fighter
 	return fighter
@@ -161,6 +169,9 @@ local function applyHit(
 	local guarding = target.guarding and now >= target.cannotGuardUntil and facing ~= "back"
 	if not guarding then
 		target.health = math.max(0, target.health - rawHp)
+		if target.health <= 0 then
+			target.diedAt = now
+		end
 		return { ok = true, damage = rawHp }
 	end
 	if parryable and (now - target.guardDownAt) <= PARRY_WINDOW then
@@ -179,6 +190,9 @@ local function applyHit(
 		target.guard = nextGuard
 	end
 	target.health = math.max(0, target.health - hp)
+	if target.health <= 0 then
+		target.diedAt = now
+	end
 	return { ok = true, damage = hp, broken = broken }
 end
 
@@ -264,6 +278,95 @@ function CombatService.tryDummyAttack(
 	end
 	dummy.lastDummyAttackAt = now
 	return applyHit(target, now, damage, damage, math.floor(damage * 0.4), "front", true)
+end
+
+function CombatService.countAliveNpcs(idPrefix: string): number
+	local n = 0
+	local prefixLen = #idPrefix
+	for id, fighter in CombatService.fighters do
+		if fighter.kind == "npc" and fighter.health > 0 and string.sub(id, 1, prefixLen) == idPrefix then
+			n += 1
+		end
+	end
+	return n
+end
+
+function CombatService.canSpawnNpc(idPrefix: string, maxAlive: number): boolean
+	return CombatService.countAliveNpcs(idPrefix) < maxAlive
+end
+
+function CombatService.tryRespawn(
+	fighter: FighterState,
+	now: number,
+	respawnSeconds: number,
+	combatNearby: boolean
+): (boolean, string?)
+	if fighter.health > 0 then
+		return false, "alive"
+	end
+	if combatNearby then
+		return false, "combat_nearby"
+	end
+	if fighter.diedAt <= 0 or (now - fighter.diedAt) < respawnSeconds then
+		return false, "respawn_wait"
+	end
+	fighter.health = fighter.maxHealth
+	fighter.diedAt = 0
+	fighter.aiPhase = "idle"
+	fighter.aiPhaseUntil = 0
+	return true, nil
+end
+
+-- Estilhaço Errante: idle → telegraph → ataque → recovery.
+-- `canAggro` vem do ZoneService (sem aggro através da fronteira).
+function CombatService.tryShardCycle(
+	shard: FighterState,
+	target: FighterState,
+	now: number,
+	distance: number,
+	canAggro: boolean,
+	damage: number,
+	range: number,
+	telegraphSeconds: number,
+	recoverySeconds: number
+): HitResult
+	if shard.health <= 0 then
+		return fail("dead")
+	end
+	if not canAggro then
+		shard.aiPhase = "idle"
+		shard.aiPhaseUntil = 0
+		return fail("no_aggro")
+	end
+	if distance > range then
+		shard.aiPhase = "idle"
+		shard.aiPhaseUntil = 0
+		return fail("out_of_range")
+	end
+	if shard.aiPhase == "recovery" then
+		if now < shard.aiPhaseUntil then
+			return fail("recovery")
+		end
+		shard.aiPhase = "idle"
+	end
+	if shard.aiPhase == "idle" then
+		shard.aiPhase = "telegraph"
+		shard.aiPhaseUntil = now + telegraphSeconds
+		return { ok = true, damage = 0, phase = "telegraph" }
+	end
+	if shard.aiPhase == "telegraph" then
+		if now < shard.aiPhaseUntil then
+			return fail("telegraph")
+		end
+		local result = applyHit(target, now, damage, damage, math.floor(damage * 0.4), "front", true)
+		shard.aiPhase = "recovery"
+		shard.aiPhaseUntil = now + recoverySeconds
+		if result.ok then
+			result.phase = "attack"
+		end
+		return result
+	end
+	return fail("idle")
 end
 
 return CombatService

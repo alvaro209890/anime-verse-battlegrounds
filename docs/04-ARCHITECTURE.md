@@ -2,7 +2,7 @@
 
 ## 1. Escopo e decisões arquiteturais
 
-Este documento descreve a arquitetura-alvo e distingue o que já existe do que ainda precisa ser entregue. O repositório contém um **esqueleto executável da F0**: bootstrap de servidor/cliente, catálogos compartilhados (incl. zonas/âncoras/greybox como dados), registry de remotes e serviços iniciais de catálogo, sessão, save, habilidade, combate, cooldown, recurso e zona. A CI versionada executa StyLua, Selene, 67 testes Lune, instalação Wally e build Rojo. Isso comprova estrutura e lógica automatizada do recorte atual; **não comprova** runtime no Roblox Studio, DataStore real, teleporte, servidor publicado, mobile ou gamepad.
+Este documento descreve a arquitetura-alvo e distingue o que já existe do que ainda precisa ser entregue. O repositório contém um **esqueleto executável da F0**: bootstrap de servidor/cliente, catálogos compartilhados (incl. zonas/âncoras/greybox como dados), registry de remotes e serviços iniciais de catálogo, sessão, save, habilidade, combate, cooldown, recurso e zona. A CI versionada executa StyLua, Selene, 74 testes Lune, instalação Wally e build Rojo. Isso comprova estrutura e lógica automatizada do recorte atual; **não comprova** runtime no Roblox Studio, DataStore real, teleporte, servidor publicado, mobile ou gamepad.
 
 Decisões principais:
 
@@ -116,7 +116,7 @@ Regras adicionais:
 - `src/shared/Data` e `src/shared/Remotes.luau` fornecem catálogos e contratos iniciais (incl. `Zones.luau` e o remote `ZoneEvent` S→C);
 - existem implementações iniciais de `AbilityService`, `CatalogService`, `CombatService`, `CooldownService`, `PlayerSessionService`, `ProgressionService` (flags de unlock; spawn sem técnicas), `RemoteGateway`, `ResourceService`, `SaveService` e `ZoneService` (zona atual, `canPvp`, transição 5 s, lockout 15 s e os 5 sinais da fronteira — domínio headless, item 6 do backlog);
 - `src/client/init.client.lua` é apenas o ponto de entrada mínimo; controllers e UX descritos abaixo continuam alvo;
-- os 67 testes Lune cobrem dados e parte do domínio/serviços, mas ainda não substituem os testes de integração e runtime previstos neste documento.
+- os 74 testes Lune cobrem dados e parte do domínio/serviços, mas ainda não substituem os testes de integração e runtime previstos neste documento.
 
 As tabelas seguintes são o mapa-alvo. Uma linha em F0 não significa que o contrato inteiro esteja pronto; o roadmap e os testes de aceite determinam a conclusão.
 
@@ -383,7 +383,7 @@ Regras de implementação futura:
 | ProfileStore | Session locking e ciclo de perfil atrás de adaptador | Dependência presente; contrato, takeover e DataStore real ainda precisam de teste publicado |
 | GitHub Actions | Formato, lint, testes, dependências e build no push/PR | Pipeline existente; sem credencial ou deploy automático |
 
-Pipeline atual: StyLua check → Selene → 67 testes Lune → instalação Wally → build Rojo. A evolução aprovada acrescenta validação dedicada de catálogos/schemas, type check e fixtures de migração sem remover os gates existentes. A CI não terá credenciais de produção e não publicará place automaticamente.
+Pipeline atual: StyLua check → Selene → 74 testes Lune → instalação Wally → build Rojo. A evolução aprovada acrescenta validação dedicada de catálogos/schemas, type check e fixtures de migração sem remover os gates existentes. A CI não terá credenciais de produção e não publicará place automaticamente.
 
 ## 13. Ordem arquitetural por fase
 
