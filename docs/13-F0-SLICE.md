@@ -24,18 +24,20 @@ P1 (revisão jurídica) continua obrigatório antes de concept art, áudio final
 
 ## 2. Divergências do código atual
 
-O esqueleto em `src/` **não** implementa o loop jogável. Catálogo, Umbral e runners da fatia já estão alinhados a este documento (item 1 do backlog). Ainda falta:
+O esqueleto em `src/` **não** implementa o loop jogável no Studio. Catálogo, Umbral, SessionSnapshot e combate universal headless já estão alinhados (itens 1–4 do backlog). Ainda falta:
 
 | Onde | Estado atual | Alvo desta spec |
 |---|---|---|
 | `src/shared/Data/Abilities.luau` | `comet_shoulder`, `broken_cadence`, `pulse_return`; `eclipse_beat` desligada | feito |
 | `src/shared/Data/EnergyFamilies.luau` | Umbral regen 2/6, Fluxo 6 / 120 ms, cap 1,5 s | feito |
-| `AbilityService` | três runners + reentrada da Cadência + `locked`/`disabled` | hitbox espacial e fases no Studio ainda faltam |
-| `src/client/init.client.lua` | não dispara intenção no boot | InputController (item 10) |
+| `src/shared/Data/Npcs.luau` | dummy 10000 HP, dano 4, alcance 8 | feito |
+| `CombatService` | cadeia leve, guarda, aparo, pesado, quebra, dash, dummy | hitbox espacial no Studio ainda falta |
+| `PlayerSessionService` | snapshot Ready na zona segura; intenções só após Ready | feito no domínio |
+| `src/client/init.client.lua` | espera `SessionSnapshot`; não dispara no boot | InputController (item 10) |
 | `SaveService` | stub em memória; persiste `wallet` | ProfileRoot v1 sem wallet; ProfileStore no place de teste |
-| Combate/guarda/zona/HUD | dano cru; sem mapa | §5–§12 |
+| Mapa/HUD | ausentes | §8 e §12 |
 
-Testes Lune: 31 casos em `tests/run.luau` (`docs/12-TESTING.md`).
+Testes Lune: 43 casos em `tests/run.luau` (`docs/12-TESTING.md`).
 
 ## 3. Escopo congelado da fatia
 
@@ -499,9 +501,9 @@ Integração Lune não cobre Studio. Evidência runtime: `12-TESTING.md` §6.
 Ordem de implementação; cada item fecha com teste automatizado **ou** evidência Studio anotada.
 
 1. ~~Alinhar catálogo, Umbral, testes Lune e CI~~ (feito 2026-08-12; 31 testes)
-2. Tirar `FireServer` do boot; `SessionSnapshot` mínimo
-3. Spawn + movimento + leve/guarda/dash contra dummy
-4. Pesado + quebra de guarda
+2. ~~Tirar `FireServer` do boot; `SessionSnapshot` mínimo~~ (feito 2026-08-12; domínio + remote)
+3. ~~Spawn + movimento + leve/guarda/dash contra dummy~~ (domínio headless 2026-08-12; movimento/Studio pendente)
+4. ~~Pesado + quebra de guarda~~ (feito 2026-08-12; 43 testes)
 5. Ombro Cometa
 6. Greybox + `ZoneService` + 5 sinais
 7. Estilhaços + objetivo 1 + unlock Cometa

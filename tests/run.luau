@@ -37,6 +37,7 @@ end
 local Abilities = require("../src/shared/Data/Abilities")
 local Characters = require("../src/shared/Data/Characters")
 local EnergyFamilies = require("../src/shared/Data/EnergyFamilies")
+local Npcs = require("../src/shared/Data/Npcs")
 local Remotes = require("../src/shared/Remotes")
 local CooldownService = require("../src/server/Services/CooldownService")
 local CombatService = require("../src/server/Services/CombatService")
@@ -143,6 +144,22 @@ test("dados: remotes registrados com contrato", function()
 		assertEq(c.direction, "ClientToServer", "direção")
 		assertEq(c.version, 1, "versão")
 	end
+	local snap = Remotes.Contracts.get(Remotes.Names.SessionSnapshot)
+	assertTrue(snap ~= nil, "SessionSnapshot deveria ter contrato")
+	if snap then
+		assertEq(snap.direction, "ServerToClient", "snapshot S→C")
+	end
+end)
+
+test("dados: dummy de treino no catálogo", function()
+	local dummy = Npcs.get("npc_training_dummy")
+	assertTrue(dummy ~= nil, "dummy deveria existir")
+	if dummy then
+		assertEq(dummy.maxHealth, 10000, "vida")
+		assertEq(dummy.attackDamage, 4, "dano")
+		assertEq(dummy.attackRange, 8, "alcance")
+		assertEq(dummy.grantsXp, false, "sem XP")
+	end
 end)
 
 -- ══ Testes: CooldownService ─────────────────────────────────────────────────
@@ -187,6 +204,130 @@ test("combate: dano negativo não cura", function()
 	local target = makePlayerState(2, 100, 50)
 	CombatService.applyDamage(target, -10, 1)
 	assertEq(target.health, 50, "vida inalterada")
+end)
+
+test("combate: cadeia leve 5+5+6+10", function()
+	CombatService.clear()
+	local atk = CombatService.createFighter("p:a", "player", 100, 100)
+	local tgt = CombatService.createFighter("p:b", "player", 100, 100)
+	assertEq(CombatService.tryLight(atk, tgt, 1.0, "front").damage, 5, "hit 1")
+	assertEq(CombatService.tryLight(atk, tgt, 1.2, "front").damage, 5, "hit 2")
+	assertEq(CombatService.tryLight(atk, tgt, 1.4, "front").damage, 6, "hit 3")
+	assertEq(CombatService.tryLight(atk, tgt, 1.6, "front").damage, 10, "hit 4")
+	assertEq(tgt.health, 74, "26 de dano")
+end)
+
+test("combate: janela 0,65 s reinicia a cadeia", function()
+	CombatService.clear()
+	local atk = CombatService.createFighter("p:a", "player", 100, 100)
+	local tgt = CombatService.createFighter("p:b", "player", 100, 100)
+	CombatService.tryLight(atk, tgt, 1.0, "front")
+	local result = CombatService.tryLight(atk, tgt, 1.7, "front")
+	assertEq(result.step, 1, "reset")
+	assertEq(result.damage, 5, "primeiro golpe de novo")
+end)
+
+test("combate: guarda frontal reduz HP a 40%", function()
+	CombatService.clear()
+	local atk = CombatService.createFighter("p:a", "player", 100, 100)
+	local tgt = CombatService.createFighter("p:b", "player", 100, 100)
+	CombatService.setGuard(tgt, true, 10.0)
+	local result = CombatService.tryLight(atk, tgt, 10.2, "front")
+	assertEq(result.damage, 2, "floor(5*0.4)")
+	assertEq(tgt.guard, 95, "guarda perde o dano cheio")
+	assertEq(tgt.health, 98, "HP reduzido")
+end)
+
+test("combate: aparo nos 120 ms zera dano e guarda", function()
+	CombatService.clear()
+	local atk = CombatService.createFighter("p:a", "player", 100, 100)
+	local tgt = CombatService.createFighter("p:b", "player", 100, 100)
+	CombatService.setGuard(tgt, true, 20.0)
+	local result = CombatService.tryLight(atk, tgt, 20.1, "front")
+	assertEq(result.parried, true, "aparo")
+	assertEq(result.damage, 0, "sem HP")
+	assertEq(tgt.guard, 100, "guarda intacta")
+	assertEq(tgt.health, 100, "HP intacto")
+end)
+
+test("combate: costas ignoram guarda", function()
+	CombatService.clear()
+	local atk = CombatService.createFighter("p:a", "player", 100, 100)
+	local tgt = CombatService.createFighter("p:b", "player", 100, 100)
+	CombatService.setGuard(tgt, true, 30.0)
+	local result = CombatService.tryLight(atk, tgt, 30.2, "back")
+	assertEq(result.damage, 5, "dano cheio")
+	assertEq(tgt.guard, 100, "guarda não consome")
+end)
+
+test("combate: pesado 10 HP, 28 guarda, 2 se bloqueado", function()
+	CombatService.clear()
+	local atk = CombatService.createFighter("p:a", "player", 100, 100)
+	local open = CombatService.createFighter("p:b", "player", 100, 100)
+	assertEq(CombatService.tryHeavy(atk, open, 1.0, "front").damage, 10, "sem guarda")
+	local guarded = CombatService.createFighter("p:c", "player", 100, 100)
+	CombatService.setGuard(guarded, true, 2.0)
+	local blocked = CombatService.tryHeavy(atk, guarded, 2.2, "front")
+	assertEq(blocked.damage, 2, "HP bloqueado")
+	assertEq(guarded.guard, 72, "28 de guarda")
+end)
+
+test("combate: quebra de guarda aplica overflow", function()
+	CombatService.clear()
+	local atk = CombatService.createFighter("p:a", "player", 100, 100)
+	local tgt = CombatService.createFighter("p:b", "player", 100, 20)
+	CombatService.setGuard(tgt, true, 3.0)
+	local result = CombatService.tryHeavy(atk, tgt, 3.2, "front")
+	assertEq(result.broken, true, "quebra")
+	assertEq(tgt.guard, 0, "guarda zerada")
+	assertEq(tgt.health, 94, "2 bloqueado + floor(8*0.5)=4")
+	local refused = CombatService.setGuard(tgt, true, 3.3)
+	assertEq(refused, false, "não guarda durante break")
+end)
+
+test("combate: pesado que erra bloqueia leve por 0,5 s", function()
+	CombatService.clear()
+	local atk = CombatService.createFighter("p:a", "player", 100, 100)
+	local tgt = CombatService.createFighter("p:b", "player", 100, 100)
+	local miss = CombatService.tryHeavy(atk, nil, 4.0, "front")
+	assertEq(miss.ok, false, "miss")
+	assertEq(miss.reason, "miss", "motivo")
+	local locked = CombatService.tryLight(atk, tgt, 4.4, "front")
+	assertEq(locked.ok, false, "leve bloqueado")
+	assertEq(locked.reason, "heavy_miss", "motivo")
+	local ok = CombatService.tryLight(atk, tgt, 4.5, "front")
+	assertEq(ok.ok, true, "após 0,5 s")
+end)
+
+test("combate: dash aplica i-frame e cooldown", function()
+	CombatService.clear()
+	local atk = CombatService.createFighter("p:a", "player", 100, 100)
+	local tgt = CombatService.createFighter("p:b", "player", 100, 100)
+	local ok, reason = CombatService.tryDash(tgt, 5.0)
+	assertEq(ok, true, "dash " .. tostring(reason))
+	local iframe = CombatService.tryLight(atk, tgt, 5.05, "front")
+	assertEq(iframe.iframe, true, "i-frame")
+	assertEq(iframe.damage, 0, "sem dano")
+	assertEq(tgt.health, 100, "HP intacto")
+	local cd = CombatService.tryDash(tgt, 5.5)
+	assertEq(cd, false, "cooldown")
+	local after = CombatService.tryLight(atk, tgt, 8.1, "front")
+	assertEq(after.damage, 5, "depois do i-frame")
+end)
+
+test("combate: dummy ataca a 8 studs e recusa longe", function()
+	CombatService.clear()
+	local dummy = CombatService.createFighter("npc_training_dummy", "npc", 10000, 0)
+	local player = CombatService.createFighter("p:a", "player", 100, 100)
+	local far = CombatService.tryDummyAttack(dummy, player, 1.0, 9, 2.5, 4, 8)
+	assertEq(far.ok, false, "fora de alcance")
+	local hit = CombatService.tryDummyAttack(dummy, player, 1.0, 8, 2.5, 4, 8)
+	assertEq(hit.ok, true, "no alcance")
+	assertEq(hit.damage, 4, "dano do dummy")
+	assertEq(player.health, 96, "HP")
+	local wait = CombatService.tryDummyAttack(dummy, player, 2.0, 8, 2.5, 4, 8)
+	assertEq(wait.reason, "cooldown", "período 2,5 s")
+	assertEq(dummy.health, 10000, "dummy não morre no próprio ataque")
 end)
 
 -- ══ Testes: ResourceService ─────────────────────────────────────────────────
@@ -493,9 +634,11 @@ test("catálogo: dados reais passam na validação", function()
 		Abilities = Abilities,
 		Characters = Characters,
 		EnergyFamilies = EnergyFamilies,
+		Npcs = Npcs,
 	})
 	assertEq(CatalogService.getAbility("comet_shoulder") ~= nil, true, "habilidade acessível")
 	assertEq(CatalogService.getAbility("eclipse_beat") ~= nil, true, "ultimate no catálogo")
+	assertEq(CatalogService.getNpc("npc_training_dummy") ~= nil, true, "dummy no catálogo")
 end)
 
 test("catálogo: personagem sem habilidade falha", function()
@@ -559,6 +702,50 @@ test("sessão: join cria estado com personagem padrão", function()
 	PlayerSessionService.onPlayerLeft(fakePlayer)
 	assertEq(ResourceService.getState(70), nil, "estado limpo no leave")
 	assertEq(#joined, 1, "release chamado no leave")
+end)
+
+test("sessão: snapshot Ready na zona segura com dummy", function()
+	CombatService.clear()
+	ResourceService.init(makeResourceDeps())
+	local snapshots: { any } = {}
+	PlayerSessionService.init({
+		getCharacter = function(id: string): any
+			return Characters.get(id)
+		end,
+		getFamily = function(id: string): any
+			return EnergyFamilies.get(id)
+		end,
+		createResourceState = function(userId: number, familyId: string)
+			return ResourceService.createState(userId, familyId)
+		end,
+		removeResourceState = ResourceService.removeState,
+		getResourceState = ResourceService.getState,
+		clearCooldowns = function(userId: number)
+			CooldownService.clear(userId)
+		end,
+		releaseProfile = function() end,
+		createFighter = CombatService.createFighter,
+		removeFighter = CombatService.removeFighter,
+		getFighter = CombatService.getFighter,
+		playerFighterId = CombatService.playerFighterId,
+		onSnapshot = function(_player: any, snap: { any })
+			table.insert(snapshots, snap)
+		end,
+	})
+	assertEq(PlayerSessionService.isReady(80), false, "antes do join")
+	PlayerSessionService.onPlayerJoined({ UserId = 80, Name = "Snap" })
+	assertEq(PlayerSessionService.isReady(80), true, "ready após snapshot")
+	assertEq(#snapshots, 1, "um snapshot")
+	local snap = snapshots[1]
+	assertEq(snap.zoneId, "zone_bastion_safe", "zona")
+	assertEq(snap.health, 100, "HP")
+	assertEq(snap.guard, 100, "guarda")
+	assertEq(snap.familyId, "umbral_aether", "família")
+	assertEq(snap.dummyId, "npc_training_dummy", "dummy")
+	assertEq(#snap.unlocks, 0, "sem técnicas no spawn")
+	PlayerSessionService.onPlayerLeft({ UserId = 80, Name = "Snap" })
+	assertEq(PlayerSessionService.isReady(80), false, "ready limpo")
+	assertEq(CombatService.getFighter(CombatService.playerFighterId(80)), nil, "fighter removido")
 end)
 
 -- ══ Runner ─────────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 --!strict
--- Contratos de rede registrados — F0 (docs/04 §6)
+-- Contratos de rede registrados — F0 (docs/04 §6, docs/13-F0-SLICE.md §13)
 -- Todo remote é declarado aqui com direção, versão e payload.
 -- RemoteGateway (server) e client usam este registro; nada de remotes soltos.
 --
@@ -14,20 +14,27 @@ export type NetworkContract = {
 	payload: string,
 }
 
--- Nomes de remote. Convenção: <Direção>_<Caso>_<Nome>.
-export type RemoteName = "AbilityActivate" | "AbilityRejected" | "ResourceChanged" | "CombatHit" | "PlayerDied"
+export type RemoteName =
+	"AbilityActivate"
+	| "AbilityRejected"
+	| "ResourceChanged"
+	| "CombatHit"
+	| "PlayerDied"
+	| "SessionSnapshot"
+	| "BasicAttackIntent"
+	| "GuardIntent"
+	| "DashIntent"
 
 local REMOTES = {
-	-- Cliente → Servidor: intenção de ativar habilidade
 	AbilityActivate = "AbilityActivate",
-	-- Servidor → Cliente: habilidade recusada (cooldown/recurso/estado)
 	AbilityRejected = "AbilityRejected",
-	-- Servidor → Cliente: pool de recurso mudou
 	ResourceChanged = "ResourceChanged",
-	-- Servidor → Cliente: um golpe confirmado acertou
 	CombatHit = "CombatHit",
-	-- Servidor → Cliente: jogador morreu
 	PlayerDied = "PlayerDied",
+	SessionSnapshot = "SessionSnapshot",
+	BasicAttackIntent = "BasicAttackIntent",
+	GuardIntent = "GuardIntent",
+	DashIntent = "DashIntent",
 }
 
 local RemoteContracts = {
@@ -35,7 +42,7 @@ local RemoteContracts = {
 		name = REMOTES.AbilityActivate,
 		direction = "ClientToServer",
 		version = 1,
-		payload = "{ abilityId: string, targetPosition: Vector3?, timestamp: number }",
+		payload = "{ abilityId: string, phase: string?, incomingHit: boolean?, requestId: string }",
 	} :: NetworkContract,
 	[REMOTES.AbilityRejected] = {
 		name = REMOTES.AbilityRejected,
@@ -53,13 +60,37 @@ local RemoteContracts = {
 		name = REMOTES.CombatHit,
 		direction = "ServerToClient",
 		version = 1,
-		payload = "{ targetUserId: number, damage: number, abilityId: string }",
+		payload = "{ targetId: string, damage: number, abilityId: string }",
 	} :: NetworkContract,
 	[REMOTES.PlayerDied] = {
 		name = REMOTES.PlayerDied,
 		direction = "ServerToClient",
 		version = 1,
 		payload = "{ userId: number, killerUserId: number? }",
+	} :: NetworkContract,
+	[REMOTES.SessionSnapshot] = {
+		name = REMOTES.SessionSnapshot,
+		direction = "ServerToClient",
+		version = 1,
+		payload = "{ protocolVersion: number, ready: boolean, zoneId: string, health: number, guard: number, resource: number, familyId: string, unlocks: { string }, dummyId: string }",
+	} :: NetworkContract,
+	[REMOTES.BasicAttackIntent] = {
+		name = REMOTES.BasicAttackIntent,
+		direction = "ClientToServer",
+		version = 1,
+		payload = '{ kind: "light" | "heavy", requestId: string }',
+	} :: NetworkContract,
+	[REMOTES.GuardIntent] = {
+		name = REMOTES.GuardIntent,
+		direction = "ClientToServer",
+		version = 1,
+		payload = "{ down: boolean, requestId: string }",
+	} :: NetworkContract,
+	[REMOTES.DashIntent] = {
+		name = REMOTES.DashIntent,
+		direction = "ClientToServer",
+		version = 1,
+		payload = "{ requestId: string }",
 	} :: NetworkContract,
 }
 

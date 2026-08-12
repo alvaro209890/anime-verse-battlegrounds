@@ -1,20 +1,29 @@
 --!strict
 -- Bootstrap do cliente — F0 (docs/13-F0-SLICE.md SLICE-DEC-005)
--- Conecta aos remotes do servidor. Cliente NUNCA decide acerto/dano/custo;
--- apenas envia intenção e reproduz apresentação do que o servidor confirmar.
--- Input real entra no InputController; não dispara intenção no boot.
+-- Conecta aos remotes do servidor. Cliente NUNCA decide acerto/dano/custo.
+-- Intenção só depois de SessionSnapshot (ready).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
--- Referências aos remotes (criados pelo RemoteGateway no servidor)
+local ready = false
+local snapshot: { any }? = nil
+
 local function getRemote(name: string): RemoteEvent?
 	local folder = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Remotes")
 	return folder:FindFirstChild(name)
 end
 
--- Escuta rejeição de habilidade (mostrar motivo na UI)
+local snapshotRemote = getRemote(Remotes.Names.SessionSnapshot)
+if snapshotRemote then
+	snapshotRemote.OnClientEvent:Connect(function(payload: { any })
+		snapshot = payload
+		ready = payload.ready == true
+		print(("[Client] sessão pronta zona=%s ready=%s"):format(tostring(snapshot.zoneId), tostring(ready)))
+	end)
+end
+
 local rejectedRemote = getRemote(Remotes.Names.AbilityRejected)
 if rejectedRemote then
 	rejectedRemote.OnClientEvent:Connect(function(payload: { any })
@@ -22,5 +31,5 @@ if rejectedRemote then
 	end)
 end
 
--- TODO F0 item 10: InputController (teclas/touch/gamepad → intenção semântica),
--- previsão visual de habilidade e reconciliação com o servidor.
+-- TODO F0 item 10: InputController só dispara se ready == true.
+-- Previsão visual e reconciliação com o servidor.

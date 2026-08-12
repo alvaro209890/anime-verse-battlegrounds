@@ -10,6 +10,7 @@ export type CatalogDeps = {
 	Abilities: { get: (string) -> any?, all: () -> { any } },
 	Characters: { get: (string) -> any?, all: () -> { any } },
 	EnergyFamilies: { get: (string) -> any?, all: () -> { any } },
+	Npcs: { get: (string) -> any?, all: () -> { any } }?,
 }
 
 local CatalogService = {
@@ -72,6 +73,17 @@ function CatalogService.validate(): ()
 		end
 	end
 
+	if deps.Npcs then
+		for _, npc in deps.Npcs.all() do
+			if npc.maxHealth <= 0 then
+				fail(("npc %s → maxHealth inválido"):format(npc.id))
+			end
+			if npc.attackRange < 0 or npc.attackPeriodSeconds < 0 then
+				fail(("npc %s → alcance/período inválido"):format(npc.id))
+			end
+		end
+	end
+
 	CatalogService.validated = true
 end
 
@@ -100,6 +112,15 @@ function CatalogService.getFamily(familyId: string): any?
 	end
 	CatalogService.validate()
 	return deps.EnergyFamilies.get(familyId)
+end
+
+function CatalogService.getNpc(npcId: string): any?
+	local deps = CatalogService.deps
+	if not deps or not deps.Npcs then
+		return nil
+	end
+	CatalogService.validate()
+	return deps.Npcs.get(npcId)
 end
 
 return CatalogService

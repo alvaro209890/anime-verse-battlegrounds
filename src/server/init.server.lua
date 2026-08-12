@@ -1,7 +1,7 @@
 --!strict
 -- Bootstrap do servidor — F0
 -- Valida catálogo → init RemoteGateway → init ResourceService →
--- conecta intenções de habilidade → ciclo join/leave.
+-- conecta intenções de habilidade/combate → ciclo join/leave.
 -- Ordem importa (grafo acíclico); falha de catálogo derruba o boot.
 --
 -- F0 usa injeção de dependências: o bootstrap monta o grafo e cada service
@@ -21,12 +21,14 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Abilities = require(ReplicatedStorage.Shared.Data.Abilities)
 local Characters = require(ReplicatedStorage.Shared.Data.Characters)
 local EnergyFamilies = require(ReplicatedStorage.Shared.Data.EnergyFamilies)
+local Npcs = require(ReplicatedStorage.Shared.Data.Npcs)
 
 -- 1. Catálogo — validação em fail-fast
 CatalogService.init({
 	Abilities = Abilities,
 	Characters = Characters,
 	EnergyFamilies = EnergyFamilies,
+	Npcs = Npcs,
 })
 print("[Bootstrap] catálogo validado")
 
@@ -56,6 +58,12 @@ ResourceService.init({
 })
 
 -- 5. Combate/Cooldown/Ability — grafo de dependências
+CombatService.clear()
+local dummyDef = CatalogService.getNpc("npc_training_dummy")
+if dummyDef then
+	CombatService.createFighter(dummyDef.id, "npc", dummyDef.maxHealth, dummyDef.maxGuard)
+end
+
 AbilityService.init({
 	getAbility = CatalogService.getAbility,
 	getCooldownRemaining = CooldownService.getRemaining,
@@ -78,16 +86,32 @@ AbilityService.init({
 -- 6. Ciclo de sessão — injeta o grafo
 PlayerSessionService.init({
 	getCharacter = CatalogService.getCharacter,
+	getFamily = CatalogService.getFamily,
 	createResourceState = function(userId: number, familyId: string)
 		return ResourceService.createState(userId, familyId)
 	end,
 	removeResourceState = ResourceService.removeState,
+	getResourceState = ResourceService.getState,
 	clearCooldowns = CooldownService.clear,
 	releaseProfile = SaveService.releaseProfile,
+	createFighter = CombatService.createFighter,
+	removeFighter = CombatService.removeFighter,
+	getFighter = CombatService.getFighter,
+	playerFighterId = CombatService.playerFighterId,
+	onSnapshot = function(player: Player, snapshot: { any })
+		RemoteGateway.fireClient(player, Remotes.Names.SessionSnapshot, snapshot)
+	end,
 })
+
+local function requireReady(player: Player): boolean
+	return PlayerSessionService.isReady(player.UserId)
+end
 
 -- 7. Intenção de habilidade (cliente → servidor)
 RemoteGateway.onClientIntent(Remotes.Names.AbilityActivate, function(player: Player, payload: { any })
+	if not requireReady(player) then
+		return
+	end
 	local abilityId = payload.abilityId
 	if type(abilityId) ~= "string" then
 		return
@@ -98,8 +122,6 @@ RemoteGateway.onClientIntent(Remotes.Names.AbilityActivate, function(player: Pla
 		return
 	end
 
-	-- TODO F1: resolução de alvo por range/targetPosition (CombatService +
-	-- SpatialQuery). F0: alvo único hardcoded não existe — ver runner.
 	local ok, reason = AbilityService.tryActivate(attacker, abilityId, nil, payload)
 	if not ok then
 		RemoteGateway.fireClient(player, Remotes.Names.AbilityRejected, {
@@ -109,7 +131,46 @@ RemoteGateway.onClientIntent(Remotes.Names.AbilityActivate, function(player: Pla
 	end
 end)
 
--- 7. Ciclo de sessão
+RemoteGateway.onClientIntent(Remotes.Names.BasicAttackIntent, function(player: Player, payload: { any })
+	if not requireReady(player) then
+		return
+	end
+	local attacker = CombatService.getFighter(CombatService.playerFighterId(player.UserId))
+	local dummy = CombatService.getFighter("npc_training_dummy")
+	if not attacker or not dummy then
+		return
+	end
+	local kind = payload.kind
+	if kind == "heavy" then
+		CombatService.tryHeavy(attacker, dummy, os.clock(), "front")
+	else
+		CombatService.tryLight(attacker, dummy, os.clock(), "front")
+	end
+end)
+
+RemoteGateway.onClientIntent(Remotes.Names.GuardIntent, function(player: Player, payload: { any })
+	if not requireReady(player) then
+		return
+	end
+	local fighter = CombatService.getFighter(CombatService.playerFighterId(player.UserId))
+	if not fighter then
+		return
+	end
+	CombatService.setGuard(fighter, payload.down == true, os.clock())
+end)
+
+RemoteGateway.onClientIntent(Remotes.Names.DashIntent, function(player: Player, _payload: { any })
+	if not requireReady(player) then
+		return
+	end
+	local fighter = CombatService.getFighter(CombatService.playerFighterId(player.UserId))
+	if not fighter then
+		return
+	end
+	CombatService.tryDash(fighter, os.clock())
+end)
+
+-- 8. Ciclo de sessão
 game.Players.PlayerAdded:Connect(function(player: Player)
 	PlayerSessionService.onPlayerJoined(player)
 end)

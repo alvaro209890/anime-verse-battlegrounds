@@ -84,6 +84,22 @@ export type ServerPlayerState = {
 	lastCombatAt: number,
 }
 
+export type SessionSnapshot = {
+	protocolVersion: number,
+	ready: boolean,
+	zoneId: string,
+	characterId: CharacterId,
+	health: number,
+	maxHealth: number,
+	guard: number,
+	maxGuard: number,
+	resource: number,
+	maxResource: number,
+	familyId: EnergyFamilyId,
+	unlocks: { string },
+	dummyId: string,
+}
+
 -- Contratos de rede (docs/04 §6) — payloads com versão
 export type NetworkContract = {
 	name: string,
