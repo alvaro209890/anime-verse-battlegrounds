@@ -27,12 +27,24 @@ export type ResourceDeps = {
 		defer: ((() -> ()) -> ())?,
 		wait: ((number) -> number)?,
 	},
+	now: (() -> number)?,
 }
 
 local ResourceService = {
 	states = {} :: { [number]: ServerPlayerState },
 	deps = nil :: ResourceDeps?,
 }
+
+local lastFlowAt: { [number]: number } = {}
+local lastFlowBonusAt: { [number]: number } = {}
+
+local function now(): number
+	local deps = ResourceService.deps
+	if deps and deps.now then
+		return deps.now()
+	end
+	return os.clock()
+end
 
 -- Fila de eventos para broadcast (evita spam de remote por tick)
 local pendingDirty: { [number]: boolean } = {}
@@ -72,7 +84,7 @@ local function regenTick()
 		if not family then
 			continue
 		end
-		local rate = state.combat and family.regenInCombatPerSec or family.regenOutOfCombatPerSec
+		local rate = ResourceService.getRegenRate(userId)
 		if rate <= 0 then
 			continue
 		end
@@ -83,6 +95,29 @@ local function regenTick()
 			broadcastResource(userId)
 		end
 	end
+end
+
+function ResourceService.getRegenRate(playerUserId: number): number
+	local state = ResourceService.states[playerUserId]
+	if not state then
+		return 0
+	end
+	local deps = ResourceService.deps
+	local family = deps and deps.getFamily(state.familyId)
+	if not family then
+		return 0
+	end
+	if state.combat then
+		return family.regenInCombatPerSec
+	end
+	if state.lastCombatAt <= 0 then
+		return family.regenOutOfCombatPerSec
+	end
+	local delay = family.outOfCombatDelaySeconds
+	if delay > 0 and (now() - state.lastCombatAt) < delay then
+		return 0
+	end
+	return family.regenOutOfCombatPerSec
 end
 
 function ResourceService.init(deps: ResourceDeps): ()
@@ -129,6 +164,8 @@ end
 function ResourceService.removeState(playerUserId: number): ()
 	ResourceService.states[playerUserId] = nil
 	pendingDirty[playerUserId] = nil
+	lastFlowAt[playerUserId] = nil
+	lastFlowBonusAt[playerUserId] = nil
 end
 
 -- Tenta gastar `amount` do pool. Retorna true se conseguiu (e deduz).
@@ -160,15 +197,43 @@ function ResourceService.grantFlowGain(playerUserId: number, amount: number): ()
 	broadcastResource(playerUserId)
 end
 
+-- Fluxo de timing (Cadência): +flowGainOnTimedHit, cap por flowGainCapSeconds,
+-- bônus de +flowBonusAmount na primeira ativação a cada flowBonusIntervalSeconds.
+function ResourceService.tryGrantFlow(playerUserId: number): number
+	local state = ResourceService.states[playerUserId]
+	if not state then
+		return 0
+	end
+	local deps = ResourceService.deps
+	local family = deps and deps.getFamily(state.familyId)
+	if not family or family.flowGainOnTimedHit <= 0 then
+		return 0
+	end
+	local t = now()
+	local last = lastFlowAt[playerUserId]
+	if last and family.flowGainCapSeconds > 0 and (t - last) < family.flowGainCapSeconds then
+		return 0
+	end
+	local amount = family.flowGainOnTimedHit
+	if family.flowBonusAmount > 0 then
+		local lastBonus = lastFlowBonusAt[playerUserId]
+		if not lastBonus or (t - lastBonus) >= family.flowBonusIntervalSeconds then
+			amount += family.flowBonusAmount
+			lastFlowBonusAt[playerUserId] = t
+		end
+	end
+	lastFlowAt[playerUserId] = t
+	ResourceService.grantFlowGain(playerUserId, amount)
+	return amount
+end
+
 function ResourceService.setCombat(playerUserId: number, inCombat: boolean): ()
 	local state = ResourceService.states[playerUserId]
 	if not state then
 		return
 	end
 	state.combat = inCombat
-	if inCombat then
-		state.lastCombatAt = os.clock()
-	end
+	state.lastCombatAt = now()
 end
 
 return ResourceService

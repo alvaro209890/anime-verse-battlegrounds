@@ -1,7 +1,7 @@
 --!strict
--- Habilidades — F0 (docs/05 §5.3)
+-- Habilidades — F0 (docs/13-F0-SLICE.md §6, docs/05 §5.3)
 -- Spec do formato: ver docs/11-ABILITY-SPEC.md
--- TODO: masteryTiers, rangePolicy completo, securityLimits (F2)
+-- TODO: masteryLevels, rangePolicy completo, securityLimits (F2)
 --
 -- Tipos declarados inline (export type é compile-time) para manter o módulo
 -- carregável em testes Lune (que não resolvem require(script.Parent.X)).
@@ -16,6 +16,7 @@ export type AbilityDefinition = {
 	energyFamilyId: string,
 	kind: "Basic" | "Skill" | "Ultimate",
 	slotCost: number,
+	impactCost: number,
 	tags: { string },
 	inputMode: "Press" | "Hold" | "Release",
 	startupMs: number,
@@ -30,97 +31,100 @@ export type AbilityDefinition = {
 }
 
 local Abilities: { [string]: AbilityDefinition } = {
-	-- dash-strike — habilidade de exemplo completa (molde das demais)
-	-- codinome interno: yuji dash-strike (soco avançado com timing)
-	dash_strike = {
-		id = "dash_strike",
+	-- Ombro Cometa — avanço curto; para na guarda (docs/13 §6.1)
+	comet_shoulder = {
+		id = "comet_shoulder",
 		contentVersion = 1,
-		displayNameKey = "ability.dash_strike.name",
-		descriptionKey = "ability.dash_strike.desc",
+		displayNameKey = "ability.comet_shoulder.name",
+		descriptionKey = "ability.comet_shoulder.desc",
 		sourceCharacterId = "eclipse_fist",
 		energyFamilyId = "umbral_aether",
 		kind = "Skill",
 		slotCost = 1,
+		impactCost = 2,
 		tags = { "movement", "melee", "cancelable" },
 		inputMode = "Press",
-		startupMs = 120,
-		activeMs = 200,
-		recoveryMs = 300,
-		resourceCost = { amount = 15 },
-		cooldown = { baseSeconds = 4 },
-		range = 24,
+		startupMs = 180,
+		activeMs = 220,
+		recoveryMs = 350,
+		resourceCost = { amount = 18 },
+		cooldown = { baseSeconds = 7 },
+		range = 8,
 		maxTargets = 1,
-		serverRunnerId = "dash_strike_runner",
+		serverRunnerId = "comet_shoulder_runner",
 		enabled = true,
 	},
 
-	-- eclipse_barrier — barreira que nega contato (zoner/controle)
-	eclipse_barrier = {
-		id = "eclipse_barrier",
+	-- Cadência Quebrada — dois golpes; reentrada 120 ms gera eco e Fluxo
+	broken_cadence = {
+		id = "broken_cadence",
 		contentVersion = 1,
-		displayNameKey = "ability.eclipse_barrier.name",
-		descriptionKey = "ability.eclipse_barrier.desc",
-		sourceCharacterId = "eclipse_fist",
-		energyFamilyId = "umbral_aether",
-		kind = "Skill",
-		slotCost = 2,
-		tags = { "defense", "control", "barrier" },
-		inputMode = "Press",
-		startupMs = 200,
-		activeMs = 1500,
-		recoveryMs = 400,
-		resourceCost = { amount = 30 },
-		cooldown = { baseSeconds = 10 },
-		range = 0,
-		maxTargets = 0,
-		serverRunnerId = "eclipse_barrier_runner",
-		enabled = true,
-	},
-
-	-- void_rupture — corte à distância (área)
-	void_rupture = {
-		id = "void_rupture",
-		contentVersion = 1,
-		displayNameKey = "ability.void_rupture.name",
-		descriptionKey = "ability.void_rupture.desc",
+		displayNameKey = "ability.broken_cadence.name",
+		descriptionKey = "ability.broken_cadence.desc",
 		sourceCharacterId = "eclipse_fist",
 		energyFamilyId = "umbral_aether",
 		kind = "Skill",
 		slotCost = 1,
-		tags = { "projectile", "aoe" },
+		impactCost = 2,
+		tags = { "melee", "cancelable" },
 		inputMode = "Press",
-		startupMs = 250,
-		activeMs = 400,
-		recoveryMs = 500,
-		resourceCost = { amount = 25 },
-		cooldown = { baseSeconds = 7 },
-		range = 60,
-		maxTargets = 5,
-		serverRunnerId = "void_rupture_runner",
+		startupMs = 140,
+		activeMs = 260,
+		recoveryMs = 280,
+		resourceCost = { amount = 16 },
+		cooldown = { baseSeconds = 8 },
+		range = 6,
+		maxTargets = 1,
+		serverRunnerId = "broken_cadence_runner",
 		enabled = true,
 	},
 
-	-- eclipse_judgement — ultimate devastadora
-	eclipse_judgement = {
-		id = "eclipse_judgement",
+	-- Retorno de Pulso — postura 250 ms; contra só se reduzir um golpe
+	pulse_return = {
+		id = "pulse_return",
 		contentVersion = 1,
-		displayNameKey = "ability.eclipse_judgement.name",
-		descriptionKey = "ability.eclipse_judgement.desc",
+		displayNameKey = "ability.pulse_return.name",
+		descriptionKey = "ability.pulse_return.desc",
+		sourceCharacterId = "eclipse_fist",
+		energyFamilyId = "umbral_aether",
+		kind = "Skill",
+		slotCost = 1,
+		impactCost = 2,
+		tags = { "defense", "melee" },
+		inputMode = "Press",
+		startupMs = 250,
+		activeMs = 180,
+		recoveryMs = 300,
+		resourceCost = { amount = 20 },
+		cooldown = { baseSeconds = 12 },
+		range = 6,
+		maxTargets = 1,
+		serverRunnerId = "pulse_return_runner",
+		enabled = true,
+	},
+
+	-- Batimento Eclipse — stretch F0; catálogo presente, kill switch ligado
+	eclipse_beat = {
+		id = "eclipse_beat",
+		contentVersion = 1,
+		displayNameKey = "ability.eclipse_beat.name",
+		descriptionKey = "ability.eclipse_beat.desc",
 		sourceCharacterId = "eclipse_fist",
 		energyFamilyId = "umbral_aether",
 		kind = "Ultimate",
-		slotCost = 1,
-		tags = { "ultimate", "aoe", "burst" },
+		slotCost = 0,
+		impactCost = 5,
+		tags = { "ultimate" },
 		inputMode = "Press",
 		startupMs = 400,
 		activeMs = 800,
 		recoveryMs = 900,
-		resourceCost = { amount = 60 },
-		cooldown = { baseSeconds = 60 },
-		range = 40,
-		maxTargets = 10,
-		serverRunnerId = "eclipse_judgement_runner",
-		enabled = true,
+		resourceCost = { amount = 55 },
+		cooldown = { baseSeconds = 90 },
+		range = 8,
+		maxTargets = 1,
+		serverRunnerId = "eclipse_beat_runner",
+		enabled = false,
 	},
 }
 

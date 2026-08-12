@@ -68,6 +68,7 @@ AbilityService.init({
 		return ResourceService.trySpend(userId, amount)
 	end,
 	grantFlowGain = ResourceService.grantFlowGain,
+	tryGrantFlow = ResourceService.tryGrantFlow,
 	isAlive = function(state: any)
 		return CombatService.isAlive(state)
 	end,
@@ -99,7 +100,7 @@ RemoteGateway.onClientIntent(Remotes.Names.AbilityActivate, function(player: Pla
 
 	-- TODO F1: resolução de alvo por range/targetPosition (CombatService +
 	-- SpatialQuery). F0: alvo único hardcoded não existe — ver runner.
-	local ok, reason = AbilityService.tryActivate(attacker, abilityId, nil)
+	local ok, reason = AbilityService.tryActivate(attacker, abilityId, nil, payload)
 	if not ok then
 		RemoteGateway.fireClient(player, Remotes.Names.AbilityRejected, {
 			abilityId = abilityId,

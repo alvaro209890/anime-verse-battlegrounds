@@ -28,7 +28,7 @@ local Characters: { [string]: CharacterDefinition } = {
 		energyFamilyId = "umbral_aether",
 		combatArchetype = "bruiser_timing",
 		baseHealth = 100,
-		abilityIds = { "dash_strike", "eclipse_barrier", "void_rupture", "eclipse_judgement" },
+		abilityIds = { "comet_shoulder", "broken_cadence", "pulse_return", "eclipse_beat" },
 		enabled = true,
 	},
 }

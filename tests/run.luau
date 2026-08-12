@@ -2,6 +2,7 @@
 -- Testes unitários F0 — CooldownService, CombatService, ResourceService,
 -- AbilityService, CatalogService, PlayerSessionService + dados.
 -- Uso: lune run tests/run.luau
+-- Contrato da fatia: docs/13-F0-SLICE.md §19.
 
 require("./harness")
 
@@ -44,7 +45,12 @@ local AbilityService = require("../src/server/Services/AbilityService")
 local CatalogService = require("../src/server/Services/CatalogService")
 local PlayerSessionService = require("../src/server/Services/PlayerSessionService")
 
--- ── Helpers de estado ───────────────────────────────────────────────────────
+-- ── Relógio injetável (janela de reentrada / cap de Fluxo) ──────────────────
+local fakeNow = 1000
+local function clockNow(): number
+	return fakeNow
+end
+
 -- taskImpl de teste: defer síncrono; spawn = noop (o loop de regen roda
 -- apenas no Roblox com task real — aqui não queremos loop infinito)
 local testTask = {
@@ -76,23 +82,53 @@ local function makePlayerState(userId: number, resource: number, health: number?
 end
 
 -- ══ Testes: dados ───────────────────────────────────────────────────────────
-test("dados: roster tem o Punho do Eclipse com 4 habilidades", function()
+test("dados: Punho do Eclipse tem 3 skills ligadas e 1 ultimate desligada", function()
 	local char = Characters.get("eclipse_fist")
 	assertTrue(char ~= nil, "eclipse_fist deveria existir")
-	if char then
-		assertEq(#char.abilityIds, 4, "quantidade de habilidades")
-		assertEq(char.energyFamilyId, "umbral_aether", "família")
+	if not char then
+		return
+	end
+	assertEq(#char.abilityIds, 4, "quantidade de habilidades")
+	assertEq(char.energyFamilyId, "umbral_aether", "família")
+	local enabled = 0
+	local disabled = 0
+	for _, abilityId in char.abilityIds do
+		local ab = Abilities.get(abilityId)
+		assertTrue(ab ~= nil, "abilityIds referencia " .. abilityId)
+		if ab and ab.enabled then
+			enabled += 1
+		else
+			disabled += 1
+		end
+	end
+	assertEq(enabled, 3, "skills ligadas")
+	assertEq(disabled, 1, "ultimate desligada")
+end)
+
+test("dados: comet_shoulder é o molde com custo/cooldown", function()
+	local ab = Abilities.get("comet_shoulder")
+	assertTrue(ab ~= nil, "comet_shoulder deveria existir")
+	if ab then
+		assertEq(ab.kind, "Skill", "kind")
+		assertEq(ab.resourceCost.amount, 18, "custo de recurso")
+		assertEq(ab.cooldown.baseSeconds, 7, "cooldown")
+		assertEq(ab.serverRunnerId, "comet_shoulder_runner", "runner")
+		assertEq(ab.enabled, true, "enabled")
 	end
 end)
 
-test("dados: dash_strike é o molde com custo/cooldown", function()
-	local ab = Abilities.get("dash_strike")
-	assertTrue(ab ~= nil, "dash_strike deveria existir")
-	if ab then
-		assertEq(ab.kind, "Skill", "kind")
-		assertEq(ab.resourceCost.amount, 15, "custo de recurso")
-		assertEq(ab.cooldown.baseSeconds, 4, "cooldown")
-		assertEq(ab.serverRunnerId, "dash_strike_runner", "runner")
+test("dados: Umbral segue o baseline da fatia", function()
+	local fam = EnergyFamilies.get("umbral_aether")
+	assertTrue(fam ~= nil, "umbral_aether deveria existir")
+	if fam then
+		assertEq(fam.poolBase, 100, "pool")
+		assertEq(fam.regenInCombatPerSec, 2, "regen combate")
+		assertEq(fam.regenOutOfCombatPerSec, 6, "regen fora")
+		assertEq(fam.outOfCombatDelaySeconds, 3, "atraso OOC")
+		assertEq(fam.flowTimingWindowMs, 120, "janela")
+		assertEq(fam.flowGainOnTimedHit, 6, "fluxo")
+		assertEq(fam.flowGainCapSeconds, 1.5, "cap")
+		assertEq(fam.flowBonusAmount, 3, "bônus")
 	end
 end)
 
@@ -111,25 +147,24 @@ end)
 
 -- ══ Testes: CooldownService ─────────────────────────────────────────────────
 test("cooldown: começa zerado", function()
-	assertEq(CooldownService.getRemaining(1, "dash_strike"), 0, "cooldown inicial")
+	assertEq(CooldownService.getRemaining(1, "comet_shoulder"), 0, "cooldown inicial")
 end)
 
 test("cooldown: start aplica e expira", function()
 	CooldownService.clear(1)
-	CooldownService.start(1, "dash_strike", 0.05)
-	local remaining = CooldownService.getRemaining(1, "dash_strike")
+	CooldownService.start(1, "comet_shoulder", 0.05)
+	local remaining = CooldownService.getRemaining(1, "comet_shoulder")
 	assertTrue(remaining > 0 and remaining <= 0.06, "cooldown ativo")
-	-- espera real (busy-wait curto; task global é nil no Lune)
 	local start = os.clock()
 	while os.clock() - start < 0.06 do
 	end
-	assertEq(CooldownService.getRemaining(1, "dash_strike"), 0, "cooldown expirado")
+	assertEq(CooldownService.getRemaining(1, "comet_shoulder"), 0, "cooldown expirado")
 end)
 
 test("cooldown: clear zera", function()
-	CooldownService.start(1, "dash_strike", 10)
+	CooldownService.start(1, "comet_shoulder", 10)
 	CooldownService.clear(1)
-	assertEq(CooldownService.getRemaining(1, "dash_strike"), 0, "após clear")
+	assertEq(CooldownService.getRemaining(1, "comet_shoulder"), 0, "após clear")
 end)
 
 -- ══ Testes: CombatService ───────────────────────────────────────────────────
@@ -162,6 +197,7 @@ local function makeResourceDeps()
 		end,
 		onResourceChanged = nil,
 		taskImpl = testTask,
+		now = clockNow,
 	}
 end
 
@@ -203,8 +239,43 @@ test("recurso: cria estado em família desconhecida retorna nil", function()
 	assertEq(ResourceService.createState(13, "nao_existe"), nil, "nil esperado")
 end)
 
+test("recurso: tryGrantFlow aplica 6+3 e respeita cap de 1,5 s", function()
+	fakeNow = 2000
+	ResourceService.init(makeResourceDeps())
+	local state = ResourceService.createState(14, "umbral_aether")
+	assertTrue(state ~= nil, "estado criado")
+	if not state then
+		return
+	end
+	state.resource = 50
+	assertEq(ResourceService.tryGrantFlow(14), 9, "primeira: 6+3")
+	assertEq(state.resource, 59, "pool após primeiro fluxo")
+	assertEq(ResourceService.tryGrantFlow(14), 0, "cap 1,5 s")
+	assertEq(state.resource, 59, "pool inalterado no cap")
+	fakeNow = 2001.5
+	assertEq(ResourceService.tryGrantFlow(14), 6, "após cap, sem bônus de 8 s")
+	assertEq(state.resource, 65, "pool após segundo fluxo")
+end)
+
+test("recurso: regen 2 em combate, 0 na janela, 6 fora", function()
+	fakeNow = 3000
+	ResourceService.init(makeResourceDeps())
+	local state = ResourceService.createState(15, "umbral_aether")
+	assertTrue(state ~= nil, "estado criado")
+	if not state then
+		return
+	end
+	assertEq(ResourceService.getRegenRate(15), 6, "nunca combateu")
+	ResourceService.setCombat(15, true)
+	assertEq(ResourceService.getRegenRate(15), 2, "em combate")
+	ResourceService.setCombat(15, false)
+	assertEq(ResourceService.getRegenRate(15), 0, "atraso de 3 s")
+	fakeNow = 3003
+	assertEq(ResourceService.getRegenRate(15), 6, "fora de combate")
+end)
+
 -- ══ Testes: AbilityService (fluxo completo com deps reais) ──────────────────
-local function makeAbilityDeps()
+local function makeAbilityDeps(unlock: ((number, string) -> boolean)?)
 	return {
 		getAbility = function(abilityId: string): any
 			return Abilities.get(abilityId)
@@ -221,16 +292,21 @@ local function makeAbilityDeps()
 		grantFlowGain = function(userId: number, amount: number)
 			ResourceService.grantFlowGain(userId, amount)
 		end,
+		tryGrantFlow = function(userId: number)
+			return ResourceService.tryGrantFlow(userId)
+		end,
 		isAlive = function(state: any)
 			return CombatService.isAlive(state)
 		end,
 		applyDamage = function(target: any, damage: number, sourceUserId: number?)
 			return CombatService.applyDamage(target, damage, sourceUserId)
 		end,
+		now = clockNow,
+		isAbilityUnlocked = unlock,
 	}
 end
 
-test("ability: ativação válida com alvo (dash_strike)", function()
+test("ability: comet_shoulder aplica dano 9 sem Fluxo", function()
 	ResourceService.init(makeResourceDeps())
 	CooldownService.clear(20)
 	AbilityService.init(makeAbilityDeps())
@@ -240,11 +316,10 @@ test("ability: ativação válida com alvo (dash_strike)", function()
 	if not attacker then
 		return
 	end
-	local ok, reason = AbilityService.tryActivate(attacker, "dash_strike", target)
+	local ok, reason = AbilityService.tryActivate(attacker, "comet_shoulder", target)
 	assertTrue(ok, "deveria ativar: " .. tostring(reason))
-	assertEq(target.health, 88, "dano 12 aplicado")
-	-- custo 15, mas o runner concede prêmio de fluxo +6 (acerto confirmado)
-	assertEq(attacker.resource, 91, "custo 15 − fluxo +6 = 91")
+	assertEq(target.health, 91, "dano 9")
+	assertEq(attacker.resource, 82, "custo 18, sem fluxo")
 end)
 
 test("ability: recusa sem recurso suficiente", function()
@@ -257,7 +332,7 @@ test("ability: recusa sem recurso suficiente", function()
 		return
 	end
 	attacker.resource = 5
-	local ok, reason = AbilityService.tryActivate(attacker, "dash_strike", nil)
+	local ok, reason = AbilityService.tryActivate(attacker, "comet_shoulder", nil)
 	assertFalse(ok, "deveria recusar")
 	assertEq(reason, "no_resource", "motivo")
 end)
@@ -271,8 +346,8 @@ test("ability: recusa em cooldown", function()
 	if not attacker then
 		return
 	end
-	AbilityService.tryActivate(attacker, "dash_strike", nil)
-	local ok, reason = AbilityService.tryActivate(attacker, "dash_strike", nil)
+	AbilityService.tryActivate(attacker, "comet_shoulder", nil)
+	local ok, reason = AbilityService.tryActivate(attacker, "comet_shoulder", nil)
 	assertFalse(ok, "segunda ativação deveria recusar")
 	if reason then
 		assertTrue(reason:match("^cooldown"), "motivo cooldown: " .. reason)
@@ -303,9 +378,113 @@ test("ability: morto não ativa", function()
 		return
 	end
 	attacker.health = 0
-	local ok, reason = AbilityService.tryActivate(attacker, "dash_strike", nil)
+	local ok, reason = AbilityService.tryActivate(attacker, "comet_shoulder", nil)
 	assertFalse(ok, "morto não ativa")
 	assertEq(reason, "dead", "motivo")
+end)
+
+test("ability: eclipse_beat desligada", function()
+	ResourceService.init(makeResourceDeps())
+	CooldownService.clear(70)
+	AbilityService.init(makeAbilityDeps())
+	local attacker = ResourceService.createState(70, "umbral_aether")
+	assertTrue(attacker ~= nil, "attacker criado")
+	if not attacker then
+		return
+	end
+	local ok, reason = AbilityService.tryActivate(attacker, "eclipse_beat", nil)
+	assertFalse(ok, "ultimate F0 desligada")
+	assertEq(reason, "disabled", "motivo")
+	assertEq(attacker.resource, 100, "não gasta")
+end)
+
+test("ability: técnica locked rejeita", function()
+	ResourceService.init(makeResourceDeps())
+	CooldownService.clear(71)
+	AbilityService.init(makeAbilityDeps(function(_userId: number, _abilityId: string)
+		return false
+	end))
+	local attacker = ResourceService.createState(71, "umbral_aether")
+	assertTrue(attacker ~= nil, "attacker criado")
+	if not attacker then
+		return
+	end
+	local ok, reason = AbilityService.tryActivate(attacker, "comet_shoulder", nil)
+	assertFalse(ok, "locked")
+	assertEq(reason, "locked", "motivo")
+	assertEq(attacker.resource, 100, "não gasta")
+end)
+
+test("ability: cadência acerta 5+6 e eco 4 com Fluxo", function()
+	fakeNow = 4000
+	ResourceService.init(makeResourceDeps())
+	CooldownService.clear(80)
+	AbilityService.init(makeAbilityDeps())
+	local attacker = ResourceService.createState(80, "umbral_aether")
+	local target = makePlayerState(81, 100)
+	assertTrue(attacker ~= nil, "attacker criado")
+	if not attacker then
+		return
+	end
+	local ok, reason = AbilityService.tryActivate(attacker, "broken_cadence", target)
+	assertTrue(ok, "cadência: " .. tostring(reason))
+	assertEq(target.health, 89, "5+6")
+	assertEq(attacker.resource, 84, "custo 16")
+	local reOk, reReason = AbilityService.tryActivate(attacker, "broken_cadence", target, { phase = "reentry" })
+	assertTrue(reOk, "reentrada: " .. tostring(reReason))
+	assertEq(target.health, 85, "eco 4")
+	assertEq(attacker.resource, 93, "fluxo 6+3")
+end)
+
+test("ability: cadência recusa reentrada fora da janela", function()
+	fakeNow = 5000
+	ResourceService.init(makeResourceDeps())
+	CooldownService.clear(82)
+	AbilityService.init(makeAbilityDeps())
+	local attacker = ResourceService.createState(82, "umbral_aether")
+	local target = makePlayerState(83, 100)
+	assertTrue(attacker ~= nil, "attacker criado")
+	if not attacker then
+		return
+	end
+	AbilityService.tryActivate(attacker, "broken_cadence", target)
+	fakeNow = 5000.2
+	local ok, reason = AbilityService.tryActivate(attacker, "broken_cadence", target, { phase = "reentry" })
+	assertFalse(ok, "fora da janela")
+	assertEq(reason, "reentry_window", "motivo")
+	assertEq(target.health, 89, "sem eco")
+	assertEq(attacker.resource, 84, "sem fluxo extra")
+end)
+
+test("ability: pulse_return sem golpe não contra-ataca", function()
+	ResourceService.init(makeResourceDeps())
+	CooldownService.clear(90)
+	AbilityService.init(makeAbilityDeps())
+	local attacker = ResourceService.createState(90, "umbral_aether")
+	local target = makePlayerState(91, 100)
+	assertTrue(attacker ~= nil, "attacker criado")
+	if not attacker then
+		return
+	end
+	local ok, reason = AbilityService.tryActivate(attacker, "pulse_return", target)
+	assertTrue(ok, "postura: " .. tostring(reason))
+	assertEq(target.health, 100, "sem contra")
+	assertEq(attacker.resource, 80, "custo 20")
+end)
+
+test("ability: pulse_return com golpe contra-ataca 8", function()
+	ResourceService.init(makeResourceDeps())
+	CooldownService.clear(92)
+	AbilityService.init(makeAbilityDeps())
+	local attacker = ResourceService.createState(92, "umbral_aether")
+	local target = makePlayerState(93, 100)
+	assertTrue(attacker ~= nil, "attacker criado")
+	if not attacker then
+		return
+	end
+	local ok, reason = AbilityService.tryActivate(attacker, "pulse_return", target, { incomingHit = true })
+	assertTrue(ok, "contra: " .. tostring(reason))
+	assertEq(target.health, 92, "dano 8")
 end)
 
 -- ══ Testes: CatalogService (validação) ──────────────────────────────────────
@@ -315,7 +494,8 @@ test("catálogo: dados reais passam na validação", function()
 		Characters = Characters,
 		EnergyFamilies = EnergyFamilies,
 	})
-	assertEq(CatalogService.getAbility("dash_strike") ~= nil, true, "habilidade acessível")
+	assertEq(CatalogService.getAbility("comet_shoulder") ~= nil, true, "habilidade acessível")
+	assertEq(CatalogService.getAbility("eclipse_beat") ~= nil, true, "ultimate no catálogo")
 end)
 
 test("catálogo: personagem sem habilidade falha", function()
@@ -351,6 +531,7 @@ end)
 
 -- ══ Testes: PlayerSessionService ────────────────────────────────────────────
 test("sessão: join cria estado com personagem padrão", function()
+	ResourceService.init(makeResourceDeps())
 	local joined: { any } = {}
 	PlayerSessionService.init({
 		getCharacter = function(id: string): any

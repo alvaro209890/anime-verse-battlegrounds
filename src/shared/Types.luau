@@ -17,9 +17,13 @@ export type EnergyFamilyDefinition = {
 	poolCap: number,
 	regenInCombatPerSec: number,
 	regenOutOfCombatPerSec: number,
+	outOfCombatDelaySeconds: number,
 	-- gainTrigger: "flow" premia timing correto (Éter Umbral)
 	flowTimingWindowMs: number,
 	flowGainOnTimedHit: number,
+	flowGainCapSeconds: number,
+	flowBonusAmount: number,
+	flowBonusIntervalSeconds: number,
 	-- TODO: depletionEffects e modifierCaps (F2)
 }
 
@@ -43,6 +47,7 @@ export type AbilityDefinition = {
 	energyFamilyId: EnergyFamilyId,
 	kind: "Basic" | "Skill" | "Ultimate",
 	slotCost: number,
+	impactCost: number,
 	tags: { string },
 	inputMode: "Press" | "Hold" | "Release",
 	startupMs: number,

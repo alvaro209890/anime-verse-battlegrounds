@@ -50,6 +50,11 @@ function CatalogService.validate(): ()
 		if #char.abilityIds == 0 then
 			fail(("character %s sem habilidades"):format(char.id))
 		end
+		for _, abilityId in char.abilityIds do
+			if deps.Abilities.get(abilityId) == nil then
+				fail(("character %s → habilidade ausente %s"):format(char.id, abilityId))
+			end
+		end
 	end
 
 	for _, ab in deps.Abilities.all() do

@@ -1,5 +1,5 @@
 --!strict
--- Famílias de energia — F0 (docs/05 §2.1)
+-- Famílias de energia — F0 (docs/05 §2.1, docs/13-F0-SLICE.md §7)
 -- Conteúdo dirigido por dados: sistemas nunca fazem `if` por família.
 --
 -- Tipos declarados inline (export type é compile-time) para manter o módulo
@@ -13,26 +13,32 @@ export type EnergyFamilyDefinition = {
 	poolCap: number,
 	regenInCombatPerSec: number,
 	regenOutOfCombatPerSec: number,
+	outOfCombatDelaySeconds: number,
 	flowTimingWindowMs: number,
 	flowGainOnTimedHit: number,
+	flowGainCapSeconds: number,
+	flowBonusAmount: number,
+	flowBonusIntervalSeconds: number,
 }
 
 local EnergyFamilies: { [string]: EnergyFamilyDefinition } = {
-	-- Éter Umbral (inspiração: energia amaldiçoada) — pool menor, regen lenta em
-	-- combate e rápida fora. Fluxo: acertar no timing devolve energia (premia
-	-- jogador bom, pune spam).
+	-- Éter Umbral — F0-BASELINE (docs/01 §4.2, docs/13 §7)
 	umbral_aether = {
 		id = "umbral_aether",
 		displayNameKey = "family.umbral_aether.name",
 		poolBase = 100,
 		poolCap = 100,
-		regenInCombatPerSec = 4,
-		regenOutOfCombatPerSec = 18,
-		flowTimingWindowMs = 250,
-		flowGainOnTimedHit = 8,
+		regenInCombatPerSec = 2,
+		regenOutOfCombatPerSec = 6,
+		outOfCombatDelaySeconds = 3,
+		flowTimingWindowMs = 120,
+		flowGainOnTimedHit = 6,
+		flowGainCapSeconds = 1.5,
+		flowBonusAmount = 3,
+		flowBonusIntervalSeconds = 8,
 	},
 
-	-- Fluxo Vital (inspiração: chakra) — pool grande, regen constante e moderada.
+	-- Fluxo Vital — catálogo F1; não selecionável na fatia
 	vital_flow = {
 		id = "vital_flow",
 		displayNameKey = "family.vital_flow.name",
@@ -40,11 +46,15 @@ local EnergyFamilies: { [string]: EnergyFamilyDefinition } = {
 		poolCap = 150,
 		regenInCombatPerSec = 10,
 		regenOutOfCombatPerSec = 14,
+		outOfCombatDelaySeconds = 0,
 		flowTimingWindowMs = 0,
 		flowGainOnTimedHit = 0,
+		flowGainCapSeconds = 0,
+		flowBonusAmount = 0,
+		flowBonusIntervalSeconds = 0,
 	},
 
-	-- Contrafluxo (inspiração: mana inversa/antimagia) — não regenera; enche ao anular.
+	-- Contrafluxo — catálogo F1; não selecionável na fatia
 	counterflow = {
 		id = "counterflow",
 		displayNameKey = "family.counterflow.name",
@@ -52,11 +62,15 @@ local EnergyFamilies: { [string]: EnergyFamilyDefinition } = {
 		poolCap = 100,
 		regenInCombatPerSec = 0,
 		regenOutOfCombatPerSec = 0,
+		outOfCombatDelaySeconds = 0,
 		flowTimingWindowMs = 0,
 		flowGainOnTimedHit = 0,
+		flowGainCapSeconds = 0,
+		flowBonusAmount = 0,
+		flowBonusIntervalSeconds = 0,
 	},
 
-	-- Ímpeto Metamórfico (inspiração: vigor/transformação) — drena em transformação.
+	-- Ímpeto Metamórfico — catálogo pós-lançamento; não selecionável na fatia
 	metamorphic_drive = {
 		id = "metamorphic_drive",
 		displayNameKey = "family.metamorphic_drive.name",
@@ -64,8 +78,12 @@ local EnergyFamilies: { [string]: EnergyFamilyDefinition } = {
 		poolCap = 80,
 		regenInCombatPerSec = 0,
 		regenOutOfCombatPerSec = 0,
+		outOfCombatDelaySeconds = 0,
 		flowTimingWindowMs = 0,
 		flowGainOnTimedHit = 0,
+		flowGainCapSeconds = 0,
+		flowBonusAmount = 0,
+		flowBonusIntervalSeconds = 0,
 	},
 }
 

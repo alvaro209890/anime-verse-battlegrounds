@@ -1,7 +1,8 @@
 --!strict
--- Bootstrap do cliente — F0
+-- Bootstrap do cliente — F0 (docs/13-F0-SLICE.md SLICE-DEC-005)
 -- Conecta aos remotes do servidor. Cliente NUNCA decide acerto/dano/custo;
 -- apenas envia intenção e reproduz apresentação do que o servidor confirmar.
+-- Input real entra no InputController; não dispara intenção no boot.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -21,14 +22,5 @@ if rejectedRemote then
 	end)
 end
 
--- Envia intenção de ativar habilidade (bindings reais no InputController, F1)
-local activateRemote = getRemote(Remotes.Names.AbilityActivate)
-if activateRemote then
-	activateRemote:FireServer({
-		abilityId = "dash_strike",
-		timestamp = os.clock(),
-	})
-end
-
--- TODO F1: InputController (teclas/touch/gamepad → intenção semântica),
+-- TODO F0 item 10: InputController (teclas/touch/gamepad → intenção semântica),
 -- previsão visual de habilidade e reconciliação com o servidor.

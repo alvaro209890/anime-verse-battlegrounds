@@ -24,19 +24,18 @@ P1 (revisão jurídica) continua obrigatório antes de concept art, áudio final
 
 ## 2. Divergências do código atual
 
-O esqueleto em `src/` **não** implementa esta spec. Antes de produzir conteúdo novo, alinhar:
+O esqueleto em `src/` **não** implementa o loop jogável. Catálogo, Umbral e runners da fatia já estão alinhados a este documento (item 1 do backlog). Ainda falta:
 
 | Onde | Estado atual | Alvo desta spec |
 |---|---|---|
-| `src/shared/Data/Abilities.luau` | `dash_strike`, `eclipse_barrier`, `void_rupture`, `eclipse_judgement` | `comet_shoulder`, `broken_cadence`, `pulse_return`; `eclipse_beat` desligada |
-| `src/shared/Data/Characters.luau` | `abilityIds` aponta aos placeholders | IDs da tabela §6 |
-| `src/shared/Data/EnergyFamilies.luau` | Umbral regen 4/18, Flow 8 / 250 ms | GDD: 2/6, Flow 6 / 120 ms, cap 1,5 s |
-| `AbilityService` | um runner real + três stubs do kit antigo | três runners do Punho do Eclipse |
-| `src/client/init.client.lua` | dispara `AbilityActivate` no boot | só escuta snapshot; input depois de Ready |
+| `src/shared/Data/Abilities.luau` | `comet_shoulder`, `broken_cadence`, `pulse_return`; `eclipse_beat` desligada | feito |
+| `src/shared/Data/EnergyFamilies.luau` | Umbral regen 2/6, Fluxo 6 / 120 ms, cap 1,5 s | feito |
+| `AbilityService` | três runners + reentrada da Cadência + `locked`/`disabled` | hitbox espacial e fases no Studio ainda faltam |
+| `src/client/init.client.lua` | não dispara intenção no boot | InputController (item 10) |
 | `SaveService` | stub em memória; persiste `wallet` | ProfileRoot v1 sem wallet; ProfileStore no place de teste |
-| Combat/guarda/zona/HUD | ausentes ou dano cru | §5–§12 |
+| Combate/guarda/zona/HUD | dano cru; sem mapa | §5–§12 |
 
-Testes Lune que citam `dash_strike` e “4 habilidades” devem ser reescritos na mesma mudança de catálogo. A fatia continua com quatro entradas no catálogo (três ligadas + ultimate desligada).
+Testes Lune: 31 casos em `tests/run.luau` (`docs/12-TESTING.md`).
 
 ## 3. Escopo congelado da fatia
 
@@ -480,9 +479,9 @@ Roteiro de Studio solo: boot limpo → dummy → 3 técnicas (cheats de unlock s
 
 Cheat de unlock: remote **inexistente** no cliente. Flag `StudioDebugUnlock` só no servidor se `RunService:IsStudio()` e atributo do place `F0Debug = true`.
 
-## 19. Testes a atualizar na mudança de catálogo
+## 19. Testes da mudança de catálogo
 
-Substituir casos `dash_strike` por:
+Os casos abaixo estão em `tests/run.luau` (31 no total):
 
 - roster `eclipse_fist` com 3 skills enabled + 1 ultimate disabled
 - `comet_shoulder` custo 18, CD 7, runner registrado
@@ -499,7 +498,7 @@ Integração Lune não cobre Studio. Evidência runtime: `12-TESTING.md` §6.
 
 Ordem de implementação; cada item fecha com teste automatizado **ou** evidência Studio anotada.
 
-1. Alinhar catálogo, Umbral, testes Lune e CI
+1. ~~Alinhar catálogo, Umbral, testes Lune e CI~~ (feito 2026-08-12; 31 testes)
 2. Tirar `FireServer` do boot; `SessionSnapshot` mínimo
 3. Spawn + movimento + leve/guarda/dash contra dummy
 4. Pesado + quebra de guarda
