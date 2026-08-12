@@ -20,30 +20,30 @@ Uma recomendação provisória não vira decisão silenciosamente. Ao aprovar, r
 - **Gate:** P1, antes de concept art, áudio, animações e marketing.
 - **Dono recomendado:** direção criativa + assessoria jurídica especializada.
 - **Questão:** até que ponto nome, roster, fantasias, silhuetas e kits serão redesenhados para não depender do reconhecimento de franquias existentes?
-- **Recomendação provisória:** preservar apenas arquétipos mecânicos amplos; criar universo, terminologia, personagens, histórias, formas, VFX, ícones, falas e áudio próprios. Tratar os codinomes canônicos apenas como referências privadas de design e removê-los de builds, analytics públicos e qualquer asset distribuído.
+- **✅ DECIDIDO (2026-08-12 — Álvaro):** manter visual, silhuetas e kits **próximos dos animes de referência**, trocando apenas nomes públicos (personagens, franquias e técnicas). O risco jurídico de obra derivada/trade dress é **aceito conscientemente** pelo dono do produto. Consequência: o pipeline de redesign visual é reduzido, mas o Gate P1 (revisão jurídica) ganha peso crítico e a lista de "elementos a redesenhar" tende a ser maior.
 - **Impacto:** pode alterar nome do jogo, roster, famílias de energia, direção visual, custo de arte e campanha de lançamento.
-- **Observação:** trocar nomes isoladamente não elimina risco de obra derivada ou conjunto visual reconhecível.
+- **Observação:** trocar nomes isoladamente não elimina risco de obra derivada ou conjunto visual reconhecível — o dono do produto está ciente e aceita o risco.
 
 ### Q-002 — O nome “Anime Verse Battlegrounds” será mantido?
 
 - **Gate:** P1, antes de publicar a experiência ou encomendar identidade visual.
 - **Dono recomendado:** produto + jurídico + marketing.
 - **Opções:** manter após busca de marca; adotar nome original sem “Anime”; usar nome provisório internamente e decidir após teste de posicionamento.
-- **Recomendação provisória:** tratá-lo como working title até revisão de marca, discoverability e expectativa de gênero. O termo “Battlegrounds” pode atrair público esperando arena imediata e prejudicar retenção de um MMO de progressão.
+- **✅ DECIDIDO (2026-08-12 — Álvaro):** **manter** “Anime Verse Battlegrounds”, condicionado a busca de marca (registro/colisões no Roblox e fora dele). O termo “Battlegrounds” pode atrair público esperando arena imediata; mitigar com store page, primeiro contato e material de marketing deixando clara a progressão MMO.
 - **Impacto:** store page, logo, aquisição, expectativa do público e documentação.
 
 ### Q-003 — Qual público e classificação indicativa orientam o design?
 
 - **Gate:** P0.
 - **Dono recomendado:** produto + trust & safety.
-- **Recomendação provisória:** projetar para público amplo de Roblox, sem gore, linguagem imprópria ou monetização que explore urgência; controles e onboarding acessíveis a jogadores novos, profundidade para domínio posterior.
+- **✅ DECIDIDO (2026-08-12 — Álvaro):** público **mais velho (13+)**, tom **sombrio** e **gore leve** permitido dentro das políticas da Roblox (sem gore extremo, sem linguagem imprópria, sem monetização que explore urgência). A classificação indicativa pretendida passa a ser 13+; o design de efeitos, narrativa e ambiente pode ser mais agressivo que o público amplo padrão.
 - **Impacto:** efeitos, narrativa, chat/social, monetização, privacidade, moderação e aquisição.
 
 ### Q-004 — Qual equipe, orçamento e horizonte existem de verdade?
 
 - **Gate:** P0.
 - **Dono recomendado:** produtor/executive owner.
-- **Recomendação provisória:** planejar F0 para equipe experiente de 7 a 10 pessoas; se a equipe for menor, reduzir conteúdo e manter os gates técnicos.
+- **✅ DECIDIDO (2026-08-12 — Álvaro):** equipe **solo/dupla pequena (1-3 pessoas)**. Consequência direta: **reduzir conteúdo em todas as fases** e manter os gates técnicos intactos. Roster, regiões, quantidade de assets e escopo de sistemas sociais devem ser enxutos; a Fase 0 permanece como fatia vertical mínima e as fases seguintes priorizam sistemas dirigidos por dados e reuso de assets. Prazos estimados no roadmap devem ser relidos com velocidade de equipe pequena.
 - **Impacto:** quantidade de regiões, roster, qualidade de assets, prazo, terceirização, suporte e live operations.
 
 ### Q-005 — Qual é a meta de dispositivos de baixa performance?
@@ -51,7 +51,7 @@ Uma recomendação provisória não vira decisão silenciosamente. Ao aprovar, r
 - **Gate:** primeira semana da F0.
 - **Dono recomendado:** engenharia + produto.
 - **Questão:** quais telefones, consoles, resoluções, memória e condições de rede compõem a matriz mínima?
-- **Recomendação provisória:** selecionar ao menos um Android de entrada, um telefone mediano, PC integrado e gamepad; definir budgets após benchmark da fatia.
+- **✅ DECIDIDO (2026-08-12 — Álvaro):** matriz mínima completa — 1 Android de entrada, 1 telefone mediano, PC com gráficos integrados e gamepad. Budgets definidos após benchmark da fatia.
 - **Impacto:** tamanho do mundo, quantidade de jogadores, efeitos, streaming, UI, física e custo de QA.
 
 ### Q-006 — Qual câmera e modelo de alvo definem o combate?
@@ -59,7 +59,7 @@ Uma recomendação provisória não vira decisão silenciosamente. Ao aprovar, r
 - **Gate:** antes do primeiro protótipo de combate da F0.
 - **Dono recomendado:** combat designer + UX.
 - **Opções:** soft lock contextual; lock-on manual; direção livre com aim assist; híbrido por habilidade.
-- **Recomendação provisória:** soft lock contextual para ataques básicos e assistência configurável para toque/gamepad, mantendo habilidades de área direcionáveis. Lock-on rígido tende a piorar lutas com muitos participantes.
+- **✅ DECIDIDO (2026-08-12 — Álvaro):** soft lock contextual para ataques básicos e assistência configurável para toque/gamepad, mantendo habilidades de área direcionáveis. Lock-on rígido tende a piorar lutas com muitos participantes.
 - **Impacto:** controles, câmera, hit validation, mobilidade, acessibilidade e balanceamento entre plataformas.
 
 ### Q-007 — Quantos jogadores por servidor e qual topologia de places?
@@ -67,6 +67,7 @@ Uma recomendação provisória não vira decisão silenciosamente. Ao aprovar, r
 - **Gate:** arquitetura da F0, antes de comprometer mapa e rede.
 - **Dono recomendado:** engenharia de plataforma.
 - **Recomendação provisória:** testar o mundo com alvo inicial conservador de 16 a 24 jogadores e arenas em places/servidores reservados separados. Ajustar somente após profiling real.
+- **✅ DECIDIDO (2026-08-12 — Álvaro):** alvo de **16 a 24 jogadores por servidor**, arenas em places/servidores reservados. Ajuste somente após profiling real.
 - **Impacto:** densidade do mapa, bosses, streaming, rede, fila, teleport, custo operacional e sensação de MMO.
 
 ### Q-008 — Qual conjunto mínimo prova a fatia vertical?
@@ -74,6 +75,7 @@ Uma recomendação provisória não vira decisão silenciosamente. Ao aprovar, r
 - **Gate:** P0.
 - **Dono recomendado:** produto + game design.
 - **Recomendação provisória:** 1 estilo original, ataque básico, dash, guarda e 3 habilidades; 1 recurso; 1 vila segura; 1 área livre; 1 inimigo simples; 1 objetivo; PvP e save. Ultimate é stretch goal.
+- **✅ DECIDIDO (2026-08-12 — Álvaro):** fatia vertical padrão — 1 estilo original, ataque básico, dash, guarda e 3 habilidades; 1 recurso; 1 vila segura; 1 área livre; 1 inimigo simples; 1 objetivo; PvP e save. **Ultimate permanece como stretch goal** da F0.
 - **Impacto:** duração da F0, quantidade de arte e superfície de teste.
 
 ## 3. Decisões necessárias durante as fases 1 e 2
@@ -255,6 +257,14 @@ Uma recomendação provisória não vira decisão silenciosamente. Ao aprovar, r
 | D-010 | Troca direta e território ficam fora do lançamento inicial | Proposta | F5/soft launch |
 | D-011 | Ranked preserva build, mas normaliza atributo bruto de equipamento | Proposta | F6 |
 | D-012 | Monetização não vende poder e mantém rotas gratuitas de respec/progresso | Proposta | Soft launch |
+| D-013 | Identidade visual mantém silhuetas/kits próximos dos animes; só nomes públicos são trocados (risco jurídico aceito) | Aprovada — 2026-08-12 — Álvaro | P1 |
+| D-014 | Nome “Anime Verse Battlegrounds” mantido, condicionado a busca de marca | Aprovada — 2026-08-12 — Álvaro | P1 |
+| D-015 | Público 13+, tom sombrio, gore leve (dentro das políticas Roblox) | Aprovada — 2026-08-12 — Álvaro | P0 |
+| D-016 | Equipe 1-3 pessoas; conteúdo reduzido em todas as fases, gates técnicos mantidos | Aprovada — 2026-08-12 — Álvaro | P0 |
+| D-017 | Matriz mínima: Android entrada + mediano + PC integrado + gamepad | Aprovada — 2026-08-12 — Álvaro | P0 |
+| D-018 | Combate com soft lock contextual + aim assist configurável | Aprovada — 2026-08-12 — Álvaro | P0 |
+| D-019 | 16-24 jogadores por servidor; arenas em places reservados | Aprovada — 2026-08-12 — Álvaro | P0 |
+| D-020 | Fatia vertical padrão na F0; ultimate é stretch goal | Aprovada — 2026-08-12 — Álvaro | P0 |
 
 Ao aprovar uma decisão, substituir “Proposta” por `Aprovada — AAAA-MM-DD — responsável` e acrescentar uma nota curta se a decisão divergir da recomendação.
 
