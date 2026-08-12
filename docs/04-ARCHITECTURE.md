@@ -1,0 +1,384 @@
+# 04 — Arquitetura
+
+## 1. Escopo e decisões arquiteturais
+
+Este documento descreve a arquitetura-alvo. Nesta rodada, todas as ferramentas, módulos, remotes, serviços, testes e pipelines citados são **planejamento futuro**, não implementação existente.
+
+Decisões principais:
+
+| Tema | Decisão recomendada | Motivo | Custo assumido |
+|---|---|---|---|
+| Autoridade | Servidor autoritativo para regras, combate, economia, progressão e posição válida | O cliente Roblox é controlável pelo jogador e não pode ser fonte de verdade | Mais trabalho de previsão visual e reconciliação |
+| Organização | Arquitetura própria de `service/controller`, com contratos explícitos | Mantém dependências, remotes e superfície de segurança visíveis | Exige disciplina e um bootstrap pequeno |
+| Persistência | Adaptador tipado sobre ProfileStore, com session locking | Evita DataStore cru espalhado e permite trocar a biblioteca | Uma camada adicional para manter e testar |
+| Conteúdo | Definições em dados versionados; sistemas não conhecem personagens específicos | Adicionar personagem, habilidade, item ou zona não deve alterar o núcleo | Validação de conteúdo precisa ser forte |
+| Comunicação | Intenções do cliente; snapshots e deltas aprovados pelo servidor | Não replica o perfil bruto nem aceita resultados calculados no cliente | Contratos precisam de versão e compatibilidade |
+| Consistência | Operações econômicas idempotentes, com revisão e recibo | Evita duplicação em retry, reconexão e falhas parciais | Mais metadados e fluxos de compensação |
+| Equipamento | Modificadores de habilidade, com bônus numérico pequeno e limitado | Preserva identidade de build sem transformar PvP em corrida de atributos | Maior esforço de balanceamento e QA combinatório |
+
+### 1.1 Atributos de qualidade prioritários
+
+1. **Integridade:** nenhuma recompensa, moeda, dano, item ou vitória nasce de uma afirmação do cliente.
+2. **Evolução:** schemas de save e contratos de rede possuem versão e caminho de migração.
+3. **Auditabilidade:** toda mutação econômica relevante tem origem, identificador de operação e resultado rastreável.
+4. **Desempenho previsível:** combate não realiza persistência; consultas espaciais são limitadas e nenhum loop por frame percorre todos os jogadores.
+5. **Degradação segura:** falha em DataStore, MemoryStore, arena ou catálogo bloqueia apenas a ação afetada; não concede recompensa por padrão.
+6. **Testabilidade:** lógica de domínio não depende diretamente de Instances, remotes ou DataStore.
+7. **Compatibilidade multiplataforma:** PC, mobile e console emitem as mesmas intenções semânticas; somente o mapeamento de input muda.
+
+## 2. Knit versus arquitetura própria
+
+### 2.1 Opção A — Knit
+
+Vantagens:
+
+- convenção conhecida de services/controllers e ciclo de inicialização;
+- produtividade inicial e menor quantidade de infraestrutura própria;
+- integração simples entre cliente e servidor para protótipos.
+
+Riscos neste projeto:
+
+- o repositório oficial está arquivado e declara que Knit não recebe mais manutenção;
+- a conveniência de expor métodos ao cliente pode esconder a superfície real de remotes;
+- contratos de rede, validação, versionamento e rate limit ainda precisariam de uma camada própria;
+- dependência do ciclo de vida e das decisões de uma biblioteca arquivada em um MMO de longa duração;
+- facilidade de criar chamadas diretas entre serviços, aumentando acoplamento e dificultando testes.
+
+### 2.2 Opção B — service/controller próprio
+
+Vantagens:
+
+- registro único e explícito de todo remote, direção, payload, resposta e política de abuso;
+- interfaces pequenas entre domínio, infraestrutura e apresentação;
+- ciclo de vida e grafo de dependências adequados ao jogo;
+- troca de ProfileStore, sistema de remotes ou telemetria sem reescrever regras.
+
+Custos:
+
+- bootstrap, container de dependências e gateway de rede precisam ser projetados;
+- sem revisão arquitetural, existe risco de recriar um framework grande e inconsistente;
+- onboarding exige documentação das convenções.
+
+### 2.3 Escolha
+
+Escolher **service/controller próprio, mínimo**, sem criar um framework genérico. O núcleo terá apenas registro de dependências, fases `Init` e `Start`, desligamento ordenado e registro explícito de contratos de rede. Não haverá descoberta mágica de módulos, exposição automática de métodos nem service locator acessível por toda parte.
+
+Knit fica **rejeitado para o projeto novo**, inclusive no protótipo: adotar uma dependência arquivada não compensa a produtividade inicial. Se o bootstrap próprio consumir esforço material em F0, a contingência é avaliar outra biblioteca ativa contra os mesmos contratos — não retornar automaticamente ao Knit. Migrar depois de dezenas de serviços seria caro; portanto o limite do bootstrap é aprovado em P0 e verificado antes da expansão de F1.
+
+### 2.4 ADR-001 — framework de aplicação
+
+| Campo | Registro |
+|---|---|
+| Status | Aceito no planejamento em 2026-08-12 |
+| Contexto | MMO server-authoritative, remotes sensíveis e framework sugerido pelo prompt sem manutenção upstream |
+| Decisão | Services/controllers próprios, tipados, com bootstrap mínimo e contratos de rede registrados |
+| Consequências | Mais infraestrutura inicial; superfície de segurança e dependências ficam explícitas |
+| Contingência | Avaliar biblioteca ativa somente por ADR novo, prova em branch isolada e equivalência de contratos/testes |
+
+### 2.5 ADR-002 — persistência de perfil
+
+| Campo | Registro |
+|---|---|
+| Status | Aceito no planejamento em 2026-08-12 |
+| Contexto | O upstream do ProfileService declara que novos projetos devem usar ProfileStore |
+| Decisão | Usar ProfileStore pinado e auditado, sempre atrás de `ProfileRepository` tipado |
+| Consequências | Session locking e ciclo de perfil não vazam para o domínio; atualização da biblioteca exige teste de contrato |
+| Contingência | Se auditoria/licença/manutenção falhar antes de F0, trocar por solução mantida que prove locking atômico com UpdateAsync, takeover seguro, autosave e release; DataStore cru não é fallback aceitável |
+
+Referências upstream da decisão: [Knit arquivado](https://github.com/Sleitnick/Knit), [ProfileService direcionando novos projetos ao ProfileStore](https://github.com/MadStudioRoblox/ProfileService), [ProfileStore](https://github.com/MadStudioRoblox/ProfileStore) e [orientação do Creator Hub para dados de jogador e session locking](https://create.roblox.com/docs/cloud-services/data-stores/player-data-purchasing).
+
+## 3. Camadas e regras de dependência
+
+| Camada | Responsabilidade | Pode depender de | Não pode depender de |
+|---|---|---|---|
+| Definições compartilhadas | IDs, schemas, catálogos, enums e contratos sem segredo | Outros dados compartilhados validados | Services, controllers, DataStore, UI |
+| Domínio do servidor | Regras puras de combate, recursos, loadout, economia e progressão | Definições e interfaces | Cliente, UI e remotes concretos |
+| Aplicação do servidor | Orquestra casos de uso, autorização e transações | Domínio e portas de infraestrutura | Controllers do cliente |
+| Infraestrutura do servidor | Persistência, remotes, relógio, telemetria, matchmaking | Interfaces da aplicação | Regras específicas embutidas |
+| Controllers do cliente | Input, câmera, UI, previsão visual e reconciliação | Contratos públicos e estado replicado | Perfil completo, fórmulas secretas, concessão de recompensas |
+| Apresentação | HUD, menus, VFX, SFX e acessibilidade | Estado dos controllers | Remotes diretamente |
+
+Regras adicionais:
+
+- dependências entre serviços são declaradas no bootstrap e formam um grafo acíclico;
+- um serviço não lê o armazenamento de outro; chama a interface pública ou consome evento de domínio;
+- eventos notificam fatos concluídos, não substituem comandos que precisam de resultado;
+- nenhuma definição de personagem contém função executável arbitrária vinda do cliente;
+- IDs e chaves de localização são estáveis; nomes públicos podem mudar após revisão legal sem migrar save.
+
+## 4. Mapa de módulos planejados
+
+### 4.1 Servidor
+
+| Serviço | Responsabilidade | Dependências principais | Fase inicial |
+|---|---|---|---|
+| Bootstrap | Validar configuração, ordenar inicialização e desligamento | Registro de serviços | F0 |
+| RemoteGateway | Decodificar contratos, autenticar sessão, limitar taxa e despachar intenção | Session, Security, Telemetry | F0 |
+| PlayerSessionService | Ciclo join/leave, estado de sessão e readiness | ProfileRepository | F0 |
+| ProfileRepositoryAdapter | Load, session lock, migration, save e release | ProfileStore, DataStore | F0 |
+| CatalogService | Carregar e validar definições versionadas | Dados compartilhados | F0 |
+| CharacterService | Spawn, estado vivo/morto e atributos derivados | Catalog, Profile, Modifier | F0 |
+| AbilityService | Autorizar ativação, fases, cancelamento e efeitos | Cooldown, Resource, Combat, Catalog | F0 |
+| CombatService | Estado de combate, hitbox, alvo, dano, guarda e morte | SpatialQuery, Character, Zone | F0 |
+| ResourceService | Pool, custo, regeneração, exaustão e eventos | Modifier, Catalog | F0 |
+| ModifierService | Buff/debuff/passiva/equipamento, fonte e expiração | Relógio do servidor | F0 |
+| CooldownService | Cooldowns por habilidade, grupo e personagem | Relógio do servidor | F0 |
+| ZoneService | Zona atual, regras PvP, transição e spawn seguro | World/Spatial, Character | F0 |
+| LoadoutService | Validação de slots, ultimate, ressonância e ativação | Catalog, Profile, Resource | F1 |
+| ProgressionService | XP, maestria, unlock, respec e consolidação | Profile, Catalog, Economy | F2 |
+| InventoryService | Posse, stacks, instâncias, capacidade e equip | Profile, Catalog | F2 |
+| CraftingService | Forja, upgrade, falha e materiais | Inventory, Economy | F2 |
+| TradeService | Oferta, escrow, commit/compensação e histórico | Inventory, Profile, OperationLedger | F7 |
+| QuestService | Estado e objetivos dirigidos por eventos | Profile, Catalog, World | F3 |
+| BossService | Spawn, contribuição e recompensa idempotente | Combat, Quest, Loot | F3 |
+| ReputationService | Reputação, fora da lei, morte e bounty | Combat, Zone, AbuseSignals | F4 |
+| ClanService | Membros, cargos, convites, perks e banco limitado | ClanRepository, OperationLedger | F5 |
+| TerritoryService | Posse, disputa e bônus de região | Clan, World, Scheduler | F7 |
+| TournamentService | Inscrição, bracket, forfeit e premiação | Matchmaking, Teleport, Ranking | F6 |
+| RankingService | Temporada, MMR e projeções de leaderboard | SeasonRepository, OrderedDataStore | F6 |
+| SecurityService | Validações comuns, score de risco e kill switches | Telemetry, configuração operacional | F0 |
+| TelemetryService | Métricas, eventos estruturados e correlação | Sink/console controlado | F0 |
+
+Serviços de fases futuras não devem ser antecipados com implementação vazia em F0. Seus contratos podem ser documentados e introduzidos somente quando o caso de uso vertical chegar.
+
+### 4.2 Cliente
+
+| Controller | Responsabilidade | Regra de autoridade |
+|---|---|---|
+| InputController | Mapear touch, teclado, mouse e gamepad para intenções semânticas | Nunca decide se a ação foi aceita |
+| CharacterController | Movimento local, câmera e leitura do estado confirmado | Previsão visual é corrigível |
+| AbilityController | Antecipar animação/VFX e reconciliar aceite/rejeição | Não calcula acerto, dano ou custo final |
+| CombatFeedbackController | Hit confirm confirmado, dano recebido e feedback de guarda | Não recebe fórmulas secretas nem escolhe alvo válido |
+| ResourceController | Exibir snapshot/delta de recurso | Não regenera nem desconta valor persistente |
+| ZoneController | Avisos, borda visual e confirmação de entrada PvP | O servidor define a zona efetiva |
+| LoadoutController | Editar rascunho e enviar comando de ativação | O servidor recalcula slots e ressonância |
+| InventoryController | Exibir inventário e solicitar mutações | Não cria, move ou destrói item localmente como verdade |
+| SocialController | Clã, torneio, ranking e convites | Exibe projeções autorizadas |
+| UIController | Roteamento de telas, acessibilidade e estado transitório | Não chama remotes fora dos controllers de domínio |
+
+## 5. Estado e fronteiras de autoridade
+
+### 5.1 Estado persistente
+
+Pertence aos repositórios do servidor: perfil, progressão, inventário, moedas, loadouts, maestria, reputação, ranking-fonte, associação de clã e registros compartilhados. O cliente recebe somente projeções necessárias à tela.
+
+### 5.2 Estado de sessão
+
+Pertence ao servidor: cooldown, recurso atual, efeitos, estado de combate, proteção de spawn, tokens de teleporte, locks de ação e contribuição de boss. O que precisar sobreviver a crash deve ter recibo ou journal explícito; não se deve salvar a cada golpe.
+
+### 5.3 Estado visual previsto
+
+Pertence ao cliente e pode ser descartado: animação antecipada, trilha, tremor de câmera, retículo e barra interpolada. Cada previsão é correlacionada a um `requestId`; rejeição cancela ou suaviza o visual.
+
+### 5.4 Física e network ownership
+
+Network ownership melhora responsividade, mas não concede autoridade de regra. O servidor valida deslocamento, estado, janela temporal e alcance. Projéteis que causam dano têm trajetória ou resultado validado no servidor; um objeto controlado pelo cliente nunca aplica dano apenas por `Touched`.
+
+## 6. Contratos de rede
+
+### 6.1 Envelope comum
+
+Todo comando cliente → servidor terá, conceitualmente:
+
+| Campo | Finalidade | Regra |
+|---|---|---|
+| `protocolVersion` | Compatibilidade do contrato | Inteiro conhecido; versão incompatível é rejeitada |
+| `requestId` | Correlação e idempotência de comandos elegíveis | ID curto, único por sessão e com retenção limitada |
+| `clientSequence` | Ordenação e detecção de replay local | Crescente por canal; não substitui relógio do servidor |
+| `action` | Comando permitido no contrato | Enum fechado |
+| `payload` | Apenas parâmetros necessários | Schema estrito, limites de tamanho e profundidade |
+
+Não aceitar timestamp do cliente como prova de cooldown, posição, propriedade ou ordem global. O tempo do cliente pode ser usado apenas como pista limitada para compensação de latência, nunca como autoridade.
+
+### 6.2 Catálogo inicial de contratos
+
+| Contrato lógico | Direção | Intenção ou projeção | Resposta esperada |
+|---|---|---|---|
+| AbilityIntent | C→S | Ativar, manter ou cancelar uma habilidade por ID e input mínimo | Aceite/rejeição com fase e sequência autoritativa |
+| MovementAbilityIntent | C→S | Solicitar dash ou movimento especial | Aceite e parâmetros visuais aprovados |
+| InteractionIntent | C→S | Interagir com entidade identificada | Resultado do caso de uso, nunca recompensa arbitrária |
+| LoadoutCommand | C→S | Salvar ou ativar composição | Loadout normalizado e resumo de ressonância |
+| InventoryCommand | C→S | Equipar, desequipar, forjar ou melhorar | Revisão nova do inventário ou erro de conflito |
+| TradeCommand | C→S | Criar, alterar, confirmar ou cancelar troca | Estado da saga e revisão; nenhuma troca otimista no cliente |
+| QuestCommand | C→S | Aceitar ou reclamar etapa elegível | Progresso/recompensa confirmados |
+| ClanCommand | C→S | Convite, cargo, banco, guerra ou território | Estado autorizado ou recibo da operação |
+| TournamentCommand | C→S | Inscrição, ready, forfeit ou reconexão | Estado de inscrição/partida |
+| SessionSnapshot | S→C | Projeção inicial após perfil pronto | Versão da projeção e seções permitidas |
+| StateDelta | S→C | Mudança confirmada de recurso, cooldown, inventário ou progressão | Sequência para detectar lacuna |
+| CombatEvent | S→C | Ação aceita, hit confirmado, dano e estado | Dados visuais mínimos, sem segredos desnecessários |
+| ZoneEvent | S→C | Pré-aviso e confirmação de transição | Zona, regra PvP e instante de efetivação |
+| OperationResult | S→C | Resultado correlacionado de comando | `requestId`, status estável e revisão relevante |
+
+Eventos servidor → cliente usam sequência por domínio. Ao detectar lacuna, o cliente solicita ressincronização limitada da seção, não o perfil inteiro.
+
+## 7. Fluxos ponta a ponta
+
+### 7.1 Entrada do jogador
+
+1. `PlayerSessionService` cria sessão em estado `Loading`; remotes mutáveis ainda não estão disponíveis.
+2. O adaptador abre o perfil com session lock e aplica migrações determinísticas.
+3. Catálogos referenciados e invariantes do save são validados; referência inválida é normalizada ou colocada em quarentena conforme gravidade.
+4. Serviços derivam atributos, loadout e spawn permitido.
+5. O servidor envia uma projeção inicial, marca `Ready` e só então aceita comandos.
+6. Em falha, o jogador recebe erro recuperável; nunca entra com perfil default sobrescrevendo um save que não carregou.
+
+### 7.2 Ativação de habilidade
+
+1. O cliente prevê apenas o início visual e envia `AbilityIntent`.
+2. O gateway valida envelope, sessão, schema, taxa e replay.
+3. `AbilityService` verifica personagem vivo, estado, posse, loadout, zona, custo, cooldown e conflitos.
+4. Recurso e cooldown são reservados/consumidos em ordem definida; o serviço cria uma execução com ID autoritativo.
+5. O servidor resolve janela, hitbox, linha de visão, alvo e dano. O cliente nunca envia dano nem lista final de vítimas.
+6. Eventos confirmados alimentam recurso, maestria, reputação, UI, VFX e telemetria.
+7. Cancelamento ou interrupção segue política da definição; reembolso também é regra de dados, não decisão do cliente.
+
+### 7.3 Morte no mundo aberto
+
+1. `CombatService` emite morte confirmada com cadeia de contribuição.
+2. `ZoneService` determina o conjunto de regras vigente no instante do dano decisivo.
+3. `ReputationService` calcula elegibilidade, diferença de poder, repetição de pares e sinais de abuso.
+4. Penalidades e recompensas são aplicadas por uma operação idempotente.
+5. Proteção e destino de respawn são definidos no servidor; o cliente apenas apresenta.
+
+### 7.4 Mutação econômica
+
+1. O comando referencia IDs, quantidade e revisão esperada; nunca envia saldo resultante.
+2. O servidor valida propriedade, capacidade, catálogo, estado de combate e permissões.
+3. Uma operação com ID único reserva os recursos e registra o estado.
+4. A mutação acontece sob lock/revisão do agregado proprietário.
+5. Retry retorna o mesmo resultado. Falha parcial entra em compensação; não repete a concessão.
+6. O cliente recebe recibo e delta somente após commit lógico.
+
+### 7.5 Torneio entre servidores
+
+1. Scheduler publica janela e inscrições em estado compartilhado, sem depender do relógio do cliente.
+2. O bracket é congelado com versão e participantes elegíveis.
+3. Cada participante recebe um token de teleporte de uso único, ligado a partida e UserId.
+4. O servidor de arena reconstrói loadout permitido a partir da fonte do servidor e registra presença/resultado.
+5. O resultado usa operação idempotente; arena em falha fica pendente para reconciliação, sem premiar ambos por padrão.
+6. OrderedDataStore recebe projeção posterior; não é a fonte de verdade do resultado.
+
+## 8. Persistência, budgets e disponibilidade
+
+- Uma carga principal por perfil no join; nenhum `GetAsync` ou `SetAsync` em loops de gameplay.
+- Autosave coalescido, inicialmente entre 60 e 120 segundos com jitter, ajustado por telemetria e orçamento disponível.
+- Mudanças críticas marcam seções dirty, mas não forçam uma escrita por item ou kill.
+- Saída normal salva e libera o lock; `BindToClose` drena operações com prazo limitado e registra o que ficou pendente.
+- O adaptador consulta o budget atual antes de operações não urgentes e aplica backoff com jitter.
+- Ranking e telemetria são projeções assíncronas; indisponibilidade deles não bloqueia combate.
+- Mercado, troca, banco de clã e premiação podem entrar em modo somente leitura por kill switch.
+- MemoryStore pode coordenar leases, filas e matchmaking, mas não é a única fonte durável de posse.
+- O perfil terá meta interna de até 256 KiB serializados no lançamento; atingir 80% bloqueia crescimento não essencial e gera alerta.
+- Inventário, histórico e recibos têm limites explícitos; logs extensos ficam fora do perfil.
+
+Detalhes de schemas, locking e migração estão em `05-DATA-SCHEMA.md`.
+
+## 9. Observabilidade
+
+### 9.1 Eventos estruturados mínimos
+
+| Evento | Campos essenciais | Uso |
+|---|---|---|
+| SessionLoad | correlação, versão anterior/nova, duração, resultado | Saúde de save e migrações |
+| RemoteRejected | contrato, razão, peso, sequência, correlação | Abuso, bugs de cliente e tuning de limites |
+| AbilityResolved | abilityId, fase, resultado agregado, latência | Balanceamento e performance sem registrar input excessivo |
+| EconomyMutation | operationId, tipo, origem, deltas, revisões, resultado | Auditoria e anti-dupe |
+| KillResolved | zona, diferença de poder, recompensa, sinais | Bounty, camping e win trading |
+| TeleportLifecycle | matchId, token hash, origem, destino, estado | Falhas de torneio e replay |
+| SaveAttempt | seções dirty, tamanho, budget, tentativas, resultado | Capacidade e risco de perda |
+| SecuritySignal | categoria, severidade, evidências resumidas | Investigação e resposta |
+
+Não registrar chat bruto, tokens, payload completo de remotes, endereço de rede ou informação pessoal desnecessária. IDs de operação devem permitir correlação sem expor segredos.
+
+### 9.2 Métricas e alertas
+
+- p50/p95/p99 de load, save, resolução de habilidade e resposta de remote;
+- taxa de rejeição por contrato e motivo;
+- tamanho de perfil e quantidade de operações pendentes;
+- saldo emitido e drenado por fonte, por hora;
+- duplicidade de itemInstanceId e falha de reconciliação;
+- mortes repetidas por par, spawn e diferença de poder;
+- falha de teleporte, arena órfã e resultado pendente;
+- tempo de frame do servidor, volume de rede e contagem de candidatos por consulta espacial.
+
+Alertas devem usar baseline por versão. Uma mudança de cliente que aumenta rejeições não deve virar ban automático.
+
+## 10. Estratégia de testes
+
+| Camada | Testes planejados | Critério |
+|---|---|---|
+| Dados | Schema, IDs únicos, referências, limites, nomes públicos e curvas | Catálogo inválido impede build |
+| Domínio | Recursos, modificadores, cooldown, dano, ressonância e economia | Determinístico com relógio e RNG injetados |
+| Migração | Fixture de cada versão suportada, repetição e falha | Migrar duas vezes não corrompe nem duplica |
+| Contrato | Encode/decode, versão, campos extras, payload hostil | Todo remote falha fechado |
+| Integração | Join→combate→save→rejoin e operações econômicas | Estado final e recibos consistentes |
+| Propriedade/fuzz | Sequências aleatórias de inventário, trade e comandos | Quantidades nunca ficam negativas; item não tem dois donos |
+| Concorrência | Dois servidores, retry, disconnect e shutdown | Lock e fencing impedem dupla sessão/mutação |
+| Segurança | Replay, spam, spoof de dano, teleporte e escalada de cargo | Rejeição sem efeito colateral |
+| Carga | Bots de teste em servidor cheio, bosses e guerra | Budgets de frame/rede atendidos |
+| Cliente | Touch/gamepad/teclado, previsão e resync | Rejeição não deixa UI ou animação presa |
+
+Teste em Studio não substitui teste publicado privado com múltiplos servidores. Fases econômicas só avançam após testes de crash nos pontos entre reserva, commit e resposta.
+
+## 11. Budgets iniciais de performance
+
+São metas internas iniciais, não limites garantidos da plataforma. Devem ser medidos na fatia vertical e revisados antes de aumentar jogadores ou roster.
+
+| Recurso | Meta inicial | Estratégia |
+|---|---|---|
+| Tempo de scripts do servidor | p95 até 8 ms por frame em servidor-alvo | Profiling por serviço; trabalho pesado fatiado |
+| Resolução de intenção de combate | p95 até 100 ms no servidor, sem contar rede | Filas curtas e nenhuma persistência no caminho crítico |
+| Consulta de hitbox | Até 32 candidatos antes de filtros finos | Spatial query, collision groups e limites por habilidade |
+| Rede de gameplay | Média até 30 KiB/s por jogador; p95 até 50 KiB/s | Deltas, quantização e batching; medir por plataforma |
+| Snapshot inicial | Até 128 KiB de projeção ao cliente | Paginar inventário e social; não replicar perfil bruto |
+| Perfil persistido | Meta até 256 KiB | Caps, dados esparsos e históricos externos |
+| Atualizações de UI | Orientadas a eventos; no máximo 10 Hz para barras contínuas | Interpolação local sem polling do servidor |
+| Autosave | 60–120 s com jitter | Coalescer seções e respeitar budget dinâmico |
+
+Regras de implementação futura:
+
+- não usar uma conexão Heartbeat por habilidade, buff ou jogador;
+- usar schedulers agregados para expiração e regeneração;
+- não replicar efeitos cosméticos para quem está fora do raio de relevância;
+- limitar NPCs ativos por região e usar LOD de simulação;
+- cachear definições imutáveis, nunca resultados de autorização;
+- degradar VFX no mobile, mas preservar telegraph e regra de hit.
+
+## 12. Stack e fluxo de engenharia — plano futuro
+
+| Ferramenta | Papel planejado | Decisão de adoção |
+|---|---|---|
+| Rojo | Sincronizar filesystem e Studio com mapeamento explícito | Adotar em F0; Studio não será fonte exclusiva de scripts |
+| Wally | Pacotes Luau com versões fixadas e lockfile | Adotar; dependências passam por licença, manutenção e segurança |
+| luau-lsp | Tipos e análise; módulos core em modo estrito | Adotar desde o primeiro módulo de domínio |
+| Selene | Lint semântico e regras do projeto | Adotar com configuração versionada |
+| StyLua | Formatação determinística | Adotar; CI verifica divergência |
+| ProfileStore | Session locking e ciclo de perfil atrás de adaptador | Auditar e pinar revisão em P0; validar contrato e takeover em F0 |
+| GitHub Actions | Lint, formato, type check e testes no push/PR | Introduzir quando existir esqueleto executável; sem deploy automático inicial |
+
+Pipeline futuro proposto: validação de catálogos → formato → lint → type check → testes de domínio → testes de migração → build Rojo. A CI não terá credenciais de produção e não publicará place automaticamente em F0.
+
+## 13. Ordem arquitetural por fase
+
+0. **P0 — aprovação do plano:** fechar documentos, decisões, equipe, arquitetura, tamanho-alvo de servidor e métricas. ProfileStore e bootstrap são auditados aqui, sem implementação.
+1. **P1 — gate jurídico/plataforma:** revisar nomes, assets, políticas Roblox e monetização antes de qualquer asset público.
+2. **F0 — fatia vertical:** um estilo, três habilidades, uma família de recurso, mapa pequeno com zona segura + livre, PvP e save ponta a ponta.
+3. **F1 — plataforma de combate:** conteúdo dirigido a dados, expansão controlada de estilos, loadout e Ressonância.
+4. **F2 — progressão/economia básica:** maestria, respec, inventário, equipamento e forja; troca continua fora de escopo.
+5. **F3–F4:** mundo PvE/recursos; depois reputação, morte e proteção social.
+6. **F5–F6:** clãs sem território completo; depois torneios e ranking sazonal.
+7. **F7:** território, troca mediada, live ops e monetização, todos atrás de gates de consistência e segurança.
+
+Conteúdo amplo, comércio aberto, banco compartilhado, guerras e torneio multi-servidor são escopo excessivo para as duas primeiras fases. Antecipá-los aumentaria o risco de perda de save e duplicação antes do combate principal estar validado.
+
+## 14. Riscos e decisões a validar
+
+| Risco | Consequência | Mitigação/decisão necessária |
+|---|---|---|
+| Arquitetura própria crescer como framework | Atraso e complexidade | Limitar bootstrap às quatro capacidades definidas e revisar em F0 |
+| ProfileStore ou sua API mudar | Dependência operacional frágil | Pinar revisão, auditar upstream e manter adaptador/testes de contrato |
+| Previsão visual divergir do servidor | Combate parece pesado ou injusto | IDs de execução, reconciliação e testes com latência/perda |
+| Combinações de modificadores explodirem | Bugs e meta dominante | Ordem de aplicação formal, caps e teste combinatório |
+| Trading exigir atomicidade inexistente | Dupe/perda de item | Saga com escrow; adiar lançamento até crash tests |
+| Clã e território terem múltiplos escritores | Corrupção ou dupla posse | Revisionamento, UpdateAsync, lease com fencing e registros separados |
+| Metas de performance não caberem no mundo | Queda de FPS e latência | Provar na fatia vertical antes de ampliar mapa e servidor |
