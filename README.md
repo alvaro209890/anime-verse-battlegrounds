@@ -3,7 +3,7 @@
 RPG / Action RPG de mundo aberto no Roblox (Luau) — combate estilo battlegrounds com
 progressão persistente, loadout customizável e ressonância de famílias de energia.
 
-> **Status em 2026-08-13:** itens 1–13 do backlog F0 fechados em código/headless, incluindo cliente multiplataforma, telemetria e segurança mínima dos remotes.
+> **Status em 2026-08-13:** itens 1–13 do backlog F0 fechados em código/headless, além da fundação procedural de mundo/apresentação e do gate seguro de playtest no Studio.
 > **Runtime ainda não validado formalmente.** O arquivo local foi aberto manualmente no Studio, mas não há roteiro registrado de Play, feeling, save real, mobile, gamepad ou teste adversarial com dois clientes.
 
 ## Estado comprovado
@@ -12,8 +12,8 @@ progressão persistente, loadout customizável e ressonância de famílias de en
 |---|---|
 | Produto | Q-001 a Q-030 decididas; `docs/09-OPEN-QUESTIONS.md` é o registro canônico |
 | Planejamento | visão, GDD, mundo, social, arquitetura, schemas, segurança, roster, roadmap, benchmark e plano de animação documentados |
-| Implementado | domínio F0, greybox, save/ProfileStore, cliente Input/HUD, envelope v2, `SecurityService` e `TelemetryService` mínimo |
-| Validado automaticamente | 155 testes Lune + Selene + StyLua + Wally + build Rojo |
+| Implementado | domínio F0, mundo greybox com rotas/marcos/modelos low-poly, animação procedural de NPCs, save/ProfileStore, cliente Input/HUD, envelope v2, `SecurityService` e `TelemetryService` mínimo |
+| Validado automaticamente | 159 testes Lune + Selene + StyLua + Wally + build Rojo |
 | Ainda não comprovado | roteiro Play no Studio, physics/collision groups, DataStore real, dois clientes, latência, mobile, gamepad, performance, UX visual e assets de animação |
 
 O CI em pushes para `main` valida contratos headless e a árvore Rojo; não substitui playtest. O snapshot e os links de evidência ficam em `docs/12-TESTING.md`.
@@ -34,7 +34,7 @@ O CI em pushes para `main` valida contratos headless e a árvore Rojo; não subs
 
 ```bash
 aftman install        # instala o toolchain (rojo, wally, selene, stylua, lune, luau-lsp)
-lune run tests/run.luau   # testes unitários (155)
+lune run tests/run.luau   # testes unitários (159)
 selene src tests      # lint
 stylua --check src tests  # formatação
 rojo build -o build.rbxl  # valida a árvore de instâncias
@@ -50,8 +50,8 @@ src/
     Data/            catálogos dirigidos por dados (personagens, habilidades, famílias, NPCs, zonas, objetivos, locale)
   server/            services (domínio F0, save, rede, segurança e telemetria)
   client/            controllers (bootstrap de apresentação)
-tests/               harness Lune + 155 testes unitários
-docs/                produto, arquitetura, decisões, testes e planos (00 a 14)
+tests/               harness Lune + 159 testes unitários
+docs/                produto, arquitetura, decisões, testes e planos (00 a 15)
 lib/                 bibliotecas pinadas (ProfileStore)
 ```
 
@@ -67,6 +67,7 @@ lib/                 bibliotecas pinadas (ProfileStore)
 - [docs/12-TESTING.md](docs/12-TESTING.md) — como rodar e o que cobre os testes
 - [docs/13-F0-SLICE.md](docs/13-F0-SLICE.md) — spec de execução da fatia vertical (kit, mapa, roteiro, backlog)
 - [docs/14-ANIMATION-PLAN.md](docs/14-ANIMATION-PLAN.md) — pipeline, qualidade, budgets e gates das animações
+- [docs/15-WORLD-PRESENTATION.md](docs/15-WORLD-PRESENTATION.md) — mundo procedural, modelos greybox, animação dos atores e roteiro de validação
 
 `PROMPT_AnimeVerseBattlegrounds_v2.md` é o briefing histórico que originou o
 planejamento. Em conflito, os documentos canônicos em `docs/` prevalecem.

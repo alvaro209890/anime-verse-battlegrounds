@@ -1,6 +1,6 @@
 # 14 — Plano de animação e apresentação de combate
 
-> **Status em 2026-08-13:** direção de produção aprovada para planejamento; nenhum asset final foi criado ou validado. A F0 continua usando greybox/animação R15 genérica até o Gate P1. Este documento transforma “animações bem bonitas” em entregas e critérios verificáveis, sem autorizar cópia de pose, timing, câmera ou efeito de uma franquia.
+> **Status em 2026-08-13:** a fundação greybox procedural de NPCs foi implementada; nenhum dos 45 clipes finais foi criado ou validado. A F0 continua usando modelos em Parts e apresentação genérica até o Gate P1. Este documento transforma “animações bem bonitas” em entregas e critérios verificáveis, sem autorizar cópia de pose, timing, câmera ou efeito de uma franquia.
 
 ## 1. Objetivo
 
@@ -15,6 +15,10 @@ Ordem de prioridade:
 5. quantidade de variações.
 
 Qualidade vem de poucos movimentos muito bem resolvidos antes de ampliar o catálogo. O primeiro alvo de produção é um **golpe-modelo** do Ombro Cometa; as outras técnicas só avançam após esse pipeline ser medido.
+
+### 1.1 Fundação implementada — não confundir com asset final
+
+`WorldPresentation.luau` e `ActorAnimator.luau` introduzem receitas e poses procedurais para dummy, instrutor e dois Estilhaços. Essa camada serve para verificar estados, silhueta básica, telegraph e custo de atualização antes da produção R15. Ela não usa timeline, keyframe, marker ou asset publicado e não conta como nenhum dos 45 clipes planejados. A árvore, o contrato de autoridade e o roteiro de evidência ficam em `15-WORLD-PRESENTATION.md`.
 
 ## 2. Invariantes técnicos e jurídicos
 
@@ -174,7 +178,7 @@ Para cada revisão aprovada, guardar:
 
 ## 10. Estado e próximos passos
 
-Comprovado agora: somente regras de combate, eventos autoritativos, build e testes headless descritos em `12-TESTING.md`.
+Comprovado agora: regras de combate, eventos autoritativos, receitas/poses procedurais puras e build/testes headless descritos em `12-TESTING.md`. A inspeção visual e o profiling do runtime continuam ausentes.
 
 Ainda pendente:
 
@@ -182,5 +186,5 @@ Ainda pendente:
 2. definir conta/grupo proprietário dos assets;
 3. escolher animador e ferramenta-fonte;
 4. produzir o blocking original do Ombro Cometa;
-5. integrar um futuro `AnimationController` somente quando houver asset real — não criar serviço vazio;
+5. substituir gradualmente o greybox procedural por um futuro `AnimationController` somente quando houver asset real — não criar serviço vazio;
 6. executar A1 no Studio e em dispositivo antes de ampliar a lista.

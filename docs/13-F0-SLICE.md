@@ -24,7 +24,7 @@ P1 (revisão jurídica) continua obrigatório antes de concept art, áudio final
 
 ## 2. Divergências do código atual
 
-Itens 1–7 fechados no domínio, com a camada espacial construída por código (greybox, hitbox, lunge, AI). O que **não** está comprovado é execução real no Studio: o código existe e é testado headless, mas ninguém abriu o place. Ainda falta:
+Itens 1–13 estão fechados em código/headless, e a fundação procedural de mundo/apresentação foi acrescentada. O que **não** está comprovado é execução real em Play: o arquivo chegou a ser aberto manualmente no editor, mas não há roteiro, Output ou captura de uma sessão. Ainda falta:
 
 | Onde | Estado atual | Alvo desta spec |
 |---|---|---|
@@ -35,7 +35,7 @@ Itens 1–7 fechados no domínio, com a camada espacial construída por código 
 | `src/shared/Geometry.luau` | distância, costas, esfera, cápsula, caixa, lunge e passo de perseguição | feito |
 | `SpatialService` | registro de posição/olhar; hitbox à frente, cápsula do trajeto, `resolveCometShoulder` | feito no domínio; leitura do `HumanoidRootPart` só roda no Studio |
 | `EnemyService` | spawn nas 6 âncoras, perseguição 12 studs/s, ciclo de ataque, respawn 45 s, teto 4 | feito no domínio; nunca rodou em Studio |
-| `WorldService` | constrói chão, muros, portões, volumes, cratera, pilares, âncoras e collision groups | **código escrito, execução não verificada** |
+| `WorldService` / `WorldPresentation` | constrói chão, rotas, praça, portões, cratera segmentada, marcos, iluminação, modelos low-poly, âncoras/volumes invisíveis e collision groups a partir de dados puros | **código/headless/build feitos; aparência, colisão e performance não verificadas em Play** |
 | `src/shared/Data/Quests.luau` | `quest_hunt`: 3 Estilhaços, +40 XP, unlock Cometa, aceite forçado em 90 s | **itens 9/10 feitos**: `quest_elite` (1 Ancorado, +60 XP, unlock Cadência, aceite 900 s) e `quest_flow` (kind `flow_echo`, +40 XP, unlock Pulso, aceite 2700 s); cadeia sequencial caça → elite → timing |
 | `src/shared/Data/Locale.luau` | chaves §16 em PT-BR e EN; validado no boot contra os catálogos | copy final e P1 |
 | `CombatService` | cadeia leve, guarda, aparo, pesado, quebra, dash, dummy, comet, Estilhaço, `killed` na transição vivo → morto; alvo e lado do golpe agora vêm do `SpatialService` | **itens 8/10 feitos**: postura do Pulso (250 ms, 50%, contra 8, erro 600 ms) e ciclo do elite (combo/slam alternados, slam unblockable com guarda 30%) — Studio pendente |
@@ -45,15 +45,16 @@ Itens 1–7 fechados no domínio, com a camada espacial construída por código 
 | `ZoneService` | zona atual, `canPvp`, transição 5 s, lockout 15 s, `ZoneEvent` + `ZoneCrossingIntent`; hostil na segura não marca PvP | 5 sinais visíveis/audíveis, volumes e collision groups no Studio |
 | `PlayerSessionService` | snapshot Ready lê zona, unlocks, objetivo e XP não consolidado | feito no domínio |
 | `TelemetryService` / `SecurityService` | sete eventos allowlisted; envelope/payload fechado; replay, sequência e rate limit por classe | feito em código/headless; sink F0 é log estruturado, adversarial runtime pendente |
-| `src/client/init.client.lua` | sete controllers na ordem §12.3; espera `SessionSnapshot.ready`; sem intenção no boot; envelope v2 e HUD localizado | feito em código/headless; Studio e dispositivos pendentes |
+| `src/client/init.client.lua` | sete controllers na ordem §12.3; espera `SessionSnapshot.ready`; sem intenção no boot; envelope v2 e HUD localizado; `ActorAnimator` separado anima somente Motor6D de apresentação | feito em código/headless; Studio e dispositivos pendentes |
 | `SaveService` | stub em memória; persiste `wallet` | **item 11 feito**: ProfileRoot v1 sem wallet, ProfileStore via `Shared.vendor` (lock, autosave 60–120 s, release); DataStore real e respawn no Studio pendentes |
-| Mapa/HUD | greybox e HUD mínimo implementados por código; build Rojo verde | execução, layout e feeling no Studio/dispositivos pendentes |
+| `StudioDebug` | exige `RunService:IsStudio()` + atributo `F0Debug = true`; concede as 3 técnicas como flags de sessão fora do save; sem remote de cheat | feito em código/headless; uso real no Studio pendente |
+| Mapa/HUD | greybox enriquecido e HUD mínimo implementados por código; build Rojo verde | execução, layout, animação e feeling no Studio/dispositivos pendentes |
 
-Testes Lune: 155 casos em `tests/run.luau` (`docs/12-TESTING.md`).
+Testes Lune: 159 casos em `tests/run.luau` (`docs/12-TESTING.md`).
 
 **Comprovado neste recorte:** técnicas locked no spawn; Estilhaço Errante completo (spawn nas 6 âncoras, perseguição a 12 studs/s, telegraph 400 ms, dano 6, alcance 4, sem aggro através da fronteira, respawn 45 s, teto de 4); XP com retorno decrescente por âncora e teto de sessão; objetivo 1 do aceite ao prêmio; unlock do Ombro Cometa no 3º kill; geometria do greybox coerente com as âncoras; hitbox à frente; lunge de 7 studs com cap 8 e parada na guarda.
 
-**Não comprovado — e esta é a linha que importa:** não há playtest Studio registrado. O `WorldService` constrói o greybox e o `UIController` constrói o HUD por código, mas faltam boot/spawn, layout real, feeling, hold de 0,6 s no toque, gamepad, collision groups e teste cego da fronteira. Persistência entre sessões no DataStore real também segue ausente. Um `rojo build` verde prova que a árvore monta, não que o jogo roda.
+**Não comprovado — e esta é a linha que importa:** não há playtest Studio registrado. O `WorldService` constrói o greybox/modelos e o `UIController` constrói o HUD por código, mas faltam boot/spawn, Parts/Motor6D reais, layout, clipping, feeling, hold de 0,6 s no toque, gamepad, collision groups e teste cego da fronteira. Persistência entre sessões no DataStore real também segue ausente. Um `rojo build` verde prova que a árvore monta, não que o jogo roda.
 
 **Arquitetura da camada espacial (2026-08-12).** A regra fica em módulos puros e testáveis; só a tradução para Instances é intocada por teste.
 
@@ -63,6 +64,7 @@ Testes Lune: 155 casos em `tests/run.luau` (`docs/12-TESTING.md`).
 | Volumes e âncoras | `src/shared/Data/Zones.luau` | sim |
 | Consultas de combate | `SpatialService` | sim |
 | AI e spawn | `EnemyService` | sim |
+| Receitas e poses procedurais | `WorldPresentation` / `ActorAnimator.sample` | sim |
 | Parts, muros e collision groups | `WorldService` | **não** — é a fronteira Roblox |
 
 Regra de manutenção: se o `WorldService` precisar de um `if` de gameplay, o `if` está no lugar errado. Ele traduz dados em parts e nada mais.
@@ -514,11 +516,11 @@ Dispositivos (Q-005): registrar modelo, RAM, resolução e rede **depois** do pr
 
 Roteiro de Studio solo: boot limpo → dummy → 3 técnicas (cheats de unlock só em build de teste) → morte → rejoin. Depois: 2 clientes, fronteira, spam de remote.
 
-Cheat de unlock: remote **inexistente** no cliente. Flag `StudioDebugUnlock` só no servidor se `RunService:IsStudio()` e atributo do place `F0Debug = true`.
+Cheat de unlock: remote **inexistente** no cliente. O gate `StudioDebug` só concede flags de sessão no servidor se `RunService:IsStudio()` e o atributo do place for `F0Debug = true`; essas flags não entram no save.
 
 ## 19. Testes da mudança de catálogo
 
-Os casos abaixo estão em `tests/run.luau` (155 no total; fonte: chamadas `test(...)`):
+Os casos abaixo estão em `tests/run.luau` (159 no total; fonte: chamadas `test(...)`):
 
 - roster `eclipse_fist` com 3 skills enabled + 1 ultimate disabled
 - `comet_shoulder` custo 18, CD 7, runner registrado
@@ -610,7 +612,7 @@ Ordem de implementação; cada item fecha com teste automatizado **ou** evidênc
 3. ~~Spawn + movimento + leve/guarda/dash contra dummy~~ (domínio headless 2026-08-12; movimento/Studio pendente)
 4. ~~Pesado + quebra de guarda~~ (feito 2026-08-12; 43 testes)
 5. ~~Ombro Cometa~~ (feito 2026-08-12; lunge espacial de 7 studs com cap 8, parada na guarda e cápsula do trajeto entraram em 2026-08-12 via `SpatialService.resolveCometShoulder`)
-6. ~~Greybox + `ZoneService` + 5 sinais~~ (feito 2026-08-12; regras headless em 64 testes; geometria construída por código em 2026-08-12 — `Zones.luau` ganhou volumes, `WorldService` constrói parts/muros/portões/collision groups e `zoneAtPosition` reconcilia a zona no heartbeat. **Sem execução em Studio**: sinais visíveis/audíveis, iluminação, hold 0,6 s no toque e playtest cego da fronteira continuam pendentes)
+6. ~~Greybox + `ZoneService` + 5 sinais~~ (regras concluídas em 2026-08-12; fundação visual evoluída em 2026-08-13 — praça/rotas, portais, cratera segmentada, Marco de Retorno, marcos da planície, iluminação neutra, modelos low-poly e animação procedural de NPCs. Volumes/âncoras ficaram invisíveis e o servidor sincroniza a raiz dos inimigos pelo `SpatialService`. **Sem execução em Studio**: Parts/Motor6D, sinais visíveis/audíveis, iluminação, clipping, hold 0,6 s no toque e playtest cego continuam pendentes)
 7. ~~Estilhaços + objetivo 1 + unlock Cometa~~ (completo 2026-08-12; 109 testes — Locale, `Quests.luau`, `QuestService`, XP com retorno decrescente e teto de sessão, unlock no 3º kill, `InteractionIntent` + `StateDelta`, e o `EnemyService` com spawn nas 6 âncoras, perseguição, telegraph e respawn. **Pendente**: persistência do XP/flags, que é o item 11, e execução em Studio)
 8. ~~Cadência + Fluxo~~ (completo 2026-08-12 — janela de reentrada abre 120 ms após o fim do active do golpe 2 (400 ms da ativação), clique prematuro não destrói a janela, reentrada agenda o eco para 350 ms depois (`AbilityService.tick` no Heartbeat), eco 4 com Fluxo +6, cap 1,5 s e bônus +3 a cada 8 s no `ResourceService`. **Pendente**: execução em Studio)
 9. ~~Elite + unlock Cadência~~ (completo 2026-08-12 — `enemy_anchored_shard` no catálogo com slam 12/700 ms unblockable (guarda corta 30%) e combo 5+5/300 ms alternados por ciclo; spawn único na `anchor_elite`; respawn 180 s; leeching ≥ 1% da vida ou 8 s no raio sem último golpe; XP 80 com cooldown de 180 s por jogador; `quest_elite` +60 XP e `unlock_broken_cadence`. **Pendente**: cratera e ciclo no Studio)
@@ -618,7 +620,7 @@ Ordem de implementação; cada item fecha com teste automatizado **ou** evidênc
 11. ~~Consolidação + morte + ProfileStore~~ (completo 2026-08-12 — consolidação no Marco de Retorno move todo o não consolidado com recibo `operationId` idempotente e anel de 32 recibos; morte aplica perda por zona: segura 0, livre PvE 10%, PvP 15%, cap 200; `SaveService` com ProfileRoot v1, session lock, autosave 60–120 s com jitter e os 5 cenários de §11.2 cobertos por teste; `lib/ProfileStore.luau` entra no build via `ReplicatedStorage.Shared.vendor`. **Pendente**: DataStore real no place privado e respawn com proteção 8 s no Studio)
 12. ~~HUD/input mobile e gamepad~~ (implementado em código/headless 2026-08-13 — controllers na ordem §12.3, gate `SessionSnapshot.ready`, envelope v2, 8 intenções/s, teclado/mouse/toque/gamepad, soft lock 8°/25 studs apenas no ataque básico de toque/gamepad, 3 técnicas com unlock/cooldown, ultimate oculta, feedback/Umbral/zona/objetivo e Locale PT-BR/EN. **Pendente**: qualquer playtest Studio, toque em dispositivo e gamepad real)
 13. ~~Telemetria + rejeição adversarial de remotes~~ (implementado em código/headless 2026-08-13 — `TelemetryService` aceita somente os sete eventos da §15 e remove campos arbitrários; `SecurityService` fecha schema de envelope/payload, bloqueia replay de `requestId`/sequência, NaN/vetor impossível/campo extra e aplica 8 intenções de combate/s com orçamento separado para interação. Rejeição é amostrada por contrato/motivo para não inundar logs. **Pendente**: fuzz/spam em Studio com dois clientes e sink operacional fora do log do servidor)
-14. Playtest interno 20 min (PC, um Android, um gamepad)
+14. Playtest interno 20 min (PC, um Android, um gamepad), começando pelo Gate W1 de `15-WORLD-PRESENTATION.md`
 
 Não puxar item 8 antes do 5. Não puxar ProfileStore real antes do loop dummy existir — senão o save testa um jogo que ainda não se joga.
 

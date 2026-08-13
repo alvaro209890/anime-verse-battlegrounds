@@ -2,9 +2,9 @@
 
 ## 1. Objetivo e estado deste documento
 
-Este roadmap transforma a visão do jogo em uma sequência de entregas verificáveis e passa a ser a referência de escopo para uma equipe de 1–3 pessoas. A implementação **já começou**: os itens 1–13 do backlog de `docs/13-F0-SLICE.md` estão fechados em código/headless — catálogos, serviços de domínio, ProfileStore, camada cliente F0 e segurança/telemetria mínima — além de CI com StyLua, Selene, 155 testes Lune, Wally e build Rojo.
+Este roadmap transforma a visão do jogo em uma sequência de entregas verificáveis e passa a ser a referência de escopo para uma equipe de 1–3 pessoas. A implementação **já começou**: os itens 1–13 do backlog de `docs/13-F0-SLICE.md` estão fechados em código/headless — catálogos, serviços de domínio, ProfileStore, camada cliente F0 e segurança/telemetria mínima. A fundação adicional de mundo/apresentação procedural e o unlock seguro de playtest também existem em código, com CI de StyLua, Selene, 159 testes Lune, Wally e build Rojo.
 
-Esse estado **não** equivale a F0 concluída. A camada cliente não recebeu playtest nesta rodada: não há evidência registrada de boot/spawn, HUD/câmera, DataStore real, servidor publicado, mobile ou gamepad. O próximo marco do programa é a primeira sessão medida no Studio, que também recalibra a estimativa da fase (§2).
+Esse estado **não** equivale a F0 concluída. A camada cliente e o mundo procedural não receberam playtest nesta rodada: não há evidência registrada de boot/spawn, Parts/Motor6D, HUD/câmera, DataStore real, servidor publicado, mobile ou gamepad. O próximo marco do programa é o Gate W1 (`docs/15-WORLD-PRESENTATION.md`): primeira sessão medida no Studio, que também recalibra a estimativa da fase (§2).
 
 O projeto é um **RPG / Action RPG** persistente; “Battlegrounds” permanece como nome de marketing, não como arquitetura de arena exclusiva. A ordem abaixo prioriza combate em rede, persistência e progressão antes de multiplicar conteúdo ou construir sistemas sociais caros.
 
@@ -147,6 +147,15 @@ Curva inicial de aceite: primeiro combate em até 60 segundos; objetivo de progr
 | Multiplataforma | Mesmo roteiro em PC, telefone de referência e gamepad | Todas as ações são acessíveis; HUD não obstrui combate |
 
 Os percentuais definitivos devem ser calibrados com amostra e analytics; os valores acima são gates de protótipo, não metas públicas de produto.
+
+### Próximo recorte executivo — aprovado em 2026-08-13
+
+1. **W1, leitura do greybox:** boot solo, duas rotas, dummy/instrutor, cratera, morte/retorno e clipping, primeiro sem unlock de teste e depois com `F0Debug`.
+2. **A1, golpe-modelo:** após P1, produzir somente o blocking original do Ombro Cometa e medir markers, silhueta, foot sliding e sincronismo. Os outros 44 clipes aguardam essa decisão.
+3. **W2, custo em dispositivo:** oito jogadores, quatro Errantes e um Ancorado em PC integrado e Android; separar script, física, render e animação.
+4. **R1, runtime adversarial:** dois clientes, latência simulada, replay/spam e network ownership hostil antes de ampliar conteúdo F1.
+
+Essa ordem transforma o próximo investimento em evidência. Um build verde não promove W1/A1/W2/R1; cada gate exige a captura descrita em `12-TESTING.md` e `15-WORLD-PRESENTATION.md`.
 
 ### Critério de pronto da Fase 0
 
@@ -460,7 +469,7 @@ Produtos permitidos no soft launch: cosméticos de compra direta, emotes/finaliz
 | Engenharia de rede | F0 | autoridade, predição visual, rate limits, profiling e testes de latência |
 | Persistência/economia | F0 | schemas, migrações, auditoria, budgets, simulação e recuperação |
 | UX multiplataforma | F0 | controles, HUD, onboarding, acessibilidade e testes de dispositivo |
-| Arte/áudio original | P1 | linguagem visual, checklist jurídico, budgets e produção guiada por `14-ANIMATION-PLAN.md` |
+| Arte/áudio original | P1 | fundação greybox em `15-WORLD-PRESENTATION.md`; linguagem final, checklist jurídico, budgets e produção guiada por `14-ANIMATION-PLAN.md` |
 | Segurança | F0 | threat modeling por feature, testes adversariais, alertas e runbooks |
 | Trust & Safety | F3 | denúncia, moderação, políticas sociais, evidência e apelação |
 | Live operations | F3 | feature flags, versionamento, dashboards, eventos e rollback |
