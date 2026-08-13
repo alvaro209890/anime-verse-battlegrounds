@@ -58,6 +58,25 @@ function InputController.subscribe(controller: Controller, listener: (SemanticAc
 	table.insert(controller.listeners, listener)
 end
 
+-- Clique de combate não pode morrer na HUD. No Studio, InputBegan chega com
+-- processed=true sobre Frame/TextLabel do ScreenGui — o playtest clicava e
+-- nem o golpe nem a animação saíam. Teclado ainda respeita chat/TextBox.
+-- Clique em GuiButton ativo fica com o botão (MENU, ATACAR, técnicas).
+function InputController.shouldAcceptInput(
+	processed: boolean,
+	typing: boolean,
+	isMouseCombat: boolean,
+	onGuiButton: boolean
+): boolean
+	if typing then
+		return false
+	end
+	if not processed then
+		return true
+	end
+	return isMouseCombat and not onGuiButton
+end
+
 function InputController.dispatch(
 	controller: Controller,
 	action: SemanticAction,
@@ -131,10 +150,16 @@ local function platformFromInputType(inputType: any): "KeyboardMouse" | "Touch" 
 	return "KeyboardMouse"
 end
 
-function InputController.start(controller: Controller, userInputService: any): ()
+function InputController.start(
+	controller: Controller,
+	userInputService: any,
+	opts: { mouseOnButton: (() -> boolean)? }?
+): ()
 	controller.state.platform = if userInputService.TouchEnabled and not userInputService.KeyboardEnabled
 		then "Touch"
 		else "KeyboardMouse"
+
+	local mouseOnButton = if opts then opts.mouseOnButton else nil
 
 	local function dispatch(action: SemanticAction)
 		InputController.dispatch(controller, action, {})
@@ -149,11 +174,19 @@ function InputController.start(controller: Controller, userInputService: any): (
 	table.insert(
 		controller.connections,
 		userInputService.InputBegan:Connect(function(input: any, processed: boolean)
-			if processed then
-				return
-			end
 			local key = input.KeyCode
 			local inputType = input.UserInputType
+			local isMouseCombat = inputType == Enum.UserInputType.MouseButton1
+				or inputType == Enum.UserInputType.MouseButton2
+				or inputType == Enum.UserInputType.MouseButton3
+			local typing = false
+			if userInputService.GetFocusedTextBox then
+				typing = userInputService:GetFocusedTextBox() ~= nil
+			end
+			local onButton = if mouseOnButton then mouseOnButton() else false
+			if not InputController.shouldAcceptInput(processed, typing, isMouseCombat, onButton) then
+				return
+			end
 			if inputType == Enum.UserInputType.MouseButton1 or key == Enum.KeyCode.ButtonR2 then
 				dispatch("BasicLight")
 			elseif inputType == Enum.UserInputType.MouseButton2 or key == Enum.KeyCode.ButtonR1 then

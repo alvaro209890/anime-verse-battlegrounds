@@ -26,7 +26,9 @@ tinha como soltar a mira nem via os golpes (CADEADO + evento sem dano).
 
 ## 3. O que está quebrado (impacto)
 
-1. **Golpe parece morto (P0).** Clique esquerdo *é* o básico, mas o
+1. **Golpe parece morto (P0).** Clique esquerdo *é* o básico, mas (a) o
+   `InputBegan` descartava o clique quando a HUD marcava `processed=true`
+   (labels, MENU, técnicas) — golpe e animação local nunca disparavam; (b) o
    `CombatEvent` do básico não levava `damage` e o `StateDelta` da vida do NPC
    não era enviado ao atacante. Sem número flutuante e sem barra, o acerto
    some. As técnicas em CADEADO reforçam a leitura de "nada funciona".
@@ -54,9 +56,10 @@ finais** (`docs/14` Gate A1 continua aberto):
 | Cadência / Pulso | poses próprias (eco e contra não reusam a ativação) | testado headless |
 | NPCs | telegraph / ataque / queda / late join | scaffolding, não clip |
 
-Como ver no Studio agora: dummy no canto sudeste; clique esquerdo 4 vezes
-seguidas; F guarda; Q dash; 1/2/3 técnicas (KIT DE TESTE no spawn). Se a
-câmera grudar, clique **SOLTAR MIRA** no centro ou abra **MENU**.
+Como ver no Studio agora: dummy no canto sudeste; clique esquerdo **ou** o
+botão **ATACAR** 4 vezes seguidas; F ou **GUARDA**; Q ou **DASH**; 1/2/3
+técnicas (KIT DE TESTE no spawn). Se a câmera grudar, clique **SOLTAR MIRA**.
+Feche o MENU (ele some sozinho no primeiro golpe).
 
 ## 5. O que ainda falta (runtime)
 
@@ -66,6 +69,9 @@ câmera grudar, clique **SOLTAR MIRA** no centro ou abra **MENU**.
 
 ## 6. Correção desta rodada
 
+- Clique de combate ignora `processed` da HUD (labels/frames); só TextBox e
+  GuiButton ativo comem o clique. Botão **ATACAR** visível no PC (não só no
+  toque). MENU fecha no primeiro golpe.
 - Evento do básico leva `damage` + barra do inimigo no atacante.
 - `F0Debug` também no Script Server; join aplica as 3 técnicas de sessão.
 - Mira: **Tab** ou clique do meio. Botão **SOLTAR MIRA** no centro (não

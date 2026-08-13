@@ -1,10 +1,10 @@
 # 12 — Testes e evidências
 
-> **Snapshot:** 2026-08-13. `tests/run.luau` declara **213** testes F0 alinhados a `docs/13-F0-SLICE.md`; `tests/animation.luau` soma **35** testes de apresentação/game-feel. Nesta rodada: `StudioDebug.resolveAttribute`, ToggleLock, ToggleHelp, `basicCombatEvent` com dano, `clearLock` (botão SOLTAR MIRA) e `shakeEnabled` da câmera.
+> **Snapshot:** 2026-08-13. `tests/run.luau` declara **214** testes F0 alinhados a `docs/13-F0-SLICE.md`; `tests/animation.luau` soma **35** testes de apresentação/game-feel. Nesta rodada: clique de combate não morre na HUD (`shouldAcceptInput`), botão ATACAR visível no PC, `StudioDebug.resolveAttribute`, ToggleLock, ToggleHelp, `basicCombatEvent` com dano, `clearLock` e `shakeEnabled`.
 
 ## 1. Estado da execução
 
-Em 2026-08-13, no Windows 11 (`C:\GIS\anime-verse-battlegrounds`), a verificação atual registrou Selene limpo, 213/213 testes em `tests/run.luau` e 35/35 em `tests/animation.luau`. O Play das 13:48 (`docs/18-ANALISE-VIDEO.md`) comprovou HUD, spawn e prompt do Instrutor; não comprovou combate. Esta rodada deixa MENU/SOLTAR MIRA e o golpe básico com dano no snapshot do Studio.
+Em 2026-08-13, no Windows 11 (`C:\GIS\anime-verse-battlegrounds`), a verificação atual registrou Selene limpo, 214/214 testes em `tests/run.luau` e 35/35 em `tests/animation.luau`. O Play das 13:48 (`docs/18-ANALISE-VIDEO.md`) comprovou HUD, spawn e prompt do Instrutor; o clique não disparava golpe porque a HUD marcava `processed=true`. Esta rodada deixa o clique de combate passar pela HUD e o botão **ATACAR** visível no PC.
 
 O Play registrado às 09:26 abriu o artefato anterior, de 128744 bytes e data 08:20. Esse arquivo antigo chegou a `[Bootstrap] servidor pronto (F0)` sem erro Luau do jogo, mas antecede as mudanças atuais e não serve como evidência deste snapshot. O novo arquivo canônico não foi reaberto nem executado por nós; boot/spawn atual, apresentação, interação, física, HUD, save e fluxo jogável continuam sem comprovação no Studio.
 
@@ -33,12 +33,12 @@ O CI executa StyLua, Selene, os testes Lune, a instalação Wally e o build Rojo
 
 Em checkout Windows com `core.autocrlf=true`, os arquivos de trabalho podem estar em CRLF enquanto `stylua.toml` exige `Unix`; nesse caso, o check direto acusa somente final de linha. Para reproduzir o CI, use uma cópia com bytes LF canônicos do Git (`git -c core.autocrlf=false archive ...`). `--line-endings Windows` só é equivalente quando todo o checkout está uniformemente em CRLF; ele não resolve uma árvore mista. Não reformatar código só para mascarar essa conversão do checkout.
 
-## 2. Cobertura existente: exatamente 213 testes
+## 2. Cobertura existente: exatamente 214 testes
 
 | Área | Cobertura |
 |---|---|
 | **Dados e rede** (15) | Punho do Eclipse 3+1; `comet_shoulder`; Umbral baseline; 4 famílias; remotes incl. `SessionSnapshot`, `AbilityIntent`, `CombatEvent`, `InteractionIntent`, `StateDelta` e `EnemyEvent`; envelope v2 exige versão, request ID, sequência, ação e payload válidos; dummy 10000 HP / dano 4; Estilhaço Errante 40/6/4; zonas: 3 zonas, PvP só na livre, âncoras persistidas + pontos de Estilhaço, spawn no bastião; Locale PT-BR/EN das chaves §16 e formatação de `{n}`; `quest_hunt` 3 kills / +40 XP / unlock Cometa |
-| **Cliente** (12) | gate de `SessionSnapshot.ready`; limite de 8 intenções de combate/s; no máximo 2 botões de toque simultâneos; `CharacterController` envia intenção sem alvo/dano; ToggleLock solta sem remote; `clearLock` solta sem procurar outro alvo; ToggleHelp fora do rate limit; 3 slots, ultimate oculta, unlock e cooldown no `AbilityController`; rejeição reconciliada sem código interno na UI; Umbral/zona/perda só após ready; hold de fronteira de 0,6 s; Locale cobre PT-BR/EN do HUD F0 (inclui MENU/mira/câmera) |
+| **Cliente** (13) | gate de `SessionSnapshot.ready`; limite de 8 intenções de combate/s; no máximo 2 botões de toque simultâneos; `CharacterController` envia intenção sem alvo/dano; ToggleLock solta sem remote; `clearLock` solta sem procurar outro alvo; ToggleHelp fora do rate limit; clique de combate passa por HUD `processed` salvo em GuiButton/TextBox; 3 slots, ultimate oculta, unlock e cooldown no `AbilityController`; rejeição reconciliada sem código interno na UI; Umbral/zona/perda só após ready; hold de fronteira de 0,6 s; Locale cobre PT-BR/EN do HUD F0 (inclui MENU/mira/câmera/ATACAR) |
 | **Bootstrap/Rojo** (1) | o bootstrap resolve `Services` como filho do Script `Server` gerado pelo Rojo e não procura a pasta em `ServerScriptService` |
 | **Telemetria/segurança** (10) | allowlist/remoção de campos arbitrários; tipo/buffer; execução dos sete schemas; envelope/payload válido; campo extra e direção; replay de request/sequence; envelope fechado e amostragem de rejeição; limite 8/s separado de interação; NaN/vetor impossível/interação ambígua; limpeza entre sessões |
 | **Mundo/apresentação/Studio debug** (6) | quatro receitas e estilo procedural válidos; poses de NPC preservam antecipação/ataque/queda; apresentação local do jogador diferencia antecipação/impacto leve, peso do ataque pesado, guarda e recuperação; gate exige Studio + atributo e exclui ultimate; flags de sessão aparecem para habilidade/HUD e não entram no snapshot durável; `resolveAttribute` cai no Script Server e `applySessionUnlocks` só no Studio |
@@ -65,7 +65,7 @@ A divisão é deliberada: matemática e decisão ficam em módulos puros (`Geome
 ## 3. Arquitetura do harness
 
 - **`tests/harness.luau`** simula o mínimo que o Lune não fornece: `_G.game`, `_G.Instance`, `_G.task` e resolução de `require(script.Parent.X)` no filesystem.
-- **`tests/run.luau`** contém os 213 casos e usa módulos reais de `src/`, com um miniframework de asserts.
+- **`tests/run.luau`** contém os 214 casos e usa módulos reais de `src/`, com um miniframework de asserts.
 - **Services testáveis por injeção** recebem dependências em `init()`: `CatalogService`, `AbilityService`, `ResourceService`, `PlayerSessionService`, `ZoneService`, `ProgressionService`, `QuestService`, `SpatialService`, `EnemyService` e `SaveService` (adaptador de store mockado). O bootstrap Roblox monta o grafo real.
 - **`src/shared/TaskCompat.luau`** usa `task` nativo no Roblox e o polyfill somente no harness.
 
@@ -75,7 +75,7 @@ Os módulos de dados declaram tipos inline porque o Lune não resolve `script.Pa
 
 | Camada | O que demonstra | O que não demonstra |
 |---|---|---|
-| lint + 213 testes Lune | sintaxe, estilo e comportamento unitário coberto no ambiente simulado | física, replicação, UI renderizada, dispositivo ou serviços Roblox reais |
+| lint + 214 testes Lune | sintaxe, estilo e comportamento unitário coberto no ambiente simulado | física, replicação, UI renderizada, dispositivo ou serviços Roblox reais |
 | Wally + build Rojo | dependências resolvidas e árvore de projeto montável | que o place abre sem erro ou que um fluxo é jogável |
 | Studio | bootstrap, UI/input, câmera, física e replicação no cenário testado | DataStore/teleport/rede pública com fidelidade total |
 | publicado privado | serviços reais, múltiplos servidores, reconnect, teleport e condições reais de rede | cobertura de dispositivo que não foi executada |
@@ -150,6 +150,6 @@ rg -n "\\x{FFFD}" README.md docs
 - `task.wait` real em teste cria loop infinito se o polyfill síncrono for usado no `spawn`; o harness injeta `spawn = noop` para o loop de regen. `ZoneService` usa relógio injetado (`fakeNow`), nunca `task.wait`, para as janelas de 5 s e 15 s.
 - Busy-wait curto com `os.clock` substitui `task.wait` nos testes de expiração de cooldown.
 - Selene permite `global_usage` e `empty_loop` no `selene.toml` porque o harness usa `_G` e busy-waits deliberadamente.
-- Contar casos pelo resumo pode mascarar erro: a fonte é a quantidade real de chamadas `test(...)` em `tests/run.luau`; nesta versão são 213.
+- Contar casos pelo resumo pode mascarar erro: a fonte é a quantidade real de chamadas `test(...)` em `tests/run.luau`; nesta versão são 214.
 - Lua patterns não têm alternação (`a|b` é literal): validar IDs de sinal por pertencimento a uma tabela, não com regex no teste.
 - Quirk do Lune/MLua: closure auto-referente (`local x = { fn = function() ... x ... end }`) vê `x` como nil dentro da função. Declarar a variável antes (`local x; x = { ... }`) ou o mock do SaveService quebra com "attempt to index nil".

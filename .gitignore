@@ -9,6 +9,10 @@ Packages/
 # luau-lsp
 .luau-aliases
 
+# Bridge de debug do Studio (logs e estado local — docs/19-DEBUG-BRIDGE.md)
+.avb-debug/
+*.rbxm
+
 # OS
 .DS_Store
 Thumbs.db

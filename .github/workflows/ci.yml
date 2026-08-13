@@ -18,10 +18,10 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: StyLua — verificar formatação
-        run: stylua --check src tests
+        run: stylua --check src tests plugins scripts
 
       - name: Selene — lint
-        run: selene src tests
+        run: selene src tests plugins scripts
 
       - name: Testes unitários (Lune)
         run: |

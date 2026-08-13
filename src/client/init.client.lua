@@ -2,6 +2,7 @@
 -- Bootstrap de apresentação F0. Não há FireServer de boot: toda intenção passa
 -- pelo InputController e somente depois de SessionSnapshot ready.
 
+local GuiService = game:GetService("GuiService")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -219,7 +220,38 @@ local ui = UIController.new({
 	runService = RunService,
 })
 
-InputController.start(input, UserInputService)
+local function mouseOnButton(): boolean
+	local playerGui = player:FindFirstChildOfClass("PlayerGui")
+	if not playerGui then
+		return false
+	end
+	local inset = GuiService:GetGuiInset()
+	local location = UserInputService:GetMouseLocation()
+	local hits = playerGui:GetGuiObjectsAtPosition(location.X - inset.X, location.Y - inset.Y)
+	for _, obj in hits do
+		if obj:IsA("GuiButton") and obj.Active and obj.Visible then
+			local current: Instance? = obj
+			local blocked = false
+			while current and current ~= playerGui do
+				if current:IsA("GuiObject") and current.Visible == false then
+					blocked = true
+					break
+				end
+				if current:IsA("LayerCollector") and current.Enabled == false then
+					blocked = true
+					break
+				end
+				current = current.Parent
+			end
+			if not blocked then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+InputController.start(input, UserInputService, { mouseOnButton = mouseOnButton })
 ActorAnimator.start(actorAnimator)
 PlayerCombatAnimator.start(playerCombatAnimator)
 CombatCameraController.start(combatCamera)

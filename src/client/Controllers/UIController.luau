@@ -20,6 +20,7 @@ local function frame(name: string, parent: Instance, size: UDim2, position: UDim
 	value.BackgroundColor3 = BG
 	value.BackgroundTransparency = 0.12
 	value.BorderSizePixel = 0
+	value.Active = false
 	value.Parent = parent
 	return value
 end
@@ -35,6 +36,8 @@ local function label(name: string, parent: Instance, size: UDim2, position: UDim
 	value.TextSize = 14
 	value.TextXAlignment = Enum.TextXAlignment.Left
 	value.Text = ""
+	value.Active = false
+	value.Interactable = false
 	value.Parent = parent
 	return value
 end
@@ -148,30 +151,52 @@ function UIController.new(deps: { [string]: any }): any
 
 	local touch = frame("TouchControls", gui, UDim2.fromOffset(250, 80), UDim2.new(1, -268, 1, -194))
 	touch.BackgroundTransparency = 1
-	local attack = button("Attack", touch, UDim2.fromOffset(78, 68), UDim2.fromOffset(172, 8))
+	local attack = button("Attack", touch, UDim2.fromOffset(90, 68), UDim2.fromOffset(160, 8))
+	attack.TextSize = 16
 	local guard = button("Guard", touch, UDim2.fromOffset(76, 58), UDim2.fromOffset(88, 18))
 	local dash = button("Dash", touch, UDim2.fromOffset(76, 58), UDim2.fromOffset(4, 18))
+	local function isPointer(input: InputObject): boolean
+		return input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1
+	end
 	local attackStartedAt = 0
 	attack.InputBegan:Connect(function(input: InputObject)
+		if not isPointer(input) then
+			return
+		end
+		attackStartedAt = os.clock()
 		if input.UserInputType == Enum.UserInputType.Touch then
-			attackStartedAt = os.clock()
 			deps.inputApi.touchBegin(deps.input, "attack", nil, {})
 		end
 	end)
 	attack.InputEnded:Connect(function(input: InputObject)
+		if not isPointer(input) then
+			return
+		end
+		local action = if os.clock() - attackStartedAt >= 0.35 then "BasicHeavy" else "BasicLight"
 		if input.UserInputType == Enum.UserInputType.Touch then
-			local action = if os.clock() - attackStartedAt >= 0.35 then "BasicHeavy" else "BasicLight"
 			deps.inputApi.touchEnd(deps.input, "attack", action, {})
+		else
+			deps.inputApi.dispatch(deps.input, action, {})
 		end
 	end)
 	guard.InputBegan:Connect(function(input: InputObject)
+		if not isPointer(input) then
+			return
+		end
 		if input.UserInputType == Enum.UserInputType.Touch then
 			deps.inputApi.touchBegin(deps.input, "guard", "GuardDown", {})
+		else
+			deps.inputApi.dispatch(deps.input, "GuardDown", {})
 		end
 	end)
 	guard.InputEnded:Connect(function(input: InputObject)
+		if not isPointer(input) then
+			return
+		end
 		if input.UserInputType == Enum.UserInputType.Touch then
 			deps.inputApi.touchEnd(deps.input, "guard", "GuardUp", {})
+		else
+			deps.inputApi.dispatch(deps.input, "GuardUp", {})
 		end
 	end)
 	dash.Activated:Connect(function()
@@ -321,6 +346,8 @@ function UIController.new(deps: { [string]: any }): any
 		deps.inputApi.subscribe(deps.input, function(action: string, _payload: { [string]: any })
 			if action == "ToggleHelp" then
 				toggleHelp()
+			elseif action == "BasicLight" or action == "BasicHeavy" or action == "Dash" then
+				controller.helpVisible = false
 			end
 		end)
 	end
@@ -405,12 +432,11 @@ function UIController.render(controller: any, elapsed: number): ()
 		end
 	end
 
-	local touchVisible = state.platform == "Touch"
-	controller.touch.Visible = touchVisible
+	controller.touch.Visible = true
 	controller.attack.Text = controller.locale.get("hud.control_attack", localeId)
 	controller.guard.Text = controller.locale.get("hud.control_guard", localeId)
 	controller.dash.Text = controller.locale.get("hud.control_dash", localeId)
-	controller.zoneHold.Visible = touchVisible and state.zoneHoldRequired
+	controller.zoneHold.Visible = state.platform == "Touch" and state.zoneHoldRequired
 	controller.zoneHold.Text = controller.locale.get("hud.pvp_hold", localeId)
 
 	controller.hint.Text = controller.locale.get("hud.help_hint", localeId)

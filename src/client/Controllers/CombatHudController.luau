@@ -115,6 +115,7 @@ function CombatHudController.spawnDamage(hud: Controller, payload: { [string]: a
 	gui.Name = "AvbDamage"
 	gui.Adornee = adornee
 	gui.AlwaysOnTop = true
+	gui.Active = false
 	gui.LightInfluence = 0
 	gui.MaxDistance = 120
 	gui.Size = UDim2.fromOffset(80, 34)
@@ -160,6 +161,7 @@ function CombatHudController.spawnBar(hud: Controller, fighterId: string): BarEn
 	gui.Name = "AvbEnemyBar"
 	gui.Adornee = model
 	gui.AlwaysOnTop = true
+	gui.Active = false
 	gui.LightInfluence = 0
 	gui.MaxDistance = 100
 	gui.Size = UDim2.fromOffset(120, 16)

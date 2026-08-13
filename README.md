@@ -13,7 +13,7 @@ progressão persistente, loadout customizável e ressonância de famílias de en
 | Produto | Q-001 a Q-030 decididas; `docs/09-OPEN-QUESTIONS.md` é o registro canônico |
 | Planejamento | visão, GDD, mundo, social, arquitetura, schemas, segurança, roster, roadmap, benchmark e plano de animação documentados |
 | Implementado | domínio F0, mundo greybox com rotas/marcos/modelos low-poly, animação procedural de NPCs e do jogador, interações semânticas com Instrutor/Marco, save/ProfileStore, cliente Input/HUD, envelope v2, `SecurityService` e `TelemetryService` mínimo |
-| Validado automaticamente | 213/213 testes em `tests/run.luau` + 35/35 em `tests/animation.luau`, Selene limpo, StyLua canônico, Wally e build Rojo |
+| Validado automaticamente | 214/214 testes em `tests/run.luau` + 35/35 em `tests/animation.luau`, Selene limpo, StyLua canônico, Wally e build Rojo |
 | Ainda não comprovado | roteiro Play no Studio, physics/collision groups, DataStore real, dois clientes, latência, mobile, gamepad, performance, UX visual e assets de animação |
 
 O CI em pushes para `main` valida contratos headless e a árvore Rojo; não substitui playtest. O snapshot e os links de evidência ficam em `docs/12-TESTING.md`.
@@ -80,7 +80,7 @@ src/
     Data/            catálogos dirigidos por dados (personagens, habilidades, famílias, NPCs, zonas, objetivos, locale)
   server/            services (domínio F0, save, rede, segurança e telemetria)
   client/            controllers (bootstrap de apresentação)
-tests/               harness Lune + 248 testes unitários (213 run.luau + 35 animation.luau)
+tests/               harness Lune + 249 testes unitários (214 run.luau + 35 animation.luau)
 docs/                produto, arquitetura, decisões, testes e planos (00 a 18)
 lib/                 bibliotecas pinadas (ProfileStore)
 ```
