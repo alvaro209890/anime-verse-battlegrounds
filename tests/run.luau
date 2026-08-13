@@ -2828,6 +2828,296 @@ test("fatia: roteiro 0–60 min — caça, elite, eco e as 3 técnicas liberadas
 	ProgressionService.unregisterPlayer(990)
 end)
 
+-- ══ Testes: item 11 — consolidação, morte e ProfileStore ───────────────────
+local SaveService = require("../src/server/Services/SaveService")
+
+-- Mock do adaptador ProfileStore: DataStore em memória com session lock.
+local function makeMockStore()
+	local stored = {} -- key → dados persistidos
+	local locked = {} -- key → true (lock ativo)
+	local saves = 0
+	-- store declarado antes: a closure do startSession referencia a variável
+	-- (quirk do Lune/MLua com closure auto-referente).
+	local store: any = nil
+	store = {
+		stored = stored,
+		saves = function()
+			return saves
+		end,
+		startSession = function(profileKey: string): any?
+			if locked[profileKey] then
+				return nil -- lock de outro servidor (§11.2 item 4)
+			end
+			locked[profileKey] = true
+			-- handle declarado antes para o closure do Save enxergar a tabela
+			-- (quirk do Lune/MLua com closure auto-referente).
+			local handle: any = nil
+			handle = {
+				Save = function()
+					stored[profileKey] = table.clone(handle.Data)
+					saves += 1
+				end,
+				EndSession = function()
+					locked[profileKey] = nil
+				end,
+			}
+			-- ProfileStore hard-copia: jogador novo recebe nil (o SaveService
+			-- aplica o template); jogador existente recebe o save.
+			handle.Data = if stored[profileKey] then table.clone(stored[profileKey]) else nil
+			store.lastHandle = handle
+			return handle
+		end,
+	}
+	return store
+end
+
+local function makeSaveDeps(store: any): any
+	return {
+		store = store,
+		getSessionId = function()
+			return "job-test-1"
+		end,
+		now = clockNow,
+		getSnapshot = function(userId: number)
+			return ProgressionService.snapshotForSave(userId)
+		end,
+		applySnapshot = function(userId: number, snapshot: any)
+			ProgressionService.restoreFromSave(userId, snapshot)
+		end,
+		autosaveBaseSeconds = 60,
+	}
+end
+
+test("consolidação: move todo não consolidado e emite recibo idempotente", function()
+	fakeNow = 60000
+	ProgressionService.init()
+	ProgressionService.registerPlayer(1000)
+	ProgressionService.awardXp(1000, 130)
+	assertEq(ProgressionService.getUnconsolidatedXp(1000), 130, "não consolidado antes")
+	assertEq(ProgressionService.getLedger(1000).consolidated, 0, "consolidado antes")
+	local receipt = ProgressionService.consolidate(1000, fakeNow)
+	assertTrue(receipt ~= nil, "recibo emitido")
+	if receipt then
+		assertEq(receipt.consolidated, 130, "moveu 130")
+		assertEq(receipt.operationId, "cons_1000_60000", "operationId determinístico")
+	end
+	assertEq(ProgressionService.getUnconsolidatedXp(1000), 0, "zerou o não consolidado")
+	assertEq(ProgressionService.getLedger(1000).consolidated, 130, "consolidado 130")
+	assertEq(ProgressionService.getLedger(1000).lastConsolidationAt, 60000, "timestamp")
+	-- Consolidar de novo com saldo zero: recibo sem movimento.
+	local empty = ProgressionService.consolidate(1000, fakeNow + 1)
+	if empty then
+		assertEq(empty.consolidated, 0, "nada a consolidar")
+	end
+	assertEq(ProgressionService.getLedger(1000).consolidated, 130, "não duplica")
+	ProgressionService.unregisterPlayer(1000)
+end)
+
+test("morte: segura/treino não perde; livre PvE 10% e PvP 15% com cap 200", function()
+	ProgressionService.init()
+	ProgressionService.registerPlayer(1001)
+	ProgressionService.awardXp(1001, 500)
+	local safe = ProgressionService.applyDeathPenalty(1001, "safe", false)
+	assertEq(safe.lost, 0, "segura não perde")
+	assertEq(safe.reason, "safe_zone", "motivo")
+	local transition = ProgressionService.applyDeathPenalty(1001, "transition", true)
+	assertEq(transition.lost, 0, "transição não perde")
+	assertEq(ProgressionService.getUnconsolidatedXp(1001), 500, "saldo intacto")
+	local pve = ProgressionService.applyDeathPenalty(1001, "free", false)
+	assertEq(pve.lost, 50, "10% de 500 = 50")
+	assertEq(ProgressionService.getUnconsolidatedXp(1001), 450, "perdeu 50")
+	local pvp = ProgressionService.applyDeathPenalty(1001, "free", true)
+	assertEq(pvp.lost, 67, "15% de 450 = 67 (floor)")
+	assertEq(ProgressionService.getUnconsolidatedXp(1001), 383, "perdeu 67")
+	assertEq(ProgressionService.getLedger(1001).consolidated, 0, "consolidado nunca é perdido")
+	ProgressionService.unregisterPlayer(1001)
+end)
+
+test("morte: cap de 200 aplica em saldo grande", function()
+	ProgressionService.init()
+	ProgressionService.registerPlayer(1002)
+	-- Saldo alto (acima do teto de emissão da sessão, via restore simulado).
+	ProgressionService.restoreFromSave(1002, {
+		consolidatedXp = 0,
+		unconsolidatedXp = 3000,
+		lastConsolidationAt = 0,
+		tutorialFlags = {},
+		unlockedAbilities = {},
+	})
+	local pvp = ProgressionService.applyDeathPenalty(1002, "free", true)
+	assertEq(pvp.lost, 200, "cap 200 (15% de 3000 = 450)")
+	assertEq(pvp.capped, true, "cap sinalizado")
+	assertEq(ProgressionService.getUnconsolidatedXp(1002), 2800, "3000 - 200")
+	-- PvE também respeita o cap.
+	local pve = ProgressionService.applyDeathPenalty(1002, "free", false)
+	assertEq(pve.lost, 200, "cap 200 no PvE (10% de 2800 = 280)")
+	assertEq(ProgressionService.getUnconsolidatedXp(1002), 2600, "2800 - 200")
+	-- Jogador desconhecido não quebra.
+	local ghost = ProgressionService.applyDeathPenalty(999, "free", true)
+	assertEq(ghost.lost, 0, "desconhecido 0")
+	ProgressionService.unregisterPlayer(1002)
+end)
+
+test("save: leave persiste flags e XP (item 1 da §11.2)", function()
+	fakeNow = 61000
+	ProgressionService.init()
+	ProgressionService.setNow(clockNow)
+	local store = makeMockStore()
+	SaveService.init(makeSaveDeps(store))
+	ProgressionService.registerPlayer(1010)
+	local profile = SaveService.loadProfile(1010)
+	assertTrue(profile ~= nil, "perfil aberto")
+	-- Joga: ganha XP, desbloqueia, suja o perfil.
+	ProgressionService.awardXp(1010, 90)
+	ProgressionService.grantUnlock(1010, "unlock_comet_shoulder")
+	SaveService.markDirty(1010)
+	SaveService.releaseProfile(1010) -- leave: salva se sujo e libera o lock
+	assertFalse(SaveService.hasOpenProfile(1010), "lock liberado")
+	assertTrue(store.stored["player:1010"] ~= nil, "save escrito")
+	-- Rejoin (novo servidor): o save restaura flags e XP.
+	ProgressionService.unregisterPlayer(1010)
+	ProgressionService.registerPlayer(1010)
+	local restored = SaveService.loadProfile(1010)
+	assertTrue(restored ~= nil, "reabre")
+	assertEq(ProgressionService.getUnconsolidatedXp(1010), 90, "XP restaurado")
+	assertTrue(ProgressionService.hasUnlock(1010, "unlock_comet_shoulder"), "flag restaurada")
+	SaveService.releaseProfile(1010)
+	ProgressionService.setNow(nil)
+	ProgressionService.unregisterPlayer(1010)
+end)
+
+test("save: crash no autosave não duplica unlock (item 2 da §11.2)", function()
+	fakeNow = 62000
+	ProgressionService.init()
+	ProgressionService.setNow(clockNow)
+	local store = makeMockStore()
+	SaveService.init(makeSaveDeps(store))
+	ProgressionService.registerPlayer(1011)
+	SaveService.loadProfile(1011)
+	ProgressionService.grantUnlock(1011, "unlock_broken_cadence")
+	SaveService.markDirty(1011)
+	SaveService.saveProfile(1011) -- autosave 1
+	SaveService.saveProfile(1011) -- sem dirty: não reescreve
+	assertEq(store.saves(), 1, "um save para um dirty")
+	assertEq(#ProgressionService.listUnlocks(1011), 1, "uma flag na sessão")
+	-- Restaura do save: flag não duplica (grantUnlock idempotente).
+	local saved = store.stored["player:1011"]
+	assertEq(#saved.progression.tutorialFlags, 1, "uma flag persistida")
+	-- Reaplica o snapshot salvo (como um crash que religa e reconstrói a
+	-- sessão a partir do último save): a flag continua única.
+	SaveService.releaseProfile(1011)
+	ProgressionService.unregisterPlayer(1011)
+	ProgressionService.registerPlayer(1011)
+	SaveService.loadProfile(1011)
+	assertEq(#ProgressionService.listUnlocks(1011), 1, "sem duplicar no rejoin")
+	SaveService.releaseProfile(1011)
+	ProgressionService.setNow(nil)
+	ProgressionService.unregisterPlayer(1011)
+end)
+
+test("save: rejoin no mesmo servidor devolve a sessão aberta (item 3)", function()
+	fakeNow = 63000
+	ProgressionService.init()
+	ProgressionService.setNow(clockNow)
+	local store = makeMockStore()
+	SaveService.init(makeSaveDeps(store))
+	ProgressionService.registerPlayer(1012)
+	local first = SaveService.loadProfile(1012)
+	ProgressionService.awardXp(1012, 25)
+	SaveService.markDirty(1012)
+	local second = SaveService.loadProfile(1012)
+	assertTrue(second ~= nil, "rejoin abre")
+	assertTrue(first == second, "mesma sessão (mesma tabela)")
+	assertEq(ProgressionService.getUnconsolidatedXp(1012), 25, "estado da sessão mantido")
+	SaveService.releaseProfile(1012)
+	ProgressionService.setNow(nil)
+	ProgressionService.unregisterPlayer(1012)
+end)
+
+test("save: segundo servidor recusa sessão concorrente (item 4)", function()
+	fakeNow = 64000
+	ProgressionService.init()
+	ProgressionService.setNow(clockNow)
+	local store = makeMockStore()
+	SaveService.init(makeSaveDeps(store))
+	ProgressionService.registerPlayer(1013)
+	-- Servidor A abre o lock.
+	local serverA = SaveService.loadProfile(1013)
+	assertTrue(serverA ~= nil, "servidor A abriu")
+	-- Servidor B (mesmo store) não consegue: startSession devolve nil.
+	SaveService.init(makeSaveDeps(store))
+	ProgressionService.unregisterPlayer(1013)
+	ProgressionService.registerPlayer(1013)
+	local serverB = SaveService.loadProfile(1013)
+	assertTrue(serverB == nil, "servidor B recusado (lock)")
+	assertFalse(SaveService.hasOpenProfile(1013), "sem sessão aberta")
+	-- Servidor A sai (EndSession) → o lock libera → B consegue abrir.
+	store.lastHandle.EndSession()
+	local reopened = SaveService.loadProfile(1013)
+	assertTrue(reopened ~= nil, "após o A liberar, B abre")
+	SaveService.releaseProfile(1013)
+	ProgressionService.setNow(nil)
+	ProgressionService.unregisterPlayer(1013)
+end)
+
+test("save: falha injetada no load não entra com default por cima (item 5)", function()
+	fakeNow = 65000
+	ProgressionService.init()
+	ProgressionService.setNow(clockNow)
+	local store = makeMockStore()
+	SaveService.init(makeSaveDeps(store))
+	ProgressionService.registerPlayer(1014)
+	SaveService.loadProfile(1014)
+	ProgressionService.awardXp(1014, 50)
+	SaveService.markDirty(1014)
+	SaveService.releaseProfile(1014) -- save existe: 50 XP não consolidado
+	assertTrue(store.stored["player:1014"] ~= nil, "save existente")
+	-- Próximo load falha (startSession devolve nil por erro de rede simulado).
+	local failing = {
+		stored = store.stored,
+		startSession = function()
+			return nil
+		end,
+	}
+	SaveService.init({
+		store = failing,
+		getSessionId = function()
+			return "job-fail"
+		end,
+		now = clockNow,
+	})
+	ProgressionService.unregisterPlayer(1014)
+	ProgressionService.registerPlayer(1014)
+	local profile = SaveService.loadProfile(1014)
+	assertTrue(profile == nil, "load falho → nil")
+	assertFalse(SaveService.hasOpenProfile(1014), "sem sessão")
+	assertTrue(store.stored["player:1014"] ~= nil, "save NÃO foi sobrescrito por default")
+	-- O save original continua intacto (50 XP).
+	assertEq(store.stored["player:1014"].progression.unconsolidatedXp, 50, "save intacto")
+	ProgressionService.setNow(nil)
+	ProgressionService.unregisterPlayer(1014)
+end)
+
+test("save: anel de recentOperations limita a 32 recibos", function()
+	fakeNow = 66000
+	ProgressionService.init()
+	ProgressionService.setNow(clockNow)
+	local store = makeMockStore()
+	SaveService.init(makeSaveDeps(store))
+	ProgressionService.registerPlayer(1015)
+	local profile = SaveService.loadProfile(1015)
+	assertTrue(profile ~= nil, "perfil")
+	for i = 1, 40 do
+		SaveService.appendOperation(1015, { operationId = ("op_%d"):format(i), kind = "test", at = fakeNow + i })
+	end
+	assertEq(#profile.recentOperations, 32, "anel limitado a 32")
+	assertEq(profile.recentOperations[1].operationId, "op_9", "mais antigo descartado")
+	assertEq(profile.recentOperations[32].operationId, "op_40", "mais recente presente")
+	SaveService.releaseProfile(1015)
+	ProgressionService.setNow(nil)
+	ProgressionService.unregisterPlayer(1015)
+end)
+
 -- ══ Runner ─────────────────────────────────────────────────────────────────
 print("")
 print("== Testes F0 — Anime Verse Battlegrounds ==")

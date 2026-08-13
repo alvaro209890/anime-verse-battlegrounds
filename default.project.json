@@ -6,6 +6,12 @@
     "ReplicatedStorage": {
       "Packages": {
         "$path": "Packages"
+      },
+      "Shared": {
+        "$className": "Folder",
+        "vendor": {
+          "$path": "lib/vendor"
+        }
       }
     }
   }

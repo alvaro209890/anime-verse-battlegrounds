@@ -7,6 +7,10 @@
 -- `anchor_bastion_return`, perda de XP na morte e ProfileStore. O XP aqui vive
 -- na sessão e some no leave — nada é persistido ainda.
 --
+-- Item 11 (2026-08-12): consolidação (move unconsolidated → consolidated com
+-- recibo idempotente), perda na morte por zona (docs/13 §11.1) e snapshot
+-- para o SaveService (ProfileRoot v1). O relógio é injetável (setNow).
+--
 -- Puro (sem Instances) — testável.
 
 local ABILITY_UNLOCK_FLAG: { [string]: string } = {
@@ -28,6 +32,11 @@ local KNOWN_FLAGS: { [string]: boolean } = {
 
 -- Teto de emissão por sessão (docs/13 §11.1).
 local SESSION_XP_CAP = 800
+-- Perda na morte (docs/13 §11.1): 10% PvE / 15% PvP da não consolidado,
+-- cap 200 XP (5 min × 40/min). Segura/treino: 0.
+local DEATH_LOSS_PVE_PCT = 0.10
+local DEATH_LOSS_PVP_PCT = 0.15
+local DEATH_LOSS_CAP = 200
 
 export type XpLedger = {
 	unconsolidated: number,
@@ -36,6 +45,10 @@ export type XpLedger = {
 	emitted: number,
 	-- anchorId → kills desta sessão (retorno decrescente por âncora).
 	killsByAnchor: { [string]: number },
+	-- Última consolidação (docs/13 §11.1); 0 = nunca consolidou na sessão.
+	lastConsolidationAt: number,
+	-- operationId do último recibo de consolidação (idempotência §11.1).
+	lastOperationId: string?,
 }
 
 export type XpAward = {
@@ -81,6 +94,8 @@ function ProgressionService.registerPlayer(userId: number): ()
 		consolidated = 0,
 		emitted = 0,
 		killsByAnchor = {},
+		lastConsolidationAt = 0,
+		lastOperationId = nil,
 	}
 end
 
@@ -239,6 +254,133 @@ end
 
 function ProgressionService.sessionXpCap(): number
 	return SESSION_XP_CAP
+end
+
+-- ── Consolidação e morte (docs/13 §11.1) ───────────────────────────────────
+
+export type ConsolidationReceipt = {
+	operationId: string,
+	consolidated: number,
+	-- Saldo não consolidado restante (sempre 0 — consolida tudo).
+	unconsolidatedAfter: number,
+	at: number,
+}
+
+-- Consolida todo o XP não consolidado (interagir 1,5 s com
+-- `anchor_bastion_return` fora de combate — o hold é validação do chamador).
+-- Retorna recibo com `operationId` idempotente: repetir a mesma operação não
+-- move nada de novo.
+function ProgressionService.consolidate(userId: number, at: number): ConsolidationReceipt?
+	local ledger = ProgressionService.xp[userId]
+	if not ledger then
+		return nil
+	end
+	if ledger.unconsolidated <= 0 then
+		return {
+			operationId = ("cons_%d_%d"):format(userId, at),
+			consolidated = 0,
+			unconsolidatedAfter = 0,
+			at = at,
+		}
+	end
+	ledger.consolidated += ledger.unconsolidated
+	ledger.lastConsolidationAt = at
+	ledger.lastOperationId = ("cons_%d_%d"):format(userId, at)
+	local moved = ledger.unconsolidated
+	ledger.unconsolidated = 0
+	return {
+		operationId = ledger.lastOperationId,
+		consolidated = moved,
+		unconsolidatedAfter = 0,
+		at = at,
+	}
+end
+
+export type DeathPenalty = {
+	lost: number,
+	reason: string?,
+	-- cap aplicado (200) ou nil se não houve perda.
+	capped: boolean?,
+}
+
+-- Perda de XP na morte (docs/13 §11.1, Q-018 — sem materiais na fatia):
+-- segura/treino 0; livre PvE 10% do não consolidado; livre PvP 15%; cap 200.
+-- O XP perdido sai da economia — não vai ao agressor.
+function ProgressionService.applyDeathPenalty(userId: number, zoneKind: string, pvp: boolean): DeathPenalty
+	local ledger = ProgressionService.xp[userId]
+	if not ledger then
+		return { lost = 0, reason = "unknown_player" }
+	end
+	if zoneKind == "safe" or zoneKind == "transition" then
+		return { lost = 0, reason = "safe_zone" }
+	end
+	local pct = if pvp then DEATH_LOSS_PVP_PCT else DEATH_LOSS_PVE_PCT
+	local raw = math.floor(ledger.unconsolidated * pct)
+	local lost = math.min(raw, DEATH_LOSS_CAP)
+	if lost <= 0 then
+		return { lost = 0, reason = "nothing_to_lose" }
+	end
+	ledger.unconsolidated -= lost
+	return { lost = lost, capped = raw > DEATH_LOSS_CAP }
+end
+
+-- ── Snapshot para o SaveService (ProfileRoot v1, docs/05 §4) ───────────────
+
+export type ProgressionSnapshot = {
+	consolidatedXp: number,
+	unconsolidatedXp: number,
+	lastConsolidationAt: number,
+	tutorialFlags: { string },
+	-- Habilidades desbloqueadas (abilities.{id}.unlockedAt no perfil).
+	unlockedAbilities: { string },
+}
+
+-- O que o perfil persiste. Sessão (emitted/killsByAnchor/combate) não entra:
+-- "combate não persiste" (docs/13 §11.2).
+function ProgressionService.snapshotForSave(userId: number): ProgressionSnapshot?
+	local ledger = ProgressionService.xp[userId]
+	if not ledger then
+		return nil
+	end
+	local unlocked: { string } = {}
+	for abilityId in ABILITY_UNLOCK_FLAG do
+		if ProgressionService.hasUnlock(userId, ABILITY_UNLOCK_FLAG[abilityId]) then
+			table.insert(unlocked, abilityId)
+		end
+	end
+	table.sort(unlocked)
+	return {
+		consolidatedXp = ledger.consolidated,
+		unconsolidatedXp = ledger.unconsolidated,
+		lastConsolidationAt = ledger.lastConsolidationAt,
+		tutorialFlags = ProgressionService.listUnlocks(userId),
+		unlockedAbilities = unlocked,
+	}
+end
+
+-- Restaura o perfil salvo na sessão (rejoin no mesmo servidor, §11.2 item 3).
+-- Só aplica o que é durável; o teto de emissão da sessão recomeça do zero.
+function ProgressionService.restoreFromSave(userId: number, snapshot: ProgressionSnapshot): ()
+	local ledger = ProgressionService.xp[userId]
+	if not ledger then
+		return
+	end
+	ledger.consolidated = snapshot.consolidatedXp or 0
+	ledger.unconsolidated = snapshot.unconsolidatedXp or 0
+	ledger.lastConsolidationAt = snapshot.lastConsolidationAt or 0
+	ledger.emitted = 0
+	ledger.killsByAnchor = {}
+	for _, flag in (snapshot.tutorialFlags or {}) do
+		if KNOWN_FLAGS[flag] then
+			ProgressionService.grantUnlock(userId, flag)
+		end
+	end
+	for _, abilityId in (snapshot.unlockedAbilities or {}) do
+		local flag = ABILITY_UNLOCK_FLAG[abilityId]
+		if flag then
+			ProgressionService.grantUnlock(userId, flag)
+		end
+	end
 end
 
 return ProgressionService

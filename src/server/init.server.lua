@@ -58,8 +58,50 @@ print("[Bootstrap] greybox construído")
 -- 1.2. Espaço — produz distância, costas e hitbox para o combate.
 SpatialService.init({ geometry = Geometry })
 
--- 2. Persistência (stub seguro até ProfileStore entrar no build)
-SaveService.init()
+-- 2. Persistência — ProfileRoot v1 com ProfileStore (docs/13 §11)
+-- lib/ProfileStore.luau entra no build via ReplicatedStorage.Shared.vendor
+-- (default.project.json); o adaptador injetado mantém o serviço testável.
+local ProfileStore = require(ReplicatedStorage.Shared.vendor.ProfileStore)
+local profileStoreInstance = ProfileStore.New("avb_f0_v1_profiles", nil)
+SaveService.init({
+	store = {
+		startSession = function(profileKey: string)
+			local profile = profileStoreInstance:StartSessionAsync(profileKey)
+			return if profile
+				then {
+					Data = profile.Data,
+					Save = function()
+						profile:Save()
+					end,
+					EndSession = function()
+						profile:EndSession()
+					end,
+				}
+				else nil
+		end,
+	},
+	getSessionId = function()
+		return game.JobId
+	end,
+	getSnapshot = function(userId: number)
+		return ProgressionService.snapshotForSave(userId)
+	end,
+	applySnapshot = function(userId: number, snapshot: any)
+		ProgressionService.restoreFromSave(userId, snapshot)
+	end,
+	onSaved = function(userId: number, _result: { any })
+		local player = game.Players:GetPlayerByUserId(userId)
+		if player then
+			RemoteGateway.fireClient(player, Remotes.Names.StateDelta, {
+				unconsolidatedXp = ProgressionService.getUnconsolidatedXp(userId),
+				consolidatedXp = ProgressionService.getLedger(userId)
+						and ProgressionService.getLedger(userId).consolidated
+					or 0,
+			})
+		end
+	end,
+})
+print("[Bootstrap] SaveService iniciado (ProfileStore)")
 
 -- 3. Gateway de rede — cria remotes registrados ANTES de qualquer fireClient
 RemoteGateway.init()
@@ -97,6 +139,10 @@ QuestService.init({
 			unlocks = ProgressionService.listUnlocks(userId),
 			unconsolidatedXp = ProgressionService.getUnconsolidatedXp(userId),
 		})
+		-- Item 11: recompensa/unlock de objetivo muda o perfil.
+		if event.state == "completed" then
+			SaveService.markDirty(userId)
+		end
 	end,
 })
 print("[Bootstrap] QuestService iniciado")
@@ -301,6 +347,8 @@ local function grantKillCredit(player: Player, fighterId: string, now: number): 
 	end
 	local award = ProgressionService.creditNpcKill(player.UserId, npcDef, anchorId)
 	local events = QuestService.creditKill(player.UserId, npcId, now)
+	-- Item 11: XP/flags mudaram — o autosave precisa persistir.
+	SaveService.markDirty(player.UserId)
 	-- QuestService já emitiu StateDelta com o XP atualizado; sem evento de
 	-- objetivo, o XP do kill ainda precisa chegar ao HUD.
 	if #events == 0 and award.granted > 0 then
@@ -316,6 +364,38 @@ end
 local function creditKill(player: Player, fighterId: string, now: number): ()
 	EnemyService.reportKill(player.UserId, fighterId)
 	grantKillCredit(player, fighterId, now)
+end
+
+-- userId → diedAt já penalizado (evita aplicar a perda duas vezes na mesma
+-- morte: PvP no BasicAttackIntent + PvE no Heartbeat).
+local deathPenalized: { [number]: number } = {}
+
+-- Item 11: perda de XP na morte (docs/13 §11.1, Q-018). Aplica a penalidade
+-- da zona do morto; o XP perdido sai da economia (não vai ao agressor).
+local function applyDeathPenalty(userId: number, pvp: boolean): ()
+	local fighter = CombatService.getFighter(CombatService.playerFighterId(userId))
+	if not fighter or fighter.health > 0 then
+		return
+	end
+	if deathPenalized[userId] == fighter.diedAt then
+		return
+	end
+	deathPenalized[userId] = fighter.diedAt
+	local zoneId = ZoneService.getPlayerZone(userId)
+	local zone = CatalogService.getZone(zoneId)
+	local zoneKind = if zone then zone.kind else "safe"
+	local penalty = ProgressionService.applyDeathPenalty(userId, zoneKind, pvp)
+	if penalty.lost > 0 then
+		SaveService.markDirty(userId)
+		local player = game.Players:GetPlayerByUserId(userId)
+		if player then
+			RemoteGateway.fireClient(player, Remotes.Names.StateDelta, {
+				unconsolidatedXp = ProgressionService.getUnconsolidatedXp(userId),
+				consolidatedXp = ProgressionService.getLedger(userId).consolidated,
+				deathPenalty = penalty.lost,
+			})
+		end
+	end
 end
 
 -- 6.1. Inimigos — spawn nas 6 âncoras, perseguição e respawn (§9.2).
@@ -434,10 +514,14 @@ RemoteGateway.onClientIntent(Remotes.Names.BasicAttackIntent, function(player: P
 			abilityId = if isHeavy then "heavy" else "light",
 		})
 		if result.killed then
-			-- Elite (item 9): o crédito é do leeching (resolveEliteDeath no
-			-- tick) — sem último golpe, para todos os elegíveis. Aqui só
-			-- registramos o dano; nunca creditamos direto (evita duplicar).
-			if EnemyService.isElite(target.id) then
+			-- Item 11: se o alvo é um jogador, a morte dele aplica a perda
+			-- de XP PvP (15% da não consolidado na zona livre, cap 200).
+			if target.id:match("^player:") then
+				applyDeathPenalty(tonumber(target.id:match("^player:(%d+)$")) :: number, true)
+			elseif EnemyService.isElite(target.id) then
+				-- Elite (item 9): o crédito é do leeching (resolveEliteDeath no
+				-- tick) — sem último golpe, para todos os elegíveis. Aqui só
+				-- registramos o dano; nunca creditamos direto (evita duplicar).
 				EnemyService.registerEliteDamage(target.id, player.UserId, result.damage)
 			else
 				creditKill(player, target.id, now)
@@ -454,10 +538,34 @@ RemoteGateway.onClientIntent(Remotes.Names.InteractionIntent, function(player: P
 		return
 	end
 	local npcId = payload.npcId
-	if type(npcId) ~= "string" then
+	if type(npcId) == "string" then
+		QuestService.tryAcceptFromNpc(player.UserId, npcId, os.clock())
 		return
 	end
-	QuestService.tryAcceptFromNpc(player.UserId, npcId, os.clock())
+	-- Item 11: consolidação no Marco de Retorno (docs/13 §11.1) — interagir
+	-- 1,5 s com `anchor_bastion_return` fora de combate move todo o XP não
+	-- consolidado para consolidado, com recibo idempotente.
+	local anchorId = payload.anchorId
+	if type(anchorId) == "string" and anchorId == "anchor_bastion_return" then
+		local resource = ResourceService.getState(player.UserId)
+		if resource and resource.combat then
+			return
+		end
+		local receipt = ProgressionService.consolidate(player.UserId, os.clock())
+		if receipt then
+			SaveService.appendOperation(player.UserId, {
+				operationId = receipt.operationId,
+				kind = "consolidate",
+				amount = receipt.consolidated,
+				at = receipt.at,
+			})
+			SaveService.markDirty(player.UserId)
+			RemoteGateway.fireClient(player, Remotes.Names.StateDelta, {
+				unconsolidatedXp = ProgressionService.getUnconsolidatedXp(player.UserId),
+				consolidatedXp = ProgressionService.getLedger(player.UserId).consolidated,
+			})
+		end
+	end
 end)
 
 RemoteGateway.onClientIntent(Remotes.Names.GuardIntent, function(player: Player, payload: { any })
@@ -498,6 +606,13 @@ end)
 -- 8. Ciclo de sessão
 game.Players.PlayerAdded:Connect(function(player: Player)
 	ProgressionService.registerPlayer(player.UserId)
+	-- Item 11: restaura o perfil salvo (flags + XP consolidado). Se o load
+	-- falhar (lock de outro servidor ou falha de rede), a sessão segue em
+	-- memória SEM criar default por cima do save existente (§11.2 itens 4/5).
+	local profile = SaveService.loadProfile(player.UserId)
+	if not profile then
+		warn(("[Bootstrap] save indisponível para %d — sessão em memória"):format(player.UserId))
+	end
 	ZoneService.registerPlayer(player.UserId)
 	QuestService.registerPlayer(player.UserId, os.clock())
 	ProgressionService.grantUnlock(player.UserId, "ftue_spawned")
@@ -518,6 +633,8 @@ game.Players.PlayerRemoving:Connect(function(player: Player)
 	QuestService.unregisterPlayer(player.UserId)
 	ZoneService.unregisterPlayer(player.UserId)
 	ProgressionService.unregisterPlayer(player.UserId)
+	-- Item 11: libera o lock do perfil (salva se sujo) — §11.2 item 1.
+	SaveService.releaseProfile(player.UserId)
 end)
 
 -- Aceite forçado do objetivo após 90 s (docs/13 §10). Heartbeat barato: o
@@ -578,6 +695,18 @@ RunService.Heartbeat:Connect(function()
 	EnemyService.tickElite(now, delta)
 	-- Item 8/10: ecos pendentes da Cadência (350 ms) e posturas do Pulso.
 	AbilityService.tick(now)
+	-- Item 11: morte PvE (inimigo) aplica a perda; autosave 60–120 s com
+	-- jitter persiste o perfil sujo.
+	for _, player in game.Players:GetPlayers() do
+		local userId = player.UserId
+		if PlayerSessionService.isReady(userId) then
+			local fighter = CombatService.getFighter(CombatService.playerFighterId(userId))
+			if fighter and fighter.health <= 0 then
+				applyDeathPenalty(userId, false)
+			end
+			SaveService.tick(userId, now)
+		end
+	end
 end)
 
 print("[Bootstrap] servidor pronto (F0)")
