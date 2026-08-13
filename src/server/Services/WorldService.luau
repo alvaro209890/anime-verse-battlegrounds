@@ -200,6 +200,11 @@ local function setActorVisible(model: Model, visible: boolean): ()
 	if not visible then
 		setTelegraphVisible(model, false, nil)
 	end
+	local actorId = model:GetAttribute("ActorId")
+	local root = model.PrimaryPart
+	if root and type(actorId) == "string" and string.find(actorId, "@", 1, true) then
+		root:SetAttribute("CombatTarget", visible)
+	end
 end
 
 local function createActorModel(name: string, actorId: string, npcId: string, recipe: any, position: Vector3): Model
