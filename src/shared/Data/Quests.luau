@@ -5,7 +5,7 @@
 --
 -- Tipos inline para o harness Lune. Contrato canônico: src/shared/Types.luau.
 
-export type QuestObjectiveKind = "kill"
+export type QuestObjectiveKind = "kill" | "flow_echo"
 
 export type QuestDefinition = {
 	id: string,
@@ -41,10 +41,44 @@ local Quests: { [string]: QuestDefinition } = {
 		acceptFlag = "quest_hunt_accepted",
 		enabled = true,
 	},
+
+	-- Objetivo 2 — elite da cratera (15–20 min do roteiro); unlock da
+	-- Cadência Quebrada ao derrotar (docs/13 §9.3, §10). Aceite forçado só
+	-- após 15 min (o roteiro não pula direto para o elite).
+	quest_elite = {
+		id = "quest_elite",
+		trackerKey = "quest.elite.tracker",
+		kind = "kill",
+		targetId = "enemy_anchored_shard",
+		requiredCount = 1,
+		giverNpcId = "npc_threshold_instructor",
+		autoAcceptAfterSeconds = 900,
+		xpReward = 60,
+		unlockFlag = "unlock_broken_cadence",
+		acceptFlag = "quest_elite_accepted",
+		enabled = true,
+	},
+
+	-- Objetivo 3 — timing (45–60 min do roteiro): acertar um eco da Cadência
+	-- Quebrada (docs/13 §6.2, §10); unlock do Retorno de Pulso.
+	-- kind "flow_echo": o alvo é a HABILIDADE que gera o eco, não um NPC.
+	quest_flow = {
+		id = "quest_flow",
+		trackerKey = "quest.flow.tracker",
+		kind = "flow_echo",
+		targetId = "broken_cadence",
+		requiredCount = 1,
+		giverNpcId = "npc_threshold_instructor",
+		autoAcceptAfterSeconds = 2700,
+		xpReward = 40,
+		unlockFlag = "unlock_pulse_return",
+		acceptFlag = "quest_flow_accepted",
+		enabled = true,
+	},
 }
 
--- Ordem de oferta na fatia. Itens 9/10 acrescentam `quest_elite` e `quest_flow`.
-local CHAIN: { string } = { "quest_hunt" }
+-- Ordem de oferta na fatia: caça → elite → timing (docs/13 §10).
+local CHAIN: { string } = { "quest_hunt", "quest_elite", "quest_flow" }
 
 local QuestCatalog = {}
 

@@ -20,6 +20,8 @@ local KNOWN_FLAGS: { [string]: boolean } = {
 	unlock_broken_cadence = true,
 	unlock_pulse_return = true,
 	quest_hunt_accepted = true,
+	quest_elite_accepted = true,
+	quest_flow_accepted = true,
 	ftue_spawned = true,
 	ftue_dummy_hit = true,
 }
@@ -48,11 +50,28 @@ local ProgressionService = {
 	flags = {} :: { [number]: { [string]: boolean } },
 	-- userId → ledger
 	xp = {} :: { [number]: XpLedger },
+	-- userId → npcId → instante do último XP (cooldown por NPC, §9.3)
+	lastXpAt = {} :: { [number]: { [string]: number } },
 }
+
+-- Relógio injetável (os testes usam o fakeNow; o servidor usa os.clock).
+local injectedNow: (() -> number)? = nil
+
+function ProgressionService.setNow(fn: (() -> number)?): ()
+	injectedNow = fn
+end
+
+local function now(): number
+	if injectedNow then
+		return injectedNow()
+	end
+	return os.clock()
+end
 
 function ProgressionService.init(): ()
 	table.clear(ProgressionService.flags)
 	table.clear(ProgressionService.xp)
+	table.clear(ProgressionService.lastXpAt)
 end
 
 function ProgressionService.registerPlayer(userId: number): ()
@@ -68,6 +87,7 @@ end
 function ProgressionService.unregisterPlayer(userId: number): ()
 	ProgressionService.flags[userId] = nil
 	ProgressionService.xp[userId] = nil
+	ProgressionService.lastXpAt[userId] = nil
 end
 
 function ProgressionService.hasUnlock(userId: number, flag: string): boolean
@@ -150,6 +170,8 @@ end
 
 -- XP de um kill, aplicando o retorno decrescente por âncora antes do teto.
 -- `npcDef` vem do catálogo; `anchorId` identifica o ponto de spawn.
+-- Cooldown por NPC (`npcDef.xpCooldownSeconds`, §9.3): o elite paga 80 XP
+-- uma vez por 3 min por jogador — dentro do cooldown, recusa "xp_cooldown".
 function ProgressionService.creditNpcKill(userId: number, npcDef: any, anchorId: string): XpAward
 	local ledger = ProgressionService.xp[userId]
 	if not ledger then
@@ -161,6 +183,15 @@ function ProgressionService.creditNpcKill(userId: number, npcDef: any, anchorId:
 	local base = npcDef.xpUnconsolidated or 0
 	if base <= 0 then
 		return { granted = 0, withheld = 0, reason = "no_xp_source" }
+	end
+
+	-- Cooldown por NPC (elite §9.3): uma vez por xpCooldownSeconds por jogador.
+	local cooldown = npcDef.xpCooldownSeconds
+	if cooldown and cooldown > 0 then
+		local last = (ProgressionService.lastXpAt[userId] or {})[npcDef.id]
+		if last and (now() - last) < cooldown then
+			return { granted = 0, withheld = base, reason = "xp_cooldown" }
+		end
 	end
 
 	local kills = (ledger.killsByAnchor[anchorId] or 0) + 1
@@ -184,6 +215,15 @@ function ProgressionService.creditNpcKill(userId: number, npcDef: any, anchorId:
 	if award.granted < base then
 		award.withheld = base - award.granted
 		award.reason = award.reason or "diminished"
+	end
+	-- Marca o cooldown só quando o XP saiu (elite com cooldown).
+	if cooldown and cooldown > 0 and award.granted > 0 then
+		local userTimes = ProgressionService.lastXpAt[userId]
+		if not userTimes then
+			userTimes = {}
+			ProgressionService.lastXpAt[userId] = userTimes
+		end
+		userTimes[npcDef.id] = now()
 	end
 	return award
 end

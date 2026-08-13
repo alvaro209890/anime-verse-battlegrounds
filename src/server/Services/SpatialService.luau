@@ -58,6 +58,33 @@ function SpatialService.remove(fighterId: string): ()
 	SpatialService.transforms[fighterId] = nil
 end
 
+-- Empurrão (docs/13 §6.3 — contra do Retorno de Pulso): move `fighterId`
+-- `distance` studs para longe de `fromPosition`, no plano do chão (altura
+-- preservada). Sem transform conhecido, não move.
+function SpatialService.pushBack(fighterId: string, fromPosition: Vec3, distance: number): boolean
+	local transform = SpatialService.transforms[fighterId]
+	local deps = SpatialService.deps
+	if not transform or not deps or distance <= 0 then
+		return false
+	end
+	local delta = deps.geometry.sub(transform.position, fromPosition)
+	local horizontal = math.sqrt(delta.x * delta.x + delta.z * delta.z)
+	if horizontal <= 1e-6 then
+		return false
+	end
+	local dir = {
+		x = delta.x / horizontal,
+		z = delta.z / horizontal,
+	}
+	transform.position = {
+		x = transform.position.x + dir.x * distance,
+		y = transform.position.y,
+		z = transform.position.z + dir.z * distance,
+	}
+	SpatialService.transforms[fighterId] = transform
+	return true
+end
+
 -- Distância no plano do chão. `nil` se algum dos dois não tem transform —
 -- quem chama trata como "fora de alcance", nunca como 0.
 function SpatialService.distanceBetween(idA: string, idB: string): number?

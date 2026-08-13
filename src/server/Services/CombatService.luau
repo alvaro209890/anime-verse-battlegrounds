@@ -34,6 +34,14 @@ export type FighterState = {
 	aiPhase: "idle" | "telegraph" | "recovery",
 	aiPhaseUntil: number,
 	diedAt: number,
+	-- Retorno de Pulso (docs/13 §6.3): postura de 250 ms que reduz 50% de UM
+	-- golpe frontal. `pulseStanceUsed` evita reduzir mais de um golpe por
+	-- postura. `pulseRecoveryUntil` é o erro da postura (600 ms sem golpe).
+	pulseStanceUntil: number,
+	pulseStanceUsed: boolean,
+	pulseRecoveryUntil: number,
+	-- Padrão do ciclo do elite (docs/13 §9.3): alterna combo leve e slam.
+	elitePattern: "combo" | "slam",
 }
 
 export type HitFacing = "front" | "back"
@@ -62,6 +70,11 @@ local HEAVY_MISS_LOCK = 0.5
 local BREAK_NO_GUARD = 1.2
 local DASH_COOLDOWN = 3.0
 local DASH_IFRAME = 0.08
+-- Retorno de Pulso (docs/13 §6.3): postura 250 ms, contra 8, empurrão 8 studs
+-- (espacial — fora deste serviço), erro 600 ms.
+local PULSE_STANCE_MS = 250
+local PULSE_COUNTER_DAMAGE = 8
+local PULSE_MISS_RECOVERY_MS = 600
 
 local CombatService = {
 	fighters = {} :: { [string]: FighterState },
@@ -104,6 +117,10 @@ function CombatService.createFighter(
 		aiPhase = "idle",
 		aiPhaseUntil = 0,
 		diedAt = 0,
+		pulseStanceUntil = 0,
+		pulseStanceUsed = false,
+		pulseRecoveryUntil = 0,
+		elitePattern = "combo",
 	}
 	CombatService.fighters[id] = fighter
 	return fighter
@@ -148,6 +165,9 @@ function CombatService.setGuard(fighter: FighterState, down: boolean, now: numbe
 end
 
 function CombatService.tryDash(fighter: FighterState, now: number): (boolean, string?)
+	if CombatService.isPulseRecovery(fighter, now) then
+		return false, "recovery"
+	end
 	if now < fighter.dashCooldownUntil then
 		return false, "cooldown"
 	end
@@ -163,10 +183,31 @@ local function applyHit(
 	guardDamage: number,
 	blockedHp: number,
 	facing: HitFacing,
-	parryable: boolean
+	parryable: boolean,
+	unblockablePulse: boolean?
 ): HitResult
 	if now < target.iframeUntil then
 		return { ok = true, damage = 0, iframe = true }
+	end
+	-- Retorno de Pulso (docs/13 §6.3): a postura reduz 50% de UM golpe frontal.
+	-- Não reduz golpe pelas costas, nem golpe `unblockable` (slam do elite), nem
+	-- golpe contra um alvo já em quebra (pesado de break). Só o primeiro golpe
+	-- da janela de 250 ms é reduzido (`pulseStanceUsed`).
+	if
+		now < target.pulseStanceUntil
+		and not target.pulseStanceUsed
+		and facing ~= "back"
+		and not unblockablePulse
+		and now >= target.cannotGuardUntil
+	then
+		local reduced = math.floor(rawHp * 0.5)
+		target.pulseStanceUsed = true
+		target.health = math.max(0, target.health - reduced)
+		if target.health <= 0 then
+			target.diedAt = now
+			return { ok = true, damage = reduced, pulseCounter = true, killed = true }
+		end
+		return { ok = true, damage = reduced, pulseCounter = true }
 	end
 	-- Golpe em alvo já morto não re-carimba diedAt (não empurra o respawn).
 	local wasAlive = target.health > 0
@@ -203,9 +244,56 @@ local function applyHit(
 	return { ok = true, damage = hp, broken = broken, killed = killed or nil }
 end
 
+-- Entra na postura do Retorno de Pulso (docs/13 §6.3): 250 ms, UM golpe frontal.
+function CombatService.setPulseStance(fighter: FighterState, now: number): (boolean, string?)
+	if now < fighter.pulseRecoveryUntil then
+		return false, "recovery"
+	end
+	fighter.pulseStanceUntil = now + PULSE_STANCE_MS / 1000
+	fighter.pulseStanceUsed = false
+	return true, nil
+end
+
+-- Erro da postura (docs/13 §6.3): postura expira sem golpe → recovery 600 ms.
+function CombatService.pulseTick(fighter: FighterState, now: number): (boolean, string?)
+	if fighter.pulseStanceUntil <= 0 then
+		return false, "no_stance"
+	end
+	if now >= fighter.pulseStanceUntil then
+		fighter.pulseStanceUntil = 0
+		if not fighter.pulseStanceUsed then
+			fighter.pulseRecoveryUntil = now + PULSE_MISS_RECOVERY_MS / 1000
+			return true, "miss"
+		end
+	end
+	return false, "active"
+end
+
+function CombatService.isPulseRecovery(fighter: FighterState, now: number): boolean
+	return now < fighter.pulseRecoveryUntil
+end
+
+-- Contra do Retorno de Pulso: 8 de dano no atacante (empurrão de 8 studs é
+-- espacial — quem chama move o fighter; docs/13 §6.3).
+function CombatService.tryPulseCounter(attacker: FighterState, now: number): HitResult
+	if attacker.health <= 0 then
+		return fail("dead")
+	end
+	attacker.health = math.max(0, attacker.health - PULSE_COUNTER_DAMAGE)
+	local killed = false
+	if attacker.health <= 0 then
+		attacker.diedAt = now
+		killed = true
+	end
+	return { ok = true, damage = PULSE_COUNTER_DAMAGE, killed = killed or nil }
+end
+
 function CombatService.tryLight(attacker: FighterState, target: FighterState, now: number, facing: HitFacing): HitResult
 	if attacker.health <= 0 then
 		return fail("dead")
+	end
+	if CombatService.isPulseRecovery(attacker, now) then
+		return fail("recovery")
 	end
 	if now < attacker.heavyMissUntil then
 		return fail("heavy_miss")
@@ -234,6 +322,9 @@ function CombatService.tryHeavy(
 ): HitResult
 	if attacker.health <= 0 then
 		return fail("dead")
+	end
+	if CombatService.isPulseRecovery(attacker, now) then
+		return fail("recovery")
 	end
 	if target == nil then
 		attacker.heavyMissUntil = now + HEAVY_MISS_LOCK
@@ -368,6 +459,118 @@ function CombatService.tryShardCycle(
 		local result = applyHit(target, now, damage, damage, math.floor(damage * 0.4), "front", true)
 		shard.aiPhase = "recovery"
 		shard.aiPhaseUntil = now + recoverySeconds
+		if result.ok then
+			result.phase = "attack"
+		end
+		return result
+	end
+	return fail("idle")
+end
+
+-- Estilhaço Ancorado — elite da cratera (docs/13 §9.3). Máquina igual à do
+-- shard, mas com DOIS ataques alternados por ciclo: combo leve 5+5
+-- (telegraph 300 ms) e slam (telegraph 700 ms, dano 12, `unblockable` para o
+-- Retorno de Pulso, guarda reduz apenas 30% → 70% do dano passa).
+-- `params` espelha as colunas do catálogo (Npcs.luau).
+export type EliteCycleParams = {
+	range: number,
+	recoverySeconds: number,
+	comboDamage: number,
+	comboTelegraphSeconds: number,
+	slamDamage: number,
+	slamTelegraphSeconds: number,
+	-- Guarda reduz 30%: o dano que passa bloqueado é 70% do slam (§9.3).
+	slamBlockedPct: number,
+}
+
+function CombatService.tryEliteCycle(
+	elite: FighterState,
+	target: FighterState,
+	now: number,
+	distance: number,
+	canAggro: boolean,
+	params: EliteCycleParams
+): HitResult
+	if elite.health <= 0 then
+		return fail("dead")
+	end
+	if not canAggro then
+		elite.aiPhase = "idle"
+		elite.aiPhaseUntil = 0
+		return fail("no_aggro")
+	end
+	if distance > params.range then
+		elite.aiPhase = "idle"
+		elite.aiPhaseUntil = 0
+		return fail("out_of_range")
+	end
+	if elite.aiPhase == "recovery" then
+		if now < elite.aiPhaseUntil then
+			return fail("recovery")
+		end
+		elite.aiPhase = "idle"
+		-- Ciclo completo: alterna o padrão do próximo ataque.
+		elite.elitePattern = if elite.elitePattern == "slam" then "combo" else "slam"
+	end
+	if elite.aiPhase == "idle" then
+		elite.aiPhase = "telegraph"
+		local telegraph = if elite.elitePattern == "slam"
+			then params.slamTelegraphSeconds
+			else params.comboTelegraphSeconds
+		elite.aiPhaseUntil = now + telegraph
+		return { ok = true, damage = 0, phase = "telegraph" }
+	end
+	if elite.aiPhase == "telegraph" then
+		if now < elite.aiPhaseUntil then
+			return fail("telegraph")
+		end
+		local result: HitResult
+		if elite.elitePattern == "slam" then
+			-- Slam: unblockable para o Pulso (a postura não reduz) e a guarda
+			-- só corta 30% (blockedHp = 70% do dano). Parryable false: o slam
+			-- não é um leve — sem janela de aparo (§9.3 não lista aparo).
+			result = applyHit(
+				target,
+				now,
+				params.slamDamage,
+				params.slamDamage,
+				math.ceil(params.slamDamage * params.slamBlockedPct),
+				"front",
+				false,
+				true
+			)
+		else
+			-- Combo leve 5+5: dois golpes no mesmo active; o segundo só sai
+			-- se o primeiro não matou.
+			local first = applyHit(
+				target,
+				now,
+				params.comboDamage,
+				params.comboDamage,
+				math.floor(params.comboDamage * 0.4),
+				"front",
+				true
+			)
+			if not first.ok then
+				return first
+			end
+			if first.killed then
+				result = first
+			else
+				result = applyHit(
+					target,
+					now + 0.1,
+					params.comboDamage,
+					params.comboDamage,
+					math.floor(params.comboDamage * 0.4),
+					"front",
+					true
+				)
+				result.damage += first.damage
+			end
+		end
+		elite.aiPhase = "recovery"
+		elite.aiPhaseUntil = now + params.recoverySeconds
 		if result.ok then
 			result.phase = "attack"
 		end

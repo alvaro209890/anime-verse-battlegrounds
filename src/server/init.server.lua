@@ -172,6 +172,17 @@ AbilityService.init({
 	end,
 	isAbilityUnlocked = ProgressionService.isAbilityUnlocked,
 	getFighterById = CombatService.getFighter,
+	-- Retorno de Pulso (item 10): abre a postura de 250 ms no FighterState.
+	setPulseStance = CombatService.setPulseStance,
+	-- Postura sem golpe → recovery 600 ms (erro do Pulso, §6.3).
+	expirePulseStance = function(fighter: any, currentNow: number)
+		CombatService.pulseTick(fighter, currentNow)
+	end,
+	-- Eco da Cadência acertou (item 10 — objetivo quest_flow). O QuestService
+	-- já emite o StateDelta pelo onQuestEvent; aqui só credita o objetivo.
+	onFlowEcho = function(userId: number, abilityId: string)
+		QuestService.creditFlowEcho(userId, abilityId, os.clock())
+	end,
 	-- Ombro Cometa espacial (§6.1): 7 studs, cap 8, para em parede e em guarda
 	-- inimiga, cápsula 4×4×8 no trajeto e no máximo 1 alvo.
 	resolveCometShoulder = function(userId: number)
@@ -267,6 +278,46 @@ local function listAggroTargets(): { any }
 	return out
 end
 
+-- Convenção de id do fighter de inimigo: "<npcId>@<anchorId>#<n>".
+-- A âncora vem no id porque o retorno decrescente de XP é por ponto de spawn
+-- (docs/13 §9.2). A camada de spawn/AI no Studio cria os fighters com este
+-- formato e chama `creditKill` no mesmo ponto que o combate headless.
+local function parseEnemyFighterId(fighterId: string): (string?, string?)
+	return string.match(fighterId, "^([^@#]+)@([^@#]+)#%d+$")
+end
+
+-- Crédito de um kill: XP da âncora + progresso do objetivo. Idempotente por
+-- construção — só é chamado na transição vivo → morto (`result.killed`) ou
+-- pelo leeching do elite (resolveEliteDeath). Não reporta o died (quem
+-- chamou já emitiu o evento).
+local function grantKillCredit(player: Player, fighterId: string, now: number): number
+	local npcId, anchorId = parseEnemyFighterId(fighterId)
+	if not npcId or not anchorId then
+		return 0
+	end
+	local npcDef = CatalogService.getNpc(npcId)
+	if not npcDef then
+		return 0
+	end
+	local award = ProgressionService.creditNpcKill(player.UserId, npcDef, anchorId)
+	local events = QuestService.creditKill(player.UserId, npcId, now)
+	-- QuestService já emitiu StateDelta com o XP atualizado; sem evento de
+	-- objetivo, o XP do kill ainda precisa chegar ao HUD.
+	if #events == 0 and award.granted > 0 then
+		RemoteGateway.fireClient(player, Remotes.Names.StateDelta, {
+			unconsolidatedXp = ProgressionService.getUnconsolidatedXp(player.UserId),
+		})
+	end
+	return award.granted
+end
+
+-- Kill direto (BasicAttackIntent): reporta o died e credita. O elite NÃO
+-- passa por aqui — a morte dele resolve o leeching no tick.
+local function creditKill(player: Player, fighterId: string, now: number): ()
+	EnemyService.reportKill(player.UserId, fighterId)
+	grantKillCredit(player, fighterId, now)
+end
+
 -- 6.1. Inimigos — spawn nas 6 âncoras, perseguição e respawn (§9.2).
 EnemyService.init({
 	getNpc = CatalogService.getNpc,
@@ -276,6 +327,15 @@ EnemyService.init({
 	combat = CombatService,
 	geometry = Geometry,
 	listTargets = listAggroTargets,
+	-- Item 9: leeching do elite — cada jogador elegível recebe o crédito
+	-- completo (XP + objetivo), sem último golpe (§9.3). O died já foi
+	-- emitido pelo resolveEliteDeath; aqui só credita.
+	onKill = function(userId: number, fighterId: string)
+		local player = game.Players:GetPlayerByUserId(userId)
+		if player then
+			grantKillCredit(player, fighterId, os.clock())
+		end
+	end,
 	onEnemyEvent = function(fighterId: string, event: { any })
 		-- Telegraph precisa chegar ao cliente para o contorno branco (§17).
 		for _, player in game.Players:GetPlayers() do
@@ -291,38 +351,9 @@ EnemyService.init({
 	end,
 })
 EnemyService.spawnInitial()
+-- Item 9: o elite da cratera entra no mundo junto (docs/13 §9.3).
+EnemyService.spawnElite()
 print("[Bootstrap] Estilhaços no mundo")
-
--- Convenção de id do fighter de inimigo: "<npcId>@<anchorId>#<n>".
--- A âncora vem no id porque o retorno decrescente de XP é por ponto de spawn
--- (docs/13 §9.2). A camada de spawn/AI no Studio cria os fighters com este
--- formato e chama `creditKill` no mesmo ponto que o combate headless.
-local function parseEnemyFighterId(fighterId: string): (string?, string?)
-	return string.match(fighterId, "^([^@#]+)@([^@#]+)#%d+$")
-end
-
--- Crédito de um kill: XP da âncora + progresso do objetivo. Idempotente por
--- construção — só é chamado na transição vivo → morto (`result.killed`).
-local function creditKill(player: Player, fighterId: string, now: number): ()
-	local npcId, anchorId = parseEnemyFighterId(fighterId)
-	if not npcId or not anchorId then
-		return
-	end
-	local npcDef = CatalogService.getNpc(npcId)
-	if not npcDef then
-		return
-	end
-	EnemyService.reportKill(player.UserId, fighterId)
-	local award = ProgressionService.creditNpcKill(player.UserId, npcDef, anchorId)
-	local events = QuestService.creditKill(player.UserId, npcId, now)
-	-- QuestService já emitiu StateDelta com o XP atualizado; sem evento de
-	-- objetivo, o XP do kill ainda precisa chegar ao HUD.
-	if #events == 0 and award.granted > 0 then
-		RemoteGateway.fireClient(player, Remotes.Names.StateDelta, {
-			unconsolidatedXp = ProgressionService.getUnconsolidatedXp(player.UserId),
-		})
-	end
-end
 
 -- 7. Intenção de habilidade (cliente → servidor)
 RemoteGateway.onClientIntent(Remotes.Names.AbilityActivate, function(player: Player, payload: { any })
@@ -388,13 +419,31 @@ RemoteGateway.onClientIntent(Remotes.Names.BasicAttackIntent, function(player: P
 
 	if result and result.ok and target then
 		ZoneService.markHostileAction(player.UserId, now)
+		-- Retorno de Pulso (item 10): o golpe foi reduzido pela postura do
+		-- alvo — o atacante toma o contra (dano 8) e é empurrado 8 studs.
+		if result.pulseCounter then
+			CombatService.tryPulseCounter(attacker, now)
+			local targetPosition = SpatialService.getPosition(target.id)
+			if targetPosition then
+				SpatialService.pushBack(attackerId, targetPosition, 8)
+			end
+		end
 		RemoteGateway.fireClient(player, Remotes.Names.CombatHit, {
 			targetId = target.id,
 			damage = result.damage,
 			abilityId = if isHeavy then "heavy" else "light",
 		})
 		if result.killed then
-			creditKill(player, target.id, now)
+			-- Elite (item 9): o crédito é do leeching (resolveEliteDeath no
+			-- tick) — sem último golpe, para todos os elegíveis. Aqui só
+			-- registramos o dano; nunca creditamos direto (evita duplicar).
+			if EnemyService.isElite(target.id) then
+				EnemyService.registerEliteDamage(target.id, player.UserId, result.damage)
+			else
+				creditKill(player, target.id, now)
+			end
+		elseif EnemyService.isElite(target.id) and result.damage > 0 then
+			EnemyService.registerEliteDamage(target.id, player.UserId, result.damage)
 		end
 	end
 end)
@@ -525,6 +574,10 @@ RunService.Heartbeat:Connect(function()
 	end
 
 	EnemyService.tick(now, delta)
+	-- Item 9: ciclo do elite (combo/slam + leeching + respawn 180 s).
+	EnemyService.tickElite(now, delta)
+	-- Item 8/10: ecos pendentes da Cadência (350 ms) e posturas do Pulso.
+	AbilityService.tick(now)
 end)
 
 print("[Bootstrap] servidor pronto (F0)")

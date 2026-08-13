@@ -139,6 +139,9 @@ function QuestService.tryAccept(userId: number, questId: string, now: number, so
 end
 
 -- Aceite pelo NPC ofertante (docs/13 §13 — InteractionIntent).
+-- A cadeia é sequencial: o NPC só oferece o próximo objetivo quando o
+-- anterior foi completado (roteiro §10: caça → elite → timing). Sem isso,
+-- falar duas vezes com o Instrutor aceitaria os três de uma vez.
 function QuestService.tryAcceptFromNpc(userId: number, npcId: string, now: number): (boolean, string?)
 	local deps = QuestService.deps
 	if not deps then
@@ -148,11 +151,26 @@ function QuestService.tryAcceptFromNpc(userId: number, npcId: string, now: numbe
 	if not userStates then
 		return false, "unknown_player"
 	end
-	for _, questId in deps.chain() do
+	local chain = deps.chain()
+	local previousCompleted = true
+	for index, questId in chain do
 		local def = deps.getQuest(questId)
 		local progress = userStates[questId]
-		if def and progress and def.giverNpcId == npcId and progress.state == "offered" then
-			return QuestService.tryAccept(userId, questId, now, "npc")
+		if def and progress then
+			if def.giverNpcId == npcId and progress.state == "offered" and previousCompleted then
+				return QuestService.tryAccept(userId, questId, now, "npc")
+			end
+			if progress.state == "active" then
+				return false, "already_active"
+			end
+			if progress.state == "completed" then
+				previousCompleted = true
+			else
+				previousCompleted = false
+			end
+		end
+		if index < #chain and not userStates[chain[index + 1]] then
+			break
 		end
 	end
 	return false, "no_offer"
@@ -184,6 +202,19 @@ end
 -- Credita um kill no objetivo ativo cujo alvo bate. Retorna os eventos gerados
 -- (progresso e, se fechar, conclusão). Kill fora de objetivo ativo não conta.
 function QuestService.creditKill(userId: number, targetNpcId: string, now: number): { QuestEvent }
+	return QuestService.creditEvent(userId, "kill", targetNpcId, now)
+end
+
+-- Credita um eco de Fluxo acertado (docs/13 §6.2/§10 — kind "flow_echo").
+-- `abilityId` é a habilidade que gerou o eco (quest_flow mira broken_cadence).
+-- Mesma máquina de estado do kill, só muda o gatilho.
+function QuestService.creditFlowEcho(userId: number, abilityId: string, now: number): { QuestEvent }
+	return QuestService.creditEvent(userId, "flow_echo", abilityId, now)
+end
+
+-- Núcleo do crédito de objetivo: procura o primeiro objetivo ATIVO da cadeia
+-- cujo kind e alvo batem e avança o progresso. Recompensa idempotente.
+function QuestService.creditEvent(userId: number, kind: string, targetId: string, now: number): { QuestEvent }
 	local out: { QuestEvent } = {}
 	local deps = QuestService.deps
 	if not deps then
@@ -198,7 +229,7 @@ function QuestService.creditKill(userId: number, targetNpcId: string, now: numbe
 	for _, questId in deps.chain() do
 		local def = deps.getQuest(questId)
 		local progress = userStates[questId]
-		if def and progress and progress.state == "active" and def.kind == "kill" and def.targetId == targetNpcId then
+		if def and progress and progress.state == "active" and def.kind == kind and def.targetId == targetId then
 			progress.progress = math.min(progress.progress + 1, progress.required)
 			if progress.progress < progress.required then
 				local event: QuestEvent = {

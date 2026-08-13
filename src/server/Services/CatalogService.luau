@@ -131,6 +131,39 @@ function CatalogService.validate(): ()
 		if not hasShard then
 			fail("catálogo de NPCs sem enemy_wandering_shard")
 		end
+		local hasElite = false
+		for _, npc in deps.Npcs.all() do
+			if npc.id == "enemy_anchored_shard" then
+				hasElite = true
+				if npc.maxHealth ~= 80 or npc.eliteSlamDamage ~= 12 or npc.eliteSlamTelegraphMs ~= 700 then
+					fail("enemy_anchored_shard fora do baseline F0 (80 HP / slam 12 / telegraph 700)")
+				end
+				if npc.eliteComboDamage ~= 5 or npc.eliteComboTelegraphMs ~= 300 then
+					fail("enemy_anchored_shard combo leve fora do baseline (5+5 / 300 ms)")
+				end
+				if npc.respawnSeconds ~= 180 then
+					fail("enemy_anchored_shard respawn deve ser 180 s")
+				end
+				if npc.xpUnconsolidated ~= 80 or npc.xpCooldownSeconds ~= 180 then
+					fail("enemy_anchored_shard XP fora do baseline (80 / cooldown 180 s)")
+				end
+				if npc.maxAlive ~= 1 then
+					fail("enemy_anchored_shard maxAlive deve ser 1")
+				end
+				if npc.zoneId ~= "zone_plain_free" then
+					fail("enemy_anchored_shard deve viver em zone_plain_free")
+				end
+				if npc.leechDamagePct ~= 0.01 or npc.leechStaySeconds ~= 8 then
+					fail("enemy_anchored_shard leeching fora do baseline (1% / 8 s)")
+				end
+				if npc.attackPattern ~= "elite" then
+					fail('enemy_anchored_shard attackPattern deve ser "elite"')
+				end
+			end
+		end
+		if not hasElite then
+			fail("catálogo de NPCs sem enemy_anchored_shard")
+		end
 	end
 
 	if deps.Zones then
@@ -295,12 +328,19 @@ function CatalogService.validate(): ()
 			if quest.autoAcceptAfterSeconds < 0 then
 				fail(("quest %s → autoAcceptAfterSeconds negativo"):format(quest.id))
 			end
-			if quest.kind ~= "kill" then
+			if quest.kind ~= "kill" and quest.kind ~= "flow_echo" then
 				fail(("quest %s → kind não suportado na fatia: %s"):format(quest.id, tostring(quest.kind)))
 			end
 			if deps.Npcs then
-				if not npcIds[quest.targetId] then
-					fail(("quest %s → alvo desconhecido %s"):format(quest.id, quest.targetId))
+				if quest.kind == "kill" then
+					if not npcIds[quest.targetId] then
+						fail(("quest %s → alvo desconhecido %s"):format(quest.id, quest.targetId))
+					end
+				else
+					-- kind "flow_echo": o alvo é a HABILIDADE que gera o eco (item 10).
+					if deps.Abilities.get(quest.targetId) == nil then
+						fail(("quest %s → habilidade de eco desconhecida %s"):format(quest.id, quest.targetId))
+					end
 				end
 				if not npcIds[quest.giverNpcId] then
 					fail(("quest %s → ofertante desconhecido %s"):format(quest.id, quest.giverNpcId))

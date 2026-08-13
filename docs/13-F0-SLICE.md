@@ -30,25 +30,25 @@ Itens 1–7 fechados no domínio, com a camada espacial construída por código 
 |---|---|---|
 | `src/shared/Data/Abilities.luau` | `comet_shoulder`, `broken_cadence`, `pulse_return`; `eclipse_beat` desligada | feito |
 | `src/shared/Data/EnergyFamilies.luau` | Umbral regen 2/6, Fluxo 6 / 120 ms, cap 1,5 s | feito |
-| `src/shared/Data/Npcs.luau` | dummy 10000 HP; `enemy_wandering_shard` 40 HP / dano 6 / alcance 4 / telegraph 400 ms; `npc_threshold_instructor` (ofertante) | pathfinding/Studio pendente |
+| `src/shared/Data/Npcs.luau` | dummy 10000 HP; `enemy_wandering_shard` 40 HP / dano 6 / alcance 4 / telegraph 400 ms; `npc_threshold_instructor` (ofertante) | **item 9 feito**: `enemy_anchored_shard` (80 HP, slam 12/700 ms, combo 5+5/300 ms, respawn 180 s, XP 80 cooldown 180 s, leeching 1%/8 s) — pathfinding/Studio pendente |
 | `src/shared/Data/Zones.luau` | 3 zonas com volumes (AABB), 6 âncoras persistidas + 6 pontos de Estilhaço, greybox F0-BASELINE | feito |
 | `src/shared/Geometry.luau` | distância, costas, esfera, cápsula, caixa, lunge e passo de perseguição | feito |
 | `SpatialService` | registro de posição/olhar; hitbox à frente, cápsula do trajeto, `resolveCometShoulder` | feito no domínio; leitura do `HumanoidRootPart` só roda no Studio |
 | `EnemyService` | spawn nas 6 âncoras, perseguição 12 studs/s, ciclo de ataque, respawn 45 s, teto 4 | feito no domínio; nunca rodou em Studio |
 | `WorldService` | constrói chão, muros, portões, volumes, cratera, pilares, âncoras e collision groups | **código escrito, execução não verificada** |
-| `src/shared/Data/Quests.luau` | `quest_hunt`: 3 Estilhaços, +40 XP, unlock Cometa, aceite forçado em 90 s | itens 9/10 acrescentam linhas (elite e Fluxo) |
+| `src/shared/Data/Quests.luau` | `quest_hunt`: 3 Estilhaços, +40 XP, unlock Cometa, aceite forçado em 90 s | **itens 9/10 feitos**: `quest_elite` (1 Ancorado, +60 XP, unlock Cadência, aceite 900 s) e `quest_flow` (kind `flow_echo`, +40 XP, unlock Pulso, aceite 2700 s); cadeia sequencial caça → elite → timing |
 | `src/shared/Data/Locale.luau` | chaves §16 em PT-BR e EN; validado no boot contra os catálogos | copy final e P1 |
-| `CombatService` | cadeia leve, guarda, aparo, pesado, quebra, dash, dummy, comet, Estilhaço, `killed` na transição vivo → morto; alvo e lado do golpe agora vêm do `SpatialService` | feito no domínio |
-| `AbilityService` | comet resolve o fighter do dummy; `CombatHit` no acerto; unlock via `ProgressionService` no bootstrap | Cadência/Pulso contra dummy (itens 8/10) |
-| `ProgressionService` | spawn sem técnicas; grant idempotente; XP não consolidado com retorno decrescente por âncora e teto de 800/sessão | consolidação, perda na morte e persistência (item 11) |
-| `QuestService` | oferta → aceite (NPC ou 90 s) → progresso por kill → +40 XP e `unlock_comet_shoulder` no 3º | objetivos do elite e do Fluxo (itens 9/10) |
+| `CombatService` | cadeia leve, guarda, aparo, pesado, quebra, dash, dummy, comet, Estilhaço, `killed` na transição vivo → morto; alvo e lado do golpe agora vêm do `SpatialService` | **itens 8/10 feitos**: postura do Pulso (250 ms, 50%, contra 8, erro 600 ms) e ciclo do elite (combo/slam alternados, slam unblockable com guarda 30%) — Studio pendente |
+| `AbilityService` | comet resolve o fighter do dummy; `CombatHit` no acerto; unlock via `ProgressionService` no bootstrap | **itens 8/10 feitos**: Cadência com janela de reentrada + eco agendado no tick; Pulso abre postura no FighterState; `onFlowEcho` credita `quest_flow` — Studio pendente |
+| `ProgressionService` | spawn sem técnicas; grant idempotente; XP não consolidado com retorno decrescente por âncora e teto de 800/sessão | **item 9 feito**: cooldown de XP por NPC (elite 180 s) — consolidação, perda na morte e persistência (item 11) |
+| `QuestService` | oferta → aceite (NPC ou 90 s) → progresso por kill → +40 XP e `unlock_comet_shoulder` no 3º | **itens 9/10 feitos**: cadeia sequencial (anterior precisa completar) e kind `flow_echo` via `creditFlowEcho` |
 | `ZoneService` | zona atual, `canPvp`, transição 5 s, lockout 15 s, `ZoneEvent` + `ZoneCrossingIntent`; hostil na segura não marca PvP | 5 sinais visíveis/audíveis, volumes e collision groups no Studio |
 | `PlayerSessionService` | snapshot Ready lê zona, unlocks, objetivo e XP não consolidado | feito no domínio |
 | `src/client/init.client.lua` | espera `SessionSnapshot`; não dispara no boot; resolve o tracker do `StateDelta` via `Locale` | InputController (item 12) |
 | `SaveService` | stub em memória; persiste `wallet` | ProfileRoot v1 sem wallet; ProfileStore no place de teste |
 | Mapa/HUD | greybox como dados (`Zones.luau`); ausentes no Studio | §8 e §12 |
 
-Testes Lune: 109 casos em `tests/run.luau` (`docs/12-TESTING.md`).
+Testes Lune: 124 casos em `tests/run.luau` (`docs/12-TESTING.md`).
 
 **Comprovado neste recorte:** técnicas locked no spawn; Estilhaço Errante completo (spawn nas 6 âncoras, perseguição a 12 studs/s, telegraph 400 ms, dano 6, alcance 4, sem aggro através da fronteira, respawn 45 s, teto de 4); XP com retorno decrescente por âncora e teto de sessão; objetivo 1 do aceite ao prêmio; unlock do Ombro Cometa no 3º kill; geometria do greybox coerente com as âncoras; hitbox à frente; lunge de 7 studs com cap 8 e parada na guarda.
 
@@ -515,7 +515,7 @@ Cheat de unlock: remote **inexistente** no cliente. Flag `StudioDebugUnlock` só
 
 ## 19. Testes da mudança de catálogo
 
-Os casos abaixo estão em `tests/run.luau` (109 no total; fonte: chamadas `test(...)`):
+Os casos abaixo estão em `tests/run.luau` (124 no total; fonte: chamadas `test(...)`):
 
 - roster `eclipse_fist` com 3 skills enabled + 1 ultimate disabled
 - `comet_shoulder` custo 18, CD 7, runner registrado
@@ -609,9 +609,9 @@ Ordem de implementação; cada item fecha com teste automatizado **ou** evidênc
 5. ~~Ombro Cometa~~ (feito 2026-08-12; lunge espacial de 7 studs com cap 8, parada na guarda e cápsula do trajeto entraram em 2026-08-12 via `SpatialService.resolveCometShoulder`)
 6. ~~Greybox + `ZoneService` + 5 sinais~~ (feito 2026-08-12; regras headless em 64 testes; geometria construída por código em 2026-08-12 — `Zones.luau` ganhou volumes, `WorldService` constrói parts/muros/portões/collision groups e `zoneAtPosition` reconcilia a zona no heartbeat. **Sem execução em Studio**: sinais visíveis/audíveis, iluminação, hold 0,6 s no toque e playtest cego da fronteira continuam pendentes)
 7. ~~Estilhaços + objetivo 1 + unlock Cometa~~ (completo 2026-08-12; 109 testes — Locale, `Quests.luau`, `QuestService`, XP com retorno decrescente e teto de sessão, unlock no 3º kill, `InteractionIntent` + `StateDelta`, e o `EnemyService` com spawn nas 6 âncoras, perseguição, telegraph e respawn. **Pendente**: persistência do XP/flags, que é o item 11, e execução em Studio)
-8. Cadência + Fluxo
-9. Elite + unlock Cadência
-10. Pulso + objetivo 45–60 min
+8. ~~Cadência + Fluxo~~ (completo 2026-08-12 — janela de reentrada abre 120 ms após o fim do active do golpe 2 (400 ms da ativação), clique prematuro não destrói a janela, reentrada agenda o eco para 350 ms depois (`AbilityService.tick` no Heartbeat), eco 4 com Fluxo +6, cap 1,5 s e bônus +3 a cada 8 s no `ResourceService`. **Pendente**: execução em Studio)
+9. ~~Elite + unlock Cadência~~ (completo 2026-08-12 — `enemy_anchored_shard` no catálogo com slam 12/700 ms unblockable (guarda corta 30%) e combo 5+5/300 ms alternados por ciclo; spawn único na `anchor_elite`; respawn 180 s; leeching ≥ 1% da vida ou 8 s no raio sem último golpe; XP 80 com cooldown de 180 s por jogador; `quest_elite` +60 XP e `unlock_broken_cadence`. **Pendente**: cratera e ciclo no Studio)
+10. ~~Pulso + objetivo 45–60 min~~ (completo 2026-08-12 — postura de 250 ms reduz 50% de UM golpe frontal; contra 8 + empurrão 8 studs espacial; erro vira recovery 600 ms; costas e slam do elite vencem a postura; `quest_flow` kind `flow_echo` creditado pelo eco da Cadência, +40 XP e `unlock_pulse_return`. **Pendente**: empurrão e feeling no Studio)
 11. Consolidação + morte + ProfileStore
 12. HUD/input mobile e gamepad
 13. Telemetria + rejeição adversarial de remotes

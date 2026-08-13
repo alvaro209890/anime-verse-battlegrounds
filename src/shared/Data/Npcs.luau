@@ -27,6 +27,19 @@ export type NpcDefinition = {
 	maxAlive: number?,
 	zoneId: string?,
 	combatClearRadius: number?,
+	-- Elite (docs/13 §9.3 — Estilhaço Ancorado). Campos opcionais; só o elite
+	-- os preenche. `elitePattern` alterna slam/combo no CombatService.
+	attackPattern: string?,
+	eliteSlamDamage: number?,
+	eliteSlamTelegraphMs: number?,
+	eliteComboDamage: number?,
+	eliteComboTelegraphMs: number?,
+	-- XP "uma vez por 3 min por jogador" (§9.3): cooldown de crédito.
+	xpCooldownSeconds: number?,
+	-- Leeching (§9.3): crédito se causou ≥ 1% da vida (`leechDamagePct`) ou
+	-- ficou `leechStaySeconds` no raio `combatClearRadius`. Sem último golpe.
+	leechDamagePct: number?,
+	leechStaySeconds: number?,
 }
 
 local Npcs: { [string]: NpcDefinition } = {
@@ -79,6 +92,40 @@ local Npcs: { [string]: NpcDefinition } = {
 		xpReducedKills = 6,
 		xpReducedValue = 12,
 		maxAlive = 4,
+		zoneId = "zone_plain_free",
+		combatClearRadius = 20,
+	},
+	-- Estilhaço Ancorado — elite da cratera (docs/13 §9.3). Fica na âncora
+	-- `anchor_elite` (não persegue: moveSpeed ausente), alterna slam (dano 12,
+	-- telegraph 700 ms, `unblockable` para o Retorno de Pulso, guarda reduz 30%)
+	-- com combo leve 5+5 (telegraph 300 ms). Respawn 180 s. XP 80 uma vez por
+	-- 3 min por jogador, com leeching: crédito se causou ≥ 1% da vida ou ficou
+	-- 8 s no raio 20 da cratera. Sem último golpe.
+	enemy_anchored_shard = {
+		id = "enemy_anchored_shard",
+		displayNameKey = "enemy.anchored_shard.name",
+		kind = "enemy",
+		maxHealth = 80,
+		maxGuard = 0,
+		attackDamage = 12,
+		attackRange = 8,
+		attackPeriodSeconds = 1.0,
+		telegraphMs = 700,
+		grantsXp = true,
+		enabled = true,
+		-- Ancorado: não persegue o jogador; ataca quem entra na cratera.
+		attackPattern = "elite",
+		respawnSeconds = 180,
+		recoverySeconds = 0.8,
+		xpUnconsolidated = 80,
+		xpCooldownSeconds = 180,
+		eliteSlamDamage = 12,
+		eliteSlamTelegraphMs = 700,
+		eliteComboDamage = 5,
+		eliteComboTelegraphMs = 300,
+		leechDamagePct = 0.01,
+		leechStaySeconds = 8,
+		maxAlive = 1,
 		zoneId = "zone_plain_free",
 		combatClearRadius = 20,
 	},

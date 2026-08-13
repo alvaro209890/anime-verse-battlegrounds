@@ -4,6 +4,16 @@
 -- runner registrado em serverRunnerId. Adicionar habilidade nova = 1 entrada
 -- em Data/Abilities + 1 runner aqui.
 --
+-- Itens 8/10 do backlog (2026-08-12):
+--   * Cadência Quebrada: janela de reentrada abre 120 ms após o fim do active
+--     do golpe 2 (400 ms da ativação); a reentrada agenda o eco para 350 ms
+--     depois (`AbilityService.tick` resolve ecos pendentes — o Heartbeat do
+--     bootstrap chama o tick; nos testes, o relógio injetável faz o papel).
+--   * Retorno de Pulso: a ativação abre a postura de 250 ms no FighterState
+--     (CombatService.setPulseStance). O golpe frontal reduzido dispara o
+--     contra (dano 8 + empurrão) por quem causou o golpe — o runner não
+--     aplica dano na ativação (o cliente nunca informa "foi aparo").
+--
 -- Dependências injetadas no init() — sem require de Instances (testável).
 
 export type ServerPlayerState = {
@@ -18,7 +28,6 @@ export type ServerPlayerState = {
 
 export type AbilityPayload = {
 	phase: string?,
-	incomingHit: boolean?,
 }
 
 export type AbilityDeps = {
@@ -41,6 +50,13 @@ export type AbilityDeps = {
 	-- `getAbilityTarget` (dummy fixo), que é o comportamento anterior.
 	resolveCometShoulder: ((number) -> any)?,
 	getFighterById: ((string) -> any?)?,
+	-- Retorno de Pulso (item 10): abre a postura no FighterState do jogador e
+	-- expira a postura sem golpe (erro → recovery 600 ms).
+	setPulseStance: ((any, number) -> ())?,
+	expirePulseStance: ((any, number) -> ())?,
+	-- Eco da Cadência acertou (item 10 — objetivo quest_flow): o bootstrap
+	-- liga ao QuestService.creditFlowEcho. `abilityId` é quem gerou o eco.
+	onFlowEcho: ((number, string) -> ())?,
 }
 
 local AbilityService = {
@@ -48,7 +64,21 @@ local AbilityService = {
 	deps = nil :: AbilityDeps?,
 }
 
-local reentryUntil: { [number]: { abilityId: string, expiresAt: number } } = {}
+-- Janela de reentrada da Cadência: abre 120 ms após o fim do active do golpe 2
+-- (docs/13 §6.2). Fim do active do golpe 2 = startup 140 + active 80 + intervalo
+-- 100 + active 80 = 400 ms da ativação; janela de 120 ms.
+local CADENCE_REENTRY_OPENS_MS = 400
+local CADENCE_REENTRY_WINDOW_MS = 120
+-- Eco: 350 ms após a reentrada (docs/13 §6.2).
+local CADENCE_ECHO_DELAY_MS = 350
+-- Postura do Retorno de Pulso: 250 ms (docs/13 §6.3).
+local PULSE_STANCE_MS = 250
+
+local reentryUntil: { [number]: { abilityId: string, opensAt: number, expiresAt: number } } = {}
+-- userId → eco pendente da Cadência (resolvido no tick).
+local pendingEchos: { [number]: { at: number, target: any, abilityId: string } } = {}
+-- userId → postura ativa do Retorno de Pulso (expira no tick sem golpe).
+local pulseStances: { [number]: { fighterId: string, expiresAt: number } } = {}
 
 local function now(): number
 	local deps = AbilityService.deps
@@ -56,6 +86,41 @@ local function now(): number
 		return deps.now()
 	end
 	return os.clock()
+end
+
+-- Resolve ecos pendentes da Cadência (docs/13 §6.2): 350 ms após a reentrada,
+-- dano 4 na mesma hitbox; o eco que acerta gera Fluxo e dispara onFlowEcho.
+-- Também expira posturas do Pulso sem golpe (erro → recovery 600 ms, §6.3).
+-- Chamado pelo Heartbeat do bootstrap (e pelos testes com relógio fake).
+function AbilityService.tick(currentNow: number): ()
+	local deps = AbilityService.deps
+	if not deps then
+		return
+	end
+	for userId, echo in pendingEchos do
+		if currentNow >= echo.at then
+			pendingEchos[userId] = nil
+			local target = echo.target
+			if target and target.health > 0 then
+				deps.applyDamage(target, 4, userId)
+				deps.tryGrantFlow(userId)
+				if deps.onFlowEcho then
+					deps.onFlowEcho(userId, echo.abilityId)
+				end
+			end
+		end
+	end
+	for userId, stance in pulseStances do
+		if currentNow >= stance.expiresAt then
+			pulseStances[userId] = nil
+			if deps.expirePulseStance and deps.getFighterById then
+				local fighter = deps.getFighterById(stance.fighterId)
+				if fighter then
+					deps.expirePulseStance(fighter, currentNow)
+				end
+			end
+		end
+	end
 end
 
 local function cometShoulderRunner(attacker: ServerPlayerState, target: ServerPlayerState?, _payload: AbilityPayload)
@@ -98,39 +163,46 @@ local function cometShoulderRunner(attacker: ServerPlayerState, target: ServerPl
 	deps.applyDamage(target, 9, attacker.userId)
 end
 
-local function brokenCadenceRunner(attacker: ServerPlayerState, target: ServerPlayerState?, payload: AbilityPayload)
+local function brokenCadenceRunner(attacker: ServerPlayerState, target: ServerPlayerState?, _payload: AbilityPayload)
 	local deps = AbilityService.deps
 	if not deps then
 		return
 	end
-	if payload.phase == "reentry" then
-		if target then
-			local dead = deps.applyDamage(target, 4, attacker.userId)
-			if not dead then
-				deps.tryGrantFlow(attacker.userId)
-			end
-		end
-		return
-	end
+	-- Golpe 1 (dano 5) e golpe 2 (dano 6) conectam na ativação; o timing de
+	-- startup/active/recovery é executado no Studio (a fatia headless confirma
+	-- o dano). O golpe 2 só sai se o golpe 1 não matou.
 	if target then
-		deps.applyDamage(target, 5, attacker.userId)
+		if deps.applyDamage(target, 5, attacker.userId) then
+			return
+		end
 		deps.applyDamage(target, 6, attacker.userId)
 	end
+	-- Janela de reentrada: 120 ms após o fim do active do golpe 2.
 	reentryUntil[attacker.userId] = {
 		abilityId = "broken_cadence",
-		expiresAt = now() + 0.12,
+		opensAt = now() + CADENCE_REENTRY_OPENS_MS / 1000,
+		expiresAt = now() + (CADENCE_REENTRY_OPENS_MS + CADENCE_REENTRY_WINDOW_MS) / 1000,
 	}
 end
 
-local function pulseReturnRunner(attacker: ServerPlayerState, target: ServerPlayerState?, payload: AbilityPayload)
-	if not payload.incomingHit or not target then
-		return
-	end
+local function pulseReturnRunner(attacker: ServerPlayerState, _target: ServerPlayerState?, _payload: AbilityPayload)
 	local deps = AbilityService.deps
 	if not deps then
 		return
 	end
-	deps.applyDamage(target, 8, attacker.userId)
+	-- Ativação: abre a postura de 250 ms no FighterState do jogador. O golpe
+	-- frontal reduzido (CombatService.applyHit) dispara o contra com dano 8 e
+	-- empurrão — quem causou o golpe resolve o contra (docs/13 §6.3).
+	if deps.getAttackerFighter and deps.setPulseStance then
+		local fighter = deps.getAttackerFighter(attacker.userId)
+		if fighter then
+			deps.setPulseStance(fighter, now())
+			pulseStances[attacker.userId] = {
+				fighterId = fighter.id,
+				expiresAt = now() + PULSE_STANCE_MS / 1000,
+			}
+		end
+	end
 end
 
 local function eclipseBeatRunner(_attacker: ServerPlayerState, _target: ServerPlayerState?, _payload: AbilityPayload)
@@ -140,6 +212,8 @@ end
 function AbilityService.init(deps: AbilityDeps): ()
 	AbilityService.deps = deps
 	table.clear(reentryUntil)
+	table.clear(pendingEchos)
+	table.clear(pulseStances)
 	AbilityService.runners = {
 		comet_shoulder_runner = cometShoulderRunner,
 		broken_cadence_runner = brokenCadenceRunner,
@@ -152,14 +226,23 @@ local function tryReentry(
 	attacker: ServerPlayerState,
 	abilityId: string,
 	target: ServerPlayerState?,
-	payload: AbilityPayload
+	_payload: AbilityPayload
 ): (boolean, string?)
 	local deps = AbilityService.deps
 	if not deps then
 		return false, "not_initialized"
 	end
 	local window = reentryUntil[attacker.userId]
-	if not window or window.abilityId ~= abilityId or now() > window.expiresAt then
+	if not window or window.abilityId ~= abilityId then
+		reentryUntil[attacker.userId] = nil
+		return false, "reentry_window"
+	end
+	if now() < window.opensAt then
+		-- Ainda não abriu: clique prematuro NÃO destrói a janela (o jogador
+		-- pode reentrar quando ela abrir).
+		return false, "reentry_window"
+	end
+	if now() > window.expiresAt then
 		reentryUntil[attacker.userId] = nil
 		return false, "reentry_window"
 	end
@@ -168,11 +251,12 @@ local function tryReentry(
 	if not ability then
 		return false, "unknown_ability"
 	end
-	local runner = AbilityService.runners[ability.serverRunnerId]
-	if not runner then
-		return false, "runner_not_found"
-	end
-	runner(attacker, target, payload)
+	-- A reentrada não gasta recurso nem reinicia cooldown: só agenda o eco.
+	pendingEchos[attacker.userId] = {
+		at = now() + CADENCE_ECHO_DELAY_MS / 1000,
+		target = target,
+		abilityId = abilityId,
+	}
 	return true
 end
 
