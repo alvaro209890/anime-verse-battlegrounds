@@ -1,8 +1,8 @@
 --!strict
 -- WorldService (server) — F0 (docs/13-F0-SLICE.md §8)
--- Constrói o greybox no Studio a partir de `Zones.luau`: chão, muros, portões,
--- volumes de transição, planície, cratera da elite e marcadores de âncora,
--- além dos collision groups `Safe` / `Transition` / `Free` / `GateBlock`.
+-- Constrói o greybox no Studio a partir de `Zones.luau`: chão, rotas, muros,
+-- portões, planície, cratera, marcos e atores low-poly funcionais, além dos
+-- collision groups `Safe` / `Transition` / `Free` / `GateBlock`.
 --
 -- ATENÇÃO — esta é a ÚNICA camada da fatia que toca Instances, e por isso é a
 -- única que os testes Lune não cobrem. Ela não tem regra de jogo: é tradução
@@ -10,19 +10,29 @@
 -- vive em `Zones.luau`, `Geometry.luau` e `SpatialService`, que são testados.
 -- Se algo aqui precisar de um `if` de gameplay, o `if` está no lugar errado.
 --
--- Arte proibida até P1 (§17): só parts, cores neutras e luz.
+-- Arte final proibida até P1 (§17): só Parts, cores neutras, luz e animação
+-- procedural genérica. Nenhuma silhueta/roupa/VFX de referência.
 
+local Lighting = game:GetService("Lighting")
 local PhysicsService = game:GetService("PhysicsService")
 local Workspace = game:GetService("Workspace")
 
 export type WorldDeps = {
 	zones: any,
 	greybox: any,
+	presentation: any,
+}
+
+export type ActorVisual = {
+	model: Model,
+	lastPosition: Vector3?,
+	rootHeight: number,
 }
 
 local WorldService = {
 	deps = nil :: WorldDeps?,
 	root = nil :: Folder?,
+	actors = {} :: { [string]: ActorVisual },
 }
 
 local GROUND_Y = 0
@@ -35,7 +45,15 @@ local COLORS = {
 	transition = Color3.fromRGB(230, 190, 90),
 	crater = Color3.fromRGB(100, 92, 84),
 	anchor = Color3.fromRGB(90, 160, 220),
+	path = Color3.fromRGB(168, 158, 139),
+	darkStone = Color3.fromRGB(82, 85, 88),
+	lightStone = Color3.fromRGB(205, 201, 187),
+	boundary = Color3.fromRGB(232, 224, 196),
 }
+
+local function toColor(rgb: { number }): Color3
+	return Color3.fromRGB(rgb[1], rgb[2], rgb[3])
+end
 
 local function registerCollisionGroups(groups: { string }): ()
 	for _, name in groups do
@@ -67,6 +85,7 @@ local function makePart(
 	part.Position = position
 	part.Color = color
 	part.Material = Enum.Material.SmoothPlastic
+	part.CastShadow = canCollide
 	part.TopSurface = Enum.SurfaceType.Smooth
 	part.BottomSurface = Enum.SurfaceType.Smooth
 	if not canCollide then
@@ -74,6 +93,134 @@ local function makePart(
 	end
 	part.CollisionGroup = collisionGroup
 	return part
+end
+
+local function makeVisualPart(
+	className: "Part" | "WedgePart",
+	name: string,
+	size: Vector3,
+	color: Color3,
+	material: Enum.Material
+): BasePart
+	local part = Instance.new(className) :: BasePart
+	part.Name = name
+	part.Size = size
+	part.Color = color
+	part.Material = material
+	part.Anchored = false
+	part.CanCollide = false
+	part.CanTouch = false
+	part.CanQuery = false
+	part.CastShadow = true
+	part.Massless = true
+	part.TopSurface = Enum.SurfaceType.Smooth
+	part.BottomSurface = Enum.SurfaceType.Smooth
+	return part
+end
+
+local function attach(root: BasePart, part: BasePart, offset: CFrame, jointName: string): ()
+	part.CFrame = root.CFrame * offset
+	part.Parent = root.Parent
+	local joint = Instance.new("Motor6D")
+	joint.Name = jointName
+	joint.Part0 = root
+	joint.Part1 = part
+	joint.C0 = offset
+	joint.Parent = root
+end
+
+local function setActorVisible(model: Model, visible: boolean): ()
+	for _, descendant in model:GetDescendants() do
+		if descendant:IsA("BasePart") and descendant.Name ~= "Root" then
+			descendant.Transparency = if visible then 0 else 1
+		end
+	end
+end
+
+local function createActorModel(name: string, actorId: string, npcId: string, recipe: any, position: Vector3): Model
+	local model = Instance.new("Model")
+	model.Name = name
+	model:SetAttribute("PresentationActor", true)
+	model:SetAttribute("ActorId", actorId)
+	model:SetAttribute("NpcId", npcId)
+	model:SetAttribute("PoseKind", "spawn")
+	model:SetAttribute("Moving", false)
+
+	local scale = recipe.scale
+	local root = makeVisualPart("Part", "Root", Vector3.new(1, 1, 1), COLORS.darkStone, Enum.Material.SmoothPlastic)
+	root.Anchored = true
+	root.Transparency = 1
+	root.CFrame = CFrame.new(position + Vector3.new(0, if recipe.shape == "shard" then 3 * scale else 3, 0))
+	root.Parent = model
+	model.PrimaryPart = root
+
+	local bodyColor = toColor(recipe.bodyRgb)
+	local accentColor = toColor(recipe.accentRgb)
+	local coreColor = toColor(recipe.coreRgb)
+	if recipe.shape == "humanoid" then
+		local torso =
+			makeVisualPart("Part", "Torso", Vector3.new(2.2, 2.4, 1.1) * scale, bodyColor, Enum.Material.Slate)
+		attach(root, torso, CFrame.new(0, 0.1, 0), "Joint_Torso")
+
+		local head = makeVisualPart(
+			"Part",
+			"Head",
+			Vector3.new(1.35, 1.35, 1.35) * scale,
+			coreColor,
+			Enum.Material.SmoothPlastic
+		)
+		head.Shape = Enum.PartType.Ball
+		attach(root, head, CFrame.new(0, 1.95 * scale, 0), "Joint_Head")
+
+		local leftArm =
+			makeVisualPart("Part", "LeftArm", Vector3.new(0.7, 2.2, 0.7) * scale, accentColor, Enum.Material.Slate)
+		attach(root, leftArm, CFrame.new(-1.45 * scale, 0.05, 0), "Joint_LeftArm")
+		local rightArm = leftArm:Clone()
+		rightArm.Name = "RightArm"
+		attach(root, rightArm, CFrame.new(1.45 * scale, 0.05, 0), "Joint_RightArm")
+
+		local leftLeg =
+			makeVisualPart("Part", "LeftLeg", Vector3.new(0.85, 2.4, 0.9) * scale, bodyColor, Enum.Material.Slate)
+		attach(root, leftLeg, CFrame.new(-0.58 * scale, -2.2 * scale, 0), "Joint_LeftLeg")
+		local rightLeg = leftLeg:Clone()
+		rightLeg.Name = "RightLeg"
+		attach(root, rightLeg, CFrame.new(0.58 * scale, -2.2 * scale, 0), "Joint_RightLeg")
+	else
+		local torso =
+			makeVisualPart("Part", "Torso", Vector3.new(2.2, 2.8, 1.6) * scale, bodyColor, Enum.Material.Slate)
+		attach(root, torso, CFrame.Angles(0, 0, math.rad(45)), "Joint_Torso")
+		local core =
+			makeVisualPart("Part", "Core", Vector3.new(1.25, 1.25, 1.25) * scale, coreColor, Enum.Material.Neon)
+		core.Shape = Enum.PartType.Ball
+		attach(root, core, CFrame.new(0, 0, -0.75 * scale), "Joint_Core")
+		local left = makeVisualPart(
+			"WedgePart",
+			"ShardLeft",
+			Vector3.new(1.1, 2.7, 0.8) * scale,
+			accentColor,
+			Enum.Material.Slate
+		)
+		attach(root, left, CFrame.new(-1.35 * scale, 0.1, 0) * CFrame.Angles(0, 0, math.rad(28)), "Joint_ShardLeft")
+		local right = left:Clone()
+		right.Name = "ShardRight"
+		attach(
+			root,
+			right,
+			CFrame.new(1.35 * scale, 0.1, 0) * CFrame.Angles(0, math.pi, math.rad(-28)),
+			"Joint_ShardRight"
+		)
+		local top = makeVisualPart(
+			"WedgePart",
+			"ShardTop",
+			Vector3.new(0.9, 2.2, 0.9) * scale,
+			accentColor,
+			Enum.Material.Slate
+		)
+		attach(root, top, CFrame.new(0, 2 * scale, 0), "Joint_ShardTop")
+	end
+
+	model:PivotTo(root.CFrame)
+	return model
 end
 
 -- Volume de zona vira uma part de gatilho (sem colisão): o servidor lê a
@@ -107,6 +254,7 @@ local function buildZoneVolumes(root: Folder, zones: any): ()
 				false
 			)
 			part:SetAttribute("ZoneId", zone.id)
+			part.Transparency = 1
 			part.Parent = folder
 		end
 	end
@@ -114,7 +262,7 @@ end
 
 -- Chão do Bastião e da Planície, com material distinto (§8.1: pedra clara na
 -- vila, areia/pedra na planície) — aqui só cor, porque arte é pós-P1.
-local function buildFloors(root: Folder, greybox: any): ()
+local function buildFloors(root: Folder, greybox: any, style: any): ()
 	local folder = Instance.new("Folder")
 	folder.Name = "Floors"
 	folder.Parent = root
@@ -151,17 +299,83 @@ local function buildFloors(root: Folder, greybox: any): ()
 	)
 	training.Parent = folder
 
-	-- Cratera da elite: borda 2 studs mais alta (§8.1).
-	local crater = makePart(
-		"EliteCraterRim",
-		Vector3.new(greybox.eliteCraterRadius * 2, 2, greybox.eliteCraterRadius * 2),
-		Vector3.new(0, GROUND_Y + 1, -102),
+	-- Praça e rotas tornam spawn → treino → dois portões legíveis sem minimapa.
+	local plaza = makePart(
+		"SpawnPlaza",
+		Vector3.new(0.35, style.spawnPlazaRadius * 2, style.spawnPlazaRadius * 2),
+		Vector3.new(0, 0.18, 16),
+		COLORS.lightStone,
+		"Safe",
+		true
+	)
+	plaza.Shape = Enum.PartType.Cylinder
+	plaza.CFrame = CFrame.new(plaza.Position) * CFrame.Angles(0, 0, math.pi / 2)
+	plaza.Parent = folder
+
+	local northPath = makePart(
+		"PathNorthGate",
+		Vector3.new(style.pathWidth, 0.3, 43),
+		Vector3.new(0, 0.16, -10.5),
+		COLORS.path,
+		"Safe",
+		true
+	)
+	northPath.Parent = folder
+	local trainingPath = makePart(
+		"PathTraining",
+		Vector3.new(30, 0.3, style.pathWidth),
+		Vector3.new(15, 0.16, -20),
+		COLORS.path,
+		"Safe",
+		true
+	)
+	trainingPath.Parent = folder
+	local westPath = makePart(
+		"PathWestGate",
+		Vector3.new(42, 0.3, style.pathWidth),
+		Vector3.new(-21, 0.16, 0),
+		COLORS.path,
+		"Safe",
+		true
+	)
+	westPath.Parent = folder
+	local wildPath = makePart(
+		"PathToCrater",
+		Vector3.new(style.pathWidth, 0.24, 62),
+		Vector3.new(0, 0.13, -70),
 		COLORS.crater,
 		"Free",
 		true
 	)
-	crater.Shape = Enum.PartType.Cylinder
-	crater.Parent = folder
+	wildPath.Parent = folder
+
+	-- Cratera baixa com aro segmentado: reconhecível, atravessável e sem o
+	-- bloco maciço que prendia o personagem no centro do encontro.
+	local basin = makePart(
+		"EliteCraterBasin",
+		Vector3.new(0.25, greybox.eliteCraterRadius * 1.7, greybox.eliteCraterRadius * 1.7),
+		Vector3.new(0, 0.12, -102),
+		COLORS.darkStone,
+		"Free",
+		true
+	)
+	basin.Shape = Enum.PartType.Cylinder
+	basin.CFrame = CFrame.new(basin.Position) * CFrame.Angles(0, 0, math.pi / 2)
+	basin.Parent = folder
+	for index = 1, style.craterSegments do
+		local angle = (index - 1) / style.craterSegments * math.pi * 2
+		local radius = greybox.eliteCraterRadius
+		local stone = makePart(
+			("EliteCraterRim_%02d"):format(index),
+			Vector3.new(5.2, 1.6 + (index % 3) * 0.25, 2.4),
+			Vector3.new(math.cos(angle) * radius, 0.8, -102 + math.sin(angle) * radius),
+			COLORS.crater,
+			"Free",
+			true
+		)
+		stone.CFrame = CFrame.new(stone.Position) * CFrame.Angles(0, -angle, 0)
+		stone.Parent = folder
+	end
 end
 
 -- Muros do Bastião com as aberturas dos dois portões. O muro em L do Portão
@@ -226,6 +440,113 @@ local function buildWalls(root: Folder, greybox: any): ()
 	end
 end
 
+local function buildLandmarks(root: Folder, greybox: any, style: any): ()
+	local folder = Instance.new("Folder")
+	folder.Name = "Landmarks"
+	folder.Parent = root
+
+	local function stone(name: string, size: Vector3, position: Vector3, color: Color3): BasePart
+		local part = makePart(name, size, position, color, "GateBlock", true)
+		part.Material = Enum.Material.Slate
+		part.Parent = folder
+		return part
+	end
+
+	-- Portais físicos redundantes com a troca de solo/UI da fronteira.
+	stone("NorthGateLeft", Vector3.new(2.5, 12, 3), Vector3.new(-7.25, 6, -32), COLORS.darkStone)
+	stone("NorthGateRight", Vector3.new(2.5, 12, 3), Vector3.new(7.25, 6, -32), COLORS.darkStone)
+	stone("NorthGateBeam", Vector3.new(17, 2.5, 3), Vector3.new(0, 11.5, -32), COLORS.lightStone)
+	stone("WestGateNorth", Vector3.new(3, 12, 2.5), Vector3.new(-40, 6, -6.25), COLORS.darkStone)
+	stone("WestGateSouth", Vector3.new(3, 12, 2.5), Vector3.new(-40, 6, 6.25), COLORS.darkStone)
+	stone("WestGateBeam", Vector3.new(3, 2.5, 15), Vector3.new(-40, 11.5, 0), COLORS.lightStone)
+
+	-- Postes claros fazem a zona de transição legível também sem cor.
+	for index = 1, style.boundaryPostCount do
+		local side = if index % 2 == 0 then 1 else -1
+		local lane = math.ceil(index / 2)
+		stone(
+			("NorthBoundaryPost_%d"):format(index),
+			Vector3.new(0.8, 4 + lane * 0.35, 0.8),
+			Vector3.new(side * 8.5, 2, -32 - lane * 2),
+			COLORS.boundary
+		)
+	end
+
+	-- Marco de Retorno: obelisco simples, distinto das âncoras invisíveis.
+	local returnBase = stone("ReturnBase", Vector3.new(6, 1, 6), Vector3.new(0, 0.5, 12), COLORS.darkStone)
+	returnBase.CollisionGroup = "Safe"
+	local returnSpire = stone("ReturnSpire", Vector3.new(2, 7, 2), Vector3.new(0, 4.5, 12), COLORS.lightStone)
+	returnSpire.CollisionGroup = "Safe"
+	local returnCore =
+		makePart("ReturnCore", Vector3.new(1.15, 1.15, 1.15), Vector3.new(0, 7.5, 12), COLORS.boundary, "Safe", false)
+	returnCore.Shape = Enum.PartType.Ball
+	returnCore.Material = Enum.Material.Neon
+	returnCore.Transparency = 0.12
+	returnCore.Parent = folder
+
+	-- Silhuetas verticais na planície orientam as duas rotas e a cratera.
+	for index = 1, style.landmarkShardCount do
+		local angle = (index - 1) / style.landmarkShardCount * math.pi * 2
+		local radius = 31 + (index % 2) * 8
+		local height = 7 + (index % 3) * 2
+		local shard = stone(
+			("PlainShard_%02d"):format(index),
+			Vector3.new(2.2, height, 2.2),
+			Vector3.new(math.cos(angle) * radius, height / 2, -102 + math.sin(angle) * radius),
+			if index % 2 == 0 then COLORS.darkStone else COLORS.crater
+		)
+		shard.CFrame = CFrame.new(shard.Position) * CFrame.Angles(math.rad(8), angle, math.rad(10 - index * 2))
+	end
+
+	-- Spawn real do Roblox dentro da praça; o bootstrap ainda reconcilia a
+	-- posição na âncora canônica ao CharacterAdded.
+	local spawn = Instance.new("SpawnLocation")
+	spawn.Name = "BastionSpawn"
+	spawn.Size = Vector3.new(math.min(12, greybox.spawnRadius * 2), 0.4, math.min(12, greybox.spawnRadius * 2))
+	spawn.Position = Vector3.new(0, 0.25, 20)
+	spawn.Anchored = true
+	spawn.CanCollide = true
+	spawn.Neutral = true
+	spawn.Duration = 8
+	spawn.Transparency = 0.65
+	spawn.Color = COLORS.lightStone
+	spawn.Material = Enum.Material.Slate
+	spawn.CollisionGroup = "Safe"
+	spawn.Parent = folder
+end
+
+local function buildStaticActors(root: Folder, presentation: any): ()
+	local folder = Instance.new("Folder")
+	folder.Name = "Actors"
+	folder.Parent = root
+
+	local dummyRecipe = presentation.getActor("npc_training_dummy")
+	if dummyRecipe then
+		local dummy = createActorModel(
+			"TrainingDummy",
+			"npc_training_dummy",
+			"npc_training_dummy",
+			dummyRecipe,
+			Vector3.new(28, 0, -20)
+		)
+		dummy:SetAttribute("PoseKind", "idle")
+		dummy.Parent = folder
+	end
+
+	local instructorRecipe = presentation.getActor("npc_threshold_instructor")
+	if instructorRecipe then
+		local instructor = createActorModel(
+			"ThresholdInstructor",
+			"npc_threshold_instructor",
+			"npc_threshold_instructor",
+			instructorRecipe,
+			Vector3.new(20, 0, -14)
+		)
+		instructor:SetAttribute("PoseKind", "idle")
+		instructor.Parent = folder
+	end
+end
+
 -- Marcadores de âncora: parts invisíveis com atributo, para o servidor
 -- posicionar spawn, retorno, dummy, instrutor e Estilhaços sem CFrame cru.
 local function buildAnchors(root: Folder, zones: any): ()
@@ -243,20 +564,46 @@ local function buildAnchors(root: Folder, zones: any): ()
 		local isCombatTarget = anchor.id == "anchor_training"
 			or anchor.id == "anchor_elite"
 			or string.match(anchor.id, "^anchor_shard_") ~= nil
-		part.Transparency = if isCombatTarget then 0.18 else 0.6
+		part.Transparency = 1
 		part.Size = if isCombatTarget then Vector3.new(4, 6, 4) else Vector3.new(2, 2, 2)
 		part.Position = Vector3.new(anchor.position.x, anchor.position.y + part.Size.Y / 2, anchor.position.z)
 		part.Color = COLORS.anchor
 		part:SetAttribute("AnchorId", anchor.id)
 		part:SetAttribute("ZoneId", anchor.zoneId)
 		part:SetAttribute("CombatTarget", isCombatTarget)
+		part:SetAttribute("GroundX", anchor.position.x)
+		part:SetAttribute("GroundY", anchor.position.y)
+		part:SetAttribute("GroundZ", anchor.position.z)
 		part.Parent = folder
 	end
+end
+
+local function buildLighting(): ()
+	Lighting.Brightness = 2.2
+	Lighting.ClockTime = 15.25
+	Lighting.EnvironmentDiffuseScale = 0.35
+	Lighting.EnvironmentSpecularScale = 0.2
+	Lighting.GlobalShadows = true
+	Lighting.OutdoorAmbient = Color3.fromRGB(132, 136, 142)
+
+	local oldAtmosphere = Lighting:FindFirstChild("F0Atmosphere")
+	if oldAtmosphere then
+		oldAtmosphere:Destroy()
+	end
+	local atmosphere = Instance.new("Atmosphere")
+	atmosphere.Name = "F0Atmosphere"
+	atmosphere.Color = Color3.fromRGB(204, 211, 218)
+	atmosphere.Decay = Color3.fromRGB(114, 105, 97)
+	atmosphere.Density = 0.22
+	atmosphere.Glare = 0.08
+	atmosphere.Haze = 1.25
+	atmosphere.Parent = Lighting
 end
 
 -- Constrói o mundo. Idempotente: rodar de novo em Studio limpa e reconstrói.
 function WorldService.init(deps: WorldDeps): ()
 	WorldService.deps = deps
+	table.clear(WorldService.actors)
 
 	local existing = Workspace:FindFirstChild("GreyboxF0")
 	if existing then
@@ -268,14 +615,105 @@ function WorldService.init(deps: WorldDeps): ()
 
 	local root = Instance.new("Folder")
 	root.Name = "GreyboxF0"
+	local style = deps.presentation.style()
 
-	buildFloors(root, greybox)
+	buildFloors(root, greybox, style)
 	buildWalls(root, greybox)
+	buildLandmarks(root, greybox, style)
 	buildZoneVolumes(root, deps.zones)
+	buildStaticActors(root, deps.presentation)
 	buildAnchors(root, deps.zones)
+	buildLighting()
 
 	root.Parent = Workspace
 	WorldService.root = root
+end
+
+local function actorFolder(): Folder?
+	local root = WorldService.root
+	if not root then
+		return nil
+	end
+	local folder = root:FindFirstChild("Actors")
+	return if folder and folder:IsA("Folder") then folder else nil
+end
+
+local function spawnActor(fighterId: string, npcId: string, position: Vector3): ActorVisual?
+	local existing = WorldService.actors[fighterId]
+	if existing then
+		setActorVisible(existing.model, true)
+		return existing
+	end
+	local deps = WorldService.deps
+	local folder = actorFolder()
+	if not deps or not folder then
+		return nil
+	end
+	local recipe = deps.presentation.getActor(npcId)
+	if not recipe then
+		return nil
+	end
+	local model =
+		createActorModel(("Actor_%s"):format((fighterId:gsub("[^%w_%-]", "_"))), fighterId, npcId, recipe, position)
+	model.Parent = folder
+	local actor = {
+		model = model,
+		lastPosition = position,
+		rootHeight = if recipe.shape == "shard" then 3 * recipe.scale else 3,
+	}
+	WorldService.actors[fighterId] = actor
+	return actor
+end
+
+function WorldService.presentEnemyEvent(fighterId: string, event: { [string]: any }): ()
+	local kind = event.kind
+	if type(kind) ~= "string" then
+		return
+	end
+	local actor = WorldService.actors[fighterId]
+	if (kind == "spawn" or kind == "respawn") and not actor then
+		local anchorId = event.anchorId
+		local npcId = string.match(fighterId, "^([^@]+)@")
+		local position = if type(anchorId) == "string" then WorldService.getAnchorPosition(anchorId) else nil
+		if npcId and position then
+			actor = spawnActor(fighterId, npcId, position)
+		end
+	end
+	if not actor then
+		return
+	end
+	if kind == "spawn" or kind == "respawn" then
+		setActorVisible(actor.model, true)
+	end
+	actor.model:SetAttribute("PoseKind", kind)
+	actor.model:SetAttribute("PoseSerial", (actor.model:GetAttribute("PoseSerial") or 0) + 1)
+	if kind == "died" then
+		task.delay(0.75, function()
+			if actor and actor.model.Parent and actor.model:GetAttribute("PoseKind") == "died" then
+				setActorVisible(actor.model, false)
+			end
+		end)
+	end
+end
+
+function WorldService.syncActor(fighterId: string, transform: any): ()
+	local actor = WorldService.actors[fighterId]
+	if not actor or not transform or not transform.position then
+		return
+	end
+	local position = Vector3.new(transform.position.x, transform.position.y, transform.position.z)
+	local look = transform.look
+	local lookVector = if look then Vector3.new(look.x, 0, look.z) else Vector3.new(0, 0, -1)
+	if lookVector.Magnitude < 1e-4 then
+		lookVector = Vector3.new(0, 0, -1)
+	else
+		lookVector = lookVector.Unit
+	end
+	local rootPosition = position + Vector3.new(0, actor.rootHeight, 0)
+	actor.model:PivotTo(CFrame.lookAt(rootPosition, rootPosition + lookVector))
+	local lastPosition = actor.lastPosition
+	actor.model:SetAttribute("Moving", lastPosition ~= nil and (position - lastPosition).Magnitude > 0.02)
+	actor.lastPosition = position
 end
 
 function WorldService.getAnchorPosition(anchorId: string): Vector3?
@@ -289,6 +727,12 @@ function WorldService.getAnchorPosition(anchorId: string): Vector3?
 	end
 	local part = anchors:FindFirstChild(anchorId)
 	if part and part:IsA("BasePart") then
+		local groundX = part:GetAttribute("GroundX")
+		local groundY = part:GetAttribute("GroundY")
+		local groundZ = part:GetAttribute("GroundZ")
+		if type(groundX) == "number" and type(groundY) == "number" and type(groundZ) == "number" then
+			return Vector3.new(groundX, groundY, groundZ)
+		end
 		return part.Position
 	end
 	return nil

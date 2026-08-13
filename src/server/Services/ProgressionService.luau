@@ -59,8 +59,10 @@ export type XpAward = {
 }
 
 local ProgressionService = {
-	-- userId → flag → true
+	-- userId → flag → true (durável; entra no ProfileRoot).
 	flags = {} :: { [number]: { [string]: boolean } },
+	-- Overrides da sessão (ex.: loadout de teste em Studio); nunca persistem.
+	sessionFlags = {} :: { [number]: { [string]: boolean } },
 	-- userId → ledger
 	xp = {} :: { [number]: XpLedger },
 	-- userId → npcId → instante do último XP (cooldown por NPC, §9.3)
@@ -83,12 +85,14 @@ end
 
 function ProgressionService.init(): ()
 	table.clear(ProgressionService.flags)
+	table.clear(ProgressionService.sessionFlags)
 	table.clear(ProgressionService.xp)
 	table.clear(ProgressionService.lastXpAt)
 end
 
 function ProgressionService.registerPlayer(userId: number): ()
 	ProgressionService.flags[userId] = {}
+	ProgressionService.sessionFlags[userId] = {}
 	ProgressionService.xp[userId] = {
 		unconsolidated = 0,
 		consolidated = 0,
@@ -101,13 +105,15 @@ end
 
 function ProgressionService.unregisterPlayer(userId: number): ()
 	ProgressionService.flags[userId] = nil
+	ProgressionService.sessionFlags[userId] = nil
 	ProgressionService.xp[userId] = nil
 	ProgressionService.lastXpAt[userId] = nil
 end
 
 function ProgressionService.hasUnlock(userId: number, flag: string): boolean
 	local userFlags = ProgressionService.flags[userId]
-	return userFlags ~= nil and userFlags[flag] == true
+	local sessionFlags = ProgressionService.sessionFlags[userId]
+	return (userFlags ~= nil and userFlags[flag] == true) or (sessionFlags ~= nil and sessionFlags[flag] == true)
 end
 
 -- Concede a flag. Retorna true só na primeira vez (idempotente).
@@ -126,7 +132,47 @@ function ProgressionService.grantUnlock(userId: number, flag: string): boolean
 	return true
 end
 
+-- Concede um override não durável. Usado apenas pelo gate StudioDebug; a
+-- mesma flag pode existir depois no progresso real sem ser contaminada pelo
+-- playtest. Retorna true só na primeira concessão efetiva da sessão.
+function ProgressionService.grantSessionUnlock(userId: number, flag: string): boolean
+	if not KNOWN_FLAGS[flag] then
+		return false
+	end
+	local sessionFlags = ProgressionService.sessionFlags[userId]
+	if not sessionFlags or ProgressionService.hasUnlock(userId, flag) then
+		return false
+	end
+	sessionFlags[flag] = true
+	return true
+end
+
 function ProgressionService.listUnlocks(userId: number): { string }
+	local userFlags = ProgressionService.flags[userId]
+	local sessionFlags = ProgressionService.sessionFlags[userId]
+	local out: { string } = {}
+	if not userFlags and not sessionFlags then
+		return out
+	end
+	local seen: { [string]: boolean } = {}
+	if userFlags then
+		for flag in userFlags do
+			seen[flag] = true
+		end
+	end
+	if sessionFlags then
+		for flag in sessionFlags do
+			seen[flag] = true
+		end
+	end
+	for flag in seen do
+		table.insert(out, flag)
+	end
+	table.sort(out)
+	return out
+end
+
+function ProgressionService.listPersistentUnlocks(userId: number): { string }
 	local userFlags = ProgressionService.flags[userId]
 	local out: { string } = {}
 	if not userFlags then
@@ -343,8 +389,10 @@ function ProgressionService.snapshotForSave(userId: number): ProgressionSnapshot
 		return nil
 	end
 	local unlocked: { string } = {}
+	local persistentFlags = ProgressionService.flags[userId]
 	for abilityId in ABILITY_UNLOCK_FLAG do
-		if ProgressionService.hasUnlock(userId, ABILITY_UNLOCK_FLAG[abilityId]) then
+		local flag = ABILITY_UNLOCK_FLAG[abilityId]
+		if persistentFlags and persistentFlags[flag] then
 			table.insert(unlocked, abilityId)
 		end
 	end
@@ -353,7 +401,7 @@ function ProgressionService.snapshotForSave(userId: number): ProgressionSnapshot
 		consolidatedXp = ledger.consolidated,
 		unconsolidatedXp = ledger.unconsolidated,
 		lastConsolidationAt = ledger.lastConsolidationAt,
-		tutorialFlags = ProgressionService.listUnlocks(userId),
+		tutorialFlags = ProgressionService.listPersistentUnlocks(userId),
 		unlockedAbilities = unlocked,
 	}
 end

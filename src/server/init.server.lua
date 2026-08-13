@@ -9,6 +9,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
 
 -- `src/server` vira um Script chamado `Server` no Rojo; a pasta Services fica
 -- como filha desse Script (ver default.project.json/sourcemap), não como irmã
@@ -21,6 +22,7 @@ local CombatService = require(Services.CombatService)
 local EnemyService = require(Services.EnemyService)
 local PlayerSessionService = require(Services.PlayerSessionService)
 local SpatialService = require(Services.SpatialService)
+local StudioDebug = require(Services.StudioDebug)
 local WorldService = require(Services.WorldService)
 local ProgressionService = require(Services.ProgressionService)
 local QuestService = require(Services.QuestService)
@@ -39,6 +41,7 @@ local Locale = require(ReplicatedStorage.Shared.Data.Locale)
 local Npcs = require(ReplicatedStorage.Shared.Data.Npcs)
 local Quests = require(ReplicatedStorage.Shared.Data.Quests)
 local RemoteEnvelope = require(ReplicatedStorage.Shared.RemoteEnvelope)
+local WorldPresentation = require(ReplicatedStorage.Shared.Data.WorldPresentation)
 local Zones = require(ReplicatedStorage.Shared.Data.Zones)
 
 -- 1. Catálogo — validação em fail-fast
@@ -53,6 +56,11 @@ CatalogService.init({
 })
 print("[Bootstrap] catálogo validado")
 
+local presentationOk, presentationReason = WorldPresentation.validate()
+if not presentationOk then
+	error("catálogo de apresentação inválido: " .. (presentationReason or "unknown"))
+end
+
 ProgressionService.init()
 
 -- 1.1. Mundo — greybox, collision groups e marcadores de âncora (§8).
@@ -60,6 +68,7 @@ ProgressionService.init()
 WorldService.init({
 	zones = Zones,
 	greybox = Zones.greybox,
+	presentation = WorldPresentation,
 })
 print("[Bootstrap] greybox construído")
 
@@ -499,6 +508,7 @@ EnemyService.init({
 		end
 	end,
 	onEnemyEvent = function(fighterId: string, event: { any })
+		WorldService.presentEnemyEvent(fighterId, event)
 		-- Telegraph precisa chegar ao cliente para o contorno branco (§17).
 		for _, player in game.Players:GetPlayers() do
 			if PlayerSessionService.isReady(player.UserId) then
@@ -729,6 +739,13 @@ game.Players.PlayerAdded:Connect(function(player: Player)
 	if not profile then
 		warn(("[Bootstrap] save indisponível para %d — sessão em memória"):format(player.UserId))
 	end
+	-- Recorte adicional da §18: playtest pode receber as três técnicas sem
+	-- remote de cheat. O override é de sessão e nunca entra no ProfileRoot.
+	if StudioDebug.isEnabled(RunService:IsStudio(), game:GetAttribute("F0Debug")) then
+		for _, flag in StudioDebug.unlockFlags() do
+			ProgressionService.grantSessionUnlock(player.UserId, flag)
+		end
+	end
 	TelemetryService.record("SessionLoad", player.UserId, {
 		durationMs = math.floor((os.clock() - loadStartedAt) * 1000),
 		schemaFrom = if profile then profile.schemaVersion or 1 else 0,
@@ -828,7 +845,6 @@ end)
 -- O cliente NUNCA informa posição para efeito de dano — o que se lê aqui é o
 -- HumanoidRootPart replicado, e a fronteira é decidida pelo mesmo
 -- `zoneAtPosition` que gerou os volumes no Studio.
-local RunService = game:GetService("RunService")
 local lastTick = os.clock()
 
 RunService.Heartbeat:Connect(function()
@@ -864,6 +880,12 @@ RunService.Heartbeat:Connect(function()
 	EnemyService.tick(now, delta)
 	-- Item 9: ciclo do elite (combo/slam + leeching + respawn 180 s).
 	EnemyService.tickElite(now, delta)
+	for _, record in EnemyService.list() do
+		local transform = SpatialService.getTransform(record.fighterId)
+		if transform then
+			WorldService.syncActor(record.fighterId, transform)
+		end
+	end
 	-- Item 8/10: ecos pendentes da Cadência (350 ms) e posturas do Pulso.
 	AbilityService.tick(now)
 	-- Item 11: morte PvE (inimigo) aplica a perda; autosave 60–120 s com
