@@ -11,6 +11,8 @@ export type SemanticAction =
 	| "Ability1"
 	| "Ability2"
 	| "Ability3"
+	| "ZoneHoldDown"
+	| "ZoneHoldUp"
 	| "ToggleLock"
 
 export type Controller = {
@@ -26,7 +28,11 @@ export type Controller = {
 }
 
 local COMBAT_LIMIT_PER_SECOND = 8
-local NON_COMBAT: { [string]: boolean } = { ToggleLock = true }
+local NON_COMBAT: { [string]: boolean } = {
+	ToggleLock = true,
+	ZoneHoldDown = true,
+	ZoneHoldUp = true,
+}
 
 local InputController = {}
 
@@ -78,7 +84,7 @@ end
 function InputController.touchBegin(
 	controller: Controller,
 	token: string,
-	action: SemanticAction,
+	action: SemanticAction?,
 	payload: { [string]: any }?
 ): (boolean, string?)
 	if not controller.touchPressed[token] then
@@ -88,7 +94,10 @@ function InputController.touchBegin(
 		controller.touchPressed[token] = true
 		controller.touchCount += 1
 	end
-	return InputController.dispatch(controller, action, payload)
+	if action then
+		return InputController.dispatch(controller, action, payload)
+	end
+	return true, nil
 end
 
 function InputController.touchEnd(
@@ -157,6 +166,8 @@ function InputController.start(controller: Controller, userInputService: any): (
 				dispatch("Ability3")
 			elseif key == Enum.KeyCode.ButtonL1 then
 				controller.gamepadModifier = true
+			elseif key == Enum.KeyCode.E or key == Enum.KeyCode.ButtonY then
+				dispatch("ZoneHoldDown")
 			elseif key == Enum.KeyCode.ButtonR3 then
 				dispatch("ToggleLock")
 			end
@@ -170,6 +181,8 @@ function InputController.start(controller: Controller, userInputService: any): (
 				dispatch("GuardUp")
 			elseif key == Enum.KeyCode.ButtonL1 then
 				controller.gamepadModifier = false
+			elseif key == Enum.KeyCode.E or key == Enum.KeyCode.ButtonY then
+				dispatch("ZoneHoldUp")
 			end
 		end)
 	)

@@ -106,7 +106,7 @@ local RemoteContracts = {
 		name = REMOTES.ZoneEvent,
 		direction = "ServerToClient",
 		version = 1,
-		payload = "{ from: string, to: string, pvp: boolean, signals: { string }, holdConfirmed: boolean, lockoutRemaining: number?, instant: number }",
+		payload = "{ from: string, to: string, pvp: boolean, signals: { string }, holdConfirmed: boolean, lockoutRemaining: number?, rejectedReason: string?, instant: number }",
 	} :: NetworkContract,
 	[REMOTES.ZoneCrossingIntent] = {
 		name = REMOTES.ZoneCrossingIntent,

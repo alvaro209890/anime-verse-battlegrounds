@@ -168,6 +168,7 @@ export type ZoneEventPayload = {
 	holdConfirmed: boolean,
 	lockoutRemaining: number?,
 	instant: number,
+	rejectedReason: string?,
 }
 
 return {}

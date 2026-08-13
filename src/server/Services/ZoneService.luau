@@ -16,6 +16,7 @@ export type ZoneEventPayload = {
 	holdConfirmed: boolean,
 	lockoutRemaining: number?,
 	instant: number,
+	rejectedReason: string?,
 }
 
 export type EnterZoneResult = {
@@ -47,6 +48,8 @@ local ZoneService = {
 	pvpCombatAt = {} :: { [number]: number },
 	-- userId → hold confirmado nesta sessão (primeira travessia exige)
 	holdConfirmed = {} :: { [number]: boolean },
+	-- Evita repetir o banner de hold a cada Heartbeat dentro do volume.
+	holdPromptedTarget = {} :: { [number]: string },
 }
 
 local ZONE_SAFE = "zone_bastion_safe"
@@ -101,6 +104,7 @@ function ZoneService.init(deps: ZoneServiceDeps): ()
 	table.clear(ZoneService.transitions)
 	table.clear(ZoneService.pvpCombatAt)
 	table.clear(ZoneService.holdConfirmed)
+	table.clear(ZoneService.holdPromptedTarget)
 end
 
 function ZoneService.registerPlayer(userId: number): ()
@@ -113,6 +117,7 @@ function ZoneService.unregisterPlayer(userId: number): ()
 	ZoneService.transitions[userId] = nil
 	ZoneService.pvpCombatAt[userId] = nil
 	ZoneService.holdConfirmed[userId] = nil
+	ZoneService.holdPromptedTarget[userId] = nil
 end
 
 function ZoneService.getZone(zoneId: string): any?
@@ -220,7 +225,7 @@ local function emit(
 	fromZoneId: string,
 	toZoneId: string,
 	now: number,
-	opts: { holdConfirmed: boolean? }
+	opts: { holdConfirmed: boolean?, rejectedReason: string? }
 ): ZoneEventPayload
 	local event: ZoneEventPayload = {
 		from = fromZoneId,
@@ -229,6 +234,7 @@ local function emit(
 		signals = {},
 		holdConfirmed = opts.holdConfirmed == true,
 		instant = now,
+		rejectedReason = opts.rejectedReason,
 	}
 	local target = ZoneService.getZone(toZoneId)
 	if target then
@@ -293,8 +299,14 @@ function ZoneService.tryEnterZone(
 	-- Saindo da segura em direção à livre (via volume de transição).
 	if toZoneId == ZONE_TRANSITION and fromZoneId == ZONE_SAFE then
 		if not ZoneService.holdConfirmed[userId] and opts.holdConfirmed ~= true then
-			return { ok = false, reason = "hold_required" }
+			local event: ZoneEventPayload? = nil
+			if ZoneService.holdPromptedTarget[userId] ~= toZoneId then
+				event = emit(userId, fromZoneId, toZoneId, now, { rejectedReason = "hold_required" })
+				ZoneService.holdPromptedTarget[userId] = toZoneId
+			end
+			return { ok = false, reason = "hold_required", event = event }
 		end
+		ZoneService.holdPromptedTarget[userId] = nil
 		ZoneService.holdConfirmed[userId] = true
 		ZoneService.zones[userId] = ZONE_TRANSITION
 		ZoneService.transitions[userId] = {
@@ -308,8 +320,14 @@ function ZoneService.tryEnterZone(
 	-- Cruzando da transição para a livre: proteção restante continua valendo.
 	if toZoneId == ZONE_FREE then
 		if not ZoneService.holdConfirmed[userId] and opts.holdConfirmed ~= true then
-			return { ok = false, reason = "hold_required" }
+			local event: ZoneEventPayload? = nil
+			if ZoneService.holdPromptedTarget[userId] ~= toZoneId then
+				event = emit(userId, fromZoneId, toZoneId, now, { rejectedReason = "hold_required" })
+				ZoneService.holdPromptedTarget[userId] = toZoneId
+			end
+			return { ok = false, reason = "hold_required", event = event }
 		end
+		ZoneService.holdPromptedTarget[userId] = nil
 		ZoneService.holdConfirmed[userId] = true
 		local transition = ZoneService.transitions[userId]
 		-- Defesa em profundidade: sem passar pelo volume de transição,

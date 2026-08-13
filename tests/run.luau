@@ -347,6 +347,67 @@ test("cliente: recurso, zona e perda só mudam após ready", function()
 	assertEq(ClientState.feedback(state), "hud.feedback_death_loss", "perda resumida localizada")
 end)
 
+test("cliente: hold de fronteira exige 0,6 s e usa apenas destino oferecido pelo servidor", function()
+	fakeNow = 2100
+	local state = ClientState.new(clockNow)
+	ClientState.applySnapshot(state, { ready = true, zoneId = "zone_bastion_safe" })
+	local sent: { any } = {}
+	local zone = ZoneController.new(
+		state,
+		ClientState,
+		nil,
+		nil,
+		function(remoteName: string, action: string, payload: any)
+			table.insert(sent, { remoteName = remoteName, action = action, payload = payload })
+		end,
+		clockNow
+	)
+	ZoneController.onZoneEvent(zone, {
+		from = "zone_bastion_safe",
+		to = "zone_threshold_transition",
+		pvp = false,
+		signals = { "physical_gate" },
+		holdConfirmed = false,
+		rejectedReason = "hold_required",
+	})
+	assertEq(state.zoneId, "zone_bastion_safe", "rejeição não falsifica zona")
+	assertTrue(state.zoneHoldRequired, "prompt visível")
+	ZoneController.onAction(zone, "ZoneHoldDown")
+	fakeNow += 0.59
+	ZoneController.onAction(zone, "ZoneHoldUp")
+	assertEq(#sent, 0, "hold curto não cruza")
+	ZoneController.onAction(zone, "ZoneHoldDown")
+	fakeNow += 0.61
+	ZoneController.onAction(zone, "ZoneHoldUp")
+	assertEq(#sent, 1, "hold confirmado")
+	assertEq(sent[1].payload.toZoneId, "zone_threshold_transition", "destino do evento autoritativo")
+	assertEq(sent[1].payload.position, nil, "sem posição declarada pelo cliente")
+end)
+
+test("cliente: Locale cobre todo texto do HUD F0 em PT-BR e EN", function()
+	local keys = {
+		"hud.health",
+		"hud.guard",
+		"hud.resource",
+		"hud.resource_depleted",
+		"hud.ability_locked",
+		"hud.feedback_hit",
+		"hud.feedback_guard",
+		"hud.feedback_no_resource",
+		"hud.feedback_cooldown",
+		"hud.feedback_rejected",
+		"hud.feedback_death_loss",
+		"hud.control_attack",
+		"hud.control_guard",
+		"hud.control_dash",
+	}
+	for _, key in keys do
+		assertTrue(Locale.hasKey(key), key .. " existe")
+		assertFalse(Locale.get(key, "pt-br") == key, key .. " PT-BR")
+		assertFalse(Locale.get(key, "en") == key, key .. " EN")
+	end
+end)
+
 test("dados: dummy de treino no catálogo", function()
 	local dummy = Npcs.get("npc_training_dummy")
 	assertTrue(dummy ~= nil, "dummy deveria existir")
