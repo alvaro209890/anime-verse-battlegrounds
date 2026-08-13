@@ -260,19 +260,128 @@ local function createActorModel(name: string, actorId: string, npcId: string, re
 
 		-- ── Toques de skin (pós-P1 vira arte; hoje são silhueta de cor) ──────
 		if npcId == "npc_threshold_instructor" then
-			-- Capuz do mensageiro: meia carapaça atrás da cabeça, energia umbral
-			-- na borda. Não anima (joint próprio) — presença, não movimento.
+			-- O mensageiro do Limiar com skin: casaco escuro de tecido, cauda e
+			-- bainha umbral, capuz de couro com borda de energia, gola alta com
+			-- trim neon, olhos brilhantes, punhos e botas, cinto com fivela e
+			-- três orbes de energia orbitando o torso. Tudo com joints próprios
+			-- (o ActorAnimator ignora joints desconhecidos) — presença, não pose.
+			torso.Material = Enum.Material.Fabric
+			leftArm.Material = Enum.Material.Leather
+			rightArm.Material = Enum.Material.Leather
+			leftLeg.Material = Enum.Material.Leather
+			rightLeg.Material = Enum.Material.Leather
+
+			-- Casaco: cauda atrás das pernas + fio umbral na bainha.
+			local coatBottom = makeVisualPart(
+				"Part",
+				"CoatBottom",
+				Vector3.new(2.5, 1.15, 1.35) * scale,
+				bodyColor,
+				Enum.Material.Fabric
+			)
+			attach(torso, coatBottom, CFrame.new(0, -1.32 * scale, 0), "Joint_CoatBottom")
+			local hem =
+				makeVisualPart("Part", "Hem", Vector3.new(2.55, 0.16, 1.4) * scale, accentColor, Enum.Material.Neon)
+			attach(torso, hem, CFrame.new(0, -1.85 * scale, 0), "Joint_Hem")
+
+			-- Gola alta: base de tecido escuro + trim umbral na borda.
+			local collar =
+				makeVisualPart("Part", "Collar", Vector3.new(1.6, 0.5, 1.5) * scale, bodyColor, Enum.Material.Fabric)
+			attach(torso, collar, CFrame.new(0, 1.55 * scale, 0), "Joint_Collar")
+			local collarTrim = makeVisualPart(
+				"Part",
+				"CollarTrim",
+				Vector3.new(1.72, 0.14, 1.62) * scale,
+				accentColor,
+				Enum.Material.Neon
+			)
+			attach(collar, collarTrim, CFrame.new(0, 0.2 * scale, 0), "Joint_CollarTrim")
+
+			-- Capuz do mensageiro: meia carapaça de couro atrás da cabeça,
+			-- energia umbral na borda. Não anima (joint próprio) — presença.
 			local hood =
-				makeVisualPart("Part", "Hood", Vector3.new(1.5, 1.2, 1.1) * scale, accentColor, Enum.Material.Slate)
+				makeVisualPart("Part", "Hood", Vector3.new(1.5, 1.2, 1.1) * scale, accentColor, Enum.Material.Leather)
 			hood.Shape = Enum.PartType.Ball
 			attach(head, hood, CFrame.new(0, 0.35 * scale, -0.55 * scale), "Joint_Hood")
-			-- Gola alta e faixa de energia no peito (Neon = o "fio" umbral).
-			local collar =
-				makeVisualPart("Part", "Collar", Vector3.new(1.6, 0.5, 1.5) * scale, accentColor, Enum.Material.Slate)
-			attach(torso, collar, CFrame.new(0, 1.55 * scale, 0), "Joint_Collar")
+			local hoodTrim = makeVisualPart(
+				"Part",
+				"HoodTrim",
+				Vector3.new(1.62, 0.14, 1.2) * scale,
+				accentColor,
+				Enum.Material.Neon
+			)
+			attach(hood, hoodTrim, CFrame.new(0, 0.14 * scale, -0.62 * scale), "Joint_HoodTrim")
+
+			-- Rosto pálido com olhos neon brilhantes e sombra inferior (anime).
+			local eyeL =
+				makeVisualPart("Part", "EyeL", Vector3.new(0.17, 0.17, 0.12) * scale, coreColor, Enum.Material.Neon)
+			eyeL.Shape = Enum.PartType.Ball
+			attach(head, eyeL, CFrame.new(-0.28 * scale, 0.14 * scale, 0.68 * scale), "Joint_EyeL")
+			local eyeR = eyeL:Clone()
+			eyeR.Name = "EyeR"
+			attach(head, eyeR, CFrame.new(0.28 * scale, 0.14 * scale, 0.68 * scale), "Joint_EyeR")
+			local faceShade = makeVisualPart(
+				"Part",
+				"FaceShade",
+				Vector3.new(0.95, 0.5, 0.7) * scale,
+				bodyColor,
+				Enum.Material.SmoothPlastic
+			)
+			faceShade.Transparency = 0.45
+			attach(head, faceShade, CFrame.new(0, -0.28 * scale, 0.62 * scale), "Joint_FaceShade")
+
+			-- Faixa de energia na cintura + fivela (Neon = o "fio" umbral).
 			local belt =
-				makeVisualPart("Part", "Belt", Vector3.new(1.7, 0.34, 1.25) * scale, coreColor, Enum.Material.Neon)
+				makeVisualPart("Part", "Belt", Vector3.new(1.7, 0.34, 1.25) * scale, accentColor, Enum.Material.Neon)
 			attach(torso, belt, CFrame.new(0, -0.55 * scale, 0.02 * scale), "Joint_Belt")
+			local buckle =
+				makeVisualPart("Part", "Buckle", Vector3.new(0.42, 0.5, 0.2) * scale, coreColor, Enum.Material.Neon)
+			attach(belt, buckle, CFrame.new(0, 0, 0.72 * scale), "Joint_Buckle")
+
+			-- Punhos neon + mãos de tecido nas mangas.
+			local cuffL =
+				makeVisualPart("Part", "Cuff", Vector3.new(0.82, 0.22, 0.82) * scale, accentColor, Enum.Material.Neon)
+			attach(leftArm, cuffL, CFrame.new(0, -0.82 * scale, 0), "Joint_CuffL")
+			local cuffR = cuffL:Clone()
+			cuffR.Name = "Cuff"
+			attach(rightArm, cuffR, CFrame.new(0, -0.82 * scale, 0), "Joint_CuffR")
+			local handL =
+				makeVisualPart("Part", "Hand", Vector3.new(0.72, 0.34, 0.72) * scale, bodyColor, Enum.Material.Fabric)
+			attach(leftArm, handL, CFrame.new(0, -1.05 * scale, 0), "Joint_HandL")
+			local handR = handL:Clone()
+			handR.Name = "Hand"
+			attach(rightArm, handR, CFrame.new(0, -1.05 * scale, 0), "Joint_HandR")
+
+			-- Botas de couro escuro.
+			local bootL =
+				makeVisualPart("Part", "Boot", Vector3.new(1.0, 0.6, 1.1) * scale, bodyColor, Enum.Material.Leather)
+			attach(leftLeg, bootL, CFrame.new(0, -0.95 * scale, 0.06 * scale), "Joint_BootL")
+			local bootR = bootL:Clone()
+			bootR.Name = "Boot"
+			attach(rightLeg, bootR, CFrame.new(0, -0.95 * scale, 0.06 * scale), "Joint_BootR")
+
+			-- Três orbes de energia umbral orbitando o torso (presença).
+			for orbIndex = 1, 3 do
+				local angle = (orbIndex - 1) / 3 * math.pi * 2
+				local orb = makeVisualPart(
+					"Part",
+					("Orb%d"):format(orbIndex),
+					Vector3.new(0.24, 0.24, 0.24) * scale,
+					accentColor,
+					Enum.Material.Neon
+				)
+				orb.Shape = Enum.PartType.Ball
+				attach(
+					torso,
+					orb,
+					CFrame.new(
+						math.cos(angle) * 1.35 * scale,
+						(1.1 + math.sin(angle) * 0.2) * scale,
+						math.sin(angle) * 1.15 * scale
+					),
+					("Joint_Orb%d"):format(orbIndex)
+				)
+			end
 		elseif npcId == "npc_training_dummy" then
 			-- Boneco de treino com skin: couro escuro, braços de couro claro,
 			-- bandagens pálidas, botas, rosto clássico e alvo bullseye neon.
