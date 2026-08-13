@@ -88,7 +88,7 @@ test("greybox: WorldService gera piso para cada volume canônico de zona", funct
 	assertTrue(source:find("box.max.x - box.min.x", 1, true) ~= nil, "largura vem do volume")
 	assertTrue(source:find("box.max.z - box.min.z", 1, true) ~= nil, "profundidade vem do volume")
 	assertTrue(source:find('floor:SetAttribute("ZoneId", zone.id)', 1, true) ~= nil, "piso rastreável")
-	assertTrue(source:find("buildSpawnDecorations(root)", 1, true) ~= nil, "decoração do spawn entra no bootstrap")
+	assertTrue(source:find("buildSpawnDecorations(root", 1, true) ~= nil, "decoração do spawn entra no bootstrap")
 end)
 
 test("greybox: decoração do spawn valida com os dados reais do Zones", function()

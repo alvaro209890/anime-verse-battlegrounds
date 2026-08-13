@@ -785,6 +785,37 @@ local function buildLighting(): ()
 	atmosphere.Parent = Lighting
 end
 
+-- Decoração da área de spawn a partir das receitas puras de
+-- `SpawnDecorations.luau` (mesmo contrato do resto do greybox: decisão nos
+-- dados, esta camada só materializa Parts).
+local function buildSpawnDecorations(root: Folder, spawnDecorations: any): ()
+	local folder = Instance.new("Folder")
+	folder.Name = "SpawnDecorations"
+	folder.Parent = root
+
+	local materials = {
+		SmoothPlastic = Enum.Material.SmoothPlastic,
+		Slate = Enum.Material.Slate,
+		Neon = Enum.Material.Neon,
+	}
+	for _, d in spawnDecorations.all() do
+		local part = makePart(
+			d.name,
+			Vector3.new(d.size.x, d.size.y, d.size.z),
+			Vector3.new(d.position.x, d.position.y, d.position.z),
+			toColor(d.rgb),
+			if d.canCollide then "GateBlock" else "Safe",
+			d.canCollide
+		)
+		part.Material = materials[d.material] or Enum.Material.SmoothPlastic
+		part.Transparency = d.transparency
+		if not d.canCollide then
+			part.CastShadow = false
+		end
+		part.Parent = folder
+	end
+end
+
 -- Constrói o mundo. Idempotente: rodar de novo em Studio limpa e reconstrói.
 function WorldService.init(deps: WorldDeps): ()
 	WorldService.deps = deps
@@ -805,7 +836,7 @@ function WorldService.init(deps: WorldDeps): ()
 	buildFloors(root, greybox, style, deps.zones)
 	buildWalls(root, greybox)
 	buildLandmarks(root, greybox, style)
-	buildSpawnDecorations(root)
+	buildSpawnDecorations(root, deps.spawnDecorations)
 	buildZoneVolumes(root, deps.zones)
 	buildStaticActors(root, deps.presentation, deps.zones)
 	buildAnchors(root, deps.zones)
@@ -813,37 +844,6 @@ function WorldService.init(deps: WorldDeps): ()
 
 	root.Parent = Workspace
 	WorldService.root = root
-end
-
--- Decoração da área de spawn a partir das receitas puras de
--- `SpawnDecorations.luau` (mesmo contrato do resto do greybox: decisão nos
--- dados, esta camada só materializa Parts).
-local function buildSpawnDecorations(root: Folder): ()
-	local folder = Instance.new("Folder")
-	folder.Name = "SpawnDecorations"
-	folder.Parent = root
-
-	local materials = {
-		SmoothPlastic = Enum.Material.SmoothPlastic,
-		Slate = Enum.Material.Slate,
-		Neon = Enum.Material.Neon,
-	}
-	for _, d in deps.spawnDecorations.all() do
-		local part = makePart(
-			d.name,
-			Vector3.new(d.size.x, d.size.y, d.size.z),
-			Vector3.new(d.position.x, d.position.y, d.position.z),
-			toColor(d.rgb),
-			if d.canCollide then "GateBlock" else "Safe",
-			d.canCollide
-		)
-		part.Material = materials[d.material] or Enum.Material.SmoothPlastic
-		part.Transparency = d.transparency
-		if not d.canCollide then
-			part.CastShadow = false
-		end
-		part.Parent = folder
-	end
 end
 
 local function actorFolder(): Folder?
