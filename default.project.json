@@ -18,7 +18,10 @@
     },
     "ServerScriptService": {
       "Server": {
-        "$path": "src/server"
+        "$path": "src/server",
+        "$attributes": {
+          "F0Debug": true
+        }
       }
     },
     "StarterPlayer": {

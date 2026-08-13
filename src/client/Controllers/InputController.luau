@@ -15,6 +15,7 @@ export type SemanticAction =
 	| "ZoneHoldUp"
 	| "Interact"
 	| "ToggleLock"
+	| "ToggleHelp"
 
 export type Controller = {
 	state: any,
@@ -25,13 +26,13 @@ export type Controller = {
 	gamepadModifier: boolean,
 	touchPressed: { [string]: boolean },
 	touchCount: number,
-	lastWheelToggleAt: number,
 	connections: { any },
 }
 
 local COMBAT_LIMIT_PER_SECOND = 8
 local NON_COMBAT: { [string]: boolean } = {
 	ToggleLock = true,
+	ToggleHelp = true,
 	ZoneHoldDown = true,
 	ZoneHoldUp = true,
 	Interact = true,
@@ -49,7 +50,6 @@ function InputController.new(state: any, now: (() -> number)?): Controller
 		gamepadModifier = false,
 		touchPressed = {},
 		touchCount = 0,
-		lastWheelToggleAt = -math.huge,
 		connections = {},
 	}
 end
@@ -172,8 +172,14 @@ function InputController.start(controller: Controller, userInputService: any): (
 				controller.gamepadModifier = true
 			elseif key == Enum.KeyCode.E or key == Enum.KeyCode.ButtonY then
 				dispatch("ZoneHoldDown")
-			elseif key == Enum.KeyCode.ButtonR3 then
+			elseif
+				key == Enum.KeyCode.Tab
+				or inputType == Enum.UserInputType.MouseButton3
+				or key == Enum.KeyCode.ButtonR3
+			then
 				dispatch("ToggleLock")
+			elseif key == Enum.KeyCode.H or key == Enum.KeyCode.F1 or key == Enum.KeyCode.ButtonSelect then
+				dispatch("ToggleHelp")
 			end
 		end)
 	)
@@ -191,18 +197,6 @@ function InputController.start(controller: Controller, userInputService: any): (
 				controller.gamepadModifier = false
 			elseif not processed and (key == Enum.KeyCode.E or key == Enum.KeyCode.ButtonY) then
 				dispatch("ZoneHoldUp")
-			end
-		end)
-	)
-	table.insert(
-		controller.connections,
-		userInputService.InputChanged:Connect(function(input: any, processed: boolean)
-			if not processed and input.UserInputType == Enum.UserInputType.MouseWheel then
-				local now = controller.now()
-				if now - controller.lastWheelToggleAt >= 0.2 then
-					controller.lastWheelToggleAt = now
-					dispatch("ToggleLock")
-				end
 			end
 		end)
 	)

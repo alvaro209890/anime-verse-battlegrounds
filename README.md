@@ -3,8 +3,8 @@
 RPG / Action RPG de mundo aberto no Roblox (Luau) — combate estilo battlegrounds com
 progressão persistente, loadout customizável e ressonância de famílias de energia.
 
-> **Status em 2026-08-13:** itens 1–13 do backlog F0 fechados em código/headless, além da fundação procedural de mundo/apresentação, animação local de combate, interações mínimas e do gate seguro de playtest no Studio, além do polimento de game-feel (easing, follow-through, idle, wrist snap, hit-stop e câmera de impacto).
-> **Runtime atual ainda não validado.** O Play das 09:26 abriu um artefato antigo de 128744 bytes, gerado às 08:20; ele iniciou o servidor antigo sem erro do jogo, mas não comprova o código atual. O novo `.rbxl` ainda não foi reaberto ou executado por nós.
+> **Status em 2026-08-13:** itens 1–13 do backlog F0 fechados em código/headless, mais HUD de comandos, lock-on visível e golpe básico com número de dano (`docs/18-ANALISE-VIDEO.md`).
+> **Runtime:** o Play das 13:48 mostrou spawn/HUD/Instrutor; golpes pareciam mortos (CADEADO + evento sem dano). Reabra o `.rbxl` novo depois desta correção.
 
 ## Estado comprovado
 
@@ -13,7 +13,7 @@ progressão persistente, loadout customizável e ressonância de famílias de en
 | Produto | Q-001 a Q-030 decididas; `docs/09-OPEN-QUESTIONS.md` é o registro canônico |
 | Planejamento | visão, GDD, mundo, social, arquitetura, schemas, segurança, roster, roadmap, benchmark e plano de animação documentados |
 | Implementado | domínio F0, mundo greybox com rotas/marcos/modelos low-poly, animação procedural de NPCs e do jogador, interações semânticas com Instrutor/Marco, save/ProfileStore, cliente Input/HUD, envelope v2, `SecurityService` e `TelemetryService` mínimo |
-| Validado automaticamente | 205/205 testes em `tests/run.luau` + 25/25 em `tests/animation.luau`, Selene limpo, StyLua canônico, Wally e build Rojo |
+| Validado automaticamente | 212/212 testes em `tests/run.luau` + 34/34 em `tests/animation.luau`, Selene limpo, StyLua canônico, Wally e build Rojo |
 | Ainda não comprovado | roteiro Play no Studio, physics/collision groups, DataStore real, dois clientes, latência, mobile, gamepad, performance, UX visual e assets de animação |
 
 O CI em pushes para `main` valida contratos headless e a árvore Rojo; não substitui playtest. O snapshot e os links de evidência ficam em `docs/12-TESTING.md`.
@@ -80,8 +80,8 @@ src/
     Data/            catálogos dirigidos por dados (personagens, habilidades, famílias, NPCs, zonas, objetivos, locale)
   server/            services (domínio F0, save, rede, segurança e telemetria)
   client/            controllers (bootstrap de apresentação)
-tests/               harness Lune + 230 testes unitários (205 run.luau + 25 animation.luau)
-docs/                produto, arquitetura, decisões, testes e planos (00 a 17)
+tests/               harness Lune + 246 testes unitários (212 run.luau + 34 animation.luau)
+docs/                produto, arquitetura, decisões, testes e planos (00 a 18)
 lib/                 bibliotecas pinadas (ProfileStore)
 ```
 
@@ -100,6 +100,7 @@ lib/                 bibliotecas pinadas (ProfileStore)
 - [docs/15-WORLD-PRESENTATION.md](docs/15-WORLD-PRESENTATION.md) — mundo procedural, modelos greybox, animação dos atores e roteiro de validação
 - [docs/16-COMBAT-AUDIO.md](docs/16-COMBAT-AUDIO.md) — áudio de combate: catálogo, player, integração e pendência de upload
 - [docs/17-COMBAT-FEEL.md](docs/17-COMBAT-FEEL.md) — game-feel: easing, follow-through, idle, wrist snap, hit-stop e câmera de impacto
+- [docs/18-ANALISE-VIDEO.md](docs/18-ANALISE-VIDEO.md) — playtest 13/08: golpes invisíveis, mira e overlay de comandos
 
 `PROMPT_AnimeVerseBattlegrounds_v2.md` é o briefing histórico que originou o
 planejamento. Em conflito, os documentos canônicos em `docs/` prevalecem.

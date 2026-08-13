@@ -1028,21 +1028,12 @@ RemoteGateway.onClientIntent(Remotes.Names.BasicAttackIntent, function(player: P
 			applyPulseCounterToPlayer(player.UserId, target, now)
 		end
 		if not result.iframe then
-			RemoteGateway.fireClient(player, Remotes.Names.CombatEvent, {
-				targetId = target.id,
-				abilityId = if isHeavy then "heavy" else "light",
-				outcome = if result.parried
-						or result.stoppedOnGuard
-						or result.broken
-						or result.pulseCounter
-						or target.guarding
-					then "guard"
-					else "hit",
-				-- Degrau autoritativo da cadeia leve: o cliente sincroniza a
-				-- pose com o servidor (docs/14 §4.3 — correção da divergência).
-				step = if isHeavy then 0 else (result.step or 0),
-			})
-			fireVitalsForFighter(target.id)
+			RemoteGateway.fireClient(
+				player,
+				Remotes.Names.CombatEvent,
+				CombatService.basicCombatEvent(result, kind, target.id, target.guarding == true)
+			)
+			fireVitalsForFighter(target.id, player.UserId)
 		end
 		if result.killed then
 			-- Item 11: se o alvo é um jogador, a morte dele aplica a perda
@@ -1067,11 +1058,11 @@ RemoteGateway.onClientIntent(Remotes.Names.BasicAttackIntent, function(player: P
 		if not isHeavy then
 			attacker.lightStep = 0
 		end
-		RemoteGateway.fireClient(player, Remotes.Names.CombatEvent, {
-			abilityId = if isHeavy then "heavy" else "light",
-			outcome = "miss",
-			step = 0,
-		})
+		RemoteGateway.fireClient(
+			player,
+			Remotes.Names.CombatEvent,
+			CombatService.basicCombatEvent(result, kind, nil, false)
+		)
 	end
 end)
 
@@ -1265,10 +1256,18 @@ game.Players.PlayerAdded:Connect(function(player: Player)
 	end
 	-- Recorte adicional da §18: playtest pode receber as três técnicas sem
 	-- remote de cheat. O override é de sessão e nunca entra no ProfileRoot.
-	if StudioDebug.isEnabled(RunService:IsStudio(), game:GetAttribute("F0Debug")) then
-		for _, flag in StudioDebug.unlockFlags() do
-			ProgressionService.grantSessionUnlock(player.UserId, flag)
+	-- `F0Debug` é lido do DataModel e do Script Server: o Rojo às vezes não
+	-- carimba atributo na raiz do place.
+	local debugAttribute = StudioDebug.resolveAttribute(game:GetAttribute("F0Debug"), script:GetAttribute("F0Debug"))
+	local debugGranted = StudioDebug.applySessionUnlocks(
+		RunService:IsStudio(),
+		debugAttribute,
+		function(flag: string): boolean
+			return ProgressionService.grantSessionUnlock(player.UserId, flag)
 		end
+	)
+	if debugGranted > 0 then
+		print(("[Bootstrap] StudioDebug: %d técnicas de sessão para %d"):format(debugGranted, player.UserId))
 	end
 	TelemetryService.record("SessionLoad", player.UserId, {
 		durationMs = math.floor((os.clock() - loadStartedAt) * 1000),

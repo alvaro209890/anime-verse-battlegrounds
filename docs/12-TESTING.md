@@ -1,10 +1,10 @@
 # 12 — Testes e evidências
 
-> **Snapshot:** 2026-08-13. `tests/run.luau` declara **208** testes F0 alinhados a `docs/13-F0-SLICE.md`; `tests/animation.luau` soma **34** testes de apresentação/game-feel (easing, follow-through, idle, wrist snap, hit-stop, câmera de impacto, VFX do Cometa, HUD de combate e sync da cadeia leve). Desde o snapshot de 133 casos, foram acrescentados 9 testes dos controllers de cliente, 2 do envelope v2, 1 de coerência bootstrap/Rojo, 10 de telemetria/segurança, 4 da fundação de mundo/apresentação + gate Studio, 1 do piso estrutural, 1 da apresentação do jogador e 5 da interação mínima; em 13/08 entraram mais 5 de VFX do Cometa, 3 do HUD de combate (números de dano/barras), 1 do syncStep da cadeia e 3 da decoração do spawn (portões livres, volume, âncoras).
+> **Snapshot:** 2026-08-13. `tests/run.luau` declara **212** testes F0 alinhados a `docs/13-F0-SLICE.md`; `tests/animation.luau` soma **34** testes de apresentação/game-feel. Nesta rodada (playtest em vídeo 13:48) entraram 4 testes: `StudioDebug.resolveAttribute`/apply, ToggleLock solta sem remote, ToggleHelp fora do rate limit, e `CombatService.basicCombatEvent` com dano visível no HUD.
 
 ## 1. Estado da execução
 
-Em 2026-08-13, no Windows 11 (`C:\GIS\anime-verse-battlegrounds`), a verificação atual registrou Selene limpo (0 erros, 0 warnings, 0 parse errors), 205/205 testes em `tests/run.luau` e 34/34 em `tests/animation.luau` (0 falhas), Wally concluído e Rojo build concluído (também revalidado no server-desktop, `~/Documentos/Anime Verse Battlegrounds`). O script `scripts/build-studio.ps1` gerou exatamente `anime-verse-battlegrounds.rbxl`: 160553 bytes, data `2026-08-13 09:48:52 -03` e SHA256 `8C6D136AE9B6186F5DF6E51F6E6306C085C13BBEF0868097FB8FE6A86831D32F`. Isso comprova dependências, regras headless e montagem do snapshot; não executa suas Instances/adapters Roblox.
+Em 2026-08-13, no Windows 11 (`C:\GIS\anime-verse-battlegrounds`), a verificação atual registrou Selene limpo (0 erros, 0 warnings, 0 parse errors), 212/212 testes em `tests/run.luau` e 34/34 em `tests/animation.luau` (0 falhas). O Play das 13:48 (`docs/18-ANALISE-VIDEO.md`) comprovou HUD, spawn e prompt do Instrutor no snapshot das 13:46; não comprovou combate porque o básico não mostrava dano e as técnicas ficaram em CADEADO. Essa rodada corrige esses bugs em código/headless; o novo `.rbxl` ainda precisa ser reaberto no Studio.
 
 O Play registrado às 09:26 abriu o artefato anterior, de 128744 bytes e data 08:20. Esse arquivo antigo chegou a `[Bootstrap] servidor pronto (F0)` sem erro Luau do jogo, mas antecede as mudanças atuais e não serve como evidência deste snapshot. O novo arquivo canônico não foi reaberto nem executado por nós; boot/spawn atual, apresentação, interação, física, HUD, save e fluxo jogável continuam sem comprovação no Studio.
 
@@ -33,22 +33,22 @@ O CI executa StyLua, Selene, os testes Lune, a instalação Wally e o build Rojo
 
 Em checkout Windows com `core.autocrlf=true`, os arquivos de trabalho podem estar em CRLF enquanto `stylua.toml` exige `Unix`; nesse caso, o check direto acusa somente final de linha. Para reproduzir o CI, use uma cópia com bytes LF canônicos do Git (`git -c core.autocrlf=false archive ...`). `--line-endings Windows` só é equivalente quando todo o checkout está uniformemente em CRLF; ele não resolve uma árvore mista. Não reformatar código só para mascarar essa conversão do checkout.
 
-## 2. Cobertura existente: exatamente 205 testes
+## 2. Cobertura existente: exatamente 212 testes
 
 | Área | Cobertura |
 |---|---|
 | **Dados e rede** (15) | Punho do Eclipse 3+1; `comet_shoulder`; Umbral baseline; 4 famílias; remotes incl. `SessionSnapshot`, `AbilityIntent`, `CombatEvent`, `InteractionIntent`, `StateDelta` e `EnemyEvent`; envelope v2 exige versão, request ID, sequência, ação e payload válidos; dummy 10000 HP / dano 4; Estilhaço Errante 40/6/4; zonas: 3 zonas, PvP só na livre, âncoras persistidas + pontos de Estilhaço, spawn no bastião; Locale PT-BR/EN das chaves §16 e formatação de `{n}`; `quest_hunt` 3 kills / +40 XP / unlock Cometa |
-| **Cliente** (9) | gate de `SessionSnapshot.ready`; limite de 8 intenções de combate/s; no máximo 2 botões de toque simultâneos; `CharacterController` envia intenção sem alvo/dano; 3 slots, ultimate oculta, unlock e cooldown no `AbilityController`; rejeição reconciliada sem código interno na UI; Umbral/zona/perda só após ready; hold de fronteira de 0,6 s; Locale cobre PT-BR/EN do HUD F0 |
+| **Cliente** (11) | gate de `SessionSnapshot.ready`; limite de 8 intenções de combate/s; no máximo 2 botões de toque simultâneos; `CharacterController` envia intenção sem alvo/dano; ToggleLock solta sem remote; ToggleHelp fora do rate limit; 3 slots, ultimate oculta, unlock e cooldown no `AbilityController`; rejeição reconciliada sem código interno na UI; Umbral/zona/perda só após ready; hold de fronteira de 0,6 s; Locale cobre PT-BR/EN do HUD F0 (inclui ajuda/mira) |
 | **Bootstrap/Rojo** (1) | o bootstrap resolve `Services` como filho do Script `Server` gerado pelo Rojo e não procura a pasta em `ServerScriptService` |
 | **Telemetria/segurança** (10) | allowlist/remoção de campos arbitrários; tipo/buffer; execução dos sete schemas; envelope/payload válido; campo extra e direção; replay de request/sequence; envelope fechado e amostragem de rejeição; limite 8/s separado de interação; NaN/vetor impossível/interação ambígua; limpeza entre sessões |
-| **Mundo/apresentação/Studio debug** (5) | quatro receitas e estilo procedural válidos; poses de NPC preservam antecipação/ataque/queda; apresentação local do jogador diferencia antecipação/impacto leve, peso do ataque pesado, guarda e recuperação; gate exige Studio + atributo e exclui ultimate; flags de sessão aparecem para habilidade/HUD e não entram no snapshot durável |
+| **Mundo/apresentação/Studio debug** (6) | quatro receitas e estilo procedural válidos; poses de NPC preservam antecipação/ataque/queda; apresentação local do jogador diferencia antecipação/impacto leve, peso do ataque pesado, guarda e recuperação; gate exige Studio + atributo e exclui ultimate; flags de sessão aparecem para habilidade/HUD e não entram no snapshot durável; `resolveAttribute` cai no Script Server e `applySessionUnlocks` só no Studio |
 | **Geometria** (5) | distância no plano ignora altura; normalize de vetor nulo não vira NaN; costas vs. frente vs. perpendicular; cápsula do trajeto dentro/fora do raio e além do fim; lunge de 7 com cap 8 e parada antes do contato; `moveToward` a 12 studs/s parando no alcance |
 | **Greybox** (3) | o `WorldService` gera piso rastreável a partir de cada volume canônico; o volume de cada zona resolve a zona declarada por todas as âncoras, o plano do portão resolve como transição e fora de todo volume devolve nil; 6 pontos de Estilhaço ≥ 24 studs entre si e ≥ 20 dos portões |
 | **Interação mínima** (5) | catálogo allowlisted/localizado do Instrutor e Marco; cliente bloqueado até `ready` e payload sem recompensa; Instrutor exige alvo conhecido e proximidade medida pelo servidor; Marco exige hold de 1,5 s no relógio do servidor; conclusão revalida distância e pending é limpo no leave |
 | **SpatialService** (4) | hitbox à frente acerta 1 e ignora quem está atrás/longe; Ombro Cometa avança 7, commita a posição e acerta 1 alvo na cápsula; guarda inimiga trava o avanço; avanço sem alvo é resultado válido |
 | **EnemyService** (5 + elite 3) | spawn até o teto de 4 com a âncora no id e sem duplicar; persegue, para no alcance, telegraph de 400 ms sem dano e 6 depois; sem aggro para jogador na zona segura; respawn de 45 s bloqueado por jogador a menos de 20 studs; kill reporta âncora e autor; **elite**: spawn único na `anchor_elite`; leeching por dano ≥ 1% na morte; leeching por 8 s no raio sem dano |
 | **CooldownService** (3) | inicia zerado; `start` aplica e expira; `clear` zera |
-| **CombatService** (27) | applyDamage legado; cadeia 6+6+8+12; reset 0,65 s; guarda 40%; aparo 120 ms; costas; pesado 12/28/2; quebra+overflow; miss bloqueia leve; dash i-frame/CD; dummy alcance/período; comet 14 aberto; guarda para avanço (6 HP + 14 guarda); aparo; i-frame; Estilhaço telegraph+dano 8; sem aggro na fronteira; alcance 4; recovery; respawn 45 s; cap 4 vivos; `killed` só na transição vivo → morto e `diedAt` não é re-carimbado; **elite**: ciclo alterna combo 6+6 e slam 14; slam na guarda corta 30%; Pulso na postura reduz 50% e consome a postura |
+| **CombatService** (28) | applyDamage legado; cadeia 6+6+8+12; `basicCombatEvent` leva dano no HUD e miss esconde número; reset 0,65 s; guarda 40%; aparo 120 ms; costas; pesado 12/28/2; quebra+overflow; miss bloqueia leve; dash i-frame/CD; dummy alcance/período; comet 14 aberto; guarda para avanço (6 HP + 14 guarda); aparo; i-frame; Estilhaço telegraph+dano 8; sem aggro na fronteira; alcance 4; recovery; respawn 45 s; cap 4 vivos; `killed` só na transição vivo → morto e `diedAt` não é re-carimbado; **elite**: ciclo alterna combo 6+6 e slam 14; slam na guarda corta 30%; Pulso na postura reduz 50% e consome a postura |
 | **ResourceService** (6) | pool; `trySpend`; `grantFlowGain`; família desconhecida; `tryGrantFlow` 6+3 e cap 1,5 s; regen 2 / atraso 3 s / 6 |
 | **AbilityService** (14) | Ombro Cometa em `ServerPlayerState`; recusas; ultimate `disabled`; `locked`; Cadência 5+6, janela de reentrada e eco 4 no tick com Fluxo; Pulso: postura sem dano → erro vira recovery 600 ms; postura reduz 50% + contra 8; costas e slam do elite vencem a postura; comet no fighter dummy + `CombatEvent` |
 | **CatalogService** (6) | dados reais (incl. dummy, instrutor e cadeia de objetivos); personagem sem habilidade falha; zona/âncora inválida falha; objetivo com alvo/ofertante desconhecido, `requiredCount = 0` ou `acceptFlag` vazia falha; `displayNameKey` sem entrada no Locale falha; âncora que declara uma zona mas cai no volume de outra falha |
@@ -65,7 +65,7 @@ A divisão é deliberada: matemática e decisão ficam em módulos puros (`Geome
 ## 3. Arquitetura do harness
 
 - **`tests/harness.luau`** simula o mínimo que o Lune não fornece: `_G.game`, `_G.Instance`, `_G.task` e resolução de `require(script.Parent.X)` no filesystem.
-- **`tests/run.luau`** contém os 205 casos e usa módulos reais de `src/`, com um miniframework de asserts.
+- **`tests/run.luau`** contém os 212 casos e usa módulos reais de `src/`, com um miniframework de asserts.
 - **Services testáveis por injeção** recebem dependências em `init()`: `CatalogService`, `AbilityService`, `ResourceService`, `PlayerSessionService`, `ZoneService`, `ProgressionService`, `QuestService`, `SpatialService`, `EnemyService` e `SaveService` (adaptador de store mockado). O bootstrap Roblox monta o grafo real.
 - **`src/shared/TaskCompat.luau`** usa `task` nativo no Roblox e o polyfill somente no harness.
 
@@ -75,7 +75,7 @@ Os módulos de dados declaram tipos inline porque o Lune não resolve `script.Pa
 
 | Camada | O que demonstra | O que não demonstra |
 |---|---|---|
-| lint + 205 testes Lune | sintaxe, estilo e comportamento unitário coberto no ambiente simulado | física, replicação, UI renderizada, dispositivo ou serviços Roblox reais |
+| lint + 212 testes Lune | sintaxe, estilo e comportamento unitário coberto no ambiente simulado | física, replicação, UI renderizada, dispositivo ou serviços Roblox reais |
 | Wally + build Rojo | dependências resolvidas e árvore de projeto montável | que o place abre sem erro ou que um fluxo é jogável |
 | Studio | bootstrap, UI/input, câmera, física e replicação no cenário testado | DataStore/teleport/rede pública com fidelidade total |
 | publicado privado | serviços reais, múltiplos servidores, reconnect, teleport e condições reais de rede | cobertura de dispositivo que não foi executada |
@@ -150,6 +150,6 @@ rg -n "\\x{FFFD}" README.md docs
 - `task.wait` real em teste cria loop infinito se o polyfill síncrono for usado no `spawn`; o harness injeta `spawn = noop` para o loop de regen. `ZoneService` usa relógio injetado (`fakeNow`), nunca `task.wait`, para as janelas de 5 s e 15 s.
 - Busy-wait curto com `os.clock` substitui `task.wait` nos testes de expiração de cooldown.
 - Selene permite `global_usage` e `empty_loop` no `selene.toml` porque o harness usa `_G` e busy-waits deliberadamente.
-- Contar casos pelo resumo pode mascarar erro: a fonte é a quantidade real de chamadas `test(...)` em `tests/run.luau`; nesta versão são 205.
+- Contar casos pelo resumo pode mascarar erro: a fonte é a quantidade real de chamadas `test(...)` em `tests/run.luau`; nesta versão são 212.
 - Lua patterns não têm alternação (`a|b` é literal): validar IDs de sinal por pertencimento a uma tabela, não com regex no teste.
 - Quirk do Lune/MLua: closure auto-referente (`local x = { fn = function() ... x ... end }`) vê `x` como nil dentro da função. Declarar a variável antes (`local x; x = { ... }`) ou o mock do SaveService quebra com "attempt to index nil".

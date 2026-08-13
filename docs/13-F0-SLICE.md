@@ -394,9 +394,10 @@ F0 mostra **três** botões de técnica. Slot vazio/bloqueado: ícone cadeado, s
 
 ### 12.1 Câmera (Q-006)
 
-- PC: câmera livre; lock-on opcional (roda do mouse)
+- PC: câmera livre; lock-on opcional (**Tab** ou clique do meio). A roda do mouse não trava a mira: ela já zooma a câmera Roblox, e o playtest de 13/08 ficou preso sem HUD de saída (`docs/18-ANALISE-VIDEO.md`).
 - Toque/gamepad: magnetismo 8° até 25 studs; some após compromisso e em área
 - Soft lock só no ataque básico, não nas técnicas de deslocamento
+- HUD: botão **?** / tecla **H** abre a lista de comandos; faixa permanente no rodapé; chip "MIRA TRAVADA" enquanto o lock-on está ativo
 
 ### 12.2 HUD mínimo
 
@@ -408,6 +409,10 @@ F0 mostra **três** botões de técnica. Slot vazio/bloqueado: ícone cadeado, s
 | Zona | “SEGURO” / “PvP ATIVO” + perda resumida | persistente fora da vila |
 | Objetivo | uma linha, máx. 48 caracteres | some ao completar |
 | Feedback | hit confirm, guarda, rejeição (`no_resource`, `cooldown`) | 1 s; sem código interno |
+| Comandos | botão **?** / tecla **H**; faixa permanente no rodapé | não envia remote |
+| Mira | chip “MIRA TRAVADA — Tab para soltar” | só apresentação local |
+| Comandos | botão **?** / tecla **H**; faixa permanente no rodapé | não envia remote |
+| Mira | chip “MIRA TRAVADA — Tab para soltar” | só apresentação local |
 
 Mobile: no máximo dois botões simultâneos. Técnicas em cluster direito; dash e guarda separados. Área de combate central sem HUD opaco > 20%.
 
@@ -519,7 +524,7 @@ Dispositivos (Q-005): registrar modelo, RAM, resolução e rede **depois** do pr
 
 Roteiro de Studio solo: boot limpo → dummy → 3 técnicas (cheats de unlock só em build de teste) → morte → rejoin. Depois: 2 clientes, fronteira, spam de remote.
 
-Cheat de unlock: remote **inexistente** no cliente. O gate `StudioDebug` só concede flags de sessão no servidor se `RunService:IsStudio()` e o atributo do place for `F0Debug = true`; essas flags não entram no save.
+Cheat de unlock: remote **inexistente** no cliente. O gate `StudioDebug` só concede flags de sessão no servidor se `RunService:IsStudio()` e o atributo `F0Debug = true` existir no DataModel **ou** no Script Server (o Rojo nem sempre carimba a raiz do place). Essas flags não entram no save. O HUD mostra `KIT DE TESTE` quando as três técnicas vêm desse override.
 
 ## 19. Testes da mudança de catálogo
 

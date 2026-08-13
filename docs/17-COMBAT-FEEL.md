@@ -132,6 +132,11 @@ mais peso por golpe. Baselines do `CatalogService` e testes atualizados.
 O bootstrap (`src/client/init.client.lua`) conecta `CombatEvent` a
 `confirmHit` + `addImpact`, ao lado do áudio de impacto já existente.
 
+O golpe básico agora emite `damage` no `CombatEvent` e o `StateDelta` da vida
+do NPC para o atacante. Sem isso o HUD (`shouldShowDamage` exige `damage > 0`)
+e a barra do inimigo ficavam mudos mesmo no acerto — o playtest de 13/08 leu
+como "golpe morto" (`docs/18-ANALISE-VIDEO.md`).
+
 ## 4. Cobertura
 
 Novos testes em `tests/animation.luau` (executado pelo CI junto de

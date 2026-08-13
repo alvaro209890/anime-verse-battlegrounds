@@ -152,6 +152,8 @@ function CharacterController.onAction(controller: Controller, action: string): (
 	elseif action == "Dash" then
 		controller.send("DashIntent", "DashIntent", { direction = dashDirection(controller) })
 	elseif action == "ToggleLock" then
+		-- Segunda ativação sempre solta. A primeira só trava se houver alvo
+		-- de combate à frente; senão permanece livre (não "prende no vazio").
 		controller.lockTarget = if isCombatTarget(controller.lockTarget) then nil else findAimTarget(controller, 60, 35)
 	end
 end

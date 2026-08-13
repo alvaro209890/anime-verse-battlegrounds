@@ -191,6 +191,53 @@ function UIController.new(deps: { [string]: any }): any
 		end
 	end)
 
+	local hint = label("Hint", gui, UDim2.fromOffset(520, 22), UDim2.new(0.5, -260, 1, -24))
+	hint.BackgroundColor3 = BG
+	hint.BackgroundTransparency = 0.25
+	hint.TextXAlignment = Enum.TextXAlignment.Center
+	hint.TextSize = 12
+	hint.TextColor3 = MUTED
+
+	local lockChip = label("LockOn", gui, UDim2.fromOffset(360, 28), UDim2.new(0.5, -180, 0, 80))
+	lockChip.BackgroundColor3 = BG
+	lockChip.BackgroundTransparency = 0.1
+	lockChip.TextXAlignment = Enum.TextXAlignment.Center
+	lockChip.TextSize = 14
+	lockChip.Visible = false
+
+	local debugKit = label("DebugKit", gui, UDim2.fromOffset(140, 22), UDim2.fromOffset(18, 16))
+	debugKit.BackgroundColor3 = BG
+	debugKit.BackgroundTransparency = 0.2
+	debugKit.TextXAlignment = Enum.TextXAlignment.Center
+	debugKit.TextSize = 11
+	debugKit.TextColor3 = MUTED
+	debugKit.Visible = false
+
+	local helpButton = button("Help", gui, UDim2.fromOffset(40, 40), UDim2.new(1, -58, 0, 14))
+	helpButton.TextSize = 22
+	local helpPanel = frame("HelpPanel", gui, UDim2.fromOffset(420, 280), UDim2.new(0.5, -210, 0.5, -140))
+	helpPanel.Visible = false
+	local helpTitle = label("Title", helpPanel, UDim2.new(1, -16, 0, 28), UDim2.fromOffset(8, 8))
+	helpTitle.TextSize = 16
+	helpTitle.TextXAlignment = Enum.TextXAlignment.Center
+	local HELP_LINE_KEYS = {
+		"hud.help_light",
+		"hud.help_heavy",
+		"hud.help_guard",
+		"hud.help_dash",
+		"hud.help_ability",
+		"hud.help_lock",
+		"hud.help_interact",
+		"hud.help_close",
+	}
+	local helpLines: { TextLabel } = {}
+	for index, _ in HELP_LINE_KEYS do
+		local line =
+			label("Line" .. index, helpPanel, UDim2.new(1, -24, 0, 24), UDim2.fromOffset(12, 36 + (index - 1) * 28))
+		line.TextSize = 13
+		table.insert(helpLines, line)
+	end
+
 	local controller = {
 		gui = gui,
 		state = deps.state,
@@ -199,6 +246,7 @@ function UIController.new(deps: { [string]: any }): any
 		abilities = deps.abilities,
 		abilityController = deps.abilityController,
 		abilityApi = deps.abilityApi,
+		characterController = deps.characterController,
 		healthBar = healthBar,
 		guardBar = guardBar,
 		resourceBar = resourceBar,
@@ -211,11 +259,32 @@ function UIController.new(deps: { [string]: any }): any
 		guard = guard,
 		dash = dash,
 		zoneHold = zoneHold,
+		hint = hint,
+		lockChip = lockChip,
+		debugKit = debugKit,
+		helpButton = helpButton,
+		helpPanel = helpPanel,
+		helpTitle = helpTitle,
+		helpLines = helpLines,
+		helpLineKeys = HELP_LINE_KEYS,
+		helpVisible = false,
 		displayedHealth = 0,
 		displayedGuard = 0,
 		displayedResource = 0,
 		accumulator = 0,
 	}
+
+	local function toggleHelp()
+		controller.helpVisible = not controller.helpVisible
+	end
+	helpButton.Activated:Connect(toggleHelp)
+	if deps.inputApi and deps.input then
+		deps.inputApi.subscribe(deps.input, function(action: string, _payload: { [string]: any })
+			if action == "ToggleHelp" then
+				toggleHelp()
+			end
+		end)
+	end
 
 	deps.runService.RenderStepped:Connect(function(delta: number)
 		controller.accumulator += delta
@@ -304,6 +373,28 @@ function UIController.render(controller: any, elapsed: number): ()
 	controller.dash.Text = controller.locale.get("hud.control_dash", localeId)
 	controller.zoneHold.Visible = touchVisible and state.zoneHoldRequired
 	controller.zoneHold.Text = controller.locale.get("hud.pvp_hold", localeId)
+
+	controller.hint.Text = controller.locale.get("hud.help_hint", localeId)
+	controller.helpButton.Text = controller.locale.get("hud.help_button", localeId)
+	controller.helpTitle.Text = controller.locale.get("hud.help_title", localeId)
+	controller.helpPanel.Visible = controller.helpVisible == true
+	for index, key in controller.helpLineKeys do
+		controller.helpLines[index].Text = controller.locale.get(key, localeId)
+	end
+
+	local lockedOn = controller.characterController ~= nil and controller.characterController.lockTarget ~= nil
+	controller.lockChip.Visible = lockedOn
+	if lockedOn then
+		controller.lockChip.Text = controller.locale.get("hud.lock_on", localeId)
+	end
+
+	local debugKit = controller.abilityApi.isUnlocked(controller.abilityController, "comet_shoulder")
+		and controller.abilityApi.isUnlocked(controller.abilityController, "broken_cadence")
+		and controller.abilityApi.isUnlocked(controller.abilityController, "pulse_return")
+	controller.debugKit.Visible = debugKit
+	if debugKit then
+		controller.debugKit.Text = controller.locale.get("hud.debug_kit", localeId)
+	end
 end
 
 return UIController

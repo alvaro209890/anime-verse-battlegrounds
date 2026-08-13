@@ -211,6 +211,7 @@ local ui = UIController.new({
 	abilities = Abilities,
 	abilityController = ability,
 	abilityApi = AbilityController,
+	characterController = character,
 	input = input,
 	inputApi = InputController,
 	runService = RunService,

@@ -67,6 +67,7 @@ local ActorAnimator = require("../src/client/Presentation/ActorAnimator")
 local PlayerCombatAnimator = require("../src/client/Presentation/PlayerCombatAnimator")
 local AbilityController = require("../src/client/Controllers/AbilityController")
 local CombatFeedbackController = require("../src/client/Controllers/CombatFeedbackController")
+local CombatHudController = require("../src/client/Controllers/CombatHudController")
 local ResourceController = require("../src/client/Controllers/ResourceController")
 local ZoneController = require("../src/client/Controllers/ZoneController")
 local SecurityService = require("../src/server/Services/SecurityService")
@@ -79,6 +80,9 @@ test("bootstrap: serviços são filhos do Script Server gerado pelo Rojo", funct
 	local source = fs.readFile("src/server/init.server.lua")
 	assertTrue(source:find('local Services = script:WaitForChild("Services")', 1, true) ~= nil, "raiz de Services")
 	assertTrue(source:find("script.Parent.Services", 1, true) == nil, "não procura Services em ServerScriptService")
+	assertTrue(source:find("CombatService.basicCombatEvent", 1, true) ~= nil, "golpe básico emite dano")
+	assertTrue(source:find("StudioDebug.applySessionUnlocks", 1, true) ~= nil, "StudioDebug no join")
+	assertTrue(source:find('script:GetAttribute("F0Debug")', 1, true) ~= nil, "F0Debug no Script")
 end)
 
 test("greybox: WorldService gera piso para cada volume canônico de zona", function()
@@ -225,6 +229,33 @@ test("studio debug: unlock de sessão aparece no HUD e não entra no save", func
 		assertEq(#snapshot.unlockedAbilities, 0, "override fora de abilities persistidas")
 	end
 	ProgressionService.unregisterPlayer(8801)
+end)
+
+test("studio debug: resolveAttribute ignora nil e aplica as 3 flags só no Studio", function()
+	assertEq(StudioDebug.resolveAttribute(nil, true), true, "cai no Script")
+	assertEq(StudioDebug.resolveAttribute(false, true), false, "false explícito vence")
+	assertEq(StudioDebug.resolveAttribute(nil, nil), nil, "ausente")
+	local granted: { string } = {}
+	local count = StudioDebug.applySessionUnlocks(true, true, function(flag: string): boolean
+		table.insert(granted, flag)
+		return true
+	end)
+	assertEq(count, 3, "três técnicas")
+	assertEq(#granted, 3, "grant chamado 3 vezes")
+	assertEq(
+		StudioDebug.applySessionUnlocks(false, true, function(): boolean
+			return true
+		end),
+		0,
+		"fora do Studio"
+	)
+	assertEq(
+		StudioDebug.applySessionUnlocks(true, nil, function(): boolean
+			return true
+		end),
+		0,
+		"sem atributo"
+	)
 end)
 
 -- ── Relógio injetável (janela de reentrada / cap de Fluxo) ──────────────────
@@ -436,6 +467,54 @@ test("cliente: CharacterController envia somente intenção sem alvo ou dano", f
 	assertEq(sent[3].payload.direction.z, -1, "direção unitária fallback")
 end)
 
+test("cliente: ToggleLock solta um alvo já travado sem enviar remote", function()
+	local state = ClientState.new(clockNow)
+	ClientState.applySnapshot(state, { ready = true })
+	local input = InputController.new(state, clockNow)
+	local sent: { any } = {}
+	local controller = CharacterController.new({
+		state = state,
+		input = input,
+		inputSubscribe = InputController.subscribe,
+		send = function(remoteName: string, action: string, payload: { [string]: any })
+			table.insert(sent, { remoteName = remoteName, action = action, payload = payload })
+		end,
+	})
+	local fakeTarget = {
+		Parent = {},
+		IsA = function(_self: any, className: string): boolean
+			return className == "BasePart"
+		end,
+		GetAttribute = function(_self: any, name: string): any
+			return name == "CombatTarget"
+		end,
+	}
+	controller.lockTarget = fakeTarget
+	InputController.dispatch(input, "ToggleLock", {})
+	assertEq(controller.lockTarget, nil, "segunda ToggleLock solta")
+	assertEq(#sent, 0, "mira não é intenção de combate")
+end)
+
+test("cliente: ToggleHelp não consome o limite de combate", function()
+	local state = ClientState.new(clockNow)
+	ClientState.applySnapshot(state, { ready = true })
+	local input = InputController.new(state, clockNow)
+	local received = 0
+	InputController.subscribe(input, function(action: string)
+		if action == "ToggleHelp" then
+			received += 1
+		end
+	end)
+	for _ = 1, 8 do
+		assertTrue(InputController.dispatch(input, "BasicLight", {}), "ataque dentro do limite")
+	end
+	local ok, reason = InputController.dispatch(input, "BasicLight", {})
+	assertFalse(ok, "nono ataque recusado")
+	assertEq(reason, "rate_limited", "motivo")
+	assertTrue(InputController.dispatch(input, "ToggleHelp", {}), "ajuda passa o limite")
+	assertEq(received, 1, "ToggleHelp chegou")
+end)
+
 test("cliente: AbilityController mantém 3 slots, oculta ultimate e exige unlock", function()
 	local state = ClientState.new(clockNow)
 	ClientState.applySnapshot(state, { ready = true })
@@ -641,6 +720,19 @@ test("cliente: Locale cobre todo texto do HUD F0 em PT-BR e EN", function()
 		"hud.control_attack",
 		"hud.control_guard",
 		"hud.control_dash",
+		"hud.help_button",
+		"hud.help_title",
+		"hud.help_hint",
+		"hud.help_light",
+		"hud.help_heavy",
+		"hud.help_guard",
+		"hud.help_dash",
+		"hud.help_ability",
+		"hud.help_lock",
+		"hud.help_interact",
+		"hud.help_close",
+		"hud.lock_on",
+		"hud.debug_kit",
 	}
 	for _, key in keys do
 		assertTrue(Locale.hasKey(key), key .. " existe")
@@ -1174,6 +1266,22 @@ test("combate: cadeia leve 6+6+8+12", function()
 	assertEq(CombatService.tryLight(atk, tgt, 1.4, "front").damage, 8, "hit 3")
 	assertEq(CombatService.tryLight(atk, tgt, 1.6, "front").damage, 12, "hit 4")
 	assertEq(tgt.health, 68, "32 de dano")
+end)
+
+test("combate: evento do básico leva dano e miss zera a cadeia", function()
+	CombatService.clear()
+	local atk = CombatService.createFighter("p:a", "player", 100, 100)
+	local tgt = CombatService.createFighter("p:b", "player", 100, 100)
+	local hit = CombatService.tryLight(atk, tgt, 1.0, "front")
+	local event = CombatService.basicCombatEvent(hit, "light", tgt.id, false)
+	assertEq(event.outcome, "hit", "acerto")
+	assertEq(event.damage, 6, "dano no evento")
+	assertEq(event.step, 1, "degrau")
+	assertTrue(CombatHudController.shouldShowDamage(event), "HUD desenha o número")
+	local miss = CombatService.basicCombatEvent(nil, "light", nil, false)
+	assertEq(miss.outcome, "miss", "whiff")
+	assertEq(miss.damage, 0, "whiff sem número")
+	assertFalse(CombatHudController.shouldShowDamage(miss), "HUD esconde whiff")
 end)
 
 test("combate: janela 0,65 s reinicia a cadeia", function()

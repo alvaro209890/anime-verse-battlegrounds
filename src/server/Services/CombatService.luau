@@ -361,6 +361,39 @@ function CombatService.tryHeavy(
 	return result
 end
 
+-- Evento S→C do básico. Sem `damage` o HUD não desenha o número; o cliente
+-- nunca inventa esse valor (docs/18 — playtest 13/08).
+function CombatService.basicCombatEvent(
+	result: HitResult?,
+	kind: string,
+	targetId: string?,
+	targetGuarding: boolean
+): { [string]: any }
+	local isHeavy = kind == "heavy"
+	if not result or not result.ok then
+		return {
+			abilityId = if isHeavy then "heavy" else "light",
+			outcome = "miss",
+			damage = 0,
+			step = 0,
+		}
+	end
+	local outcome = if result.parried
+			or result.stoppedOnGuard
+			or result.broken
+			or result.pulseCounter
+			or targetGuarding
+		then "guard"
+		else "hit"
+	return {
+		targetId = targetId,
+		abilityId = if isHeavy then "heavy" else "light",
+		outcome = outcome,
+		damage = result.damage,
+		step = if isHeavy then 0 else (result.step or 0),
+	}
+end
+
 function CombatService.tryCometShoulder(
 	attacker: FighterState,
 	target: FighterState,

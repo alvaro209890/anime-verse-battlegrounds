@@ -90,7 +90,7 @@ Metas de percepção:
 | pulo | Espaço | botão de pulo | A sem modificador |
 | técnicas 1–4 | 1–4 | botões contextuais 1–4 | segurar LB + A/B/X/Y |
 | ultimate | R | botão de ultimate com confirmação | LB + RB |
-| lock-on opcional | roda do mouse | toque no alvo/ícone | R3 |
+| lock-on opcional | Tab / clique do meio | toque no alvo/ícone | R3 |
 
 Uma técnica de custo dois ocupa duas unidades de capacidade, mas usa um único botão. O espaço não utilizado não produz botão vazio na interface.
 
