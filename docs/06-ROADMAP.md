@@ -2,9 +2,9 @@
 
 ## 1. Objetivo e estado deste documento
 
-Este roadmap transforma a visão do jogo em uma sequência de entregas verificáveis e passa a ser a referência de escopo para uma equipe de 1–3 pessoas. A implementação **já começou**: os itens 1–11 do backlog de `docs/13-F0-SLICE.md` estão fechados no domínio — catálogos, `ZoneService` com a fronteira PvP, `QuestService` com a cadeia de objetivos (caça → elite → timing), o XP da sessão com consolidação e perda na morte, a camada espacial (`Geometry`, `SpatialService`, `EnemyService` e o greybox construído por `WorldService`), as três técnicas do Punho do Eclipse (`comet_shoulder`, `broken_cadence` com eco/Fluxo, `pulse_return` com postura) e o `SaveService` com ProfileRoot v1/ProfileStore — além de CI com StyLua, Selene, 133 testes Lune, Wally e build Rojo.
+Este roadmap transforma a visão do jogo em uma sequência de entregas verificáveis e passa a ser a referência de escopo para uma equipe de 1–3 pessoas. A implementação **já começou**: os itens 1–12 do backlog de `docs/13-F0-SLICE.md` estão fechados em código/headless — catálogos, serviços de domínio, ProfileStore e a camada cliente F0 (`InputController` → `UIController`) — além de CI com StyLua, Selene, 145 testes Lune, Wally e build Rojo.
 
-Esse estado **não** equivale a F0 concluída. O código nunca foi executado no Roblox Studio: não há evidência de runtime, DataStore real, servidor publicado, mobile ou gamepad. O próximo marco do programa não é mais código de domínio — é a primeira sessão medida no Studio, que também recalibra a estimativa da fase (§2).
+Esse estado **não** equivale a F0 concluída. A camada cliente não recebeu playtest nesta rodada: não há evidência registrada de boot/spawn, HUD/câmera, DataStore real, servidor publicado, mobile ou gamepad. O próximo marco do programa é a primeira sessão medida no Studio, que também recalibra a estimativa da fase (§2).
 
 O projeto é um **RPG / Action RPG** persistente; “Battlegrounds” permanece como nome de marketing, não como arquitetura de arena exclusiva. A ordem abaixo prioriza combate em rede, persistência e progressão antes de multiplicar conteúdo ou construir sistemas sociais caros.
 
