@@ -44,11 +44,12 @@ Itens 1–7 fechados no domínio, com a camada espacial construída por código 
 | `QuestService` | oferta → aceite (NPC ou 90 s) → progresso por kill → +40 XP e `unlock_comet_shoulder` no 3º | **itens 9/10 feitos**: cadeia sequencial (anterior precisa completar) e kind `flow_echo` via `creditFlowEcho` |
 | `ZoneService` | zona atual, `canPvp`, transição 5 s, lockout 15 s, `ZoneEvent` + `ZoneCrossingIntent`; hostil na segura não marca PvP | 5 sinais visíveis/audíveis, volumes e collision groups no Studio |
 | `PlayerSessionService` | snapshot Ready lê zona, unlocks, objetivo e XP não consolidado | feito no domínio |
+| `TelemetryService` / `SecurityService` | sete eventos allowlisted; envelope/payload fechado; replay, sequência e rate limit por classe | feito em código/headless; sink F0 é log estruturado, adversarial runtime pendente |
 | `src/client/init.client.lua` | sete controllers na ordem §12.3; espera `SessionSnapshot.ready`; sem intenção no boot; envelope v2 e HUD localizado | feito em código/headless; Studio e dispositivos pendentes |
 | `SaveService` | stub em memória; persiste `wallet` | **item 11 feito**: ProfileRoot v1 sem wallet, ProfileStore via `Shared.vendor` (lock, autosave 60–120 s, release); DataStore real e respawn no Studio pendentes |
 | Mapa/HUD | greybox e HUD mínimo implementados por código; build Rojo verde | execução, layout e feeling no Studio/dispositivos pendentes |
 
-Testes Lune: 145 casos em `tests/run.luau` (`docs/12-TESTING.md`).
+Testes Lune: 155 casos em `tests/run.luau` (`docs/12-TESTING.md`).
 
 **Comprovado neste recorte:** técnicas locked no spawn; Estilhaço Errante completo (spawn nas 6 âncoras, perseguição a 12 studs/s, telegraph 400 ms, dano 6, alcance 4, sem aggro através da fronteira, respawn 45 s, teto de 4); XP com retorno decrescente por âncora e teto de sessão; objetivo 1 do aceite ao prêmio; unlock do Ombro Cometa no 3º kill; geometria do greybox coerente com as âncoras; hitbox à frente; lunge de 7 studs com cap 8 e parada na guarda.
 
@@ -497,6 +498,8 @@ Proibido até P1: silhueta/roupa/cabelo reconhecíveis, VFX cromático de refer�
 
 Telegraph de perigo: contorno branco + ícone, não só vermelho. Mobile reduz partículas; mantém o contorno.
 
+A direção de produção, lista de clipes, markers, gates de qualidade e budgets de dispositivo estão em `docs/14-ANIMATION-PLAN.md`. Esse plano não muda a proibição de assets finais antes de P1 nem transforma animação em autoridade de combate.
+
 ## 18. Place, Studio e dispositivos
 
 | Item | Valor F0 |
@@ -515,7 +518,7 @@ Cheat de unlock: remote **inexistente** no cliente. Flag `StudioDebugUnlock` só
 
 ## 19. Testes da mudança de catálogo
 
-Os casos abaixo estão em `tests/run.luau` (145 no total; fonte: chamadas `test(...)`):
+Os casos abaixo estão em `tests/run.luau` (155 no total; fonte: chamadas `test(...)`):
 
 - roster `eclipse_fist` com 3 skills enabled + 1 ultimate disabled
 - `comet_shoulder` custo 18, CD 7, runner registrado
@@ -614,7 +617,7 @@ Ordem de implementação; cada item fecha com teste automatizado **ou** evidênc
 10. ~~Pulso + objetivo 45–60 min~~ (completo 2026-08-12 — postura de 250 ms reduz 50% de UM golpe frontal; contra 8 + empurrão 8 studs espacial; erro vira recovery 600 ms; costas e slam do elite vencem a postura; `quest_flow` kind `flow_echo` creditado pelo eco da Cadência, +40 XP e `unlock_pulse_return`. **Pendente**: empurrão e feeling no Studio)
 11. ~~Consolidação + morte + ProfileStore~~ (completo 2026-08-12 — consolidação no Marco de Retorno move todo o não consolidado com recibo `operationId` idempotente e anel de 32 recibos; morte aplica perda por zona: segura 0, livre PvE 10%, PvP 15%, cap 200; `SaveService` com ProfileRoot v1, session lock, autosave 60–120 s com jitter e os 5 cenários de §11.2 cobertos por teste; `lib/ProfileStore.luau` entra no build via `ReplicatedStorage.Shared.vendor`. **Pendente**: DataStore real no place privado e respawn com proteção 8 s no Studio)
 12. ~~HUD/input mobile e gamepad~~ (implementado em código/headless 2026-08-13 — controllers na ordem §12.3, gate `SessionSnapshot.ready`, envelope v2, 8 intenções/s, teclado/mouse/toque/gamepad, soft lock 8°/25 studs apenas no ataque básico de toque/gamepad, 3 técnicas com unlock/cooldown, ultimate oculta, feedback/Umbral/zona/objetivo e Locale PT-BR/EN. **Pendente**: qualquer playtest Studio, toque em dispositivo e gamepad real)
-13. Telemetria + rejeição adversarial de remotes
+13. ~~Telemetria + rejeição adversarial de remotes~~ (implementado em código/headless 2026-08-13 — `TelemetryService` aceita somente os sete eventos da §15 e remove campos arbitrários; `SecurityService` fecha schema de envelope/payload, bloqueia replay de `requestId`/sequência, NaN/vetor impossível/campo extra e aplica 8 intenções de combate/s com orçamento separado para interação. Rejeição é amostrada por contrato/motivo para não inundar logs. **Pendente**: fuzz/spam em Studio com dois clientes e sink operacional fora do log do servidor)
 14. Playtest interno 20 min (PC, um Android, um gamepad)
 
 Não puxar item 8 antes do 5. Não puxar ProfileStore real antes do loop dummy existir — senão o save testa um jogo que ainda não se joga.

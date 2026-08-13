@@ -3,22 +3,20 @@
 RPG / Action RPG de mundo aberto no Roblox (Luau) — combate estilo battlegrounds com
 progressão persistente, loadout customizável e ressonância de famílias de energia.
 
-> **Status em 2026-08-12:** itens 1–7 do backlog F0 fechados no domínio, incluindo a camada espacial (greybox por código, hitbox, lunge de 7 studs, AI dos Estilhaços).
-> **O jogo nunca rodou.** Nenhuma linha deste repositório foi executada no Roblox Studio: não há evidência de feeling, HUD, save real, mobile, gamepad ou das parts do greybox existirem de fato.
+> **Status em 2026-08-13:** itens 1–13 do backlog F0 fechados em código/headless, incluindo cliente multiplataforma, telemetria e segurança mínima dos remotes.
+> **Runtime ainda não validado formalmente.** O arquivo local foi aberto manualmente no Studio, mas não há roteiro registrado de Play, feeling, save real, mobile, gamepad ou teste adversarial com dois clientes.
 
 ## Estado comprovado
 
 | Camada | Estado |
 |---|---|
 | Produto | Q-001 a Q-030 decididas; `docs/09-OPEN-QUESTIONS.md` é o registro canônico |
-| Planejamento | visão, GDD, mundo, social, arquitetura, schemas, segurança, roster, roadmap e benchmark documentados |
-| Implementado | catálogo F0, Umbral, SessionSnapshot, combate universal com hitbox real, dummy, Ombro Cometa com lunge de 7 studs, ZoneService, técnicas locked no spawn, Locale PT-BR/EN, objetivo 1 (aceite por NPC ou 90 s → 3 kills → +40 XP → unlock do Cometa), XP com retorno decrescente por âncora e teto de 800/sessão, greybox construído por código e Estilhaços com spawn/perseguição/telegraph/respawn |
-| Validado automaticamente | 109 testes Lune + Selene + StyLua check + Wally + build Rojo no CI |
-| Ainda não comprovado | **qualquer execução no Roblox Studio**: as parts do greybox existirem, collision groups, leitura do personagem, feeling do combate, os 5 sinais visíveis/audíveis, hold 0,6 s no toque, HUD, persistência de XP/flags entre sessões, servidor publicado, DataStore real, latência, mobile, gamepad, performance e UX visual |
+| Planejamento | visão, GDD, mundo, social, arquitetura, schemas, segurança, roster, roadmap, benchmark e plano de animação documentados |
+| Implementado | domínio F0, greybox, save/ProfileStore, cliente Input/HUD, envelope v2, `SecurityService` e `TelemetryService` mínimo |
+| Validado automaticamente | 155 testes Lune + Selene + StyLua + Wally + build Rojo |
+| Ainda não comprovado | roteiro Play no Studio, physics/collision groups, DataStore real, dois clientes, latência, mobile, gamepad, performance, UX visual e assets de animação |
 
-O CI do commit `33eca73` passou em
-[2026-08-12](https://github.com/alvaro209890/anime-verse-battlegrounds/actions/runs/31618843968).
-Um build verde valida contratos headless e a árvore Rojo; não substitui playtest.
+O CI em pushes para `main` valida contratos headless e a árvore Rojo; não substitui playtest. O snapshot e os links de evidência ficam em `docs/12-TESTING.md`.
 
 ## Stack
 
@@ -36,7 +34,7 @@ Um build verde valida contratos headless e a árvore Rojo; não substitui playte
 
 ```bash
 aftman install        # instala o toolchain (rojo, wally, selene, stylua, lune, luau-lsp)
-lune run tests/run.luau   # testes unitários (109)
+lune run tests/run.luau   # testes unitários (155)
 selene src tests      # lint
 stylua --check src tests  # formatação
 rojo build -o build.rbxl  # valida a árvore de instâncias
@@ -50,10 +48,10 @@ O CI (`.github/workflows/ci.yml`) roda lint + format + testes + build em todo pu
 src/
   shared/            módulos compartilhados (dados, contratos, tipos, geometria)
     Data/            catálogos dirigidos por dados (personagens, habilidades, famílias, NPCs, zonas, objetivos, locale)
-  server/            services (bootstrap, recurso, habilidade, combate, espaço, mundo, inimigos, zona, objetivo, progressão, rede, sessão)
+  server/            services (domínio F0, save, rede, segurança e telemetria)
   client/            controllers (bootstrap de apresentação)
-tests/               harness Lune + 109 testes unitários
-docs/                produto, arquitetura, decisões, benchmark, testes e spec F0 (00 a 13)
+tests/               harness Lune + 155 testes unitários
+docs/                produto, arquitetura, decisões, testes e planos (00 a 14)
 lib/                 bibliotecas pinadas (ProfileStore)
 ```
 
@@ -68,6 +66,7 @@ lib/                 bibliotecas pinadas (ProfileStore)
 - [docs/11-ABILITY-SPEC.md](docs/11-ABILITY-SPEC.md) — como adicionar habilidade (spec do formato)
 - [docs/12-TESTING.md](docs/12-TESTING.md) — como rodar e o que cobre os testes
 - [docs/13-F0-SLICE.md](docs/13-F0-SLICE.md) — spec de execução da fatia vertical (kit, mapa, roteiro, backlog)
+- [docs/14-ANIMATION-PLAN.md](docs/14-ANIMATION-PLAN.md) — pipeline, qualidade, budgets e gates das animações
 
 `PROMPT_AnimeVerseBattlegrounds_v2.md` é o briefing histórico que originou o
 planejamento. Em conflito, os documentos canônicos em `docs/` prevalecem.

@@ -1,10 +1,10 @@
 # 12 — Testes e evidências
 
-> **Snapshot:** 2026-08-13. `tests/run.luau` declara 145 testes F0 alinhados a `docs/13-F0-SLICE.md`. Desde o snapshot de 133 casos, foram acrescentados 9 testes dos controllers de cliente, 2 do envelope v2 e 1 de coerência entre o bootstrap e a árvore Rojo.
+> **Snapshot:** 2026-08-13. `tests/run.luau` declara 155 testes F0 alinhados a `docs/13-F0-SLICE.md`. Desde o snapshot de 133 casos, foram acrescentados 9 testes dos controllers de cliente, 2 do envelope v2, 1 de coerência bootstrap/Rojo e 10 de telemetria/segurança.
 
 ## 1. Estado da execução
 
-Em 2026-08-13, no Windows 11 (`C:\GIS\anime-verse-battlegrounds`, branch `feat/ui-item10`, commit `8287df3`), foram executados: Selene 0.31.0 (0 erros, 0 warnings); 145 testes Lune 0.10.5 (0 falhas); Wally 0.3.2; e Rojo 7.7.0 (`rojo build`, exit 0). O sourcemap confirmou `Services` como filho do Script `Server`; o bootstrap foi corrigido para essa topologia e ganhou teste de regressão.
+Em 2026-08-13, no Windows 11 (`C:\GIS\anime-verse-battlegrounds`, branch `codex/telemetry-security-animation-plan`, commit de código `9ba9b84`), foram executados: Selene 0.31.0 (0 erros, 0 warnings) e 155 testes Lune 0.10.5 (0 falhas). Wally/Rojo e o CI do commit documental final são registrados ao fechar esta rodada. O sourcemap do snapshot anterior confirmou `Services` como filho do Script `Server` e há teste de regressão.
 
 O checkout está com finais de linha mistos por `core.autocrlf`: o check direto do StyLua 2.5.2 e o check forçado com `--line-endings Windows` retornam diff apenas de EOL em conjuntos opostos. O código alterado foi formatado pelo StyLua, e a validação canônica LF deve ser usada para reproduzir o CI sem converter o repositório inteiro.
 
@@ -30,13 +30,14 @@ O CI executa StyLua, Selene, os testes Lune, a instalação Wally e o build Rojo
 
 Em checkout Windows com `core.autocrlf=true`, os arquivos de trabalho podem estar em CRLF enquanto `stylua.toml` exige `Unix`; nesse caso, o check direto acusa somente final de linha. Para reproduzir o CI, use uma cópia com bytes LF canônicos do Git (`git -c core.autocrlf=false archive ...`). `--line-endings Windows` só é equivalente quando todo o checkout está uniformemente em CRLF; ele não resolve uma árvore mista. Não reformatar código só para mascarar essa conversão do checkout.
 
-## 2. Cobertura existente: exatamente 145 testes
+## 2. Cobertura existente: exatamente 155 testes
 
 | Área | Cobertura |
 |---|---|
 | **Dados e rede** (15) | Punho do Eclipse 3+1; `comet_shoulder`; Umbral baseline; 4 famílias; remotes incl. `SessionSnapshot`, `AbilityIntent`, `CombatEvent`, `InteractionIntent`, `StateDelta` e `EnemyEvent`; envelope v2 exige versão, request ID, sequência, ação e payload válidos; dummy 10000 HP / dano 4; Estilhaço Errante 40/6/4; zonas: 3 zonas, PvP só na livre, âncoras persistidas + pontos de Estilhaço, spawn no bastião; Locale PT-BR/EN das chaves §16 e formatação de `{n}`; `quest_hunt` 3 kills / +40 XP / unlock Cometa |
 | **Cliente** (9) | gate de `SessionSnapshot.ready`; limite de 8 intenções de combate/s; no máximo 2 botões de toque simultâneos; `CharacterController` envia intenção sem alvo/dano; 3 slots, ultimate oculta, unlock e cooldown no `AbilityController`; rejeição reconciliada sem código interno na UI; Umbral/zona/perda só após ready; hold de fronteira de 0,6 s; Locale cobre PT-BR/EN do HUD F0 |
 | **Bootstrap/Rojo** (1) | o bootstrap resolve `Services` como filho do Script `Server` gerado pelo Rojo e não procura a pasta em `ServerScriptService` |
+| **Telemetria/segurança** (10) | allowlist/remoção de campos arbitrários; tipo/buffer; execução dos sete schemas; envelope/payload válido; campo extra e direção; replay de request/sequence; envelope fechado e amostragem de rejeição; limite 8/s separado de interação; NaN/vetor impossível/interação ambígua; limpeza entre sessões |
 | **Geometria** (5) | distância no plano ignora altura; normalize de vetor nulo não vira NaN; costas vs. frente vs. perpendicular; cápsula do trajeto dentro/fora do raio e além do fim; lunge de 7 com cap 8 e parada antes do contato; `moveToward` a 12 studs/s parando no alcance |
 | **Greybox** (2) | o volume de cada zona resolve a zona declarada por todas as âncoras, o plano do portão resolve como transição e fora de todo volume devolve nil; 6 pontos de Estilhaço ≥ 24 studs entre si e ≥ 20 dos portões |
 | **SpatialService** (4) | hitbox à frente acerta 1 e ignora quem está atrás/longe; Ombro Cometa avança 7, commita a posição e acerta 1 alvo na cápsula; guarda inimiga trava o avanço; avanço sem alvo é resultado válido |
@@ -59,7 +60,7 @@ A divisão é deliberada: matemática e decisão ficam em módulos puros (`Geome
 ## 3. Arquitetura do harness
 
 - **`tests/harness.luau`** simula o mínimo que o Lune não fornece: `_G.game`, `_G.Instance`, `_G.task` e resolução de `require(script.Parent.X)` no filesystem.
-- **`tests/run.luau`** contém os 145 casos e usa módulos reais de `src/`, com um miniframework de asserts.
+- **`tests/run.luau`** contém os 155 casos e usa módulos reais de `src/`, com um miniframework de asserts.
 - **Services testáveis por injeção** recebem dependências em `init()`: `CatalogService`, `AbilityService`, `ResourceService`, `PlayerSessionService`, `ZoneService`, `ProgressionService`, `QuestService`, `SpatialService`, `EnemyService` e `SaveService` (adaptador de store mockado). O bootstrap Roblox monta o grafo real.
 - **`src/shared/TaskCompat.luau`** usa `task` nativo no Roblox e o polyfill somente no harness.
 
@@ -69,7 +70,7 @@ Os módulos de dados declaram tipos inline porque o Lune não resolve `script.Pa
 
 | Camada | O que demonstra | O que não demonstra |
 |---|---|---|
-| lint + 145 testes Lune | sintaxe, estilo e comportamento unitário coberto no ambiente simulado | física, replicação, UI renderizada, dispositivo ou serviços Roblox reais |
+| lint + 155 testes Lune | sintaxe, estilo e comportamento unitário coberto no ambiente simulado | física, replicação, UI renderizada, dispositivo ou serviços Roblox reais |
 | Wally + build Rojo | dependências resolvidas e árvore de projeto montável | que o place abre sem erro ou que um fluxo é jogável |
 | Studio | bootstrap, UI/input, câmera, física e replicação no cenário testado | DataStore/teleport/rede pública com fidelidade total |
 | publicado privado | serviços reais, múltiplos servidores, reconnect, teleport e condições reais de rede | cobertura de dispositivo que não foi executada |
@@ -78,7 +79,7 @@ Uma entrega deve dizer explicitamente quais camadas foram executadas, em vez de 
 
 ## 5. Casos obrigatórios antes de F1/F2
 
-Os testes abaixo são backlog, não parte dos 145 existentes:
+Os testes abaixo são backlog, não parte dos 155 existentes:
 
 - catálogo rejeita `impactCost` ausente, não inteiro ou fora do intervalo;
 - validador de loadout aceita capacidade 4/impacto 12 e rejeita qualquer excesso;
@@ -102,6 +103,8 @@ A spec de execução da fatia (`docs/13-F0-SLICE.md` §19–§21) lista os teste
 Até essas execuções existirem, a formulação correta é **“esqueleto F0 com testes unitários e build de árvore”**, não “runtime validado”. Para o item 6 especificamente: **comprovado** são as regras de zona/PvP/transição/lockout/sinais como dados + testes Lune; **não comprovado** são geometria no Studio, os 5 sinais visíveis/audíveis, o hold de 0,6 s no toque, iluminação, collision groups reais e playtest cego da fronteira.
 
 Para Input/HUD (entrega 10 da §14; item 12 do backlog): **comprovado** em código/headless são o gate `ready`, a ordem dos sete controllers, o envelope v2, o limite local de 8 intenções/s, teclado/mouse/toque/gamepad como intenções semânticas, soft lock de 8°/25 studs apenas no ataque básico para toque/gamepad, 3 slots com unlock/cooldown, ultimate oculta, feedback localizado, Umbral, zona, objetivo e HUD retangular. **Não comprovado** é o runtime inteiro: criação e layout das Instances, boot/spawn, câmera, toque real, gamepad real, magnetismo percebido, limites de obstrução, cooldown radial renderizado e o roteiro jogável.
+
+Para telemetria/segurança (item 13): **comprovado** em código/headless são schemas fechados por remote, envelope v2 sem campos extras, IDs/enums/vetores finitos, replay por `requestId` e sequência, 8 intenções de combate/s, orçamento default separado, limpeza no leave e `RemoteRejected` sanitizado/amostrado. **Não comprovado** são serialização real do payload em bytes, fuzz/spam através de `RemoteEvent`, teto global, network ownership hostil, alertas/dashboards e comportamento sob dois clientes no Studio.
 
 Para o item 7: **comprovado** são o catálogo de objetivos, a máquina de estado do objetivo 1 (oferta → aceite por NPC ou 90 s → progresso → prêmio), o ledger de XP com retorno decrescente por âncora e teto de 800/sessão, o unlock do Ombro Cometa no 3º kill, a validação de Locale no boot e o ciclo completo do Estilhaço (spawn nas 6 âncoras, perseguição, telegraph, respawn, teto de 4). **Não comprovado** são a persistência de XP e flags entre sessões (item 11), o tracker na tela e o `InteractionIntent` disparado por um jogador real.
 
@@ -136,6 +139,6 @@ rg -n "\\x{FFFD}" README.md docs
 - `task.wait` real em teste cria loop infinito se o polyfill síncrono for usado no `spawn`; o harness injeta `spawn = noop` para o loop de regen. `ZoneService` usa relógio injetado (`fakeNow`), nunca `task.wait`, para as janelas de 5 s e 15 s.
 - Busy-wait curto com `os.clock` substitui `task.wait` nos testes de expiração de cooldown.
 - Selene permite `global_usage` e `empty_loop` no `selene.toml` porque o harness usa `_G` e busy-waits deliberadamente.
-- Contar casos pelo resumo pode mascarar erro: a fonte é a quantidade real de chamadas `test(...)` em `tests/run.luau`; nesta versão são 145.
+- Contar casos pelo resumo pode mascarar erro: a fonte é a quantidade real de chamadas `test(...)` em `tests/run.luau`; nesta versão são 155.
 - Lua patterns não têm alternação (`a|b` é literal): validar IDs de sinal por pertencimento a uma tabela, não com regex no teste.
 - Quirk do Lune/MLua: closure auto-referente (`local x = { fn = function() ... x ... end }`) vê `x` como nil dentro da função. Declarar a variável antes (`local x; x = { ... }`) ou o mock do SaveService quebra com "attempt to index nil".

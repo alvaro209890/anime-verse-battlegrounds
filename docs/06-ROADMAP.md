@@ -2,7 +2,7 @@
 
 ## 1. Objetivo e estado deste documento
 
-Este roadmap transforma a visão do jogo em uma sequência de entregas verificáveis e passa a ser a referência de escopo para uma equipe de 1–3 pessoas. A implementação **já começou**: os itens 1–12 do backlog de `docs/13-F0-SLICE.md` estão fechados em código/headless — catálogos, serviços de domínio, ProfileStore e a camada cliente F0 (`InputController` → `UIController`) — além de CI com StyLua, Selene, 145 testes Lune, Wally e build Rojo.
+Este roadmap transforma a visão do jogo em uma sequência de entregas verificáveis e passa a ser a referência de escopo para uma equipe de 1–3 pessoas. A implementação **já começou**: os itens 1–13 do backlog de `docs/13-F0-SLICE.md` estão fechados em código/headless — catálogos, serviços de domínio, ProfileStore, camada cliente F0 e segurança/telemetria mínima — além de CI com StyLua, Selene, 155 testes Lune, Wally e build Rojo.
 
 Esse estado **não** equivale a F0 concluída. A camada cliente não recebeu playtest nesta rodada: não há evidência registrada de boot/spawn, HUD/câmera, DataStore real, servidor publicado, mobile ou gamepad. O próximo marco do programa é a primeira sessão medida no Studio, que também recalibra a estimativa da fase (§2).
 
@@ -460,7 +460,7 @@ Produtos permitidos no soft launch: cosméticos de compra direta, emotes/finaliz
 | Engenharia de rede | F0 | autoridade, predição visual, rate limits, profiling e testes de latência |
 | Persistência/economia | F0 | schemas, migrações, auditoria, budgets, simulação e recuperação |
 | UX multiplataforma | F0 | controles, HUD, onboarding, acessibilidade e testes de dispositivo |
-| Arte/áudio original | P1 | linguagem visual, checklist jurídico, budgets e produção de conteúdo |
+| Arte/áudio original | P1 | linguagem visual, checklist jurídico, budgets e produção guiada por `14-ANIMATION-PLAN.md` |
 | Segurança | F0 | threat modeling por feature, testes adversariais, alertas e runbooks |
 | Trust & Safety | F3 | denúncia, moderação, políticas sociais, evidência e apelação |
 | Live operations | F3 | feature flags, versionamento, dashboards, eventos e rollback |

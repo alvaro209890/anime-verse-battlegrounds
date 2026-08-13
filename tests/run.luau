@@ -460,6 +460,24 @@ test("telemetria: rejeita evento/campo inválido e limita o buffer", function()
 	assertEq(events[1].fields.flag, "b", "mais antigo descartado")
 end)
 
+test("telemetria: os sete eventos F0 possuem schema executável", function()
+	TelemetryService.init({ sessionId = "s", releaseId = "r", bufferCapacity = 10 })
+	local cases = {
+		{ "SessionLoad", { durationMs = 1, schemaFrom = 1, schemaTo = 1, result = "success" } },
+		{ "FtueBeat", { flag = "ftue_spawned", elapsedMs = 2 } },
+		{ "AbilityResolved", { abilityId = "comet_shoulder", result = "hit", latencyMs = 3, flowGranted = 0 } },
+		{ "KillResolved", { zoneId = "zone_plain_free", combatType = "pve", xpLost = 0 } },
+		{ "SaveAttempt", { dirty = false, bytes = 4, result = "success" } },
+		{ "RemoteRejected", { contract = "DashIntent", reason = "payload_schema", weight = 3 } },
+		{ "ZoneTransition", { from = "zone_bastion_safe", to = "zone_plain_free", holdConfirmed = true } },
+	}
+	for _, case in cases do
+		local ok, reason = TelemetryService.record(case[1], 1, case[2])
+		assertTrue(ok, case[1] .. ": " .. tostring(reason))
+	end
+	assertEq(#TelemetryService.snapshot(), 7, "todos registrados")
+end)
+
 local function validAbilityEnvelope(sequence: number, requestId: string): any
 	return RemoteEnvelope.create("AbilityIntent", {
 		abilityId = "comet_shoulder",

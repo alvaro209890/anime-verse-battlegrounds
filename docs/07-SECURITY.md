@@ -14,7 +14,18 @@ Princípios:
 6. **Economia auditável.** Criação, transferência e consumo têm origem e operationId.
 7. **Operação reversível.** Sistemas de risco possuem kill switch e modo somente leitura.
 
-Este documento combina baseline existente e alvo. O repositório já possui registry de remotes, validações iniciais de catálogo/serviços (incl. zonas/âncoras no `CatalogService` e as regras de fronteira no `ZoneService`) e CI com StyLua, Selene, 74 testes Lune, Wally e build Rojo. Esses checks não provam DataStore real, teleporte, network ownership, múltiplos servidores, Studio ou dispositivos; os controles restantes precisam ser implementados e medidos por fase.
+Este documento combina baseline existente e alvo. O repositório possui registry de remotes, envelope v2, `SecurityService` com schemas fechados/replay/rate limit, `TelemetryService` allowlisted, validações de catálogo/serviços e CI com StyLua, Selene, 155 testes Lune, Wally e build Rojo. Esses checks não provam fuzz no runtime, DataStore real, network ownership, múltiplos servidores, Studio ou dispositivos; os controles restantes precisam ser implementados e medidos por fase.
+
+### Estado F0 implementado em 2026-08-13
+
+- `requestId` recente e `clientSequence` estritamente crescente por sessão;
+- envelope com cinco campos conhecidos e payload específico por cada remote C→S;
+- rejeição de campo extra, enum/ID inválido, NaN, vetor de dash fora do envelope e interação ambígua;
+- orçamento de combate de 8 intenções/s, separado do orçamento default de 15/s;
+- `RemoteRejected` com contrato, motivo e peso, sem payload bruto, limitado a uma emissão por contrato/motivo/jogador/s;
+- limpeza do estado de replay no `PlayerRemoving`.
+
+Ainda pendentes: teto global do servidor, token bucket com burst ponderado, tamanho real serializado em bytes, fuzz em Studio, simulação de network ownership e sanção operacional correlacionada. Rejeição isolada continua sem banimento automático.
 
 ## 2. Ativos e fronteiras de confiança
 
@@ -291,7 +302,7 @@ Ataque de spam não deve consumir budget de save. Rejeições repetidas são amo
 ## 11. Segredos, dependências e CI
 
 - nenhum segredo, token de place, chave de API ou credencial em repositório, atributo replicado ou log;
-- a CI atual usa permissões mínimas e executa StyLua, Selene, 74 testes Lune, Wally e build Rojo;
+- a CI atual usa permissões mínimas e executa StyLua, Selene, 155 testes Lune, Wally e build Rojo;
 - Wally packages passam por revisão de licença, manutenção e superfície de código;
 - a evolução da CI adicionará type/schema/migrações; publicação continua não automática e sem credenciais de produção;
 - ambientes de desenvolvimento, staging e produção usam identificadores e stores separados;
