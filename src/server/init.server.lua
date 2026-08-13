@@ -181,6 +181,23 @@ if dummyDef then
 	end
 end
 
+local function fireVitalsForFighter(fighterId: string): ()
+	local userIdText = string.match(fighterId, "^player:(%d+)$")
+	if not userIdText then
+		return
+	end
+	local player = game.Players:GetPlayerByUserId(tonumber(userIdText) :: number)
+	local fighter = CombatService.getFighter(fighterId)
+	if player and fighter then
+		RemoteGateway.fireClient(player, Remotes.Names.StateDelta, {
+			health = fighter.health,
+			maxHealth = fighter.maxHealth,
+			guard = fighter.guard,
+			maxGuard = fighter.maxGuard,
+		})
+	end
+end
+
 AbilityService.init({
 	getAbility = CatalogService.getAbility,
 	getCooldownRemaining = CooldownService.getRemaining,
@@ -215,6 +232,7 @@ AbilityService.init({
 			abilityId = abilityId,
 			outcome = "hit",
 		})
+		fireVitalsForFighter(targetId)
 	end,
 	isAbilityUnlocked = ProgressionService.isAbilityUnlocked,
 	getFighterById = CombatService.getFighter,
@@ -369,6 +387,7 @@ end
 -- userId → diedAt já penalizado (evita aplicar a perda duas vezes na mesma
 -- morte: PvP no BasicAttackIntent + PvE no Heartbeat).
 local deathPenalized: { [number]: number } = {}
+local deathPresented: { [number]: number } = {}
 
 -- Item 11: perda de XP na morte (docs/13 §11.1, Q-018). Aplica a penalidade
 -- da zona do morto; o XP perdido sai da economia (não vai ao agressor).
@@ -425,6 +444,20 @@ EnemyService.init({
 					kind = event.kind,
 					targetId = event.targetId,
 					damage = event.damage,
+				})
+			end
+		end
+		if event.kind == "attack" and type(event.targetId) == "string" then
+			fireVitalsForFighter(event.targetId)
+			local targetUserId = string.match(event.targetId, "^player:(%d+)$")
+			local targetPlayer = if targetUserId
+				then game.Players:GetPlayerByUserId(tonumber(targetUserId) :: number)
+				else nil
+			local targetFighter = CombatService.getFighter(event.targetId)
+			if targetPlayer and targetFighter then
+				RemoteGateway.fireClient(targetPlayer, Remotes.Names.CombatEvent, {
+					abilityId = "basic_enemy",
+					outcome = if targetFighter.guarding then "guard" else "hit",
 				})
 			end
 		end
@@ -519,6 +552,10 @@ RemoteGateway.onClientIntent(Remotes.Names.BasicAttackIntent, function(player: P
 			abilityId = if isHeavy then "heavy" else "light",
 			outcome = if result.parried or result.stoppedOnGuard or target.guarding then "guard" else "hit",
 		})
+		fireVitalsForFighter(target.id)
+		if result.pulseCounter then
+			fireVitalsForFighter(attacker.id)
+		end
 		if result.killed then
 			-- Item 11: se o alvo é um jogador, a morte dele aplica a perda
 			-- de XP PvP (15% da não consolidado na zona livre, cap 200).
@@ -583,6 +620,7 @@ RemoteGateway.onClientIntent(Remotes.Names.GuardIntent, function(player: Player,
 		return
 	end
 	CombatService.setGuard(fighter, payload.phase == "down", os.clock())
+	fireVitalsForFighter(fighter.id)
 end)
 
 RemoteGateway.onClientIntent(Remotes.Names.DashIntent, function(player: Player, _payload: { any })
@@ -623,6 +661,49 @@ game.Players.PlayerAdded:Connect(function(player: Player)
 	QuestService.registerPlayer(player.UserId, os.clock())
 	ProgressionService.grantUnlock(player.UserId, "ftue_spawned")
 	PlayerSessionService.onPlayerJoined(player)
+	-- Snapshot S→C reemitido após o StarterPlayerScripts existir. Isso evita a
+	-- corrida de boot sem criar uma intenção C→S proibida pela SLICE-DEC-005.
+	local function resendSnapshot()
+		if not PlayerSessionService.isReady(player.UserId) then
+			return
+		end
+		local snapshot = PlayerSessionService.buildSnapshot(player.UserId, "eclipse_fist", "umbral_aether")
+		if snapshot then
+			RemoteGateway.fireClient(player, Remotes.Names.SessionSnapshot, snapshot)
+		end
+	end
+	local function setupCharacter(character: Model)
+		task.defer(function()
+			local fighterId = CombatService.playerFighterId(player.UserId)
+			local fighter = CombatService.getFighter(fighterId)
+			local respawning = fighter ~= nil and fighter.health <= 0
+			if not fighter or fighter.health <= 0 then
+				fighter = CombatService.createFighter(fighterId, "player", 100, 100)
+			end
+			deathPresented[player.UserId] = nil
+			local spawnPosition =
+				WorldService.getAnchorPosition(if respawning then "anchor_bastion_return" else "anchor_bastion_spawn")
+			if spawnPosition and character.Parent then
+				character:PivotTo(CFrame.new(spawnPosition + Vector3.new(0, 3, 0)))
+			end
+			local humanoid = character:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				humanoid.Died:Connect(function()
+					local current = CombatService.getFighter(fighterId)
+					if current and current.health > 0 then
+						current.health = 0
+						current.diedAt = os.clock()
+					end
+				end)
+			end
+			fireVitalsForFighter(fighterId)
+		end)
+		task.delay(0.5, resendSnapshot)
+	end
+	player.CharacterAdded:Connect(setupCharacter)
+	if player.Character then
+		setupCharacter(player.Character)
+	end
 	-- Posição inicial na âncora de spawn até o Heartbeat ler o personagem.
 	local spawnAnchor = CatalogService.getAnchor("anchor_bastion_spawn")
 	if spawnAnchor then
@@ -708,7 +789,20 @@ RunService.Heartbeat:Connect(function()
 		if PlayerSessionService.isReady(userId) then
 			local fighter = CombatService.getFighter(CombatService.playerFighterId(userId))
 			if fighter and fighter.health <= 0 then
+				if deathPresented[userId] ~= fighter.diedAt then
+					deathPresented[userId] = fighter.diedAt
+					fireVitalsForFighter(fighter.id)
+					RemoteGateway.fireClient(player, Remotes.Names.CombatEvent, {
+						abilityId = "death",
+						outcome = "death",
+					})
+				end
 				applyDeathPenalty(userId, false)
+				local character = player.Character
+				local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
+				if humanoid and humanoid.Health > 0 then
+					humanoid.Health = 0
+				end
 			end
 			SaveService.tick(userId, now)
 		end

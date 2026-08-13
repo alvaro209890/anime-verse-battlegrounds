@@ -240,12 +240,16 @@ local function buildAnchors(root: Folder, zones: any): ()
 		part.CanCollide = false
 		part.CanTouch = false
 		part.CanQuery = false
-		part.Transparency = 0.6
-		part.Size = Vector3.new(2, 2, 2)
-		part.Position = Vector3.new(anchor.position.x, anchor.position.y + 1, anchor.position.z)
+		local isCombatTarget = anchor.id == "anchor_training"
+			or anchor.id == "anchor_elite"
+			or string.match(anchor.id, "^anchor_shard_") ~= nil
+		part.Transparency = if isCombatTarget then 0.18 else 0.6
+		part.Size = if isCombatTarget then Vector3.new(4, 6, 4) else Vector3.new(2, 2, 2)
+		part.Position = Vector3.new(anchor.position.x, anchor.position.y + part.Size.Y / 2, anchor.position.z)
 		part.Color = COLORS.anchor
 		part:SetAttribute("AnchorId", anchor.id)
 		part:SetAttribute("ZoneId", anchor.zoneId)
+		part:SetAttribute("CombatTarget", isCombatTarget)
 		part.Parent = folder
 	end
 end
