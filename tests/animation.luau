@@ -32,6 +32,7 @@ local PlayerCombatAnimator = require("../src/client/Presentation/PlayerCombatAni
 local CombatCameraController = require("../src/client/Presentation/CombatCameraController")
 local CombatAudioPlayer = require("../src/client/Presentation/CombatAudioPlayer")
 local CombatAudio = require("../src/shared/Data/CombatAudio")
+local AbilityVfx = require("../src/shared/Data/AbilityVfx")
 local fs = require("@lune/fs")
 
 local CHAIN = PlayerCombatAnimator.LightChainLength
@@ -403,6 +404,95 @@ test("câmera: addImpact clampa trauma e fov no teto e decai no tick", function(
 	CombatCameraController.tick(cam, 0.5)
 	assertTrue(cam.trauma < 1, "decaimento após tick")
 	assertTrue(cam.fovPunch < CombatCameraController.MaxFovPunch, "fov decai após tick")
+end)
+
+-- ── VFX do Ombro Cometa (docs/14 §4.1, docs/18 §4) ─────────────────────────
+
+test("vfx: catálogo do cometa tem aura, flash e onda de choque", function()
+	local technique = AbilityVfx.get("comet_shoulder")
+	assertTrue(technique ~= nil, "técnica existe")
+	if not technique then
+		return
+	end
+	local ids: { [string]: boolean } = {}
+	for _, entry in technique.layers do
+		ids[entry.id] = true
+	end
+	assertTrue(ids.comet_aura, "aura de carga declarada")
+	assertTrue(ids.comet_flash, "flash de impacto declarado")
+	assertTrue(ids.comet_ring, "onda de choque declarada")
+	local ok, reason = AbilityVfx.validate()
+	assertTrue(ok, reason or "catálogo válido")
+end)
+
+test("vfx: aura acende durante a carga sem precisar de confirmação", function()
+	local technique = AbilityVfx.get("comet_shoulder")
+	assertTrue(technique ~= nil, "técnica existe")
+	if not technique then
+		return
+	end
+	local lit = AbilityVfx.planAt(technique, 0.08, false)
+	local auraFound = false
+	for _, planned in lit do
+		if planned.layer.id == "comet_aura" then
+			auraFound = true
+			assertTrue(planned.intensity > 0, "aura com intensidade na carga")
+		end
+	end
+	assertTrue(auraFound, "aura acesa na carga sem desfecho")
+end)
+
+test("vfx: flash e onda só acendem depois do desfecho confirmado", function()
+	local technique = AbilityVfx.get("comet_shoulder")
+	assertTrue(technique ~= nil, "técnica existe")
+	if not technique then
+		return
+	end
+	local function has(id: string, confirmed: boolean): boolean
+		for _, planned in AbilityVfx.planAt(technique, 0.45, confirmed) do
+			if planned.layer.id == id then
+				return true
+			end
+		end
+		return false
+	end
+	assertTrue(not has("comet_flash", false), "flash não acende sem confirmação")
+	assertTrue(not has("comet_ring", false), "onda não acende sem confirmação")
+	assertTrue(has("comet_flash", true), "flash acende com confirmação")
+	assertTrue(has("comet_ring", true), "onda acende com confirmação")
+end)
+
+test("vfx: flash e onda nascem no instante autoritativo do impacto (0,40 s)", function()
+	local technique = AbilityVfx.get("comet_shoulder")
+	assertTrue(technique ~= nil, "técnica existe")
+	if not technique then
+		return
+	end
+	-- 0,42 s = logo após o impacto autoritativo (cometImpact = 0,40 s):
+	-- no instante exato a subida do envelope ainda é 0, o efeito nasce no
+	-- quadro seguinte.
+	local atImpact: { [string]: boolean } = {}
+	for _, planned in AbilityVfx.planAt(technique, 0.42, true) do
+		atImpact[planned.layer.id] = true
+	end
+	assertTrue(atImpact.comet_flash, "flash nasce logo após 0,40 s")
+	assertTrue(atImpact.comet_ring, "onda nasce logo após 0,40 s")
+	-- E o rastro já estava aceso desde o avanço (0,18 s).
+	assertTrue(atImpact.comet_trail, "trail segue aceso no impacto")
+end)
+
+test("vfx: nenhum raio do cometa ultrapassa o alcance da habilidade", function()
+	local technique = AbilityVfx.get("comet_shoulder")
+	assertTrue(technique ~= nil, "técnica existe")
+	if not technique then
+		return
+	end
+	for _, entry in technique.layers do
+		assertTrue(
+			entry.radiusStuds <= technique.rangeStuds,
+			("camada %s raio %.1f <= alcance %.1f"):format(entry.id, entry.radiusStuds, technique.rangeStuds)
+		)
+	end
 end)
 
 for _, entry in tests do

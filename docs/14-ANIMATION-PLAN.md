@@ -251,3 +251,10 @@ Ainda pendente:
 7. produzir o blocking original do Ombro Cometa;
 8. substituir gradualmente o procedural somente quando houver asset real aprovado — não criar serviço vazio;
 9. executar A1 no Studio e em dispositivo real antes de animar Cadência Quebrada ou Retorno de Pulso.
+
+> **13/08:** o Ombro Cometa ganhou um pacote VFX procedural de "golpe pesado"
+> (aura de carga, flash e onda de choque no impacto, rastro maior, poses mais
+> pesadas e perfil de câmera próprio — ver `17-COMBAT-FEEL.md` §2.7). Continua
+> scaffolding descartável, sem keyframe/asset, e **não reduz** a contagem de
+> clipes do gate A1 — mas é o que deve aparecer no Studio já no próximo
+> playtest (tecla 1 contra o dummy).

@@ -53,6 +53,27 @@ resto da pose permanece legível.
 desfecho **confirmado** pelo servidor, nunca na intenção local — o mesmo
 contrato do áudio de impacto (`16-COMBAT-AUDIO.md` §3.1).
 
+### 2.7 Pacote VFX do Ombro Cometa (estilo battlegrounds)
+
+O golpe-modelo ganhou uma leitura completa de "golpe pesado de anime", toda
+procedural e dirigida por dados em `AbilityVfx.luau` (13/08):
+
+- **Aura de carga no peito** (`comet_aura`): a esfera de energia concentra
+  durante o startup (0–0,20 s) junto da carga no ombro — o "power-up" antes do
+  avanço, sem confirmação (é telegrafia, não acerto);
+- **Flash branco-violeta** (`comet_flash`) + **onda de choque no chão**
+  (`comet_ring`, até 5,5 studs) nascendo no instante autoritativo do impacto
+  (0,40 s) — ambos `requiresConfirmation`, só com desfecho do servidor;
+- **Rastro mais longo** (`comet_trail`, 4,2 studs) durante o avanço;
+- **Poses mais pesadas**: coil mais enrolado (joelho −52°, cotovelo colado às
+  costelas −124°) e drive mais baixo e varrido (ombro −130°, pitch 38°);
+- **Câmera**: o Cometa é a única técnica com perfil próprio de impacto
+  (trauma 0,6 + FOV 2,85 no acerto confirmado).
+
+Regras de honestidade visual intactas: nenhum raio passa do alcance (8 studs),
+nenhum efeito de acerto acende sem `CombatEvent`, nada sobrevive à duração da
+ação. Continua scaffolding procedural — não conta como clip do gate A1.
+
 ### 2.6 Câmera de impacto (`CombatCameraController`)
 
 Novo módulo de apresentação local:
@@ -86,7 +107,10 @@ Novos testes em `tests/animation.luau` (executado pelo CI junto de
 - soco flexiona o punho, chute não;
 - hit-stop só congela no desfecho confirmado e descongela após a janela;
 - trauma decai/clampa e técnica pesada sacode mais;
-- `addImpact` clampa trauma/fov no teto e decai no tick.
+- `addImpact` clampa trauma/fov no teto e decai no tick;
+- VFX do Cometa: aura acesa na carga sem confirmação; flash e onda só com
+  desfecho; ambos nascem logo após o impacto autoritativo (0,42 s); nenhum raio
+  passa do alcance da habilidade.
 
 ## 5. Fora de escopo (ainda pendente)
 

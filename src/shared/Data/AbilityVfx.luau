@@ -110,23 +110,54 @@ local Techniques: { [string]: TechniqueVfx } = {
 				durationSeconds = 0.18,
 				attackSeconds = 0.08,
 				releaseSeconds = 0.04,
-				radiusStuds = 1.2,
+				radiusStuds = 1.5,
 				rgb = UMBRAL_EDGE,
-				rate = 26,
+				rate = 34,
 			}),
-			-- Rastro do tronco no avanço. 3,5 studs é metade do deslocamento real
-			-- de 7: o rastro acompanha o corpo, não corre à frente dele.
+			-- Aura no peito durante a carga: a esfera de energia concentrando
+			-- (referência de leitura do vídeo de referência — power-up antes do
+			-- avanço). Enquanto ela cresce, o golpe ainda não saiu.
+			layer({
+				id = "comet_aura",
+				kind = "charge",
+				joint = "torso",
+				startSeconds = 0.0,
+				durationSeconds = 0.20,
+				attackSeconds = 0.10,
+				releaseSeconds = 0.05,
+				radiusStuds = 1.6,
+				rgb = UMBRAL_CORE,
+				rate = 30,
+			}),
+			-- Rastro do tronco no avanço. 4,2 studs é pouco mais da metade do
+			-- deslocamento real de 7: o rastro acompanha o corpo, não corre à
+			-- frente dele.
 			layer({
 				id = "comet_trail",
 				kind = "trail",
 				joint = "torso",
 				startSeconds = 0.18,
-				durationSeconds = 0.28,
+				durationSeconds = 0.34,
 				attackSeconds = 0.03,
 				releaseSeconds = 0.12,
-				radiusStuds = 3.5,
+				radiusStuds = 4.2,
 				rgb = UMBRAL_CORE,
 				rate = 0,
+			}),
+			-- Flash branco-violeta no contato — o estouro de luz do impacto.
+			-- Só com desfecho confirmado pelo servidor.
+			layer({
+				id = "comet_flash",
+				kind = "burst",
+				joint = "rightUpperArm",
+				startSeconds = 0.40,
+				durationSeconds = 0.20,
+				attackSeconds = 0.02,
+				releaseSeconds = 0.12,
+				radiusStuds = 3.2,
+				rgb = { 240, 235, 250 },
+				rate = 0,
+				requiresConfirmation = true,
 			}),
 			-- Estouro no contato — só com desfecho confirmado pelo servidor.
 			layer({
@@ -138,6 +169,21 @@ local Techniques: { [string]: TechniqueVfx } = {
 				attackSeconds = 0.02,
 				releaseSeconds = 0.14,
 				radiusStuds = 2.6,
+				rgb = UMBRAL_CORE,
+				rate = 0,
+				requiresConfirmation = true,
+			}),
+			-- Onda de choque no chão no impacto confirmado: expande até 5,5
+			-- studs e some — a assinatura de "golpe pesado" de battlegrounds.
+			layer({
+				id = "comet_ring",
+				kind = "ring",
+				joint = "root",
+				startSeconds = 0.40,
+				durationSeconds = 0.30,
+				attackSeconds = 0.05,
+				releaseSeconds = 0.18,
+				radiusStuds = 5.5,
 				rgb = UMBRAL_CORE,
 				rate = 0,
 				requiresConfirmation = true,

@@ -68,6 +68,14 @@ function CombatCameraController.profileFor(outcome: string, abilityId: string?):
 		return nil
 	end
 	if outcome == "hit" and abilityId and HEAVY_ABILITIES[abilityId] then
+		-- O Cometa é o golpe mais comprometido do kit: merece o impacto mais
+		-- pesado da câmera (docs/17 §2.6). FOV 2,85 + trauma 0,6 no acerto.
+		if abilityId == "comet_shoulder" then
+			return {
+				trauma = math.min(1, base.trauma * 1.7),
+				fov = base.fov * 1.9,
+			}
+		end
 		return {
 			trauma = math.min(1, base.trauma * 1.6),
 			fov = base.fov * 1.4,

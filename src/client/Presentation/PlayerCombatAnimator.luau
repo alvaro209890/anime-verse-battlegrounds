@@ -291,8 +291,8 @@ local DASH = table.freeze(pose({
 -- pesado na silhueta. O que viaja é o tronco, não o braço (docs/18 §2.1).
 
 local COMET_COIL = table.freeze(pose({
-	rootHeightStuds = -0.22,
-	rootPitchDegrees = -14,
+	rootHeightStuds = -0.26,
+	rootPitchDegrees = -16,
 	rootYawDegrees = -16,
 	rootRollDegrees = -4,
 	waistPitchDegrees = -8,
@@ -308,9 +308,9 @@ local COMET_COIL = table.freeze(pose({
 	rightShoulderYawDegrees = 26,
 	rightShoulderRollDegrees = 18,
 	-- Cotovelo colado às costelas: o ombro é a ponta do golpe.
-	rightElbowPitchDegrees = -118,
+	rightElbowPitchDegrees = -124,
 	leftHipPitchDegrees = -14,
-	leftKneePitchDegrees = -46,
+	leftKneePitchDegrees = -52,
 	rightHipPitchDegrees = 10,
 	rightKneePitchDegrees = -18,
 	leftWristPitchDegrees = -14,
@@ -318,7 +318,7 @@ local COMET_COIL = table.freeze(pose({
 }))
 local COMET_DRIVE = table.freeze(pose({
 	rootHeightStuds = -0.30,
-	rootPitchDegrees = 34,
+	rootPitchDegrees = 38,
 	rootYawDegrees = 20,
 	rootRollDegrees = 7,
 	waistPitchDegrees = 22,
@@ -331,7 +331,7 @@ local COMET_DRIVE = table.freeze(pose({
 	leftShoulderYawDegrees = -30,
 	leftShoulderRollDegrees = -16,
 	leftElbowPitchDegrees = -34,
-	rightShoulderPitchDegrees = -124,
+	rightShoulderPitchDegrees = -130,
 	rightShoulderYawDegrees = -22,
 	rightShoulderRollDegrees = -18,
 	rightElbowPitchDegrees = -96,
