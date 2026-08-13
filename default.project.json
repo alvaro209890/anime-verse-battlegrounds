@@ -2,15 +2,26 @@
   "name": "anime-verse-battlegrounds",
   "tree": {
     "$className": "DataModel",
-    "$path": "src",
     "ReplicatedStorage": {
       "Packages": {
         "$path": "Packages"
       },
       "Shared": {
-        "$className": "Folder",
+        "$path": "src/shared",
         "vendor": {
           "$path": "lib/vendor"
+        }
+      }
+    },
+    "ServerScriptService": {
+      "Server": {
+        "$path": "src/server"
+      }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "Client": {
+          "$path": "src/client"
         }
       }
     }

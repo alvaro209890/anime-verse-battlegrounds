@@ -205,15 +205,15 @@ AbilityService.init({
 		return CombatService.getFighter("npc_training_dummy")
 	end,
 	tryCometShoulder = CombatService.tryCometShoulder,
-	onCombatHit = function(userId: number, targetId: string, damage: number, abilityId: string)
+	onCombatHit = function(userId: number, targetId: string, _damage: number, abilityId: string)
 		local player = game.Players:GetPlayerByUserId(userId)
 		if not player then
 			return
 		end
-		RemoteGateway.fireClient(player, Remotes.Names.CombatHit, {
+		RemoteGateway.fireClient(player, Remotes.Names.CombatEvent, {
 			targetId = targetId,
-			damage = damage,
 			abilityId = abilityId,
+			outcome = "hit",
 		})
 	end,
 	isAbilityUnlocked = ProgressionService.isAbilityUnlocked,
@@ -436,7 +436,7 @@ EnemyService.spawnElite()
 print("[Bootstrap] Estilhaços no mundo")
 
 -- 7. Intenção de habilidade (cliente → servidor)
-RemoteGateway.onClientIntent(Remotes.Names.AbilityActivate, function(player: Player, payload: { any })
+RemoteGateway.onClientIntent(Remotes.Names.AbilityIntent, function(player: Player, payload: { any })
 	if not requireReady(player) then
 		return
 	end
@@ -455,6 +455,12 @@ RemoteGateway.onClientIntent(Remotes.Names.AbilityActivate, function(player: Pla
 		RemoteGateway.fireClient(player, Remotes.Names.AbilityRejected, {
 			abilityId = abilityId,
 			reason = reason or "unknown",
+		})
+	else
+		RemoteGateway.fireClient(player, Remotes.Names.StateDelta, {
+			cooldowns = {
+				[abilityId] = CooldownService.getRemaining(player.UserId, abilityId),
+			},
 		})
 	end
 end)
@@ -508,10 +514,10 @@ RemoteGateway.onClientIntent(Remotes.Names.BasicAttackIntent, function(player: P
 				SpatialService.pushBack(attackerId, targetPosition, 8)
 			end
 		end
-		RemoteGateway.fireClient(player, Remotes.Names.CombatHit, {
+		RemoteGateway.fireClient(player, Remotes.Names.CombatEvent, {
 			targetId = target.id,
-			damage = result.damage,
 			abilityId = if isHeavy then "heavy" else "light",
+			outcome = if result.parried or result.stoppedOnGuard or target.guarding then "guard" else "hit",
 		})
 		if result.killed then
 			-- Item 11: se o alvo é um jogador, a morte dele aplica a perda
@@ -576,7 +582,7 @@ RemoteGateway.onClientIntent(Remotes.Names.GuardIntent, function(player: Player,
 	if not fighter then
 		return
 	end
-	CombatService.setGuard(fighter, payload.down == true, os.clock())
+	CombatService.setGuard(fighter, payload.phase == "down", os.clock())
 end)
 
 RemoteGateway.onClientIntent(Remotes.Names.DashIntent, function(player: Player, _payload: { any })

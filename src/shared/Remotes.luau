@@ -15,10 +15,10 @@ export type NetworkContract = {
 }
 
 export type RemoteName =
-	"AbilityActivate"
+	"AbilityIntent"
 	| "AbilityRejected"
 	| "ResourceChanged"
-	| "CombatHit"
+	| "CombatEvent"
 	| "PlayerDied"
 	| "SessionSnapshot"
 	| "BasicAttackIntent"
@@ -31,10 +31,10 @@ export type RemoteName =
 	| "EnemyEvent"
 
 local REMOTES = {
-	AbilityActivate = "AbilityActivate",
+	AbilityIntent = "AbilityIntent",
 	AbilityRejected = "AbilityRejected",
 	ResourceChanged = "ResourceChanged",
-	CombatHit = "CombatHit",
+	CombatEvent = "CombatEvent",
 	PlayerDied = "PlayerDied",
 	SessionSnapshot = "SessionSnapshot",
 	BasicAttackIntent = "BasicAttackIntent",
@@ -48,11 +48,11 @@ local REMOTES = {
 }
 
 local RemoteContracts = {
-	[REMOTES.AbilityActivate] = {
-		name = REMOTES.AbilityActivate,
+	[REMOTES.AbilityIntent] = {
+		name = REMOTES.AbilityIntent,
 		direction = "ClientToServer",
-		version = 1,
-		payload = "{ abilityId: string, phase: string?, incomingHit: boolean?, requestId: string }",
+		version = 2,
+		payload = "EnvelopeV2<{ abilityId: string, inputMode: string, executionId: string, phase: string? }>",
 	} :: NetworkContract,
 	[REMOTES.AbilityRejected] = {
 		name = REMOTES.AbilityRejected,
@@ -66,11 +66,11 @@ local RemoteContracts = {
 		version = 1,
 		payload = "{ familyId: string, current: number, max: number, depleted: boolean }",
 	} :: NetworkContract,
-	[REMOTES.CombatHit] = {
-		name = REMOTES.CombatHit,
+	[REMOTES.CombatEvent] = {
+		name = REMOTES.CombatEvent,
 		direction = "ServerToClient",
-		version = 1,
-		payload = "{ targetId: string, damage: number, abilityId: string }",
+		version = 2,
+		payload = '{ executionId: string?, abilityId: string, outcome: "hit" | "guard" | "death" }',
 	} :: NetworkContract,
 	[REMOTES.PlayerDied] = {
 		name = REMOTES.PlayerDied,
@@ -87,20 +87,20 @@ local RemoteContracts = {
 	[REMOTES.BasicAttackIntent] = {
 		name = REMOTES.BasicAttackIntent,
 		direction = "ClientToServer",
-		version = 1,
-		payload = '{ kind: "light" | "heavy", requestId: string }',
+		version = 2,
+		payload = 'EnvelopeV2<{ kind: "light" | "heavy", phase: "press" | "release" }>',
 	} :: NetworkContract,
 	[REMOTES.GuardIntent] = {
 		name = REMOTES.GuardIntent,
 		direction = "ClientToServer",
-		version = 1,
-		payload = "{ down: boolean, requestId: string }",
+		version = 2,
+		payload = 'EnvelopeV2<{ phase: "down" | "up" }>',
 	} :: NetworkContract,
 	[REMOTES.DashIntent] = {
 		name = REMOTES.DashIntent,
 		direction = "ClientToServer",
-		version = 1,
-		payload = "{ requestId: string }",
+		version = 2,
+		payload = "EnvelopeV2<{ direction: { x: number, z: number } }>",
 	} :: NetworkContract,
 	[REMOTES.ZoneEvent] = {
 		name = REMOTES.ZoneEvent,
@@ -111,22 +111,22 @@ local RemoteContracts = {
 	[REMOTES.ZoneCrossingIntent] = {
 		name = REMOTES.ZoneCrossingIntent,
 		direction = "ClientToServer",
-		version = 1,
-		payload = "{ toZoneId: string, holdConfirmed: boolean?, requestId: string }",
+		version = 2,
+		payload = "EnvelopeV2<{ toZoneId: string, holdConfirmed: boolean? }>",
 	} :: NetworkContract,
 	-- Aceite de objetivo / uso de âncora. O cliente nunca informa recompensa.
 	[REMOTES.InteractionIntent] = {
 		name = REMOTES.InteractionIntent,
 		direction = "ClientToServer",
-		version = 1,
-		payload = "{ npcId: string?, anchorId: string?, requestId: string }",
+		version = 2,
+		payload = "EnvelopeV2<{ npcId: string?, anchorId: string? }>",
 	} :: NetworkContract,
 	-- Delta autoritativo de estado; carrega o tracker do objetivo e as flags.
 	[REMOTES.StateDelta] = {
 		name = REMOTES.StateDelta,
 		direction = "ServerToClient",
 		version = 1,
-		payload = "{ objective: { questId: string, trackerKey: string, progress: number, required: number, state: string, xpGranted: number?, unlockFlag: string? }?, unlocks: { string }?, unconsolidatedXp: number? }",
+		payload = "{ health: number?, maxHealth: number?, guard: number?, maxGuard: number?, resource: number?, maxResource: number?, cooldowns: any?, objective: any?, unlocks: { string }?, unconsolidatedXp: number?, deathPenalty: number? }",
 	} :: NetworkContract,
 	-- Telegraph, ataque, spawn e morte de inimigo. O telegraph é o que permite
 	-- o contorno branco de perigo (§17); o cliente não decide se acertou.

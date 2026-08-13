@@ -7,15 +7,24 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local RemoteEnvelope = require(ReplicatedStorage.Shared.RemoteEnvelope)
 
 local RemoteGateway = {}
 
 -- Nome do remote → instância (criadas no boot)
 local remoteInstances: { [string]: RemoteEvent } = {}
 
--- userId → { janela, contagem } — rate limit simples por segundo
-local callWindows: { [number]: { windowStart: number, count: number } } = {}
-local CALL_LIMIT_PER_SECOND = 15
+-- userId → classe → { janela, contagem }. Intenções de combate têm orçamento
+-- próprio para uma interação (ex.: objetivo) não consumir seus 8 slots.
+local callWindows: { [number]: { [string]: { windowStart: number, count: number } } } = {}
+local DEFAULT_CALL_LIMIT_PER_SECOND = 15
+local COMBAT_CALL_LIMIT_PER_SECOND = 8
+local COMBAT_INTENTS: { [string]: boolean } = {
+	[Remotes.Names.AbilityIntent] = true,
+	[Remotes.Names.BasicAttackIntent] = true,
+	[Remotes.Names.GuardIntent] = true,
+	[Remotes.Names.DashIntent] = true,
+}
 
 function RemoteGateway.init(): ()
 	local shared = ReplicatedStorage:WaitForChild("Shared", 10)
@@ -43,19 +52,27 @@ function RemoteGateway.onClientIntent(name: string, handler: (player: Player, pa
 	if not remote then
 		error(("[RemoteGateway] remote não registrado: %s"):format(name))
 	end
-	remote.OnServerEvent:Connect(function(player: Player, payload: { any })
-		if type(payload) ~= "table" then
+	remote.OnServerEvent:Connect(function(player: Player, envelope: { any })
+		local payload = RemoteEnvelope.decode(envelope, name)
+		if not payload then
 			return
 		end
 		-- Rate limit simples por jogador (janela de 1 segundo)
 		local now = os.clock()
-		local window = callWindows[player.UserId]
+		local class = if COMBAT_INTENTS[name] then "combat" else "default"
+		local playerWindows = callWindows[player.UserId]
+		if not playerWindows then
+			playerWindows = {}
+			callWindows[player.UserId] = playerWindows
+		end
+		local window = playerWindows[class]
 		if not window or now - window.windowStart > 1 then
 			window = { windowStart = now, count = 0 }
-			callWindows[player.UserId] = window
+			playerWindows[class] = window
 		end
 		window.count += 1
-		if window.count > CALL_LIMIT_PER_SECOND then
+		local limit = if COMBAT_INTENTS[name] then COMBAT_CALL_LIMIT_PER_SECOND else DEFAULT_CALL_LIMIT_PER_SECOND
+		if window.count > limit then
 			return
 		end
 		handler(player, payload)

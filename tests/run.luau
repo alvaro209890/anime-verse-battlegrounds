@@ -39,6 +39,7 @@ local Characters = require("../src/shared/Data/Characters")
 local EnergyFamilies = require("../src/shared/Data/EnergyFamilies")
 local Npcs = require("../src/shared/Data/Npcs")
 local Remotes = require("../src/shared/Remotes")
+local RemoteEnvelope = require("../src/shared/RemoteEnvelope")
 local Zones = require("../src/shared/Data/Zones")
 local CooldownService = require("../src/server/Services/CooldownService")
 local CombatService = require("../src/server/Services/CombatService")
@@ -147,17 +148,44 @@ test("dados: 4 famílias de energia", function()
 end)
 
 test("dados: remotes registrados com contrato", function()
-	local c = Remotes.Contracts.get(Remotes.Names.AbilityActivate)
-	assertTrue(c ~= nil, "AbilityActivate deveria ter contrato")
+	local c = Remotes.Contracts.get(Remotes.Names.AbilityIntent)
+	assertTrue(c ~= nil, "AbilityIntent deveria ter contrato")
 	if c then
 		assertEq(c.direction, "ClientToServer", "direção")
-		assertEq(c.version, 1, "versão")
+		assertEq(c.version, 2, "versão")
 	end
 	local snap = Remotes.Contracts.get(Remotes.Names.SessionSnapshot)
 	assertTrue(snap ~= nil, "SessionSnapshot deveria ter contrato")
 	if snap then
 		assertEq(snap.direction, "ServerToClient", "snapshot S→C")
 	end
+end)
+
+test("dados: envelope v2 aceita somente contrato completo", function()
+	local envelope = RemoteEnvelope.create("AbilityIntent", { abilityId = "comet_shoulder" }, "req-1", 1)
+	local payload, reason = RemoteEnvelope.decode(envelope, "AbilityIntent")
+	assertTrue(payload ~= nil, "envelope válido")
+	assertEq(reason, nil, "sem rejeição")
+	assertEq(payload and payload.abilityId, "comet_shoulder", "payload preservado")
+	assertEq(RemoteEnvelope.version(), 2, "versão canônica")
+end)
+
+test("dados: envelope v2 rejeita versão, sequência e ação inválidas", function()
+	local wrongVersion = RemoteEnvelope.create("AbilityIntent", {}, "req-1", 1)
+	wrongVersion.protocolVersion = 1
+	local payload, reason = RemoteEnvelope.decode(wrongVersion, "AbilityIntent")
+	assertEq(payload, nil, "versão antiga rejeitada")
+	assertEq(reason, "protocol_version", "motivo versão")
+
+	local wrongSequence = RemoteEnvelope.create("AbilityIntent", {}, "req-2", 0)
+	local sequencePayload, sequenceReason = RemoteEnvelope.decode(wrongSequence, "AbilityIntent")
+	assertEq(sequencePayload, nil, "sequência zero rejeitada")
+	assertEq(sequenceReason, "client_sequence", "motivo sequência")
+
+	local wrongAction = RemoteEnvelope.create("DashIntent", {}, "req-3", 2)
+	local actionPayload, actionReason = RemoteEnvelope.decode(wrongAction, "AbilityIntent")
+	assertEq(actionPayload, nil, "ação trocada rejeitada")
+	assertEq(actionReason, "action_mismatch", "motivo ação")
 end)
 
 test("dados: dummy de treino no catálogo", function()
@@ -1452,7 +1480,7 @@ test("dados: ZoneCrossingIntent registrado como remote C→S", function()
 	assertTrue(zc ~= nil, "ZoneCrossingIntent deveria ter contrato")
 	if zc then
 		assertEq(zc.direction, "ClientToServer", "direção")
-		assertEq(zc.version, 1, "versão")
+		assertEq(zc.version, 2, "versão")
 		assertTrue(zc.payload:find("toZoneId") ~= nil, "payload com toZoneId")
 		assertTrue(zc.payload:find("holdConfirmed") ~= nil, "payload com holdConfirmed")
 	end
@@ -1878,7 +1906,7 @@ test("dados: InteractionIntent C→S e StateDelta S→C", function()
 	assertTrue(interaction ~= nil, "InteractionIntent deveria ter contrato")
 	if interaction then
 		assertEq(interaction.direction, "ClientToServer", "direção")
-		assertEq(interaction.version, 1, "versão")
+		assertEq(interaction.version, 2, "versão")
 		assertTrue(interaction.payload:find("npcId") ~= nil, "payload com npcId")
 		assertFalse(interaction.payload:find("reward") ~= nil, "cliente não informa recompensa")
 	end
