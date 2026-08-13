@@ -203,16 +203,22 @@ function UIController.new(deps: { [string]: any }): any
 		deps.inputApi.dispatch(deps.input, "Dash", {})
 	end)
 
-	local zoneHold = button("ZoneHold", gui, UDim2.fromOffset(280, 42), UDim2.new(0.5, -140, 1, -58))
+	local zoneHold = button("ZoneHold", gui, UDim2.fromOffset(300, 42), UDim2.new(0.5, -150, 1, -58))
 	zoneHold.Visible = false
+	-- Toque e mouse: segurar o botão vale como segurar E. Antes só Touch
+	-- disparava, então no PC o botão era decorativo.
 	zoneHold.InputBegan:Connect(function(input: InputObject)
 		if input.UserInputType == Enum.UserInputType.Touch then
 			deps.inputApi.touchBegin(deps.input, "zone", "ZoneHoldDown", {})
+		elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+			deps.inputApi.dispatch(deps.input, "ZoneHoldDown", {})
 		end
 	end)
 	zoneHold.InputEnded:Connect(function(input: InputObject)
 		if input.UserInputType == Enum.UserInputType.Touch then
 			deps.inputApi.touchEnd(deps.input, "zone", "ZoneHoldUp", {})
+		elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+			deps.inputApi.dispatch(deps.input, "ZoneHoldUp", {})
 		end
 	end)
 
@@ -252,6 +258,7 @@ function UIController.new(deps: { [string]: any }): any
 		"hud.help_ability",
 		"hud.help_lock",
 		"hud.help_interact",
+		"hud.help_gate",
 		"hud.settings_where",
 	}
 	local helpLines: { TextLabel } = {}
@@ -436,8 +443,12 @@ function UIController.render(controller: any, elapsed: number): ()
 	controller.attack.Text = controller.locale.get("hud.control_attack", localeId)
 	controller.guard.Text = controller.locale.get("hud.control_guard", localeId)
 	controller.dash.Text = controller.locale.get("hud.control_dash", localeId)
-	controller.zoneHold.Visible = state.platform == "Touch" and state.zoneHoldRequired
-	controller.zoneHold.Text = controller.locale.get("hud.pvp_hold", localeId)
+	-- O prompt de travessia vale em qualquer plataforma. Enquanto era só Touch,
+	-- o jogador de PC batia num portão invisível sem nenhuma explicação
+	-- (docs/18 §7): o servidor recusava a entrada e ele voltava andando.
+	controller.zoneHold.Visible = state.zoneHoldRequired == true
+	controller.zoneHold.Text =
+		controller.locale.get(if state.platform == "Touch" then "hud.pvp_hold" else "hud.pvp_hold_key", localeId)
 
 	controller.hint.Text = controller.locale.get("hud.help_hint", localeId)
 	controller.helpButton.Text = controller.locale.get("hud.menu_button", localeId)

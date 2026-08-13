@@ -1428,7 +1428,14 @@ RunService.Heartbeat:Connect(function()
 				local geometric = CatalogService.zoneAtPosition(position)
 				if geometric and geometric ~= ZoneService.getPlayerZone(userId) then
 					local entered = ZoneService.tryEnterZone(userId, geometric, now, {})
-					if not entered.ok and previous then
+					-- `hold_required` não é invasão: é o jogador parado no vão do
+					-- portão esperando confirmar a travessia. Puxá-lo de volta a
+					-- cada Heartbeat criava uma parede invisível — do lado de
+					-- dentro do Bastião não havia como sair (docs/18 §7). Ele fica
+					-- onde está, a zona lógica continua segura e o HUD pede o
+					-- SEGURE E. Qualquer outra recusa (lockout, travessia
+					-- inválida) continua devolvendo a posição.
+					if not entered.ok and ZoneService.shouldRestorePosition(entered.reason) and previous then
 						restoreTransform(fighterId, previous)
 						applyPlayerSpatialPosition(userId, previous.position, now)
 					end

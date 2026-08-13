@@ -250,6 +250,14 @@ function ZoneService.handleCrossingHold(
 	return { ok = true, anchorId = anchorId }
 end
 
+-- Uma recusa de travessia devolve o jogador à posição anterior? `hold_required`
+-- não: ele está parado no vão do portão esperando confirmar o SEGURE E, e
+-- empurrá-lo a cada Heartbeat vira parede invisível (docs/18 §7). Lockout e
+-- travessia inválida continuam devolvendo.
+function ZoneService.shouldRestorePosition(reason: string?): boolean
+	return reason ~= nil and reason ~= "hold_required"
+end
+
 function ZoneService.isInTransition(userId: number, now: number): boolean
 	local transition = ZoneService.transitions[userId]
 	if not transition then

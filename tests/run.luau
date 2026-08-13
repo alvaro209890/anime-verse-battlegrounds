@@ -768,6 +768,9 @@ test("cliente: Locale cobre todo texto do HUD F0 em PT-BR e EN", function()
 		"hud.help_ability",
 		"hud.help_lock",
 		"hud.help_interact",
+		"hud.help_gate",
+		"hud.pvp_hold",
+		"hud.pvp_hold_key",
 		"hud.help_close",
 		"hud.lock_on",
 		"hud.menu_button",
@@ -2641,6 +2644,16 @@ test("zona: sem holdConfirmed recusa a primeira ida à livre", function()
 	assertEq(res.reason, "hold_required", "motivo")
 	assertEq(ZoneService.getPlayerZone(210), "zone_bastion_safe", "continua na segura")
 	assertEq(ZoneService.canPvp(210), false, "sem PvP")
+end)
+
+-- docs/18 §7: a recusa por hold não pode virar parede invisível. O jogador
+-- fica parado no vão do portão até segurar E; só recusa de outro tipo devolve
+-- o avatar à posição anterior.
+test("zona: hold_required não devolve o jogador; lockout e recusa inválida devolvem", function()
+	assertFalse(ZoneService.shouldRestorePosition("hold_required"), "hold não empurra de volta")
+	assertTrue(ZoneService.shouldRestorePosition("zone_lockout"), "lockout devolve")
+	assertTrue(ZoneService.shouldRestorePosition("invalid_crossing"), "travessia inválida devolve")
+	assertFalse(ZoneService.shouldRestorePosition(nil), "sem motivo não devolve")
 end)
 
 test("zona: hold autoritativo exige 0,6 s e o mesmo portão", function()
