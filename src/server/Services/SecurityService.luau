@@ -125,12 +125,13 @@ local function validateZone(payload: { [string]: any }): boolean
 end
 
 local function validateInteraction(payload: { [string]: any }): boolean
-	if not hasOnlyKeys(payload, { npcId = true, anchorId = true }) then
+	if not hasOnlyKeys(payload, { npcId = true, anchorId = true, phase = true }) then
 		return false
 	end
 	local npcValid = payload.npcId ~= nil and validId(payload.npcId)
 	local anchorValid = payload.anchorId ~= nil and validId(payload.anchorId)
-	return npcValid ~= anchorValid
+	local phaseValid = payload.phase == "begin" or payload.phase == "complete"
+	return npcValid ~= anchorValid and phaseValid
 end
 
 local VALIDATORS: { [string]: ({ [string]: any }) -> boolean } = {

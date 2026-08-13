@@ -37,6 +37,9 @@ local Strings: { [string]: { [string]: string } } = {
 		["npc.training_dummy.name"] = "Boneco de Treino",
 		["enemy.wandering_shard.name"] = "Estilhaço Errante",
 		["enemy.anchored_shard.name"] = "Estilhaço Ancorado",
+		["interaction.talk.action"] = "CONVERSAR",
+		["interaction.consolidate.action"] = "CONSOLIDAR XP",
+		["interaction.return_marker.name"] = "Marco de Retorno",
 
 		-- HUD
 		["hud.zone_safe"] = "SEGURO",
@@ -86,6 +89,9 @@ local Strings: { [string]: { [string]: string } } = {
 		["npc.training_dummy.name"] = "Training Dummy",
 		["enemy.wandering_shard.name"] = "Wandering Shard",
 		["enemy.anchored_shard.name"] = "Anchored Shard",
+		["interaction.talk.action"] = "TALK",
+		["interaction.consolidate.action"] = "CONSOLIDATE XP",
+		["interaction.return_marker.name"] = "Return Marker",
 
 		["hud.zone_safe"] = "SAFE",
 		["hud.pvp_active"] = "PvP ACTIVE — death loses unconsolidated XP",

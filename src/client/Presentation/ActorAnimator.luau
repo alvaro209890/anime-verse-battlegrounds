@@ -15,7 +15,8 @@ export type Animator = {
 	runService: any,
 	recipes: any,
 	now: () -> number,
-	events: { [string]: { kind: string, startedAt: number } },
+	events: { [string]: { kind: string, startedAt: number, durationSeconds: number?, visualPattern: string? } },
+	seenPoseSerial: { [any]: number },
 	jointCache: { [any]: { [string]: any } },
 	connection: any?,
 }
@@ -72,6 +73,7 @@ function ActorAnimator.new(deps: {
 		recipes = deps.recipes,
 		now = deps.now or os.clock,
 		events = {},
+		seenPoseSerial = {},
 		jointCache = {},
 		connection = nil,
 	}
@@ -86,6 +88,8 @@ function ActorAnimator.onEnemyEvent(animator: Animator, payload: { [string]: any
 	animator.events[fighterId] = {
 		kind = kind,
 		startedAt = animator.now(),
+		durationSeconds = if type(payload.durationSeconds) == "number" then payload.durationSeconds else nil,
+		visualPattern = if type(payload.visualPattern) == "string" then payload.visualPattern else nil,
 	}
 end
 
@@ -126,6 +130,10 @@ end
 local function presentationKind(animator: Animator, model: Model, actorId: string): (string, number)
 	local event = animator.events[actorId]
 	if event then
+		local replicatedSerial = model:GetAttribute("PoseSerial")
+		if type(replicatedSerial) == "number" then
+			animator.seenPoseSerial[model] = replicatedSerial
+		end
 		local elapsed = animator.now() - event.startedAt
 		local durationByKind = {
 			spawn = 0.6,
@@ -133,16 +141,34 @@ local function presentationKind(animator: Animator, model: Model, actorId: strin
 			telegraph = 1,
 			attack = 0.35,
 		}
-		local duration = durationByKind[event.kind]
+		local duration = event.durationSeconds or durationByKind[event.kind]
 		if not duration or elapsed <= duration then
 			return event.kind, elapsed
 		end
 		animator.events[actorId] = nil
 	end
 	local replicatedKind = model:GetAttribute("PoseKind")
-	-- O atributo cobre late join somente para estado persistente. Eventos
-	-- transitórios chegam pelo remote; reaplicá-los para sempre congelaria a
-	-- locomoção depois de um ataque já encerrado.
+	local replicatedSerial = model:GetAttribute("PoseSerial")
+	if type(replicatedSerial) == "number" and animator.seenPoseSerial[model] ~= replicatedSerial then
+		animator.seenPoseSerial[model] = replicatedSerial
+		local startedAt = model:GetAttribute("PoseStartedAt")
+		local duration = model:GetAttribute("PoseDuration")
+		local elapsed = if type(startedAt) == "number"
+			then math.max(0, animator.workspace:GetServerTimeNow() - startedAt)
+			else 0
+		if type(replicatedKind) == "string" and (type(duration) ~= "number" or elapsed <= duration) then
+			if replicatedKind == "spawn" or replicatedKind == "respawn" then
+				model:SetAttribute("SpawnPresentation", false)
+			end
+			return replicatedKind, elapsed
+		end
+	end
+	-- Um modelo recém-replicado preserva a apresentação de spawn mesmo se o
+	-- RemoteEvent ocorreu antes deste cliente existir.
+	if model:GetAttribute("SpawnPresentation") == true then
+		model:SetAttribute("SpawnPresentation", false)
+		return "spawn", 0
+	end
 	return if replicatedKind == "died" then "died" else "idle", 1
 end
 
@@ -173,7 +199,7 @@ function ActorAnimator.start(animator: Animator): ()
 	if animator.connection then
 		return
 	end
-	animator.connection = animator.runService.RenderStepped:Connect(function()
+	animator.connection = animator.runService.PreSimulation:Connect(function()
 		ActorAnimator.step(animator)
 	end)
 end
@@ -184,6 +210,7 @@ function ActorAnimator.stop(animator: Animator): ()
 		animator.connection = nil
 	end
 	table.clear(animator.events)
+	table.clear(animator.seenPoseSerial)
 	table.clear(animator.jointCache)
 end
 

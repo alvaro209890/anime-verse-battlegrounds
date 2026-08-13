@@ -132,7 +132,10 @@ function EnemyService.spawnInitial(): number
 				}, { x = 0, y = 0, z = 1 })
 				registerEnemy(fighterId, SHARD_NPC_ID, anchor)
 				spawned += 1
-				emit(fighterId, { kind = "spawn", anchorId = anchorId })
+				emit(
+					fighterId,
+					{ kind = "spawn", anchorId = anchorId, durationSeconds = 0.6, visualPattern = "arrival" }
+				)
 			end
 		end
 	end
@@ -165,7 +168,7 @@ function EnemyService.spawnElite(): boolean
 	EnemyService.eliteDamage[fighterId] = {}
 	EnemyService.eliteTimeInRadius[fighterId] = {}
 	EnemyService.eliteDeathResolved[fighterId] = false
-	emit(fighterId, { kind = "spawn", anchorId = ELITE_ANCHOR_ID })
+	emit(fighterId, { kind = "spawn", anchorId = ELITE_ANCHOR_ID, durationSeconds = 0.6, visualPattern = "arrival" })
 	return true
 end
 
@@ -259,7 +262,12 @@ function EnemyService.tick(now: number, deltaSeconds: number): number
 							z = anchor.position.z,
 						}, { x = 0, y = 0, z = 1 })
 					end
-					emit(record.fighterId, { kind = "respawn", anchorId = record.anchorId })
+					emit(record.fighterId, {
+						kind = "respawn",
+						anchorId = record.anchorId,
+						durationSeconds = 0.6,
+						visualPattern = "arrival",
+					})
 				end
 			else
 				local target, distance = nearestTarget(record, targets)
@@ -291,13 +299,20 @@ function EnemyService.tick(now: number, deltaSeconds: number): number
 							def.recoverySeconds or 0.6
 						)
 						if result.ok and result.phase == "telegraph" then
-							emit(record.fighterId, { kind = "telegraph", targetId = target.fighterId })
+							emit(record.fighterId, {
+								kind = "telegraph",
+								targetId = target.fighterId,
+								durationSeconds = def.telegraphMs / 1000,
+								visualPattern = "strike",
+							})
 						elseif result.ok and result.phase == "attack" then
 							hits += 1
 							emit(record.fighterId, {
 								kind = "attack",
 								targetId = target.fighterId,
 								damage = result.damage,
+								durationSeconds = 0.35,
+								visualPattern = "strike",
 							})
 						end
 					end
@@ -364,7 +379,12 @@ function EnemyService.tickElite(now: number, deltaSeconds: number): number
 			EnemyService.eliteDamage[fighterId] = {}
 			EnemyService.eliteTimeInRadius[fighterId] = {}
 			EnemyService.eliteDeathResolved[fighterId] = false
-			emit(fighterId, { kind = "respawn", anchorId = record.anchorId })
+			emit(fighterId, {
+				kind = "respawn",
+				anchorId = record.anchorId,
+				durationSeconds = 0.6,
+				visualPattern = "arrival",
+			})
 		end
 		return 0
 	end
@@ -398,13 +418,24 @@ function EnemyService.tickElite(now: number, deltaSeconds: number): number
 				slamBlockedPct = 0.7,
 			})
 			if result.ok and result.phase == "telegraph" then
-				emit(fighterId, { kind = "telegraph", targetId = target.fighterId })
+				local visualPattern = if fighter.elitePattern == "slam" then "slam" else "combo"
+				local durationSeconds = if visualPattern == "slam"
+					then (def.eliteSlamTelegraphMs or 700) / 1000
+					else (def.eliteComboTelegraphMs or 300) / 1000
+				emit(fighterId, {
+					kind = "telegraph",
+					targetId = target.fighterId,
+					durationSeconds = durationSeconds,
+					visualPattern = visualPattern,
+				})
 			elseif result.ok and result.phase == "attack" then
 				hits += 1
 				emit(fighterId, {
 					kind = "attack",
 					targetId = target.fighterId,
 					damage = result.damage,
+					durationSeconds = 0.4,
+					visualPattern = if fighter.elitePattern == "slam" then "slam" else "combo",
 				})
 			end
 		end
@@ -447,7 +478,12 @@ function EnemyService.resolveEliteDeath(fighterId: string, _now: number): { numb
 	local minDamage = math.max(1, math.floor(def.maxHealth * (def.leechDamagePct or 0.01)))
 	local minStay = def.leechStaySeconds or 8
 
-	emit(fighterId, { kind = "died", anchorId = ELITE_ANCHOR_ID })
+	emit(fighterId, {
+		kind = "died",
+		anchorId = ELITE_ANCHOR_ID,
+		durationSeconds = 0.75,
+		visualPattern = "collapse",
+	})
 	local userIds: { number } = {}
 	for userId in damageTable do
 		table.insert(userIds, userId)
@@ -480,7 +516,13 @@ function EnemyService.reportKill(userId: number, fighterId: string): boolean
 	if not deps or not record then
 		return false
 	end
-	emit(fighterId, { kind = "died", anchorId = record.anchorId, byUserId = userId })
+	emit(fighterId, {
+		kind = "died",
+		anchorId = record.anchorId,
+		byUserId = userId,
+		durationSeconds = 0.75,
+		visualPattern = "collapse",
+	})
 	if deps.onKill then
 		deps.onKill(userId, fighterId)
 	end

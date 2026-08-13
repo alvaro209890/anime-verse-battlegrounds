@@ -213,6 +213,7 @@ function CatalogService.validate(): ()
 			"anchor_bastion_spawn",
 			"anchor_bastion_return",
 			"anchor_training",
+			"anchor_instructor",
 			"anchor_gate_north",
 			"anchor_gate_west",
 			"anchor_elite",

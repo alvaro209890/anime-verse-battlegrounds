@@ -108,6 +108,11 @@ local Anchors: { [string]: AnchorDefinition } = {
 		zoneId = "zone_bastion_safe",
 		position = { x = 28, y = 0, z = -20 },
 	},
+	anchor_instructor = {
+		id = "anchor_instructor",
+		zoneId = "zone_bastion_safe",
+		position = { x = 20, y = 0, z = -14 },
+	},
 	anchor_gate_north = {
 		id = "anchor_gate_north",
 		zoneId = "zone_threshold_transition",

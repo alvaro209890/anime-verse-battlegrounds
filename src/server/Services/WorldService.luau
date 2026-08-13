@@ -26,7 +26,9 @@ export type WorldDeps = {
 export type ActorVisual = {
 	model: Model,
 	lastPosition: Vector3?,
+	lastLookVector: Vector3?,
 	rootHeight: number,
+	moving: boolean,
 }
 
 local WorldService = {
@@ -129,11 +131,74 @@ local function attach(root: BasePart, part: BasePart, offset: CFrame, jointName:
 	joint.Parent = root
 end
 
+local function actorRootHeight(recipe: any): number
+	if recipe.shape == "humanoid" then
+		-- A sola fica em -3,4 na receita humanoide: 2,2 de deslocamento mais
+		-- metade da perna de 2,4. Derivar daqui evita enterrar pés no chão.
+		return 3.4 * recipe.scale
+	end
+	return 3 * recipe.scale
+end
+
+local function buildTelegraphPresentation(model: Model, root: BasePart, rootHeight: number): ()
+	local highlight = Instance.new("Highlight")
+	highlight.Name = "TelegraphHighlight"
+	highlight.Adornee = model
+	highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+	highlight.FillTransparency = 1
+	highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+	highlight.OutlineTransparency = 0
+	highlight.Enabled = false
+	highlight.Parent = model
+
+	-- O ponto de exclamação mantém o aviso reconhecível sem depender de cor.
+	local symbol = Instance.new("BillboardGui")
+	symbol.Name = "TelegraphSymbol"
+	symbol.Adornee = root
+	symbol.AlwaysOnTop = true
+	symbol.LightInfluence = 0
+	symbol.MaxDistance = 80
+	symbol.Size = UDim2.fromOffset(48, 48)
+	symbol.StudsOffsetWorldSpace = Vector3.new(0, rootHeight + 1.4, 0)
+	symbol.Enabled = false
+	symbol.Parent = model
+
+	local label = Instance.new("TextLabel")
+	label.Name = "Symbol"
+	label.BackgroundTransparency = 1
+	label.Size = UDim2.fromScale(1, 1)
+	label.Font = Enum.Font.GothamBold
+	label.Text = "!"
+	label.TextColor3 = Color3.fromRGB(255, 255, 255)
+	label.TextScaled = true
+	label.TextStrokeColor3 = Color3.fromRGB(25, 25, 28)
+	label.TextStrokeTransparency = 0
+	label.Parent = symbol
+end
+
+local function setTelegraphVisible(model: Model, visible: boolean, visualPattern: string?): ()
+	local highlight = model:FindFirstChild("TelegraphHighlight")
+	if highlight and highlight:IsA("Highlight") then
+		highlight.Enabled = visible
+	end
+	local symbol = model:FindFirstChild("TelegraphSymbol")
+	if symbol and symbol:IsA("BillboardGui") then
+		symbol.Enabled = visible
+		local label = symbol:FindFirstChild("Symbol")
+		if label and label:IsA("TextLabel") then
+			label.Text = if visualPattern == "slam" then "!!" else "!"
+		end
+	end
+end
+
 local function setActorVisible(model: Model, visible: boolean): ()
 	for _, descendant in model:GetDescendants() do
 		if descendant:IsA("BasePart") and descendant.Name ~= "Root" then
 			descendant.Transparency = if visible then 0 else 1
 		end
+	end
+	if not visible then
+		setTelegraphVisible(model, false, nil)
 	end
 end
 
@@ -150,7 +215,8 @@ local function createActorModel(name: string, actorId: string, npcId: string, re
 	local root = makeVisualPart("Part", "Root", Vector3.new(1, 1, 1), COLORS.darkStone, Enum.Material.SmoothPlastic)
 	root.Anchored = true
 	root.Transparency = 1
-	root.CFrame = CFrame.new(position + Vector3.new(0, if recipe.shape == "shard" then 3 * scale else 3, 0))
+	local rootHeight = actorRootHeight(recipe)
+	root.CFrame = CFrame.new(position + Vector3.new(0, rootHeight, 0))
 	root.Parent = model
 	model.PrimaryPart = root
 
@@ -170,14 +236,14 @@ local function createActorModel(name: string, actorId: string, npcId: string, re
 			Enum.Material.SmoothPlastic
 		)
 		head.Shape = Enum.PartType.Ball
-		attach(root, head, CFrame.new(0, 1.95 * scale, 0), "Joint_Head")
+		attach(torso, head, CFrame.new(0, 1.85 * scale, 0), "Joint_Head")
 
 		local leftArm =
 			makeVisualPart("Part", "LeftArm", Vector3.new(0.7, 2.2, 0.7) * scale, accentColor, Enum.Material.Slate)
-		attach(root, leftArm, CFrame.new(-1.45 * scale, 0.05, 0), "Joint_LeftArm")
+		attach(torso, leftArm, CFrame.new(-1.45 * scale, -0.05 * scale, 0), "Joint_LeftArm")
 		local rightArm = leftArm:Clone()
 		rightArm.Name = "RightArm"
-		attach(root, rightArm, CFrame.new(1.45 * scale, 0.05, 0), "Joint_RightArm")
+		attach(torso, rightArm, CFrame.new(1.45 * scale, -0.05 * scale, 0), "Joint_RightArm")
 
 		local leftLeg =
 			makeVisualPart("Part", "LeftLeg", Vector3.new(0.85, 2.4, 0.9) * scale, bodyColor, Enum.Material.Slate)
@@ -219,6 +285,7 @@ local function createActorModel(name: string, actorId: string, npcId: string, re
 		attach(root, top, CFrame.new(0, 2 * scale, 0), "Joint_ShardTop")
 	end
 
+	buildTelegraphPresentation(model, root, rootHeight)
 	model:PivotTo(root.CFrame)
 	return model
 end
@@ -262,32 +329,35 @@ end
 
 -- Chão do Bastião e da Planície, com material distinto (§8.1: pedra clara na
 -- vila, areia/pedra na planície) — aqui só cor, porque arte é pós-P1.
-local function buildFloors(root: Folder, greybox: any, style: any): ()
+local function buildFloors(root: Folder, greybox: any, style: any, zones: any): ()
 	local folder = Instance.new("Folder")
 	folder.Name = "Floors"
 	folder.Parent = root
 
-	local bastion = makePart(
-		"BastionFloor",
-		Vector3.new(greybox.bastionSize.x, FLOOR_THICKNESS, greybox.bastionSize.z),
-		Vector3.new(0, GROUND_Y - FLOOR_THICKNESS / 2, 0),
-		COLORS.bastion,
-		"Safe",
-		true
-	)
-	bastion.Parent = folder
-
-	-- Planície ao norte: começa depois dos 8 studs de transição do Portão Norte.
-	local plainCenterZ = -(greybox.bastionSize.z / 2) - greybox.transitionDepth - greybox.plainSize.z / 2
-	local plain = makePart(
-		"PlainFloor",
-		Vector3.new(greybox.plainSize.x, FLOOR_THICKNESS, greybox.plainSize.z),
-		Vector3.new(0, GROUND_Y - FLOOR_THICKNESS / 2, plainCenterZ),
-		COLORS.plain,
-		"Free",
-		true
-	)
-	plain.Parent = folder
+	-- Todo volume jogável gera piso na mesma caixa X/Z usada por zoneAtPosition.
+	-- Assim as transições norte/oeste e o braço livre oeste não podem divergir
+	-- do domínio e voltar a abrir buracos físicos entre zonas.
+	local groupByKind = { safe = "Safe", transition = "Transition", free = "Free" }
+	local colorByKind = { safe = COLORS.bastion, transition = COLORS.transition, free = COLORS.plain }
+	for _, zone in zones.all() do
+		for index, box in zone.volumes do
+			local floorName = if zone.id == "zone_bastion_safe" and index == 1
+				then "BastionFloor"
+				else (if zone.id == "zone_plain_free" and index == 1
+					then "PlainFloor"
+					else ("ZoneFloor_%s_%d"):format(zone.id, index))
+			local floor = makePart(
+				floorName,
+				Vector3.new(box.max.x - box.min.x, FLOOR_THICKNESS, box.max.z - box.min.z),
+				Vector3.new((box.min.x + box.max.x) / 2, GROUND_Y - FLOOR_THICKNESS / 2, (box.min.z + box.max.z) / 2),
+				colorByKind[zone.kind] or COLORS.bastion,
+				groupByKind[zone.kind] or "Safe",
+				true
+			)
+			floor:SetAttribute("ZoneId", zone.id)
+			floor.Parent = folder
+		end
+	end
 
 	local training = makePart(
 		"TrainingPad",
@@ -482,6 +552,7 @@ local function buildLandmarks(root: Folder, greybox: any, style: any): ()
 	returnCore.Shape = Enum.PartType.Ball
 	returnCore.Material = Enum.Material.Neon
 	returnCore.Transparency = 0.12
+	returnCore:SetAttribute("InteractionAnchorId", "anchor_bastion_return")
 	returnCore.Parent = folder
 
 	-- Silhuetas verticais na planície orientam as duas rotas e a cratera.
@@ -515,34 +586,58 @@ local function buildLandmarks(root: Folder, greybox: any, style: any): ()
 	spawn.Parent = folder
 end
 
-local function buildStaticActors(root: Folder, presentation: any): ()
+local function anchorPosition(zones: any, anchorId: string): Vector3?
+	local anchor = zones.getAnchor(anchorId)
+	if not anchor then
+		return nil
+	end
+	return Vector3.new(anchor.position.x, anchor.position.y, anchor.position.z)
+end
+
+local function setNpcInteraction(model: Model, npcId: string): ()
+	-- Um único alvo visível evita dois prompts concorrentes para o mesmo NPC.
+	local part = model:FindFirstChild("Head")
+	if part and part:IsA("BasePart") then
+		part:SetAttribute("InteractionNpcId", npcId)
+	end
+end
+
+local function buildStaticActors(root: Folder, presentation: any, zones: any): ()
 	local folder = Instance.new("Folder")
 	folder.Name = "Actors"
 	folder.Parent = root
 
 	local dummyRecipe = presentation.getActor("npc_training_dummy")
-	if dummyRecipe then
+	local dummyPosition = anchorPosition(zones, "anchor_training")
+	if dummyRecipe and dummyPosition then
 		local dummy = createActorModel(
 			"TrainingDummy",
 			"npc_training_dummy",
 			"npc_training_dummy",
 			dummyRecipe,
-			Vector3.new(28, 0, -20)
+			-- O pad de treino tem topo 0,5 stud acima do chão canônico.
+			dummyPosition + Vector3.new(0, 0.5, 0)
 		)
 		dummy:SetAttribute("PoseKind", "idle")
+		local dummyRoot = dummy.PrimaryPart
+		if dummyRoot then
+			dummyRoot:SetAttribute("CombatTarget", true)
+		end
 		dummy.Parent = folder
 	end
 
 	local instructorRecipe = presentation.getActor("npc_threshold_instructor")
-	if instructorRecipe then
+	local instructorPosition = anchorPosition(zones, "anchor_instructor")
+	if instructorRecipe and instructorPosition then
 		local instructor = createActorModel(
 			"ThresholdInstructor",
 			"npc_threshold_instructor",
 			"npc_threshold_instructor",
 			instructorRecipe,
-			Vector3.new(20, 0, -14)
+			instructorPosition
 		)
 		instructor:SetAttribute("PoseKind", "idle")
+		setNpcInteraction(instructor, "npc_threshold_instructor")
 		instructor.Parent = folder
 	end
 end
@@ -561,16 +656,13 @@ local function buildAnchors(root: Folder, zones: any): ()
 		part.CanCollide = false
 		part.CanTouch = false
 		part.CanQuery = false
-		local isCombatTarget = anchor.id == "anchor_training"
-			or anchor.id == "anchor_elite"
-			or string.match(anchor.id, "^anchor_shard_") ~= nil
 		part.Transparency = 1
-		part.Size = if isCombatTarget then Vector3.new(4, 6, 4) else Vector3.new(2, 2, 2)
+		part.Size = Vector3.new(2, 2, 2)
 		part.Position = Vector3.new(anchor.position.x, anchor.position.y + part.Size.Y / 2, anchor.position.z)
 		part.Color = COLORS.anchor
 		part:SetAttribute("AnchorId", anchor.id)
 		part:SetAttribute("ZoneId", anchor.zoneId)
-		part:SetAttribute("CombatTarget", isCombatTarget)
+		part:SetAttribute("CombatTarget", false)
 		part:SetAttribute("GroundX", anchor.position.x)
 		part:SetAttribute("GroundY", anchor.position.y)
 		part:SetAttribute("GroundZ", anchor.position.z)
@@ -617,11 +709,11 @@ function WorldService.init(deps: WorldDeps): ()
 	root.Name = "GreyboxF0"
 	local style = deps.presentation.style()
 
-	buildFloors(root, greybox, style)
+	buildFloors(root, greybox, style, deps.zones)
 	buildWalls(root, greybox)
 	buildLandmarks(root, greybox, style)
 	buildZoneVolumes(root, deps.zones)
-	buildStaticActors(root, deps.presentation)
+	buildStaticActors(root, deps.presentation, deps.zones)
 	buildAnchors(root, deps.zones)
 	buildLighting()
 
@@ -655,11 +747,18 @@ local function spawnActor(fighterId: string, npcId: string, position: Vector3): 
 	end
 	local model =
 		createActorModel(("Actor_%s"):format((fighterId:gsub("[^%w_%-]", "_"))), fighterId, npcId, recipe, position)
+	model:SetAttribute("SpawnPresentation", true)
+	local modelRoot = model.PrimaryPart
+	if modelRoot then
+		modelRoot:SetAttribute("CombatTarget", true)
+	end
 	model.Parent = folder
 	local actor = {
 		model = model,
 		lastPosition = position,
-		rootHeight = if recipe.shape == "shard" then 3 * recipe.scale else 3,
+		lastLookVector = nil,
+		rootHeight = actorRootHeight(recipe),
+		moving = false,
 	}
 	WorldService.actors[fighterId] = actor
 	return actor
@@ -685,12 +784,31 @@ function WorldService.presentEnemyEvent(fighterId: string, event: { [string]: an
 	if kind == "spawn" or kind == "respawn" then
 		setActorVisible(actor.model, true)
 	end
+	local visualPattern = if type(event.visualPattern) == "string" then event.visualPattern else nil
+	local defaultDuration = if kind == "spawn" or kind == "respawn"
+		then 0.6
+		else (if kind == "attack" then 0.35 else (if kind == "died" then 0.75 else 1))
+	local durationSeconds = if type(event.durationSeconds) == "number"
+		then math.clamp(event.durationSeconds, 0.1, 2)
+		else defaultDuration
+	local poseSerial = (actor.model:GetAttribute("PoseSerial") or 0) + 1
 	actor.model:SetAttribute("PoseKind", kind)
-	actor.model:SetAttribute("PoseSerial", (actor.model:GetAttribute("PoseSerial") or 0) + 1)
+	actor.model:SetAttribute("PoseSerial", poseSerial)
+	actor.model:SetAttribute("PoseStartedAt", Workspace:GetServerTimeNow())
+	actor.model:SetAttribute("PoseDuration", durationSeconds)
+	actor.model:SetAttribute("VisualPattern", visualPattern)
+	setTelegraphVisible(actor.model, kind == "telegraph", visualPattern)
 	if kind == "died" then
 		task.delay(0.75, function()
 			if actor and actor.model.Parent and actor.model:GetAttribute("PoseKind") == "died" then
 				setActorVisible(actor.model, false)
+			end
+		end)
+	else
+		task.delay(durationSeconds, function()
+			if actor and actor.model.Parent and actor.model:GetAttribute("PoseSerial") == poseSerial then
+				actor.model:SetAttribute("PoseKind", "idle")
+				setTelegraphVisible(actor.model, false, nil)
 			end
 		end)
 	end
@@ -710,10 +828,25 @@ function WorldService.syncActor(fighterId: string, transform: any): ()
 		lookVector = lookVector.Unit
 	end
 	local rootPosition = position + Vector3.new(0, actor.rootHeight, 0)
-	actor.model:PivotTo(CFrame.lookAt(rootPosition, rootPosition + lookVector))
 	local lastPosition = actor.lastPosition
-	actor.model:SetAttribute("Moving", lastPosition ~= nil and (position - lastPosition).Magnitude > 0.02)
+	local movedDistance = if lastPosition then (position - lastPosition).Magnitude else math.huge
+	local lastLookVector = actor.lastLookVector
+	local turned = lastLookVector == nil or lastLookVector:Dot(lookVector) < 0.9999
+	if movedDistance > 0.005 or turned then
+		local root = actor.model.PrimaryPart
+		if root then
+			-- Só a raiz ancorada se move; Motor6D.Transform continua exclusivamente
+			-- local. Evita PivotTo e replicação redundante em todo Heartbeat.
+			root.CFrame = CFrame.lookAt(rootPosition, rootPosition + lookVector)
+		end
+	end
+	local moving = movedDistance > 0.02
+	if actor.moving ~= moving then
+		actor.moving = moving
+		actor.model:SetAttribute("Moving", moving)
+	end
 	actor.lastPosition = position
+	actor.lastLookVector = lookVector
 end
 
 function WorldService.getAnchorPosition(anchorId: string): Vector3?

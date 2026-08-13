@@ -20,6 +20,7 @@ local CatalogService = require(Services.CatalogService)
 local CooldownService = require(Services.CooldownService)
 local CombatService = require(Services.CombatService)
 local EnemyService = require(Services.EnemyService)
+local InteractionService = require(Services.InteractionService)
 local PlayerSessionService = require(Services.PlayerSessionService)
 local SpatialService = require(Services.SpatialService)
 local StudioDebug = require(Services.StudioDebug)
@@ -37,6 +38,7 @@ local Abilities = require(ReplicatedStorage.Shared.Data.Abilities)
 local Characters = require(ReplicatedStorage.Shared.Data.Characters)
 local EnergyFamilies = require(ReplicatedStorage.Shared.Data.EnergyFamilies)
 local Geometry = require(ReplicatedStorage.Shared.Geometry)
+local Interactions = require(ReplicatedStorage.Shared.Data.Interactions)
 local Locale = require(ReplicatedStorage.Shared.Data.Locale)
 local Npcs = require(ReplicatedStorage.Shared.Data.Npcs)
 local Quests = require(ReplicatedStorage.Shared.Data.Quests)
@@ -59,6 +61,10 @@ print("[Bootstrap] catálogo validado")
 local presentationOk, presentationReason = WorldPresentation.validate()
 if not presentationOk then
 	error("catálogo de apresentação inválido: " .. (presentationReason or "unknown"))
+end
+local interactionsOk, interactionsReason = Interactions.validate()
+if not interactionsOk then
+	error("catálogo de interações inválido: " .. (interactionsReason or "unknown"))
 end
 
 ProgressionService.init()
@@ -517,6 +523,8 @@ EnemyService.init({
 					kind = event.kind,
 					targetId = event.targetId,
 					damage = event.damage,
+					durationSeconds = event.durationSeconds,
+					visualPattern = event.visualPattern,
 				})
 			end
 		end
@@ -655,39 +663,51 @@ RemoteGateway.onClientIntent(Remotes.Names.BasicAttackIntent, function(player: P
 	end
 end)
 
--- Aceite do objetivo no Instrutor do Limiar (docs/13 §10, §13).
-RemoteGateway.onClientIntent(Remotes.Names.InteractionIntent, function(player: Player, payload: { any })
-	if not requireReady(player) then
-		return
-	end
-	local npcId = payload.npcId
-	if type(npcId) == "string" then
-		QuestService.tryAcceptFromNpc(player.UserId, npcId, os.clock())
-		return
-	end
-	-- Item 11: consolidação no Marco de Retorno (docs/13 §11.1) — interagir
-	-- 1,5 s com `anchor_bastion_return` fora de combate move todo o XP não
-	-- consolidado para consolidado, com recibo idempotente.
-	local anchorId = payload.anchorId
-	if type(anchorId) == "string" and anchorId == "anchor_bastion_return" then
-		local resource = ResourceService.getState(player.UserId)
+-- Interação contextual F0: catálogo, posição e duração do hold são validados no
+-- servidor. O cliente não informa distância, recompensa ou quantidade de XP.
+InteractionService.init({
+	catalog = Interactions,
+	getAnchor = CatalogService.getAnchor,
+	getPlayerPosition = function(userId: number)
+		return SpatialService.getPosition(CombatService.playerFighterId(userId))
+	end,
+	onNpc = function(userId: number, npcId: string, now: number)
+		return QuestService.tryAcceptFromNpc(userId, npcId, now)
+	end,
+	onAnchor = function(userId: number, anchorId: string, now: number)
+		if anchorId ~= "anchor_bastion_return" then
+			return false, "unknown_target", nil
+		end
+		local resource = ResourceService.getState(userId)
 		if resource and resource.combat then
-			return
+			return false, "in_combat", nil
 		end
-		local receipt = ProgressionService.consolidate(player.UserId, os.clock())
-		if receipt then
-			SaveService.appendOperation(player.UserId, {
-				operationId = receipt.operationId,
-				kind = "consolidate",
-				amount = receipt.consolidated,
-				at = receipt.at,
-			})
-			SaveService.markDirty(player.UserId)
+		local receipt = ProgressionService.consolidate(userId, now)
+		if not receipt then
+			return false, "unknown_player", nil
+		end
+		SaveService.appendOperation(userId, {
+			operationId = receipt.operationId,
+			kind = "consolidate",
+			amount = receipt.consolidated,
+			at = receipt.at,
+		})
+		SaveService.markDirty(userId)
+		local player = game.Players:GetPlayerByUserId(userId)
+		local ledger = ProgressionService.getLedger(userId)
+		if player and ledger then
 			RemoteGateway.fireClient(player, Remotes.Names.StateDelta, {
-				unconsolidatedXp = ProgressionService.getUnconsolidatedXp(player.UserId),
-				consolidatedXp = ProgressionService.getLedger(player.UserId).consolidated,
+				unconsolidatedXp = ProgressionService.getUnconsolidatedXp(userId),
+				consolidatedXp = ledger.consolidated,
 			})
 		end
+		return true, nil, receipt
+	end,
+})
+
+RemoteGateway.onClientIntent(Remotes.Names.InteractionIntent, function(player: Player, payload: { any })
+	if requireReady(player) then
+		InteractionService.tryInteract(player.UserId, payload, os.clock())
 	end
 end)
 
@@ -815,6 +835,7 @@ game.Players.PlayerAdded:Connect(function(player: Player)
 end)
 game.Players.PlayerRemoving:Connect(function(player: Player)
 	SecurityService.clearPlayer(player.UserId)
+	InteractionService.clearPlayer(player.UserId)
 	sessionStartedAt[player.UserId] = nil
 	SpatialService.remove(CombatService.playerFighterId(player.UserId))
 	PlayerSessionService.onPlayerLeft(player)

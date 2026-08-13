@@ -13,6 +13,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Abilities = require(Shared.Data.Abilities)
 local Characters = require(Shared.Data.Characters)
 local Locale = require(Shared.Data.Locale)
+local Interactions = require(Shared.Data.Interactions)
 local WorldPresentation = require(Shared.Data.WorldPresentation)
 local RemoteEnvelope = require(Shared.RemoteEnvelope)
 local Remotes = require(Shared.Remotes)
@@ -20,6 +21,7 @@ local Remotes = require(Shared.Remotes)
 local Controllers = script:WaitForChild("Controllers")
 local Presentation = script:WaitForChild("Presentation")
 local InputController = require(Controllers.InputController)
+local InteractionController = require(Controllers.InteractionController)
 local CharacterController = require(Controllers.CharacterController)
 local AbilityController = require(Controllers.AbilityController)
 local CombatFeedbackController = require(Controllers.CombatFeedbackController)
@@ -28,6 +30,7 @@ local ZoneController = require(Controllers.ZoneController)
 local UIController = require(Controllers.UIController)
 local ClientState = require(Controllers.ClientState)
 local ActorAnimator = require(Presentation.ActorAnimator)
+local PlayerCombatAnimator = require(Presentation.PlayerCombatAnimator)
 
 local player = Players.LocalPlayer
 local state = ClientState.new(os.clock)
@@ -78,6 +81,24 @@ local actorAnimator = ActorAnimator.new({
 	runService = RunService,
 	recipes = WorldPresentation,
 	now = os.clock,
+})
+local playerCombatAnimator = PlayerCombatAnimator.new({
+	player = player,
+	runService = RunService,
+	now = os.clock,
+})
+InputController.subscribe(input, function(action: string, _payload: { [string]: any })
+	PlayerCombatAnimator.play(playerCombatAnimator, action)
+end)
+local interaction = InteractionController.new({
+	state = state,
+	input = input,
+	inputSubscribe = InputController.subscribe,
+	inputApi = InputController,
+	send = send,
+	workspace = Workspace,
+	locale = Locale,
+	catalog = Interactions,
 })
 local characterStarted = false
 
@@ -131,6 +152,8 @@ local ui = UIController.new({
 
 InputController.start(input, UserInputService)
 ActorAnimator.start(actorAnimator)
+PlayerCombatAnimator.start(playerCombatAnimator)
+InteractionController.start(interaction)
 
 -- Mantém referência forte e torna explícito que UI é o último controller.
 if not ui then

@@ -119,7 +119,7 @@ local RemoteContracts = {
 		name = REMOTES.InteractionIntent,
 		direction = "ClientToServer",
 		version = 2,
-		payload = "EnvelopeV2<{ npcId: string?, anchorId: string? }>",
+		payload = 'EnvelopeV2<{ npcId: string?, anchorId: string?, phase: "begin" | "complete" }>',
 	} :: NetworkContract,
 	-- Delta autoritativo de estado; carrega o tracker do objetivo e as flags.
 	[REMOTES.StateDelta] = {
@@ -134,7 +134,7 @@ local RemoteContracts = {
 		name = REMOTES.EnemyEvent,
 		direction = "ServerToClient",
 		version = 1,
-		payload = '{ fighterId: string, kind: "spawn" | "telegraph" | "attack" | "died" | "respawn", targetId: string?, damage: number? }',
+		payload = '{ fighterId: string, kind: "spawn" | "telegraph" | "attack" | "died" | "respawn", targetId: string?, damage: number?, durationSeconds: number?, visualPattern: "arrival" | "strike" | "combo" | "slam" | "collapse"? }',
 	} :: NetworkContract,
 }
 

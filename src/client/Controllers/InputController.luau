@@ -13,6 +13,7 @@ export type SemanticAction =
 	| "Ability3"
 	| "ZoneHoldDown"
 	| "ZoneHoldUp"
+	| "Interact"
 	| "ToggleLock"
 
 export type Controller = {
@@ -32,6 +33,7 @@ local NON_COMBAT: { [string]: boolean } = {
 	ToggleLock = true,
 	ZoneHoldDown = true,
 	ZoneHoldUp = true,
+	Interact = true,
 }
 
 local InputController = {}

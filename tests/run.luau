@@ -60,7 +60,9 @@ local EnemyService = require("../src/server/Services/EnemyService")
 local ClientState = require("../src/client/Controllers/ClientState")
 local InputController = require("../src/client/Controllers/InputController")
 local CharacterController = require("../src/client/Controllers/CharacterController")
+local InteractionController = require("../src/client/Controllers/InteractionController")
 local ActorAnimator = require("../src/client/Presentation/ActorAnimator")
+local PlayerCombatAnimator = require("../src/client/Presentation/PlayerCombatAnimator")
 local AbilityController = require("../src/client/Controllers/AbilityController")
 local CombatFeedbackController = require("../src/client/Controllers/CombatFeedbackController")
 local ResourceController = require("../src/client/Controllers/ResourceController")
@@ -68,11 +70,22 @@ local ZoneController = require("../src/client/Controllers/ZoneController")
 local SecurityService = require("../src/server/Services/SecurityService")
 local TelemetryService = require("../src/server/Services/TelemetryService")
 local StudioDebug = require("../src/server/Services/StudioDebug")
+local InteractionService = require("../src/server/Services/InteractionService")
+local Interactions = require("../src/shared/Data/Interactions")
 
 test("bootstrap: serviços são filhos do Script Server gerado pelo Rojo", function()
 	local source = fs.readFile("src/server/init.server.lua")
 	assertTrue(source:find('local Services = script:WaitForChild("Services")', 1, true) ~= nil, "raiz de Services")
 	assertTrue(source:find("script.Parent.Services", 1, true) == nil, "não procura Services em ServerScriptService")
+end)
+
+test("greybox: WorldService gera piso para cada volume canônico de zona", function()
+	local source = fs.readFile("src/server/Services/WorldService.luau")
+	assertTrue(source:find("for _, zone in zones.all() do", 1, true) ~= nil, "itera todas as zonas")
+	assertTrue(source:find("for index, box in zone.volumes do", 1, true) ~= nil, "itera todos os volumes")
+	assertTrue(source:find("box.max.x - box.min.x", 1, true) ~= nil, "largura vem do volume")
+	assertTrue(source:find("box.max.z - box.min.z", 1, true) ~= nil, "profundidade vem do volume")
+	assertTrue(source:find('floor:SetAttribute("ZoneId", zone.id)', 1, true) ~= nil, "piso rastreável")
 end)
 
 test("apresentação: quatro atores e estilo do mundo passam validação", function()
@@ -469,6 +482,170 @@ test("cliente: Locale cobre todo texto do HUD F0 em PT-BR e EN", function()
 	end
 end)
 
+test("apresentação: jogador tem antecipação, impacto, guarda e recuperação puramente visuais", function()
+	local lightWindup = PlayerCombatAnimator.sample("BasicLight", 0.065, false)
+	local lightStrike = PlayerCombatAnimator.sample("BasicLight", 0.135, false)
+	local heavyStrike = PlayerCombatAnimator.sample("BasicHeavy", 0.285, false)
+	local recovered = PlayerCombatAnimator.sample("BasicHeavy", PlayerCombatAnimator.Durations.BasicHeavy, false)
+	local guard = PlayerCombatAnimator.sample(nil, 0, true)
+	assertTrue(lightWindup.rootYawDegrees < 0, "leve antecipa para um lado")
+	assertTrue(lightStrike.rootYawDegrees > 0, "leve cruza no impacto")
+	assertTrue(
+		math.abs(heavyStrike.rightShoulderPitchDegrees) > math.abs(lightStrike.rightShoulderPitchDegrees),
+		"pesado tem mais compromisso visual"
+	)
+	assertEq(recovered.rootYawDegrees, 0, "recupera para neutro")
+	assertTrue(guard.leftShoulderPitchDegrees < -40, "guarda fecha a silhueta")
+end)
+
+test("interação: catálogo fecha Instrutor e Marco com texto localizado", function()
+	local ok, reason = Interactions.validate()
+	assertTrue(ok, reason)
+	local instructor = Interactions.getByNpc("npc_threshold_instructor")
+	local returnMarker = Interactions.getByAnchor("anchor_bastion_return")
+	assertTrue(instructor ~= nil, "Instrutor allowlisted")
+	assertTrue(returnMarker ~= nil, "Marco allowlisted")
+	if instructor and returnMarker then
+		assertEq(instructor.anchorId, "anchor_instructor", "posição canônica do Instrutor")
+		assertEq(instructor.holdDuration, 0, "conversa imediata")
+		assertEq(returnMarker.holdDuration, 1.5, "hold do Marco")
+		for _, definition in { instructor, returnMarker } do
+			assertTrue(Locale.hasKey(definition.actionTextKey), "ação localizada")
+			assertTrue(Locale.hasKey(definition.objectTextKey), "objeto localizado")
+			assertTrue(Zones.getAnchor(definition.anchorId) ~= nil, "âncora conhecida")
+		end
+	end
+end)
+
+test("cliente: interação respeita ready e envia somente alvo e fase sem recompensa", function()
+	local state = ClientState.new(clockNow)
+	local input = InputController.new(state, clockNow)
+	local sent: { any } = {}
+	InteractionController.new({
+		state = state,
+		input = input,
+		inputSubscribe = InputController.subscribe,
+		inputApi = InputController,
+		send = function(remoteName: string, action: string, payload: { [string]: any })
+			table.insert(sent, { remoteName = remoteName, action = action, payload = payload })
+		end,
+		workspace = {},
+		locale = Locale,
+		catalog = Interactions,
+	})
+	local beforeReady, beforeReason = InputController.dispatch(input, "Interact", {
+		npcId = "npc_threshold_instructor",
+		phase = "complete",
+	})
+	assertFalse(beforeReady, "não envia no boot")
+	assertEq(beforeReason, "not_ready", "gate SLICE-DEC-005")
+	ClientState.applySnapshot(state, { ready = true })
+	assertTrue(
+		InputController.dispatch(input, "Interact", {
+			npcId = "npc_threshold_instructor",
+			phase = "complete",
+		}),
+		"envia após snapshot"
+	)
+	assertEq(#sent, 1, "uma intenção")
+	assertEq(sent[1].remoteName, "InteractionIntent", "remote existente")
+	assertEq(sent[1].payload.npcId, "npc_threshold_instructor", "alvo semântico")
+	assertEq(sent[1].payload.phase, "complete", "fase explícita")
+	assertEq(sent[1].payload.anchorId, nil, "payload exclusivo")
+	assertEq(sent[1].payload.reward, nil, "sem recompensa declarada")
+end)
+
+local function makeInteractionDeps(position: any, calls: { any })
+	return {
+		catalog = Interactions,
+		getAnchor = Zones.getAnchor,
+		getPlayerPosition = function(_userId: number)
+			return position.value
+		end,
+		onNpc = function(userId: number, targetId: string, at: number)
+			table.insert(calls, { userId = userId, targetId = targetId, at = at })
+			return true, nil, { accepted = true }
+		end,
+		onAnchor = function(userId: number, targetId: string, at: number)
+			table.insert(calls, { userId = userId, targetId = targetId, at = at })
+			return true, nil, { consolidated = 25 }
+		end,
+	}
+end
+
+test("interação: Instrutor exige alvo conhecido e proximidade autoritativa", function()
+	local position = { value = { x = 20, y = 0, z = -14 } }
+	local calls: { any } = {}
+	InteractionService.init(makeInteractionDeps(position, calls))
+	local unknown = InteractionService.tryInteract(600, { npcId = "npc_spoof", phase = "complete" }, 10)
+	assertFalse(unknown.ok, "alvo inventado recusado")
+	assertEq(unknown.reason, "unknown_target", "motivo")
+	local ambiguous = InteractionService.tryInteract(600, {
+		npcId = "npc_threshold_instructor",
+		anchorId = "anchor_bastion_return",
+		phase = "complete",
+	}, 10)
+	assertFalse(ambiguous.ok, "alvo ambíguo recusado")
+	position.value = { x = 35, y = 0, z = -14 }
+	local far = InteractionService.tryInteract(600, { npcId = "npc_threshold_instructor", phase = "complete" }, 10)
+	assertFalse(far.ok, "fora do alcance")
+	assertEq(far.reason, "too_far", "distância no servidor")
+	position.value = { x = 20, y = 0, z = -14 }
+	local accepted = InteractionService.tryInteract(600, {
+		npcId = "npc_threshold_instructor",
+		phase = "complete",
+	}, 10)
+	assertTrue(accepted.ok, "próximo aceita")
+	assertEq(#calls, 1, "domínio chamado uma vez")
+end)
+
+test("interação: Marco mede hold 1,5 s no relógio do servidor", function()
+	local position = { value = { x = 0, y = 0, z = 12 } }
+	local calls: { any } = {}
+	InteractionService.init(makeInteractionDeps(position, calls))
+	local payload = { anchorId = "anchor_bastion_return", phase = "complete" }
+	local withoutBegin = InteractionService.tryInteract(601, payload, 20)
+	assertFalse(withoutBegin.ok, "complete isolado recusa")
+	assertEq(withoutBegin.reason, "hold_required", "begin obrigatório")
+	local began = InteractionService.tryInteract(601, { anchorId = "anchor_bastion_return", phase = "begin" }, 20)
+	assertTrue(began.ok, "inicia hold")
+	local early = InteractionService.tryInteract(601, payload, 21.49)
+	assertFalse(early.ok, "cliente não autoriza janela")
+	assertEq(early.reason, "hold_incomplete", "faltou tempo")
+	local completed = InteractionService.tryInteract(601, payload, 21.5)
+	assertTrue(completed.ok, "servidor confirmou 1,5 s")
+	assertEq(#calls, 1, "consolida uma vez")
+end)
+
+test("interação: Marco revalida distância ao completar e limpa pending no leave", function()
+	local position = { value = { x = 0, y = 0, z = 12 } }
+	local calls: { any } = {}
+	InteractionService.init(makeInteractionDeps(position, calls))
+	assertTrue(
+		InteractionService.tryInteract(602, {
+			anchorId = "anchor_bastion_return",
+			phase = "begin",
+		}, 30).ok,
+		"hold inicia perto"
+	)
+	position.value = { x = 30, y = 0, z = 12 }
+	local escaped = InteractionService.tryInteract(602, {
+		anchorId = "anchor_bastion_return",
+		phase = "complete",
+	}, 31.5)
+	assertFalse(escaped.ok, "afastou antes de concluir")
+	assertEq(escaped.reason, "too_far", "alcance final autoritativo")
+	position.value = { x = 0, y = 0, z = 12 }
+	InteractionService.tryInteract(602, { anchorId = "anchor_bastion_return", phase = "begin" }, 40)
+	InteractionService.clearPlayer(602)
+	local afterLeave = InteractionService.tryInteract(602, {
+		anchorId = "anchor_bastion_return",
+		phase = "complete",
+	}, 42)
+	assertEq(afterLeave.reason, "hold_required", "pending não atravessa sessão")
+	assertEq(#calls, 0, "nenhum efeito")
+end)
+
 test("telemetria: aceita só evento e campos allowlisted", function()
 	local emitted: { any } = {}
 	TelemetryService.init({
@@ -635,8 +812,12 @@ test("segurança: limita combate a 8/s sem consumir interações", function()
 	local payload, reason = SecurityService.inspect(53, "BasicAttackIntent", ninth)
 	assertEq(payload, nil, "nona intenção descartada")
 	assertEq(reason, "rate_limited", "motivo")
-	local interaction =
-		RemoteEnvelope.create("InteractionIntent", { npcId = "npc_threshold_instructor" }, "interaction", 10)
+	local interaction = RemoteEnvelope.create(
+		"InteractionIntent",
+		{ npcId = "npc_threshold_instructor", phase = "complete" },
+		"interaction",
+		10
+	)
 	local allowed = SecurityService.inspect(53, "InteractionIntent", interaction)
 	assertTrue(allowed ~= nil, "orçamento default separado")
 	currentNow += 1
@@ -656,6 +837,7 @@ test("segurança: rejeita vetor impossível, NaN e payload ambíguo", function()
 	local ambiguous = RemoteEnvelope.create("InteractionIntent", {
 		npcId = "npc_threshold_instructor",
 		anchorId = "anchor_bastion_return",
+		phase = "complete",
 	}, "interaction-2", 3)
 	assertEq(SecurityService.inspect(54, "InteractionIntent", ambiguous), nil, "interação ambígua descartada")
 end)
@@ -1713,11 +1895,12 @@ test("dados: 3 zonas, PvP só na livre, âncoras da spec, spawn no bastião", fu
 			assertEq(zone.id, "zone_plain_free", "PvP só na planície")
 		end
 	end
-	-- 6 âncoras persistidas de §8.3 + os 6 pontos de Estilhaço de §8.1.
+	-- 7 âncoras persistidas de §8.3 + os 6 pontos de Estilhaço de §8.1.
 	local required = {
 		"anchor_bastion_spawn",
 		"anchor_bastion_return",
 		"anchor_training",
+		"anchor_instructor",
 		"anchor_gate_north",
 		"anchor_gate_west",
 		"anchor_elite",
@@ -2387,6 +2570,7 @@ test("dados: InteractionIntent C→S e StateDelta S→C", function()
 		assertEq(interaction.direction, "ClientToServer", "direção")
 		assertEq(interaction.version, 2, "versão")
 		assertTrue(interaction.payload:find("npcId") ~= nil, "payload com npcId")
+		assertTrue(interaction.payload:find("phase") ~= nil, "hold com fase autoritativa")
 		assertFalse(interaction.payload:find("reward") ~= nil, "cliente não informa recompensa")
 	end
 	local delta = Remotes.Contracts.get(Remotes.Names.StateDelta)
@@ -2917,6 +3101,8 @@ test("dados: EnemyEvent registrado como remote S→C", function()
 		assertEq(contract.direction, "ServerToClient", "direção")
 		assertEq(contract.version, 1, "versão")
 		assertTrue(contract.payload:find("telegraph") ~= nil, "payload com telegraph")
+		assertTrue(contract.payload:find("durationSeconds") ~= nil, "timing visual declarado pelo servidor")
+		assertTrue(contract.payload:find("visualPattern") ~= nil, "padrão visual sem autoridade de dano")
 	end
 end)
 
