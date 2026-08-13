@@ -73,7 +73,7 @@ local RemoteContracts = {
 		name = REMOTES.CombatEvent,
 		direction = "ServerToClient",
 		version = 3,
-		payload = '{ executionId: string?, abilityId: string, targetId: string?, damage: number?, '
+		payload = "{ executionId: string?, abilityId: string, targetId: string?, damage: number?, "
 			.. 'outcome: "hit" | "guard" | "death" | "counter" }',
 	} :: NetworkContract,
 	[REMOTES.PlayerDied] = {
