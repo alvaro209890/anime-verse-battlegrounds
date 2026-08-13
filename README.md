@@ -3,8 +3,8 @@
 RPG / Action RPG de mundo aberto no Roblox (Luau) — combate estilo battlegrounds com
 progressão persistente, loadout customizável e ressonância de famílias de energia.
 
-> **Status em 2026-08-13 (18h):** itens 1–13 do backlog F0 fechados em código/headless, mais MENU/configurações, mira soltável, golpe com número de dano e, nesta rodada, **combate conectando de verdade**: toque/clique = golpe leve (botão de ataque removido da HUD), **corpo vira para a mira antes do golpe** (o servidor lê o look replicado), **aquisição de alvo em cone** no lugar da esfera (a esfera mediava centro-a-centro e o golpe passava a 11 studs), **reconciliação de zona** (quem já está fisicamente na planície é da planície — acabou o estado fantasma z=−100), **tempos de clipe medidos no Studio** (slash 0,5 s / lunge 1,5 s) com corte por fade no fim da ação, e **skins dos 2 personagens do spawn com assets**: boneco de treino em couro com bullseye/madeira e instrutor como mensageiro do Limiar (casaco escuro, capuz com energia umbral). **Cabeças corrigidas:** mesh humanoide do Roblox + rosto (anime no instrutor, clássico no dummy) no lugar das esferas lisas.
-> **Runtime:** o Play roda com os dois atores do spawn na skin nova e com rosto. Correções da rodada anterior seguem valendo: chegue no vão do portão norte e **SEGURE E**.
+> **Status em 2026-08-13 (17h):** itens 1–13 do backlog F0 fechados em código/headless. **Skins do spawn:** Instrutor do Limiar com cabeça visível, rosto em peças, capuz, cabelo e casaco umbral; dummy de treino com cabeça, palha, alvo de três anéis e poste. As cabeças anteriores usavam um FileMesh que não carregava (NPCs sem cabeça) e nasciam de costas para a praça.
+> **Runtime:** pare o Play e rode de novo para recarregar o `WorldService`. Correções da rodada anterior seguem valendo: chegue no vão do portão norte e **SEGURE E**.
 
 ## Estado comprovado
 

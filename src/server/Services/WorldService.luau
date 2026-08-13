@@ -208,6 +208,358 @@ local function setActorVisible(model: Model, visible: boolean): ()
 	end
 end
 
+local HAIR_COLOR = Color3.fromRGB(24, 22, 34)
+local EYE_WHITE = Color3.fromRGB(250, 248, 255)
+local PUPIL_COLOR = Color3.fromRGB(16, 12, 24)
+local STRAW_COLOR = Color3.fromRGB(201, 172, 92)
+local WOOD_COLOR = Color3.fromRGB(96, 70, 40)
+local STITCH_COLOR = Color3.fromRGB(42, 36, 32)
+local PLAZA = Vector3.new(0, 0, 20)
+
+local function makeBall(name: string, size: Vector3, color: Color3, material: Enum.Material): BasePart
+	local part = makeVisualPart("Part", name, size, color, material)
+	part.Shape = Enum.PartType.Ball
+	return part
+end
+
+-- Humanoides estáticos olham para a praça: senão o jogador vê as costas e
+-- o "peito" vira as costas do modelo (Front = −Z).
+local function plazaLookCFrame(position: Vector3, rootHeight: number): CFrame
+	local rootPos = position + Vector3.new(0, rootHeight, 0)
+	local toPlaza = Vector3.new(PLAZA.X - position.X, 0, PLAZA.Z - position.Z)
+	local look = if toPlaza.Magnitude > 1e-3 then toPlaza.Unit else Vector3.new(0, 0, 1)
+	return CFrame.lookAt(rootPos, rootPos + look)
+end
+
+local function dressInstructorFace(head: BasePart, scale: number, irisColor: Color3): ()
+	local function eye(name: string, x: number, joint: string)
+		local white = makeBall(name, Vector3.new(0.36, 0.42, 0.18) * scale, EYE_WHITE, Enum.Material.SmoothPlastic)
+		attach(head, white, CFrame.new(x * scale, 0.12 * scale, -0.66 * scale), joint)
+		local iris = makeBall(name .. "Iris", Vector3.new(0.22, 0.28, 0.12) * scale, irisColor, Enum.Material.Neon)
+		attach(white, iris, CFrame.new(0, 0, -0.06 * scale), joint .. "Iris")
+		local pupil =
+			makeBall(name .. "Pupil", Vector3.new(0.1, 0.14, 0.08) * scale, PUPIL_COLOR, Enum.Material.SmoothPlastic)
+		attach(iris, pupil, CFrame.new(0, 0, -0.04 * scale), joint .. "Pupil")
+	end
+	eye("EyeL", -0.28, "Joint_EyeL")
+	eye("EyeR", 0.28, "Joint_EyeR")
+
+	local browL =
+		makeVisualPart("Part", "Brow", Vector3.new(0.4, 0.08, 0.1) * scale, HAIR_COLOR, Enum.Material.SmoothPlastic)
+	attach(
+		head,
+		browL,
+		CFrame.new(-0.28 * scale, 0.38 * scale, -0.64 * scale) * CFrame.Angles(0, 0, math.rad(10)),
+		"Joint_BrowL"
+	)
+	local browR = browL:Clone()
+	browR.Name = "Brow"
+	attach(
+		head,
+		browR,
+		CFrame.new(0.28 * scale, 0.38 * scale, -0.64 * scale) * CFrame.Angles(0, 0, math.rad(-10)),
+		"Joint_BrowR"
+	)
+
+	local mouth = makeVisualPart(
+		"Part",
+		"Mouth",
+		Vector3.new(0.34, 0.07, 0.08) * scale,
+		Color3.fromRGB(92, 72, 90),
+		Enum.Material.SmoothPlastic
+	)
+	attach(head, mouth, CFrame.new(0, -0.3 * scale, -0.68 * scale), "Joint_Mouth")
+end
+
+local function dressDummyFace(head: BasePart, scale: number): ()
+	local function button(name: string, x: number, joint: string)
+		local eye = makeBall(name, Vector3.new(0.3, 0.3, 0.16) * scale, STITCH_COLOR, Enum.Material.SmoothPlastic)
+		attach(head, eye, CFrame.new(x * scale, 0.12 * scale, -0.68 * scale), joint)
+		local glint =
+			makeBall(name .. "Glint", Vector3.new(0.1, 0.1, 0.06) * scale, EYE_WHITE, Enum.Material.SmoothPlastic)
+		attach(eye, glint, CFrame.new(-0.05 * scale, 0.05 * scale, -0.06 * scale), joint .. "Glint")
+	end
+	button("EyeL", -0.3, "Joint_EyeL")
+	button("EyeR", 0.3, "Joint_EyeR")
+
+	local mouth =
+		makeVisualPart("Part", "Mouth", Vector3.new(0.46, 0.09, 0.09) * scale, STITCH_COLOR, Enum.Material.Fabric)
+	attach(head, mouth, CFrame.new(0, -0.3 * scale, -0.7 * scale), "Joint_Mouth")
+end
+
+local function dressThresholdInstructor(
+	torso: BasePart,
+	head: BasePart,
+	leftArm: BasePart,
+	rightArm: BasePart,
+	leftLeg: BasePart,
+	rightLeg: BasePart,
+	scale: number,
+	bodyColor: Color3,
+	accentColor: Color3,
+	coreColor: Color3
+): ()
+	torso.Material = Enum.Material.Fabric
+	leftArm.Material = Enum.Material.Leather
+	rightArm.Material = Enum.Material.Leather
+	leftLeg.Material = Enum.Material.Leather
+	rightLeg.Material = Enum.Material.Leather
+
+	dressInstructorFace(head, scale, accentColor)
+
+	local hairCap = makeBall("HairCap", Vector3.new(1.62, 1.05, 1.48) * scale, HAIR_COLOR, Enum.Material.Fabric)
+	attach(head, hairCap, CFrame.new(0, 0.4 * scale, 0.1 * scale), "Joint_HairCap")
+	local bangL =
+		makeVisualPart("WedgePart", "Bang", Vector3.new(0.42, 0.55, 0.32) * scale, HAIR_COLOR, Enum.Material.Fabric)
+	attach(
+		head,
+		bangL,
+		CFrame.new(-0.38 * scale, 0.48 * scale, -0.52 * scale) * CFrame.Angles(math.rad(-22), math.rad(-20), 0),
+		"Joint_BangL"
+	)
+	local bangR = bangL:Clone()
+	bangR.Name = "Bang"
+	attach(
+		head,
+		bangR,
+		CFrame.new(0.38 * scale, 0.48 * scale, -0.52 * scale) * CFrame.Angles(math.rad(-22), math.rad(20), 0),
+		"Joint_BangR"
+	)
+	local bangM =
+		makeVisualPart("WedgePart", "Bang", Vector3.new(0.36, 0.4, 0.26) * scale, HAIR_COLOR, Enum.Material.Fabric)
+	attach(head, bangM, CFrame.new(0, 0.55 * scale, -0.55 * scale) * CFrame.Angles(math.rad(-30), 0, 0), "Joint_BangM")
+
+	-- Capuz em volta da cabeça, abertura na Frente (−Z) para o rosto aparecer.
+	local hoodBack =
+		makeVisualPart("Part", "HoodBack", Vector3.new(1.78, 1.6, 0.72) * scale, accentColor, Enum.Material.Leather)
+	attach(head, hoodBack, CFrame.new(0, 0.22 * scale, 0.58 * scale), "Joint_HoodBack")
+	local hoodTop =
+		makeVisualPart("Part", "HoodTop", Vector3.new(1.72, 0.48, 1.58) * scale, accentColor, Enum.Material.Leather)
+	attach(head, hoodTop, CFrame.new(0, 0.82 * scale, 0.14 * scale), "Joint_HoodTop")
+	local hoodL =
+		makeVisualPart("Part", "HoodSide", Vector3.new(0.36, 1.48, 1.32) * scale, accentColor, Enum.Material.Leather)
+	attach(head, hoodL, CFrame.new(-0.86 * scale, 0.2 * scale, 0.1 * scale), "Joint_HoodL")
+	local hoodR = hoodL:Clone()
+	hoodR.Name = "HoodSide"
+	attach(head, hoodR, CFrame.new(0.86 * scale, 0.2 * scale, 0.1 * scale), "Joint_HoodR")
+	local hoodRim =
+		makeVisualPart("Part", "HoodRim", Vector3.new(1.74, 0.12, 1.38) * scale, accentColor, Enum.Material.Neon)
+	attach(head, hoodRim, CFrame.new(0, 0.74 * scale, -0.28 * scale), "Joint_HoodRim")
+
+	local collar =
+		makeVisualPart("Part", "Collar", Vector3.new(1.42, 0.36, 1.12) * scale, bodyColor, Enum.Material.Fabric)
+	attach(torso, collar, CFrame.new(0, 1.22 * scale, 0), "Joint_Collar")
+	local collarTrim =
+		makeVisualPart("Part", "CollarTrim", Vector3.new(1.5, 0.1, 1.2) * scale, accentColor, Enum.Material.Neon)
+	attach(collar, collarTrim, CFrame.new(0, 0.16 * scale, 0), "Joint_CollarTrim")
+
+	local shoulderL =
+		makeVisualPart("Part", "Shoulder", Vector3.new(1.18, 0.52, 1.42) * scale, bodyColor, Enum.Material.Fabric)
+	attach(
+		torso,
+		shoulderL,
+		CFrame.new(-1.22 * scale, 1.02 * scale, 0) * CFrame.Angles(0, 0, math.rad(14)),
+		"Joint_ShoulderL"
+	)
+	local shoulderR = shoulderL:Clone()
+	shoulderR.Name = "Shoulder"
+	attach(
+		torso,
+		shoulderR,
+		CFrame.new(1.22 * scale, 1.02 * scale, 0) * CFrame.Angles(0, 0, math.rad(-14)),
+		"Joint_ShoulderR"
+	)
+	local pauldronL =
+		makeVisualPart("Part", "Pauldron", Vector3.new(1.08, 0.18, 1.5) * scale, accentColor, Enum.Material.Neon)
+	attach(shoulderL, pauldronL, CFrame.new(0, 0.3 * scale, 0), "Joint_PauldronL")
+	local pauldronR = pauldronL:Clone()
+	pauldronR.Name = "Pauldron"
+	attach(shoulderR, pauldronR, CFrame.new(0, 0.3 * scale, 0), "Joint_PauldronR")
+
+	local sleeveL =
+		makeVisualPart("Part", "Sleeve", Vector3.new(0.98, 1.2, 0.98) * scale, bodyColor, Enum.Material.Fabric)
+	attach(leftArm, sleeveL, CFrame.new(0, 0.42 * scale, 0), "Joint_SleeveL")
+	local sleeveR = sleeveL:Clone()
+	sleeveR.Name = "Sleeve"
+	attach(rightArm, sleeveR, CFrame.new(0, 0.42 * scale, 0), "Joint_SleeveR")
+
+	local coatBottom =
+		makeVisualPart("Part", "CoatBottom", Vector3.new(2.55, 1.2, 1.4) * scale, bodyColor, Enum.Material.Fabric)
+	attach(torso, coatBottom, CFrame.new(0, -1.35 * scale, 0.08 * scale), "Joint_CoatBottom")
+	local hem = makeVisualPart("Part", "Hem", Vector3.new(2.62, 0.16, 1.46) * scale, accentColor, Enum.Material.Neon)
+	attach(torso, hem, CFrame.new(0, -1.9 * scale, 0.08 * scale), "Joint_Hem")
+	local tailL =
+		makeVisualPart("Part", "CoatTail", Vector3.new(1.12, 1.95, 0.42) * scale, bodyColor, Enum.Material.Fabric)
+	attach(
+		torso,
+		tailL,
+		CFrame.new(-0.52 * scale, -1.78 * scale, 0.58 * scale) * CFrame.Angles(math.rad(16), 0, math.rad(-6)),
+		"Joint_CoatTailL"
+	)
+	local tailR = tailL:Clone()
+	tailR.Name = "CoatTail"
+	attach(
+		torso,
+		tailR,
+		CFrame.new(0.52 * scale, -1.78 * scale, 0.58 * scale) * CFrame.Angles(math.rad(16), 0, math.rad(6)),
+		"Joint_CoatTailR"
+	)
+
+	local emblem =
+		makeVisualPart("Part", "Emblem", Vector3.new(0.58, 0.72, 0.16) * scale, accentColor, Enum.Material.Neon)
+	attach(torso, emblem, CFrame.new(0, 0.38 * scale, -0.64 * scale), "Joint_Emblem")
+	local emblemCore =
+		makeVisualPart("Part", "EmblemCore", Vector3.new(0.28, 0.28, 0.12) * scale, coreColor, Enum.Material.Neon)
+	attach(emblem, emblemCore, CFrame.new(0, 0, -0.05 * scale), "Joint_EmblemCore")
+
+	local belt = makeVisualPart("Part", "Belt", Vector3.new(1.78, 0.34, 1.28) * scale, accentColor, Enum.Material.Neon)
+	attach(torso, belt, CFrame.new(0, -0.55 * scale, 0), "Joint_Belt")
+	local buckle =
+		makeVisualPart("Part", "Buckle", Vector3.new(0.42, 0.48, 0.18) * scale, coreColor, Enum.Material.Neon)
+	attach(belt, buckle, CFrame.new(0, 0, -0.72 * scale), "Joint_Buckle")
+
+	local cuffL = makeVisualPart("Part", "Cuff", Vector3.new(0.86, 0.22, 0.86) * scale, accentColor, Enum.Material.Neon)
+	attach(leftArm, cuffL, CFrame.new(0, -0.82 * scale, 0), "Joint_CuffL")
+	local cuffR = cuffL:Clone()
+	cuffR.Name = "Cuff"
+	attach(rightArm, cuffR, CFrame.new(0, -0.82 * scale, 0), "Joint_CuffR")
+	local handL = makeVisualPart("Part", "Hand", Vector3.new(0.74, 0.36, 0.74) * scale, bodyColor, Enum.Material.Fabric)
+	attach(leftArm, handL, CFrame.new(0, -1.08 * scale, 0), "Joint_HandL")
+	local handR = handL:Clone()
+	handR.Name = "Hand"
+	attach(rightArm, handR, CFrame.new(0, -1.08 * scale, 0), "Joint_HandR")
+
+	local bootL =
+		makeVisualPart("Part", "Boot", Vector3.new(1.02, 0.62, 1.18) * scale, bodyColor, Enum.Material.Leather)
+	attach(leftLeg, bootL, CFrame.new(0, -0.95 * scale, -0.08 * scale), "Joint_BootL")
+	local bootR = bootL:Clone()
+	bootR.Name = "Boot"
+	attach(rightLeg, bootR, CFrame.new(0, -0.95 * scale, -0.08 * scale), "Joint_BootR")
+end
+
+local function dressTrainingDummy(
+	root: BasePart,
+	torso: BasePart,
+	head: BasePart,
+	leftArm: BasePart,
+	rightArm: BasePart,
+	leftLeg: BasePart,
+	rightLeg: BasePart,
+	scale: number,
+	_bodyColor: Color3,
+	accentColor: Color3,
+	coreColor: Color3
+): ()
+	torso.Material = Enum.Material.Leather
+	leftLeg.Material = Enum.Material.Leather
+	rightLeg.Material = Enum.Material.Leather
+	leftArm.Material = Enum.Material.Leather
+	rightArm.Material = Enum.Material.Leather
+
+	local model = root.Parent
+	local neck = if model then model:FindFirstChild("Neck") else nil
+	if neck and neck:IsA("BasePart") then
+		neck.Material = Enum.Material.Wood
+		neck.Color = WOOD_COLOR
+	end
+
+	dressDummyFace(head, scale)
+
+	local tuftL =
+		makeVisualPart("WedgePart", "Straw", Vector3.new(0.3, 0.72, 0.24) * scale, STRAW_COLOR, Enum.Material.Grass)
+	attach(
+		head,
+		tuftL,
+		CFrame.new(-0.4 * scale, 0.78 * scale, -0.12 * scale) * CFrame.Angles(0, math.rad(-12), math.rad(-22)),
+		"Joint_StrawL"
+	)
+	local tuftR = tuftL:Clone()
+	tuftR.Name = "Straw"
+	attach(
+		head,
+		tuftR,
+		CFrame.new(0.4 * scale, 0.78 * scale, -0.12 * scale) * CFrame.Angles(0, math.rad(12), math.rad(22)),
+		"Joint_StrawR"
+	)
+	local tuftM =
+		makeVisualPart("WedgePart", "Straw", Vector3.new(0.28, 0.62, 0.22) * scale, STRAW_COLOR, Enum.Material.Grass)
+	attach(head, tuftM, CFrame.new(0, 0.88 * scale, 0.05 * scale) * CFrame.Angles(math.rad(-8), 0, 0), "Joint_StrawM")
+
+	local stitchA =
+		makeVisualPart("Part", "Stitch", Vector3.new(0.1, 1.15, 0.1) * scale, STITCH_COLOR, Enum.Material.Fabric)
+	attach(
+		torso,
+		stitchA,
+		CFrame.new(-0.35 * scale, 0.15 * scale, -0.56 * scale) * CFrame.Angles(0, 0, math.rad(18)),
+		"Joint_StitchA"
+	)
+	local stitchB = stitchA:Clone()
+	stitchB.Name = "Stitch"
+	attach(
+		torso,
+		stitchB,
+		CFrame.new(0.35 * scale, 0.05 * scale, -0.56 * scale) * CFrame.Angles(0, 0, math.rad(-16)),
+		"Joint_StitchB"
+	)
+
+	local belt =
+		makeVisualPart("Part", "Belt", Vector3.new(1.78, 0.36, 1.28) * scale, accentColor, Enum.Material.Leather)
+	attach(torso, belt, CFrame.new(0, -0.75 * scale, 0), "Joint_Belt")
+	local buckle =
+		makeVisualPart("Part", "Buckle", Vector3.new(0.4, 0.44, 0.16) * scale, WOOD_COLOR, Enum.Material.Wood)
+	attach(belt, buckle, CFrame.new(0, 0, -0.7 * scale), "Joint_Buckle")
+
+	local wrapLeft =
+		makeVisualPart("Part", "Wrap", Vector3.new(0.82, 0.72, 0.82) * scale, coreColor, Enum.Material.Fabric)
+	attach(leftArm, wrapLeft, CFrame.new(0, -0.55 * scale, 0), "Joint_WrapLeft")
+	local wrapRight = wrapLeft:Clone()
+	wrapRight.Name = "Wrap"
+	attach(rightArm, wrapRight, CFrame.new(0, -0.55 * scale, 0), "Joint_WrapRight")
+
+	local bootLeft =
+		makeVisualPart("Part", "Boot", Vector3.new(0.98, 0.58, 1.1) * scale, accentColor, Enum.Material.Leather)
+	attach(leftLeg, bootLeft, CFrame.new(0, -0.85 * scale, -0.06 * scale), "Joint_BootLeft")
+	local bootRight = bootLeft:Clone()
+	bootRight.Name = "Boot"
+	attach(rightLeg, bootRight, CFrame.new(0, -0.85 * scale, -0.06 * scale), "Joint_BootRight")
+
+	-- Disco no peito (eixo do Cylinder = X; yaw 90° aponta a face para a Frente).
+	local target =
+		makeVisualPart("Part", "Target", Vector3.new(0.16, 1.2, 1.2) * scale, coreColor, Enum.Material.SmoothPlastic)
+	target.Shape = Enum.PartType.Cylinder
+	attach(
+		torso,
+		target,
+		CFrame.new(0, 0.22 * scale, -0.64 * scale) * CFrame.Angles(0, math.rad(90), 0),
+		"Joint_Target"
+	)
+	local ring = makeVisualPart(
+		"Part",
+		"Ring",
+		Vector3.new(0.18, 0.82, 0.82) * scale,
+		Color3.fromRGB(255, 82, 82),
+		Enum.Material.Neon
+	)
+	ring.Shape = Enum.PartType.Cylinder
+	attach(target, ring, CFrame.new(-0.02 * scale, 0, 0), "Joint_Ring")
+	local core = makeVisualPart("Part", "Core", Vector3.new(0.2, 0.42, 0.42) * scale, coreColor, Enum.Material.Neon)
+	core.Shape = Enum.PartType.Cylinder
+	attach(ring, core, CFrame.new(-0.02 * scale, 0, 0), "Joint_Core")
+
+	local base = makeVisualPart(
+		"Part",
+		"Base",
+		Vector3.new(0.22, 3.0, 3.0) * scale,
+		Color3.fromRGB(139, 105, 60),
+		Enum.Material.WoodPlanks
+	)
+	base.Shape = Enum.PartType.Cylinder
+	attach(root, base, CFrame.new(0, -3.3 * scale, 0) * CFrame.Angles(0, 0, math.rad(90)), "Joint_Base")
+	local post = makeVisualPart("Part", "Post", Vector3.new(3.2, 0.42, 0.42) * scale, WOOD_COLOR, Enum.Material.Wood)
+	post.Shape = Enum.PartType.Cylinder
+	attach(root, post, CFrame.new(0, -1.55 * scale, 1.12 * scale) * CFrame.Angles(0, 0, math.rad(90)), "Joint_Post")
+end
+
 local function createActorModel(name: string, actorId: string, npcId: string, recipe: any, position: Vector3): Model
 	local model = Instance.new("Model")
 	model.Name = name
@@ -222,7 +574,11 @@ local function createActorModel(name: string, actorId: string, npcId: string, re
 	root.Anchored = true
 	root.Transparency = 1
 	local rootHeight = actorRootHeight(recipe)
-	root.CFrame = CFrame.new(position + Vector3.new(0, rootHeight, 0))
+	if recipe.shape == "humanoid" then
+		root.CFrame = plazaLookCFrame(position, rootHeight)
+	else
+		root.CFrame = CFrame.new(position + Vector3.new(0, rootHeight, 0))
+	end
 	root.Parent = model
 	model.PrimaryPart = root
 
@@ -231,239 +587,58 @@ local function createActorModel(name: string, actorId: string, npcId: string, re
 	local coreColor = toColor(recipe.coreRgb)
 	if recipe.shape == "humanoid" then
 		local torso =
-			makeVisualPart("Part", "Torso", Vector3.new(2.2, 2.4, 1.1) * scale, bodyColor, Enum.Material.Slate)
+			makeVisualPart("Part", "Torso", Vector3.new(2.25, 2.45, 1.2) * scale, bodyColor, Enum.Material.Slate)
 		attach(root, torso, CFrame.new(0, 0.1, 0), "Joint_Torso")
 
-		-- Cabeça com mesh humanoide + rosto: nada de "bola lisa". O mesh é o
-		-- clássico do Roblox (asset livre) e o rosto é um decal na frente; o
-		-- instrutor recebe rosto de anime e o dummy, o rosto clássico de boneco.
-		local head = makeVisualPart(
-			"Part",
-			"Head",
-			Vector3.new(1.35, 1.35, 1.35) * scale,
-			coreColor,
-			Enum.Material.SmoothPlastic
-		)
-		local headMesh = Instance.new("SpecialMesh")
-		headMesh.MeshType = Enum.MeshType.FileMesh
-		headMesh.MeshId = "rbxassetid://1290273"
-		headMesh.Scale = Vector3.new(1, 1, 1) * scale
-		headMesh.Parent = head
-		attach(torso, head, CFrame.new(0, 1.85 * scale, 0), "Joint_Head")
+		-- Cabeça = Part esférica. FileMesh com rbxassetid some se o asset não
+		-- carrega — era isso que deixava os NPCs sem cabeça no Play.
+		local head = makeBall("Head", Vector3.new(1.55, 1.55, 1.55) * scale, coreColor, Enum.Material.SmoothPlastic)
+		attach(torso, head, CFrame.new(0, 2.08 * scale, 0), "Joint_Head")
+		local neck =
+			makeVisualPart("Part", "Neck", Vector3.new(0.62, 0.4, 0.62) * scale, coreColor, Enum.Material.SmoothPlastic)
+		attach(torso, neck, CFrame.new(0, 1.38 * scale, 0), "Joint_Neck")
 
 		local leftArm =
-			makeVisualPart("Part", "LeftArm", Vector3.new(0.7, 2.2, 0.7) * scale, accentColor, Enum.Material.Slate)
-		attach(torso, leftArm, CFrame.new(-1.45 * scale, -0.05 * scale, 0), "Joint_LeftArm")
+			makeVisualPart("Part", "LeftArm", Vector3.new(0.75, 2.2, 0.75) * scale, accentColor, Enum.Material.Slate)
+		attach(torso, leftArm, CFrame.new(-1.5 * scale, -0.05 * scale, 0), "Joint_LeftArm")
 		local rightArm = leftArm:Clone()
 		rightArm.Name = "RightArm"
-		attach(torso, rightArm, CFrame.new(1.45 * scale, -0.05 * scale, 0), "Joint_RightArm")
+		attach(torso, rightArm, CFrame.new(1.5 * scale, -0.05 * scale, 0), "Joint_RightArm")
 
 		local leftLeg =
-			makeVisualPart("Part", "LeftLeg", Vector3.new(0.85, 2.4, 0.9) * scale, bodyColor, Enum.Material.Slate)
+			makeVisualPart("Part", "LeftLeg", Vector3.new(0.88, 2.4, 0.92) * scale, bodyColor, Enum.Material.Slate)
 		attach(root, leftLeg, CFrame.new(-0.58 * scale, -2.2 * scale, 0), "Joint_LeftLeg")
 		local rightLeg = leftLeg:Clone()
 		rightLeg.Name = "RightLeg"
 		attach(root, rightLeg, CFrame.new(0.58 * scale, -2.2 * scale, 0), "Joint_RightLeg")
 
-		-- ── Toques de skin (pós-P1 vira arte; hoje são silhueta de cor) ──────
 		if npcId == "npc_threshold_instructor" then
-			-- O mensageiro do Limiar com skin: casaco escuro de tecido, cauda e
-			-- bainha umbral, capuz de couro com borda de energia, gola alta com
-			-- trim neon, olhos brilhantes, punhos e botas, cinto com fivela e
-			-- três orbes de energia orbitando o torso. Tudo com joints próprios
-			-- (o ActorAnimator ignora joints desconhecidos) — presença, não pose.
-			torso.Material = Enum.Material.Fabric
-			leftArm.Material = Enum.Material.Leather
-			rightArm.Material = Enum.Material.Leather
-			leftLeg.Material = Enum.Material.Leather
-			rightLeg.Material = Enum.Material.Leather
-
-			-- Rosto de anime na frente da cabeça (decal livre).
-			local face = Instance.new("Decal")
-			face.Name = "Face"
-			face.Face = Enum.NormalId.Front
-			face.Texture = "rbxassetid://54172038"
-			face.Parent = head
-
-			-- Casaco: cauda atrás das pernas + fio umbral na bainha.
-			local coatBottom = makeVisualPart(
-				"Part",
-				"CoatBottom",
-				Vector3.new(2.5, 1.15, 1.35) * scale,
+			dressThresholdInstructor(
+				torso,
+				head,
+				leftArm,
+				rightArm,
+				leftLeg,
+				rightLeg,
+				scale,
 				bodyColor,
-				Enum.Material.Fabric
-			)
-			attach(torso, coatBottom, CFrame.new(0, -1.32 * scale, 0), "Joint_CoatBottom")
-			local hem =
-				makeVisualPart("Part", "Hem", Vector3.new(2.55, 0.16, 1.4) * scale, accentColor, Enum.Material.Neon)
-			attach(torso, hem, CFrame.new(0, -1.85 * scale, 0), "Joint_Hem")
-
-			-- Gola alta: base de tecido escuro + trim umbral na borda.
-			local collar =
-				makeVisualPart("Part", "Collar", Vector3.new(1.6, 0.5, 1.5) * scale, bodyColor, Enum.Material.Fabric)
-			attach(torso, collar, CFrame.new(0, 1.55 * scale, 0), "Joint_Collar")
-			local collarTrim = makeVisualPart(
-				"Part",
-				"CollarTrim",
-				Vector3.new(1.72, 0.14, 1.62) * scale,
 				accentColor,
-				Enum.Material.Neon
+				coreColor
 			)
-			attach(collar, collarTrim, CFrame.new(0, 0.2 * scale, 0), "Joint_CollarTrim")
-
-			-- Capuz do mensageiro: meia carapaça de couro atrás da cabeça,
-			-- energia umbral na borda. Não anima (joint próprio) — presença.
-			local hood =
-				makeVisualPart("Part", "Hood", Vector3.new(1.5, 1.2, 1.1) * scale, accentColor, Enum.Material.Leather)
-			hood.Shape = Enum.PartType.Ball
-			attach(head, hood, CFrame.new(0, 0.35 * scale, -0.55 * scale), "Joint_Hood")
-			local hoodTrim = makeVisualPart(
-				"Part",
-				"HoodTrim",
-				Vector3.new(1.62, 0.14, 1.2) * scale,
-				accentColor,
-				Enum.Material.Neon
-			)
-			attach(hood, hoodTrim, CFrame.new(0, 0.14 * scale, -0.62 * scale), "Joint_HoodTrim")
-
-			-- Rosto de anime (decal na frente da cabeça com mesh humanoide).
-
-			-- Faixa de energia na cintura + fivela (Neon = o "fio" umbral).
-			local belt =
-				makeVisualPart("Part", "Belt", Vector3.new(1.7, 0.34, 1.25) * scale, accentColor, Enum.Material.Neon)
-			attach(torso, belt, CFrame.new(0, -0.55 * scale, 0.02 * scale), "Joint_Belt")
-			local buckle =
-				makeVisualPart("Part", "Buckle", Vector3.new(0.42, 0.5, 0.2) * scale, coreColor, Enum.Material.Neon)
-			attach(belt, buckle, CFrame.new(0, 0, 0.72 * scale), "Joint_Buckle")
-
-			-- Punhos neon + mãos de tecido nas mangas.
-			local cuffL =
-				makeVisualPart("Part", "Cuff", Vector3.new(0.82, 0.22, 0.82) * scale, accentColor, Enum.Material.Neon)
-			attach(leftArm, cuffL, CFrame.new(0, -0.82 * scale, 0), "Joint_CuffL")
-			local cuffR = cuffL:Clone()
-			cuffR.Name = "Cuff"
-			attach(rightArm, cuffR, CFrame.new(0, -0.82 * scale, 0), "Joint_CuffR")
-			local handL =
-				makeVisualPart("Part", "Hand", Vector3.new(0.72, 0.34, 0.72) * scale, bodyColor, Enum.Material.Fabric)
-			attach(leftArm, handL, CFrame.new(0, -1.05 * scale, 0), "Joint_HandL")
-			local handR = handL:Clone()
-			handR.Name = "Hand"
-			attach(rightArm, handR, CFrame.new(0, -1.05 * scale, 0), "Joint_HandR")
-
-			-- Botas de couro escuro.
-			local bootL =
-				makeVisualPart("Part", "Boot", Vector3.new(1.0, 0.6, 1.1) * scale, bodyColor, Enum.Material.Leather)
-			attach(leftLeg, bootL, CFrame.new(0, -0.95 * scale, 0.06 * scale), "Joint_BootL")
-			local bootR = bootL:Clone()
-			bootR.Name = "Boot"
-			attach(rightLeg, bootR, CFrame.new(0, -0.95 * scale, 0.06 * scale), "Joint_BootR")
-
-			-- Três orbes de energia umbral orbitando o torso (presença).
-			for orbIndex = 1, 3 do
-				local angle = (orbIndex - 1) / 3 * math.pi * 2
-				local orb = makeVisualPart(
-					"Part",
-					("Orb%d"):format(orbIndex),
-					Vector3.new(0.24, 0.24, 0.24) * scale,
-					accentColor,
-					Enum.Material.Neon
-				)
-				orb.Shape = Enum.PartType.Ball
-				attach(
-					torso,
-					orb,
-					CFrame.new(
-						math.cos(angle) * 1.35 * scale,
-						(1.1 + math.sin(angle) * 0.2) * scale,
-						math.sin(angle) * 1.15 * scale
-					),
-					("Joint_Orb%d"):format(orbIndex)
-				)
-			end
 		elseif npcId == "npc_training_dummy" then
-			-- Boneco de treino com skin: couro escuro, braços de couro claro,
-			-- bandagens pálidas, botas, rosto clássico e alvo bullseye neon.
-			-- O poste de madeira atrás ancora o visual sem mexer no root.
-			torso.Material = Enum.Material.Leather
-			leftLeg.Material = Enum.Material.Leather
-			rightLeg.Material = Enum.Material.Leather
-			leftArm.Material = Enum.Material.Leather
-			rightArm.Material = Enum.Material.Leather
-
-			-- Rosto clássico de boneco de treino na frente da cabeça (decal livre).
-			local dummyFace = Instance.new("Decal")
-			dummyFace.Name = "Face"
-			dummyFace.Face = Enum.NormalId.Front
-			dummyFace.Texture = "rbxassetid://2338267135"
-			dummyFace.Parent = head
-
-			-- Cinto de couro mais escuro na cintura.
-			local belt =
-				makeVisualPart("Part", "Belt", Vector3.new(1.7, 0.34, 1.25) * scale, accentColor, Enum.Material.Leather)
-			attach(torso, belt, CFrame.new(0, -0.75 * scale, 0.02 * scale), "Joint_Belt")
-
-			-- Bandagens pálidas nos antebraços (o "saco" de treino).
-			local wrapLeft =
-				makeVisualPart("Part", "Wrap", Vector3.new(0.78, 0.7, 0.78) * scale, coreColor, Enum.Material.Fabric)
-			attach(leftArm, wrapLeft, CFrame.new(0, -0.55 * scale, 0), "Joint_WrapLeft")
-			local wrapRight = wrapLeft:Clone()
-			wrapRight.Name = "Wrap"
-			attach(rightArm, wrapRight, CFrame.new(0, -0.55 * scale, 0), "Joint_WrapRight")
-
-			-- Botas escuras para fechar as pernas.
-			local bootLeft = makeVisualPart(
-				"Part",
-				"Boot",
-				Vector3.new(0.95, 0.55, 1.05) * scale,
+			dressTrainingDummy(
+				root,
+				torso,
+				head,
+				leftArm,
+				rightArm,
+				leftLeg,
+				rightLeg,
+				scale,
+				bodyColor,
 				accentColor,
-				Enum.Material.Leather
+				coreColor
 			)
-			attach(leftLeg, bootLeft, CFrame.new(0, -0.85 * scale, 0.05 * scale), "Joint_BootLeft")
-			local bootRight = bootLeft:Clone()
-			bootRight.Name = "Boot"
-			attach(rightLeg, bootRight, CFrame.new(0, -0.85 * scale, 0.05 * scale), "Joint_BootRight")
-
-			-- Rosto clássico do boneco de treino (decal livre).
-			local face = Instance.new("Decal")
-			face.Name = "DummyFace"
-			face.Face = Enum.NormalId.Front
-			face.Texture = "rbxassetid://2338267135"
-			face.Parent = head
-
-			-- Alvo bullseye: disco pálido neon + núcleo vermelho — o ponto de bater.
-			local target =
-				makeVisualPart("Part", "Target", Vector3.new(1.05, 0.22, 1.05) * scale, coreColor, Enum.Material.Neon)
-			target.Shape = Enum.PartType.Cylinder
-			attach(torso, target, CFrame.new(0, 0.15 * scale, 0.42 * scale), "Joint_Target")
-			local core = makeVisualPart(
-				"Part",
-				"Core",
-				Vector3.new(0.5, 0.26, 0.5) * scale,
-				Color3.fromRGB(255, 82, 82),
-				Enum.Material.Neon
-			)
-			core.Shape = Enum.PartType.Cylinder
-			attach(target, core, CFrame.new(0, 0.02 * scale, -0.02 * scale), "Joint_Core")
-
-			-- Base e poste de madeira: o boneco fica "montado" no chão.
-			local base = makeVisualPart(
-				"Part",
-				"Base",
-				Vector3.new(3.0, 0.22, 3.0) * scale,
-				Color3.fromRGB(139, 105, 60),
-				Enum.Material.WoodPlanks
-			)
-			base.Shape = Enum.PartType.Cylinder
-			attach(root, base, CFrame.new(0, -3.3 * scale, 0), "Joint_Base")
-			local post = makeVisualPart(
-				"Part",
-				"Post",
-				Vector3.new(0.42, 3.2, 0.42) * scale,
-				Color3.fromRGB(96, 70, 40),
-				Enum.Material.Wood
-			)
-			post.Shape = Enum.PartType.Cylinder
-			attach(root, post, CFrame.new(0, -1.55 * scale, -1.05 * scale), "Joint_Post")
 		end
 	else
 		-- Pivot visual comum: todas as peças do shard recebem bob/lean/spin sem

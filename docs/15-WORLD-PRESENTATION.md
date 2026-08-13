@@ -81,8 +81,8 @@ As receitas vivem em `src/shared/Data/WorldPresentation.luau`; o módulo guarda 
 
 | Ator | Forma | Escala | Papel visual |
 |---|---|---:|---|
-| Dummy de treino | humanoide em blocos | 1,00 | alvo estável e neutro |
-| Instrutor do Limiar | humanoide em blocos | 1,05 | leitura distinta do dummy sem roupa/cabelo final |
+| Dummy de treino | humanoide em blocos + palha/alvo | 1,00 | saco de treino com cabeça e poste |
+| Instrutor do Limiar | humanoide em blocos + capuz/casaco | 1,05 | mensageiro umbral, rosto visível |
 | Estilhaço Errante | núcleo + cunhas | 0,90 | ameaça móvel leve |
 | Estilhaço Ancorado | núcleo + cunhas | 1,65 | elite reconhecível por escala e massa, não só por cor |
 
@@ -95,26 +95,18 @@ Cada modelo usa uma raiz invisível ancorada e peças sem colisão ligadas por `
 > que orbita junto do pivot), `ShardFront`/`ShardBack` e, no elite, coroa
 > `Crown_1..3`. Continua tudo Part/Motor6D greybox até o Gate P1.
 
-> **Skins dos atores do spawn (13/08, 16h):** os dois personagens do spawn
-> ganharam skin completa com assets, sempre com joints próprios ignorados pelo
-> `ActorAnimator` (a animação procedural continua intacta):
+> **Skins dos atores do spawn (13/08, 16h, revista 17h):** ver bloco
+> **Cabeças e skins** abaixo — a versão com FileMesh/decal não aparecia no Play.
 >
-> - **Boneco de treino** — couro (torso/braços/pernas em `Leather`), cinto e
->   botas de couro escuro, bandagens pálidas (`Fabric`) nos antebraços, rosto
->   clássico de boneco (decal `DummyFace`, asset livre), alvo bullseye
->   (`Core` Neon vermelho no centro do `Target`) e base/poste de madeira
->   (`WoodPlanks`/`Wood`) que ancoram o visual sem mexer no root.
-> - **Instrutor do Limiar (mensageiro)** — casaco escuro de tecido (`Fabric`)
->   com cauda e bainha umbral Neon, capuz de couro com borda de energia, gola
->   alta com trim Neon, punhos Neon e mãos de tecido, botas de couro e cinto
->   umbral com fivela.
->
-> **Cabeças (correção 13/08 18h):** as cabeças deixaram de ser esferas lisas.
-> Agora cada humanoid usa o mesh clássico de cabeça do Roblox
-> (`SpecialMesh` `rbxassetid://1290273`) com rosto aplicado na frente:
-> o instrutor recebe rosto de anime (`Face` = decal livre) e o dummy, o rosto
-> clássico de boneco de treino. Os olhos neon esféricos e os orbes flutuantes
-> foram removidos (conflitavam com o rosto e poluíam a leitura).
+> **Cabeças e skins (correção 13/08 17h):** o `SpecialMesh` `rbxassetid://1290273`
+> não carregava no Play — a Part da cabeça existia, mas ficava invisível, e os
+> humanoides estáticos nasciam olhando para −Z (costas para a praça). Agora a
+> cabeça é uma esfera nativa (`Part.Shape = Ball`), o rosto é feito de peças
+> (olhos/íris/boca, sem decal de asset) e os dois NPCs do spawn olham para a
+> praça. Instrutor: capuz que emoldura o rosto, cabelo, ombreiras, casaco com
+> caudas, emblema umbral no peito. Dummy: palha, olhos-botão, costuras, alvo
+> de três anéis no peito e poste de madeira atrás. Joints novos continuam
+> ignorados pelo `ActorAnimator`.
 
 > **Skin do boneco de treino (13/08, 16h):** (ver bloco acima — skin do spawn).
 
