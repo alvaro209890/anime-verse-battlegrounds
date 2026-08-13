@@ -33,6 +33,7 @@ Essa fundação serve para verificar estados, silhueta básica, telegraph e cust
 - Nenhum asset final começa antes de P1 aprovar linguagem visual e checklist de originalidade.
 - Não reproduzir pose-assinatura, sequência, silhueta, timing, câmera, cor, símbolo ou áudio reconhecível de referência. Um nome novo não torna uma animação derivativa segura.
 - Assets pertencem à conta/grupo correto, com fonte editável preservada, autoria e licença registradas.
+- **Exceção declarada (13/08, §4.4):** clipes e sons do **criador Roblox (userId 1)** podem ser usados como andaime tocável enquanto o kit próprio não existe. Eles não contam como clipe planejado, não passam pelo Gate A1 e não entram em nenhuma decisão de jogo. Todo asset **final** continua sob a regra de propriedade acima. A direção do projeto segue procedural-primeiro: o overlay em Motor6D é a fundação e o fallback quando o asset livre não carrega.
 
 ## 3. Linguagem de movimento
 
@@ -109,6 +110,61 @@ sincroniza a pose via `PlayerCombatAnimator.syncStep`. A divergência era
 puramente cosmética e segue sem nenhuma decisão de acerto dependendo dela.
 
 Cobertura: `tests/animation.luau` (silhuetas distintas, extensão de cotovelo, chute como perna, amplitude crescente, retorno exato ao neutro, overshoot, liderança do núcleo, janela de encadeamento).
+
+### 4.4 Clipes livres do Roblox — placeholder tocável (13/08, 15h)
+
+O playtest das 14:26 (`docs/18` §7) mostrou por que o procedural sozinho não
+resolve: o overlay compõe alguns graus por junta **em cima** da animação que o
+Roblox já toca no avatar. No boneco real, de terceira pessoa e com roupa larga,
+isso lê como "não aconteceu nada". A resposta foi somar um clipe de corpo
+inteiro por ação, com a decisão em dados puros e testados.
+
+- Catálogo: `src/shared/Data/CombatAnimations.luau` (puro, testável em Lune).
+- Materialização: `src/client/Presentation/CharacterAnimationPlayer.luau`
+  (camada de Instances, não coberta por teste — como o `WorldService`).
+- Assets: **só do criador Roblox (userId 1)**, que qualquer experiência toca
+  sem upload nem compra. Verificados em 2026-08-13 em
+  `economy.roblox.com/v2/assets/<id>/details`:
+  `522635514` "R15 Sword Slash" e `522638767` "R15 Sword Lunge" (AssetTypeId 24).
+
+| Ação | Clipe | Velocidade | Duração tocada | Orçamento da ação |
+|---|---|---:|---:|---:|
+| Leve 1 (jab) | Slash | 2,30 | 0,230 s | 0,240 s |
+| Leve 2 (direto) | Slash | 1,85 | 0,286 s | 0,300 s |
+| Leve 3 (chute) | Lunge | 1,65 | 0,364 s | 0,380 s |
+| Leve 4 (finalizador) | Lunge | 1,30 | 0,462 s | 0,480 s |
+| Pesado | Lunge | 1,20 | 0,500 s | 0,520 s |
+| Ombro Cometa | Lunge | 0,85 | 0,706 s | 0,750 s |
+| Cadência Quebrada | Slash | 1,05 | 0,505 s | 0,680 s |
+| Retorno de Pulso | Slash | 0,95 | 0,558 s | 0,730 s |
+| Eco da Cadência | Slash | 1,30 | 0,408 s | 0,520 s |
+| Contra do Pulso | Lunge | 1,55 | 0,387 s | 0,440 s |
+
+Regras que os testes travam (`tests/animation.luau`):
+
+- nenhum clipe dura mais que a ação (mesma honestidade do VFX — quem decide o
+  tempo do golpe é o servidor, não a animação);
+- todo `assetId` casa `rbxassetid://%d+` e sai da lista declarada;
+- os quatro degraus da cadeia têm clipes distintos e o degrau fora da faixa
+  clampa em vez de sumir com a animação;
+- a duração declarada aqui bate com `PlayerCombatAnimator.Durations`.
+
+**Guarda e dash continuam 100% procedurais de propósito:** não existe clipe
+livre do Roblox que leia como aparo ou esquiva, e usar um golpe de espada no
+lugar mentiria sobre a ação.
+
+**Isto não fecha o Gate A1.** São placeholders honestos — leem como golpe de
+braço, não são o kit final do Punho do Eclipse. O `nominalSeconds` de cada
+asset (0,53 s e 0,60 s) foi declarado a partir da documentação e precisa ser
+reconferido no Studio com `TimeLength` do track carregado; o plugin de debug
+(`docs/19-DEBUG-BRIDGE.md`) faz essa medição sem palpite.
+
+Fallback: se o asset não carregar (moderação, offline), o clipe é ignorado com
+um aviso único e o overlay procedural segue sozinho. O combate nunca fica sem
+nenhuma leitura.
+
+Rastro de golpe: um `Trail` sem textura (recurso do próprio engine, nada para
+subir) na mão direita acende durante a ação e apaga sozinho no fim dela.
 
 ## 5. Fases e markers
 

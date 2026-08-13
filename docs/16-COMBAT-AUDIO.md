@@ -108,6 +108,33 @@ Passos:
 
 **Limite conhecido:** o catálogo hoje guarda um `assetId` por deixa, não por variante. Publicadas as 5 gravações de `impactPunch_medium`, apenas uma é usada. A variação atual vem do pitch. Suportar um id por variante é mudança pequena no catálogo e no `resolve`, e deve ser feita **depois** do upload, quando os ids reais existirem.
 
+## 5.1 Kit placeholder do Roblox — combate saiu do mudo (13/08, 15h)
+
+O upload dos `.ogg` CC0 continua pendente e depende de uma conta com acesso ao
+Creator Dashboard. Até lá, cada deixa aponta para um áudio do **criador Roblox
+(userId 1)**, que qualquer experiência toca sem upload, sem compra e sem
+moderação pendente. Verificados em 2026-08-13 via
+`economy.roblox.com/v2/assets/<id>/details` (Creator.Id 1, AssetTypeId 3):
+
+| Papel sonoro | Asset | Deixas |
+|---|---|---|
+| corte de espada | `12222216` swordslash.wav | `swing_light_1..4`, `ability_broken_cadence`, `ability_cadence_echo` |
+| avanço pesado | `12222208` swordlunge.wav | `swing_heavy` |
+| metal / postura | `12222225` unsheath.wav | `impact_guard`, `ability_pulse_return`, `guard_raise` |
+| deslocamento | `12222095` Rocket whoosh 01.wav | `dash`, `ability_comet_shoulder` |
+| impacto em corpo | `12222152` splat.wav | `impact_light`, `impact_heavy` |
+| estilhaçar | `12222005` glassbreak.wav | `ability_pulse_counter` |
+
+O que **não** mudou: `sourceFile` continua apontando o `.ogg` CC0 que é o som
+final pretendido, `assetId` vazio segue sendo estado válido e silencioso, e a
+variação por reprodução continua vindo do pitch. Um teste novo
+(`áudio: todo o catálogo aponta para um asset tocável`) impede que uma deixa
+nova volte a nascer muda sem ninguém perceber.
+
+Limite honesto: um som de espada não é o som do Punho do Eclipse. É o
+suficiente para julgar timing, mixagem relativa e a diferença audível entre
+acerto e bloqueio — que era o que faltava para o combate ter peso.
+
 ## 6. Verificação
 
 `tests/animation.luau` — 19 testes, incluindo 9 de áudio:

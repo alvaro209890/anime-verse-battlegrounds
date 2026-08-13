@@ -5,6 +5,13 @@
 > repositório (procure por `video/` na raiz ou o arquivo `.mp4`/`.mov` mais
 > recente). Leia o prompt abaixo e execute.
 
+> **Atualização (2026-08-13, 15h):** a regra "nada de clipes/assets" abaixo foi
+> flexibilizada por decisão do Álvaro nesta data — o jogo passou a usar
+> **placeholders livres do criador Roblox** (animações e sons) porque o
+> overlay procedural sozinho não lia como golpe no avatar real. O procedural
+> continua sendo a fundação e o fallback. Regra vigente e limites:
+> `docs/14-ANIMATION-PLAN.md` §2 e §4.4, `docs/16-COMBAT-AUDIO.md` §5.1.
+
 ---
 
 ## Contexto do projeto

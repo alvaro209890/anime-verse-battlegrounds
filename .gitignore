@@ -13,6 +13,9 @@ Packages/
 .avb-debug/
 *.rbxm
 
+# Quadros extraídos de vídeo para análise (evidência fica nos docs, não no Git)
+tmp-video-frames2/
+
 # OS
 .DS_Store
 Thumbs.db

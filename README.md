@@ -3,8 +3,8 @@
 RPG / Action RPG de mundo aberto no Roblox (Luau) — combate estilo battlegrounds com
 progressão persistente, loadout customizável e ressonância de famílias de energia.
 
-> **Status em 2026-08-13:** itens 1–13 do backlog F0 fechados em código/headless, mais MENU/configurações, botão SOLTAR MIRA e golpe básico com número de dano (`docs/18-ANALISE-VIDEO.md`).
-> **Runtime:** o Play das 13:48 mostrou spawn/HUD/Instrutor. Reabra o `.rbxl` novo: MENU no canto, clique esquerdo no dummy, SOLTAR MIRA se a câmera grudar.
+> **Status em 2026-08-13 (15h):** itens 1–13 do backlog F0 fechados em código/headless, mais MENU/configurações, mira soltável, golpe com número de dano e, nesta rodada, **saída do Bastião destravada**, **clipes de animação reais no ataque** e **áudio de combate ligado** (`docs/18-ANALISE-VIDEO.md` §7).
+> **Runtime:** o Play das 14:26 mostrou HUD e técnicas funcionando, mas o portão era intransponível (prompt de travessia só existia no toque e o servidor devolvia a posição a cada frame). Corrigido: chegue no vão do portão norte e **SEGURE E**.
 
 ## Estado comprovado
 
@@ -13,7 +13,7 @@ progressão persistente, loadout customizável e ressonância de famílias de en
 | Produto | Q-001 a Q-030 decididas; `docs/09-OPEN-QUESTIONS.md` é o registro canônico |
 | Planejamento | visão, GDD, mundo, social, arquitetura, schemas, segurança, roster, roadmap, benchmark e plano de animação documentados |
 | Implementado | domínio F0, mundo greybox com rotas/marcos/modelos low-poly, animação procedural de NPCs e do jogador, interações semânticas com Instrutor/Marco, save/ProfileStore, cliente Input/HUD, envelope v2, `SecurityService` e `TelemetryService` mínimo |
-| Validado automaticamente | 214/214 testes em `tests/run.luau` + 35/35 em `tests/animation.luau`, Selene limpo, StyLua canônico, Wally e build Rojo |
+| Validado automaticamente | 215/215 testes em `tests/run.luau` + 40/40 em `tests/animation.luau`, Selene limpo, StyLua canônico, Wally e build Rojo |
 | Ainda não comprovado | roteiro Play no Studio, physics/collision groups, DataStore real, dois clientes, latência, mobile, gamepad, performance, UX visual e assets de animação |
 
 O CI em pushes para `main` valida contratos headless e a árvore Rojo; não substitui playtest. O snapshot e os links de evidência ficam em `docs/12-TESTING.md`.
@@ -70,7 +70,43 @@ stylua --check --line-endings Windows src tests
 rojo build -o build.rbxl
 ```
 
-O CI (`.github/workflows/ci.yml`) roda lint + format + testes + build em todo push.
+O CI (`.github/workflows/ci.yml`) roda lint + format + testes + build em todo push
+(`src`, `tests`, `plugins` e `scripts`).
+
+### Live sync: manter o Studio sempre com o código atual
+
+`build-studio.ps1` gera um snapshot novo, mas **não** atualiza um place já
+aberto. Para editar código e ver no Studio sem reabrir nada, use o Rojo:
+
+```powershell
+.\scripts\serve.ps1
+```
+
+No Studio: aba **Plugins → Rojo → Connect**. Enquanto o serve roda, salvar um
+arquivo em `src/` atualiza o place aberto. O plugin do Rojo é instalado com
+`rojo plugin install` (já instalado nesta máquina).
+
+Para saber se o Studio está mesmo com o código do repo:
+
+```bash
+lune run scripts/avb-debug.luau sync
+```
+
+### Debug do Studio por agentes (plugin AvbDebug)
+
+O que acontece dentro do Studio deixou de ser invisível para os agentes. O plugin
+`AvbDebug` conversa com uma ponte local (só `127.0.0.1`) e qualquer agente
+consulta a árvore, as propriedades, o Output e o estado do playtest pelo CLI:
+
+```powershell
+.\scripts\install-plugin.ps1            # uma vez; reabra o Studio depois
+lune run scripts/debug-bridge.luau      # terminal 1, deixa rodando
+lune run scripts/avb-debug.luau ping    # terminal 2
+lune run scripts/avb-debug.luau sync    # o Studio está com o código do repo?
+lune run scripts/avb-debug.luau errors  # erros do último playtest
+```
+
+Detalhes, comandos e limites em [docs/19-DEBUG-BRIDGE.md](docs/19-DEBUG-BRIDGE.md).
 
 ## Estrutura
 
@@ -81,8 +117,10 @@ src/
   server/            services (domínio F0, save, rede, segurança e telemetria)
   client/            controllers (bootstrap de apresentação)
 tests/               harness Lune + 249 testes unitários (214 run.luau + 35 animation.luau)
-docs/                produto, arquitetura, decisões, testes e planos (00 a 18)
+docs/                produto, arquitetura, decisões, testes e planos (00 a 19)
 lib/                 bibliotecas pinadas (ProfileStore)
+plugins/AvbDebug/    plugin de Studio: ponte de debug usada pelos agentes
+scripts/             build do snapshot, ponte de debug e CLI dos agentes
 ```
 
 ## Docs principais
@@ -101,6 +139,7 @@ lib/                 bibliotecas pinadas (ProfileStore)
 - [docs/16-COMBAT-AUDIO.md](docs/16-COMBAT-AUDIO.md) — áudio de combate: catálogo, player, integração e pendência de upload
 - [docs/17-COMBAT-FEEL.md](docs/17-COMBAT-FEEL.md) — game-feel: easing, follow-through, idle, wrist snap, hit-stop e câmera de impacto
 - [docs/18-ANALISE-VIDEO.md](docs/18-ANALISE-VIDEO.md) — playtest 13/08: golpes invisíveis, mira e overlay de comandos
+- [docs/19-DEBUG-BRIDGE.md](docs/19-DEBUG-BRIDGE.md) — plugin AvbDebug e ponte local: como qualquer agente debuga o Studio
 
 `PROMPT_AnimeVerseBattlegrounds_v2.md` é o briefing histórico que originou o
 planejamento. Em conflito, os documentos canônicos em `docs/` prevalecem.
