@@ -1,8 +1,7 @@
 --!strict
 -- RemoteGateway (server) — F0 (docs/04 §4.1)
--- Cria os remotes registrados, decodifica contratos, limita taxa e despacha
--- intenções. Nenhum service expõe RemoteEvent solto.
--- TODO F1: session binding, rate limit por janela, assinatura/versão de contrato.
+-- Cria os remotes registrados, aplica SecurityService e despacha intenções.
+-- Nenhum service expõe RemoteEvent solto.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -11,22 +10,18 @@ local RemoteEnvelope = require(ReplicatedStorage.Shared.RemoteEnvelope)
 
 local RemoteGateway = {}
 
+export type GatewayDeps = {
+	authorize: ((number, string, any) -> ({ [string]: any }?, string?))?,
+}
+
 -- Nome do remote → instância (criadas no boot)
 local remoteInstances: { [string]: RemoteEvent } = {}
 
--- userId → classe → { janela, contagem }. Intenções de combate têm orçamento
--- próprio para uma interação (ex.: objetivo) não consumir seus 8 slots.
-local callWindows: { [number]: { [string]: { windowStart: number, count: number } } } = {}
-local DEFAULT_CALL_LIMIT_PER_SECOND = 15
-local COMBAT_CALL_LIMIT_PER_SECOND = 8
-local COMBAT_INTENTS: { [string]: boolean } = {
-	[Remotes.Names.AbilityIntent] = true,
-	[Remotes.Names.BasicAttackIntent] = true,
-	[Remotes.Names.GuardIntent] = true,
-	[Remotes.Names.DashIntent] = true,
-}
+local authorize: ((number, string, any) -> ({ [string]: any }?, string?))? = nil
 
-function RemoteGateway.init(): ()
+function RemoteGateway.init(deps: GatewayDeps?): ()
+	authorize = if deps then deps.authorize else nil
+	table.clear(remoteInstances)
 	local shared = ReplicatedStorage:WaitForChild("Shared", 10)
 	local remotesFolder = shared:FindFirstChild("Remotes")
 	if not remotesFolder then
@@ -35,9 +30,15 @@ function RemoteGateway.init(): ()
 		remotesFolder.Parent = shared
 	end
 	for _, contract in Remotes.Contracts.all() do
-		local remote = Instance.new("RemoteEvent")
-		remote.Name = contract.name
-		remote.Parent = remotesFolder
+		local existing = remotesFolder:FindFirstChild(contract.name)
+		if existing and not existing:IsA("RemoteEvent") then
+			error(("[RemoteGateway] instância inválida para %s"):format(contract.name))
+		end
+		local remote = if existing then existing :: RemoteEvent else Instance.new("RemoteEvent")
+		if not existing then
+			remote.Name = contract.name
+			remote.Parent = remotesFolder
+		end
 		remoteInstances[contract.name] = remote
 	end
 end
@@ -52,27 +53,15 @@ function RemoteGateway.onClientIntent(name: string, handler: (player: Player, pa
 	if not remote then
 		error(("[RemoteGateway] remote não registrado: %s"):format(name))
 	end
+	local contract = Remotes.Contracts.get(name :: any)
+	if not contract or contract.direction ~= "ClientToServer" then
+		error(("[RemoteGateway] remote não aceita intenção: %s"):format(name))
+	end
 	remote.OnServerEvent:Connect(function(player: Player, envelope: { any })
-		local payload = RemoteEnvelope.decode(envelope, name)
+		local payload = if authorize
+			then select(1, authorize(player.UserId, name, envelope))
+			else select(1, RemoteEnvelope.decode(envelope, name))
 		if not payload then
-			return
-		end
-		-- Rate limit simples por jogador (janela de 1 segundo)
-		local now = os.clock()
-		local class = if COMBAT_INTENTS[name] then "combat" else "default"
-		local playerWindows = callWindows[player.UserId]
-		if not playerWindows then
-			playerWindows = {}
-			callWindows[player.UserId] = playerWindows
-		end
-		local window = playerWindows[class]
-		if not window or now - window.windowStart > 1 then
-			window = { windowStart = now, count = 0 }
-			playerWindows[class] = window
-		end
-		window.count += 1
-		local limit = if COMBAT_INTENTS[name] then COMBAT_CALL_LIMIT_PER_SECOND else DEFAULT_CALL_LIMIT_PER_SECOND
-		if window.count > limit then
 			return
 		end
 		handler(player, payload)

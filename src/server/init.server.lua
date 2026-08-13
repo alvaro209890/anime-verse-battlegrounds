@@ -8,6 +8,7 @@
 -- recebe as dependências no init() (docs/04 §2.3 — testabilidade).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
 
 -- `src/server` vira um Script chamado `Server` no Rojo; a pasta Services fica
 -- como filha desse Script (ver default.project.json/sourcemap), não como irmã
@@ -26,6 +27,8 @@ local QuestService = require(Services.QuestService)
 local RemoteGateway = require(Services.RemoteGateway)
 local ResourceService = require(Services.ResourceService)
 local SaveService = require(Services.SaveService)
+local SecurityService = require(Services.SecurityService)
+local TelemetryService = require(Services.TelemetryService)
 local ZoneService = require(Services.ZoneService)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Abilities = require(ReplicatedStorage.Shared.Data.Abilities)
@@ -35,6 +38,7 @@ local Geometry = require(ReplicatedStorage.Shared.Geometry)
 local Locale = require(ReplicatedStorage.Shared.Data.Locale)
 local Npcs = require(ReplicatedStorage.Shared.Data.Npcs)
 local Quests = require(ReplicatedStorage.Shared.Data.Quests)
+local RemoteEnvelope = require(ReplicatedStorage.Shared.RemoteEnvelope)
 local Zones = require(ReplicatedStorage.Shared.Data.Zones)
 
 -- 1. Catálogo — validação em fail-fast
@@ -61,6 +65,30 @@ print("[Bootstrap] greybox construído")
 
 -- 1.2. Espaço — produz distância, costas e hitbox para o combate.
 SpatialService.init({ geometry = Geometry })
+
+-- 1.3. Observabilidade/segurança — somente campos allowlisted chegam ao log.
+-- O sink F0 é o log estruturado do servidor; backend/dashboards entram após
+-- o place privado existir. O buffer interno mantém os últimos 200 eventos.
+local sessionStartedAt: { [number]: number } = {}
+TelemetryService.init({
+	sessionId = if game.JobId ~= "" then game.JobId else "studio",
+	releaseId = ("place-%d"):format(game.PlaceVersion),
+	now = os.time,
+	emit = function(event: any)
+		print("[Telemetry] " .. HttpService:JSONEncode(event))
+	end,
+})
+SecurityService.init({
+	decode = RemoteEnvelope.decode,
+	now = os.clock,
+	onRejected = function(userId: number, contract: string, reason: string, weight: number)
+		TelemetryService.record("RemoteRejected", userId, {
+			contract = contract,
+			reason = reason,
+			weight = weight,
+		})
+	end,
+})
 
 -- 2. Persistência — ProfileRoot v1 com ProfileStore (docs/13 §11)
 -- lib/ProfileStore.luau entra no build via ReplicatedStorage.Shared.vendor
@@ -93,7 +121,12 @@ SaveService.init({
 	applySnapshot = function(userId: number, snapshot: any)
 		ProgressionService.restoreFromSave(userId, snapshot)
 	end,
-	onSaved = function(userId: number, _result: { any })
+	onSaved = function(userId: number, result: { any })
+		TelemetryService.record("SaveAttempt", userId, {
+			dirty = result.dirty == true,
+			bytes = result.bytes or 0,
+			result = "success",
+		})
 		local player = game.Players:GetPlayerByUserId(userId)
 		if player then
 			RemoteGateway.fireClient(player, Remotes.Names.StateDelta, {
@@ -108,7 +141,9 @@ SaveService.init({
 print("[Bootstrap] SaveService iniciado (ProfileStore)")
 
 -- 3. Gateway de rede — cria remotes registrados ANTES de qualquer fireClient
-RemoteGateway.init()
+RemoteGateway.init({
+	authorize = SecurityService.inspect,
+})
 print("[Bootstrap] RemoteGateway iniciado")
 
 -- 4. Zonas/fronteira — regras PvP e eventos de travessia
@@ -117,6 +152,13 @@ ZoneService.init({
 	getAnchor = CatalogService.getAnchor,
 	now = os.clock,
 	onZoneEvent = function(userId: number, event: { any })
+		if event.rejectedReason == nil then
+			TelemetryService.record("ZoneTransition", userId, {
+				from = event.from,
+				to = event.to,
+				holdConfirmed = event.holdConfirmed == true,
+			})
+		end
 		local player = game.Players:GetPlayerByUserId(userId)
 		if not player then
 			return
@@ -134,6 +176,12 @@ QuestService.init({
 	grantUnlock = ProgressionService.grantUnlock,
 	now = os.clock,
 	onQuestEvent = function(userId: number, event: any)
+		if event.state == "completed" and type(event.unlockFlag) == "string" then
+			TelemetryService.record("FtueBeat", userId, {
+				flag = event.unlockFlag,
+				elapsedMs = math.floor((os.clock() - (sessionStartedAt[userId] or os.clock())) * 1000),
+			})
+		end
 		local player = game.Players:GetPlayerByUserId(userId)
 		if not player then
 			return
@@ -248,8 +296,14 @@ AbilityService.init({
 	end,
 	-- Eco da Cadência acertou (item 10 — objetivo quest_flow). O QuestService
 	-- já emite o StateDelta pelo onQuestEvent; aqui só credita o objetivo.
-	onFlowEcho = function(userId: number, abilityId: string)
+	onFlowEcho = function(userId: number, abilityId: string, flowGranted: number)
 		QuestService.creditFlowEcho(userId, abilityId, os.clock())
+		TelemetryService.record("AbilityResolved", userId, {
+			abilityId = abilityId,
+			result = "echo_hit",
+			latencyMs = 0,
+			flowGranted = flowGranted,
+		})
 	end,
 	-- Ombro Cometa espacial (§6.1): 7 studs, cap 8, para em parede e em guarda
 	-- inimiga, cápsula 4×4×8 no trajeto e no máximo 1 alvo.
@@ -408,6 +462,11 @@ local function applyDeathPenalty(userId: number, pvp: boolean): ()
 	local zone = CatalogService.getZone(zoneId)
 	local zoneKind = if zone then zone.kind else "safe"
 	local penalty = ProgressionService.applyDeathPenalty(userId, zoneKind, pvp)
+	TelemetryService.record("KillResolved", userId, {
+		zoneId = zoneId,
+		combatType = if pvp then "pvp" else "pve",
+		xpLost = penalty.lost,
+	})
 	if penalty.lost > 0 then
 		SaveService.markDirty(userId)
 		local player = game.Players:GetPlayerByUserId(userId)
@@ -487,7 +546,14 @@ RemoteGateway.onClientIntent(Remotes.Names.AbilityIntent, function(player: Playe
 		return
 	end
 
+	local resolveStartedAt = os.clock()
 	local ok, reason = AbilityService.tryActivate(attacker, abilityId, nil, payload)
+	TelemetryService.record("AbilityResolved", player.UserId, {
+		abilityId = abilityId,
+		result = if ok then "success" else reason or "rejected",
+		latencyMs = math.floor((os.clock() - resolveStartedAt) * 1000),
+		flowGranted = 0,
+	})
 	if not ok then
 		RemoteGateway.fireClient(player, Remotes.Names.AbilityRejected, {
 			abilityId = abilityId,
@@ -653,6 +719,8 @@ end)
 
 -- 8. Ciclo de sessão
 game.Players.PlayerAdded:Connect(function(player: Player)
+	local loadStartedAt = os.clock()
+	sessionStartedAt[player.UserId] = loadStartedAt
 	ProgressionService.registerPlayer(player.UserId)
 	-- Item 11: restaura o perfil salvo (flags + XP consolidado). Se o load
 	-- falhar (lock de outro servidor ou falha de rede), a sessão segue em
@@ -661,9 +729,19 @@ game.Players.PlayerAdded:Connect(function(player: Player)
 	if not profile then
 		warn(("[Bootstrap] save indisponível para %d — sessão em memória"):format(player.UserId))
 	end
+	TelemetryService.record("SessionLoad", player.UserId, {
+		durationMs = math.floor((os.clock() - loadStartedAt) * 1000),
+		schemaFrom = if profile then profile.schemaVersion or 1 else 0,
+		schemaTo = 1,
+		result = if profile then "success" else "memory_fallback",
+	})
 	ZoneService.registerPlayer(player.UserId)
 	QuestService.registerPlayer(player.UserId, os.clock())
 	ProgressionService.grantUnlock(player.UserId, "ftue_spawned")
+	TelemetryService.record("FtueBeat", player.UserId, {
+		flag = "ftue_spawned",
+		elapsedMs = math.floor((os.clock() - loadStartedAt) * 1000),
+	})
 	PlayerSessionService.onPlayerJoined(player)
 	-- Snapshot S→C reemitido após o StarterPlayerScripts existir. Isso evita a
 	-- corrida de boot sem criar uma intenção C→S proibida pela SLICE-DEC-005.
@@ -719,6 +797,8 @@ game.Players.PlayerAdded:Connect(function(player: Player)
 	end
 end)
 game.Players.PlayerRemoving:Connect(function(player: Player)
+	SecurityService.clearPlayer(player.UserId)
+	sessionStartedAt[player.UserId] = nil
 	SpatialService.remove(CombatService.playerFighterId(player.UserId))
 	PlayerSessionService.onPlayerLeft(player)
 	QuestService.unregisterPlayer(player.UserId)

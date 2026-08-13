@@ -56,7 +56,7 @@ export type AbilityDeps = {
 	expirePulseStance: ((any, number) -> ())?,
 	-- Eco da Cadência acertou (item 10 — objetivo quest_flow): o bootstrap
 	-- liga ao QuestService.creditFlowEcho. `abilityId` é quem gerou o eco.
-	onFlowEcho: ((number, string) -> ())?,
+	onFlowEcho: ((number, string, number) -> ())?,
 }
 
 local AbilityService = {
@@ -103,9 +103,9 @@ function AbilityService.tick(currentNow: number): ()
 			local target = echo.target
 			if target and target.health > 0 then
 				deps.applyDamage(target, 4, userId)
-				deps.tryGrantFlow(userId)
+				local flowGranted = deps.tryGrantFlow(userId)
 				if deps.onFlowEcho then
-					deps.onFlowEcho(userId, echo.abilityId)
+					deps.onFlowEcho(userId, echo.abilityId, flowGranted)
 				end
 			end
 		end

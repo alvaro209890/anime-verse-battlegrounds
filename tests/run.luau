@@ -63,6 +63,8 @@ local AbilityController = require("../src/client/Controllers/AbilityController")
 local CombatFeedbackController = require("../src/client/Controllers/CombatFeedbackController")
 local ResourceController = require("../src/client/Controllers/ResourceController")
 local ZoneController = require("../src/client/Controllers/ZoneController")
+local SecurityService = require("../src/server/Services/SecurityService")
+local TelemetryService = require("../src/server/Services/TelemetryService")
 
 test("bootstrap: serviços são filhos do Script Server gerado pelo Rojo", function()
 	local source = fs.readFile("src/server/init.server.lua")
@@ -413,6 +415,186 @@ test("cliente: Locale cobre todo texto do HUD F0 em PT-BR e EN", function()
 		assertFalse(Locale.get(key, "pt-br") == key, key .. " PT-BR")
 		assertFalse(Locale.get(key, "en") == key, key .. " EN")
 	end
+end)
+
+test("telemetria: aceita só evento e campos allowlisted", function()
+	local emitted: { any } = {}
+	TelemetryService.init({
+		sessionId = "session-test",
+		releaseId = "release-test",
+		now = function()
+			return 123
+		end,
+		emit = function(event: any)
+			table.insert(emitted, event)
+		end,
+	})
+	local ok = TelemetryService.record("RemoteRejected", 42, {
+		contract = "DashIntent",
+		reason = "payload_schema",
+		weight = 3,
+		payload = { secret = "não deve sair" },
+		ip = "127.0.0.1",
+	})
+	assertTrue(ok, "evento permitido")
+	assertEq(#emitted, 1, "emitido")
+	assertEq(emitted[1].sessionId, "session-test", "correlação")
+	assertEq(emitted[1].fields.contract, "DashIntent", "campo permitido")
+	assertEq(emitted[1].fields.payload, nil, "payload bruto removido")
+	assertEq(emitted[1].fields.ip, nil, "IP removido")
+end)
+
+test("telemetria: rejeita evento/campo inválido e limita o buffer", function()
+	TelemetryService.init({ sessionId = "s", releaseId = "r", bufferCapacity = 2 })
+	local unknown, unknownReason = TelemetryService.record("ChatMessage", 1, { text = "segredo" })
+	assertFalse(unknown, "evento fora da allowlist")
+	assertEq(unknownReason, "event_not_allowed", "motivo")
+	local wrongType, typeReason = TelemetryService.record("FtueBeat", 1, { flag = 123 })
+	assertFalse(wrongType, "tipo inválido")
+	assertEq(typeReason, "field_type", "motivo")
+	TelemetryService.record("FtueBeat", 1, { flag = "a", elapsedMs = 1 })
+	TelemetryService.record("FtueBeat", 1, { flag = "b", elapsedMs = 2 })
+	TelemetryService.record("FtueBeat", 1, { flag = "c", elapsedMs = 3 })
+	local events = TelemetryService.snapshot()
+	assertEq(#events, 2, "buffer limitado")
+	assertEq(events[1].fields.flag, "b", "mais antigo descartado")
+end)
+
+local function validAbilityEnvelope(sequence: number, requestId: string): any
+	return RemoteEnvelope.create("AbilityIntent", {
+		abilityId = "comet_shoulder",
+		inputMode = "Press",
+		executionId = "exec-1",
+		phase = "press",
+	}, requestId, sequence)
+end
+
+test("segurança: aceita envelope e payload válidos", function()
+	SecurityService.init({
+		decode = RemoteEnvelope.decode,
+		now = function()
+			return 10
+		end,
+	})
+	local payload, reason = SecurityService.inspect(50, "AbilityIntent", validAbilityEnvelope(1, "req-1"))
+	assertTrue(payload ~= nil, "aceito")
+	assertEq(reason, nil, "sem rejeição")
+	assertEq(payload.abilityId, "comet_shoulder", "payload semântico")
+end)
+
+test("segurança: rejeita campo extra e contrato sem direção C→S", function()
+	local rejected: { any } = {}
+	SecurityService.init({
+		decode = RemoteEnvelope.decode,
+		onRejected = function(userId: number, contract: string, reason: string, weight: number)
+			table.insert(rejected, { userId = userId, contract = contract, reason = reason, weight = weight })
+		end,
+	})
+	local envelope = validAbilityEnvelope(1, "req-extra")
+	envelope.payload.damage = 999999
+	local payload, reason = SecurityService.inspect(51, "AbilityIntent", envelope)
+	assertEq(payload, nil, "campo hostil descartado")
+	assertEq(reason, "payload_schema", "motivo")
+	local wrongDirection, directionReason = SecurityService.inspect(51, "StateDelta", envelope)
+	assertEq(wrongDirection, nil, "S→C não aceita cliente")
+	assertEq(directionReason, "contract_direction", "direção")
+	assertEq(#rejected, 2, "duas rejeições observáveis")
+	assertEq(rejected[1].weight, 3, "peso do payload hostil")
+end)
+
+test("segurança: envelope estrito e telemetria de rejeição não fazem spam", function()
+	local currentNow = 5
+	local reports = 0
+	SecurityService.init({
+		decode = RemoteEnvelope.decode,
+		now = function()
+			return currentNow
+		end,
+		onRejected = function()
+			reports += 1
+		end,
+	})
+	for sequence = 1, 3 do
+		local envelope = validAbilityEnvelope(sequence, "extra-" .. sequence)
+		envelope.clientTimestamp = 999999
+		local payload, reason = SecurityService.inspect(510, "AbilityIntent", envelope)
+		assertEq(payload, nil, "envelope com campo extra")
+		assertEq(reason, "envelope_schema", "motivo")
+	end
+	assertEq(reports, 1, "uma emissão por contrato/motivo/segundo")
+	currentNow += 1
+	local later = validAbilityEnvelope(4, "extra-later")
+	later.clientTimestamp = 999999
+	SecurityService.inspect(510, "AbilityIntent", later)
+	assertEq(reports, 2, "nova janela volta a emitir")
+end)
+
+test("segurança: bloqueia replay de requestId e sequência", function()
+	SecurityService.init({ decode = RemoteEnvelope.decode })
+	local first = SecurityService.inspect(52, "AbilityIntent", validAbilityEnvelope(1, "same-request"))
+	assertTrue(first ~= nil, "primeira aceita")
+	local replayRequest, requestReason =
+		SecurityService.inspect(52, "AbilityIntent", validAbilityEnvelope(2, "same-request"))
+	assertEq(replayRequest, nil, "request repetido")
+	assertEq(requestReason, "replay_request", "motivo")
+	local replaySequence, sequenceReason =
+		SecurityService.inspect(52, "AbilityIntent", validAbilityEnvelope(1, "new-request"))
+	assertEq(replaySequence, nil, "sequência regressiva")
+	assertEq(sequenceReason, "replay_sequence", "motivo")
+end)
+
+test("segurança: limita combate a 8/s sem consumir interações", function()
+	local currentNow = 20
+	SecurityService.init({
+		decode = RemoteEnvelope.decode,
+		now = function()
+			return currentNow
+		end,
+	})
+	for sequence = 1, 8 do
+		local envelope = RemoteEnvelope.create(
+			"BasicAttackIntent",
+			{ kind = "light", phase = "press" },
+			"atk-" .. sequence,
+			sequence
+		)
+		local payload = SecurityService.inspect(53, "BasicAttackIntent", envelope)
+		assertTrue(payload ~= nil, "combate dentro do orçamento")
+	end
+	local ninth = RemoteEnvelope.create("BasicAttackIntent", { kind = "light", phase = "press" }, "atk-9", 9)
+	local payload, reason = SecurityService.inspect(53, "BasicAttackIntent", ninth)
+	assertEq(payload, nil, "nona intenção descartada")
+	assertEq(reason, "rate_limited", "motivo")
+	local interaction =
+		RemoteEnvelope.create("InteractionIntent", { npcId = "npc_threshold_instructor" }, "interaction", 10)
+	local allowed = SecurityService.inspect(53, "InteractionIntent", interaction)
+	assertTrue(allowed ~= nil, "orçamento default separado")
+	currentNow += 1
+	local reset = RemoteEnvelope.create("BasicAttackIntent", { kind = "light", phase = "press" }, "atk-10", 11)
+	assertTrue(SecurityService.inspect(53, "BasicAttackIntent", reset) ~= nil, "janela reinicia")
+end)
+
+test("segurança: rejeita vetor impossível, NaN e payload ambíguo", function()
+	SecurityService.init({ decode = RemoteEnvelope.decode })
+	local tooFar = RemoteEnvelope.create("DashIntent", { direction = { x = 2, z = 0 } }, "dash-1", 1)
+	local payload, reason = SecurityService.inspect(54, "DashIntent", tooFar)
+	assertEq(payload, nil, "vetor fora do limite")
+	assertEq(reason, "payload_schema", "motivo")
+	local nan = 0 / 0
+	local notNumber = RemoteEnvelope.create("DashIntent", { direction = { x = nan, z = 0 } }, "dash-2", 2)
+	assertEq(SecurityService.inspect(54, "DashIntent", notNumber), nil, "NaN descartado")
+	local ambiguous = RemoteEnvelope.create("InteractionIntent", {
+		npcId = "npc_threshold_instructor",
+		anchorId = "anchor_bastion_return",
+	}, "interaction-2", 3)
+	assertEq(SecurityService.inspect(54, "InteractionIntent", ambiguous), nil, "interação ambígua descartada")
+end)
+
+test("segurança: limpar jogador permite nova sessão começar em sequência 1", function()
+	SecurityService.init({ decode = RemoteEnvelope.decode })
+	assertTrue(SecurityService.inspect(55, "AbilityIntent", validAbilityEnvelope(1, "old-session")) ~= nil, "sessão 1")
+	SecurityService.clearPlayer(55)
+	assertTrue(SecurityService.inspect(55, "AbilityIntent", validAbilityEnvelope(1, "new-session")) ~= nil, "sessão 2")
 end)
 
 test("dados: dummy de treino no catálogo", function()
