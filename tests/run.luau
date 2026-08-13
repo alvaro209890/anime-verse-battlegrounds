@@ -55,6 +55,9 @@ local Locale = require("../src/shared/Data/Locale")
 local Geometry = require("../src/shared/Geometry")
 local SpatialService = require("../src/server/Services/SpatialService")
 local EnemyService = require("../src/server/Services/EnemyService")
+local ClientState = require("../src/client/Controllers/ClientState")
+local InputController = require("../src/client/Controllers/InputController")
+local CharacterController = require("../src/client/Controllers/CharacterController")
 
 -- ── Relógio injetável (janela de reentrada / cap de Fluxo) ──────────────────
 local fakeNow = 1000
@@ -186,6 +189,76 @@ test("dados: envelope v2 rejeita versão, sequência e ação inválidas", funct
 	local actionPayload, actionReason = RemoteEnvelope.decode(wrongAction, "AbilityIntent")
 	assertEq(actionPayload, nil, "ação trocada rejeitada")
 	assertEq(actionReason, "action_mismatch", "motivo ação")
+end)
+
+test("cliente: input não emite antes do SessionSnapshot ready", function()
+	local state = ClientState.new(clockNow)
+	local input = InputController.new(state, clockNow)
+	local emitted = 0
+	InputController.subscribe(input, function(_action: any, _payload: any)
+		emitted += 1
+	end)
+	local ok, reason = InputController.dispatch(input, "BasicLight", {})
+	assertFalse(ok, "boot não emite")
+	assertEq(reason, "not_ready", "motivo")
+	assertEq(emitted, 0, "nenhuma intenção")
+end)
+
+test("cliente: input limita combate a 8 intenções por segundo", function()
+	fakeNow = 2000
+	local state = ClientState.new(clockNow)
+	ClientState.applySnapshot(state, { ready = true })
+	local input = InputController.new(state, clockNow)
+	local emitted = 0
+	InputController.subscribe(input, function(_action: any, _payload: any)
+		emitted += 1
+	end)
+	for _ = 1, 8 do
+		assertTrue(InputController.dispatch(input, "BasicLight", {}), "primeiras oito")
+	end
+	local ninth, reason = InputController.dispatch(input, "Dash", {})
+	assertFalse(ninth, "nona descartada")
+	assertEq(reason, "rate_limited", "motivo")
+	assertEq(emitted, 8, "oito emitidas")
+	fakeNow += 1.01
+	assertTrue(InputController.dispatch(input, "Dash", {}), "nova janela")
+end)
+
+test("cliente: toque recusa terceiro botão simultâneo", function()
+	local state = ClientState.new(clockNow)
+	ClientState.applySnapshot(state, { ready = true })
+	local input = InputController.new(state, clockNow)
+	assertTrue(InputController.touchBegin(input, "a", "GuardDown", {}), "primeiro")
+	assertTrue(InputController.touchBegin(input, "b", "Ability1", {}), "segundo")
+	local ok, reason = InputController.touchBegin(input, "c", "Dash", {})
+	assertFalse(ok, "terceiro recusado")
+	assertEq(reason, "touch_chord_limit", "motivo")
+	InputController.touchEnd(input, "a", "GuardUp", {})
+	assertTrue(InputController.touchBegin(input, "c", "Dash", {}), "libera após soltar")
+end)
+
+test("cliente: CharacterController envia somente intenção sem alvo ou dano", function()
+	local state = ClientState.new(clockNow)
+	ClientState.applySnapshot(state, { ready = true })
+	local input = InputController.new(state, clockNow)
+	local sent: { any } = {}
+	CharacterController.new({
+		state = state,
+		input = input,
+		inputSubscribe = InputController.subscribe,
+		send = function(remoteName: string, action: string, payload: { [string]: any })
+			table.insert(sent, { remoteName = remoteName, action = action, payload = payload })
+		end,
+	})
+	InputController.dispatch(input, "BasicLight", {})
+	InputController.dispatch(input, "GuardDown", {})
+	InputController.dispatch(input, "Dash", {})
+	assertEq(#sent, 3, "três intenções")
+	assertEq(sent[1].payload.kind, "light", "ataque sem alvo")
+	assertEq(sent[1].payload.targetId, nil, "sem alvo")
+	assertEq(sent[1].payload.damage, nil, "sem dano")
+	assertEq(sent[2].payload.phase, "down", "guarda sem sucesso inventado")
+	assertEq(sent[3].payload.direction.z, -1, "direção unitária fallback")
 end)
 
 test("dados: dummy de treino no catálogo", function()
