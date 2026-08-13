@@ -58,6 +58,10 @@ local EnemyService = require("../src/server/Services/EnemyService")
 local ClientState = require("../src/client/Controllers/ClientState")
 local InputController = require("../src/client/Controllers/InputController")
 local CharacterController = require("../src/client/Controllers/CharacterController")
+local AbilityController = require("../src/client/Controllers/AbilityController")
+local CombatFeedbackController = require("../src/client/Controllers/CombatFeedbackController")
+local ResourceController = require("../src/client/Controllers/ResourceController")
+local ZoneController = require("../src/client/Controllers/ZoneController")
 
 -- ── Relógio injetável (janela de reentrada / cap de Fluxo) ──────────────────
 local fakeNow = 1000
@@ -259,6 +263,88 @@ test("cliente: CharacterController envia somente intenção sem alvo ou dano", f
 	assertEq(sent[1].payload.damage, nil, "sem dano")
 	assertEq(sent[2].payload.phase, "down", "guarda sem sucesso inventado")
 	assertEq(sent[3].payload.direction.z, -1, "direção unitária fallback")
+end)
+
+test("cliente: AbilityController mantém 3 slots, oculta ultimate e exige unlock", function()
+	local state = ClientState.new(clockNow)
+	ClientState.applySnapshot(state, { ready = true })
+	local input = InputController.new(state, clockNow)
+	local sent: { any } = {}
+	local controller = AbilityController.new({
+		state = state,
+		stateApi = ClientState,
+		input = input,
+		inputSubscribe = InputController.subscribe,
+		abilities = Abilities,
+		characters = Characters,
+		send = function(_remoteName: string, _action: string, payload: { [string]: any })
+			table.insert(sent, payload)
+		end,
+		guid = function()
+			return "execution-1"
+		end,
+	})
+	assertEq(#controller.slotIds, 3, "três slots")
+	for _, abilityId in controller.slotIds do
+		assertFalse(abilityId == "eclipse_beat", "ultimate desligada oculta")
+	end
+	local locked, reason = AbilityController.activateSlot(controller, 1)
+	assertFalse(locked, "locked não envia")
+	assertEq(reason, "locked", "motivo")
+	assertEq(#sent, 0, "sem remote")
+	state.unlocks.unlock_comet_shoulder = true
+	local ok, executionId = AbilityController.activateSlot(controller, 1)
+	assertTrue(ok, "destravada envia")
+	assertEq(executionId, "execution-1", "correlação")
+	assertEq(sent[1].abilityId, "comet_shoulder", "ID sem nome público")
+	assertEq(sent[1].executionId, "execution-1", "executionId no payload")
+	assertEq(sent[1].damage, nil, "sem dano")
+	assertTrue(ClientState.cooldownRemaining(state, "comet_shoulder") > 0, "cooldown radial recebe estado")
+end)
+
+test("cliente: rejeição reconcilia cooldown e feedback nunca mostra código", function()
+	local state = ClientState.new(clockNow)
+	ClientState.applySnapshot(state, { ready = true })
+	ClientState.setCooldown(state, "comet_shoulder", 7)
+	local input = InputController.new(state, clockNow)
+	local ability = AbilityController.new({
+		state = state,
+		stateApi = ClientState,
+		input = input,
+		inputSubscribe = InputController.subscribe,
+		abilities = Abilities,
+		characters = Characters,
+		send = function() end,
+		guid = function()
+			return "execution-2"
+		end,
+	})
+	local feedback = CombatFeedbackController.new(state, ClientState)
+	local payload = { abilityId = "comet_shoulder", reason = "no_resource" }
+	AbilityController.onRejected(ability, payload)
+	CombatFeedbackController.onRejected(feedback, payload)
+	assertEq(ClientState.cooldownRemaining(state, "comet_shoulder"), 0, "predição desfeita")
+	assertEq(ClientState.feedback(state), "hud.feedback_no_resource", "chave localizada")
+	assertFalse(ClientState.feedback(state) == payload.reason, "código não vai para a tela")
+end)
+
+test("cliente: recurso, zona e perda só mudam após ready", function()
+	local state = ClientState.new(clockNow)
+	local resource = ResourceController.new(state, ClientState)
+	local zone = ZoneController.new(state, ClientState)
+	ResourceController.onChanged(resource, { current = 0, max = 100, depleted = true })
+	ZoneController.onZoneEvent(zone, { to = "zone_plain_free", pvp = true })
+	assertEq(state.resource, 0, "pré-ready permanece inicial")
+	assertEq(state.zoneId, "", "pré-ready sem zona")
+	ClientState.applySnapshot(state, { ready = true, resource = 50, zoneId = "zone_bastion_safe" })
+	ResourceController.onChanged(resource, { current = 0, max = 100, depleted = true })
+	ZoneController.onZoneEvent(zone, { to = "zone_plain_free", pvp = true })
+	ZoneController.onDelta(zone, { deathPenalty = 15 })
+	assertEq(state.resource, 0, "recurso autoritativo")
+	assertTrue(state.depleted, "esgotado visível")
+	assertEq(state.zoneId, "zone_plain_free", "zona autoritativa")
+	assertTrue(state.pvp, "PvP ativo")
+	assertEq(ClientState.feedback(state), "hud.feedback_death_loss", "perda resumida localizada")
 end)
 
 test("dados: dummy de treino no catálogo", function()
