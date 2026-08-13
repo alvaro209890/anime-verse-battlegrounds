@@ -234,6 +234,9 @@ local function createActorModel(name: string, actorId: string, npcId: string, re
 			makeVisualPart("Part", "Torso", Vector3.new(2.2, 2.4, 1.1) * scale, bodyColor, Enum.Material.Slate)
 		attach(root, torso, CFrame.new(0, 0.1, 0), "Joint_Torso")
 
+		-- Cabeça com mesh humanoide + rosto: nada de "bola lisa". O mesh é o
+		-- clássico do Roblox (asset livre) e o rosto é um decal na frente; o
+		-- instrutor recebe rosto de anime e o dummy, o rosto clássico de boneco.
 		local head = makeVisualPart(
 			"Part",
 			"Head",
@@ -241,7 +244,11 @@ local function createActorModel(name: string, actorId: string, npcId: string, re
 			coreColor,
 			Enum.Material.SmoothPlastic
 		)
-		head.Shape = Enum.PartType.Ball
+		local headMesh = Instance.new("SpecialMesh")
+		headMesh.MeshType = Enum.MeshType.FileMesh
+		headMesh.MeshId = "rbxassetid://1290273"
+		headMesh.Scale = Vector3.new(1, 1, 1) * scale
+		headMesh.Parent = head
 		attach(torso, head, CFrame.new(0, 1.85 * scale, 0), "Joint_Head")
 
 		local leftArm =
@@ -270,6 +277,13 @@ local function createActorModel(name: string, actorId: string, npcId: string, re
 			rightArm.Material = Enum.Material.Leather
 			leftLeg.Material = Enum.Material.Leather
 			rightLeg.Material = Enum.Material.Leather
+
+			-- Rosto de anime na frente da cabeça (decal livre).
+			local face = Instance.new("Decal")
+			face.Name = "Face"
+			face.Face = Enum.NormalId.Front
+			face.Texture = "rbxassetid://54172038"
+			face.Parent = head
 
 			-- Casaco: cauda atrás das pernas + fio umbral na bainha.
 			local coatBottom = makeVisualPart(
@@ -312,23 +326,7 @@ local function createActorModel(name: string, actorId: string, npcId: string, re
 			)
 			attach(hood, hoodTrim, CFrame.new(0, 0.14 * scale, -0.62 * scale), "Joint_HoodTrim")
 
-			-- Rosto pálido com olhos neon brilhantes e sombra inferior (anime).
-			local eyeL =
-				makeVisualPart("Part", "EyeL", Vector3.new(0.17, 0.17, 0.12) * scale, coreColor, Enum.Material.Neon)
-			eyeL.Shape = Enum.PartType.Ball
-			attach(head, eyeL, CFrame.new(-0.28 * scale, 0.14 * scale, 0.68 * scale), "Joint_EyeL")
-			local eyeR = eyeL:Clone()
-			eyeR.Name = "EyeR"
-			attach(head, eyeR, CFrame.new(0.28 * scale, 0.14 * scale, 0.68 * scale), "Joint_EyeR")
-			local faceShade = makeVisualPart(
-				"Part",
-				"FaceShade",
-				Vector3.new(0.95, 0.5, 0.7) * scale,
-				bodyColor,
-				Enum.Material.SmoothPlastic
-			)
-			faceShade.Transparency = 0.45
-			attach(head, faceShade, CFrame.new(0, -0.28 * scale, 0.62 * scale), "Joint_FaceShade")
+			-- Rosto de anime (decal na frente da cabeça com mesh humanoide).
 
 			-- Faixa de energia na cintura + fivela (Neon = o "fio" umbral).
 			local belt =
@@ -391,6 +389,13 @@ local function createActorModel(name: string, actorId: string, npcId: string, re
 			rightLeg.Material = Enum.Material.Leather
 			leftArm.Material = Enum.Material.Leather
 			rightArm.Material = Enum.Material.Leather
+
+			-- Rosto clássico de boneco de treino na frente da cabeça (decal livre).
+			local dummyFace = Instance.new("Decal")
+			dummyFace.Name = "Face"
+			dummyFace.Face = Enum.NormalId.Front
+			dummyFace.Texture = "rbxassetid://2338267135"
+			dummyFace.Parent = head
 
 			-- Cinto de couro mais escuro na cintura.
 			local belt =

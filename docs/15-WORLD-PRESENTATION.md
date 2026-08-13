@@ -106,10 +106,15 @@ Cada modelo usa uma raiz invisível ancorada e peças sem colisão ligadas por `
 >   (`WoodPlanks`/`Wood`) que ancoram o visual sem mexer no root.
 > - **Instrutor do Limiar (mensageiro)** — casaco escuro de tecido (`Fabric`)
 >   com cauda e bainha umbral Neon, capuz de couro com borda de energia, gola
->   alta com trim Neon, olhos brilhantes (`EyeL`/`EyeR` Neon) com sombra
->   inferior no rosto pálido, punhos Neon e mãos de tecido, botas de couro,
->   cinto umbral com fivela e três orbes de energia orbitando o torso
->   (`Orb1..3` Neon).
+>   alta com trim Neon, punhos Neon e mãos de tecido, botas de couro e cinto
+>   umbral com fivela.
+>
+> **Cabeças (correção 13/08 18h):** as cabeças deixaram de ser esferas lisas.
+> Agora cada humanoid usa o mesh clássico de cabeça do Roblox
+> (`SpecialMesh` `rbxassetid://1290273`) com rosto aplicado na frente:
+> o instrutor recebe rosto de anime (`Face` = decal livre) e o dummy, o rosto
+> clássico de boneco de treino. Os olhos neon esféricos e os orbes flutuantes
+> foram removidos (conflitavam com o rosto e poluíam a leitura).
 
 > **Skin do boneco de treino (13/08, 16h):** (ver bloco acima — skin do spawn).
 
