@@ -32,12 +32,38 @@ O CI em pushes para `main` valida contratos headless e a árvore Rojo; não subs
 
 ## Desenvolvimento
 
-```bash
-aftman install        # instala o toolchain (rojo, wally, selene, stylua, lune, luau-lsp)
-lune run tests/run.luau   # testes unitários (159)
-selene src tests      # lint
-stylua --check src tests  # formatação
-rojo build -o build.rbxl  # valida a árvore de instâncias
+No PowerShell, gere sempre um snapshot novo antes de abrir o projeto no Studio:
+
+```powershell
+aftman install
+.\scripts\build-studio.ps1
+```
+
+O script instala as dependências Wally, garante `Packages/`, sobrescreve exatamente
+`anime-verse-battlegrounds.rbxl` e imprime tamanho, data e SHA256 para confirmar que
+o arquivo não é um build antigo. Feche o place que já estiver aberto no Studio e
+reabra esse `.rbxl` antes de clicar em **Play**.
+
+Esse `.rbxl` é um artefato local ignorado pelo Git: atualizar ou baixar a branch
+`main` não reconstrói o arquivo. Rode o script novamente depois de cada atualização.
+
+**Build não é Play:** o build apenas copia o estado atual de `src/` para um arquivo
+`.rbxl`; ele não inicia o jogo nem atualiza um place que já está aberto. O **Play**
+executa o snapshot atualmente carregado no Studio. Portanto, depois de mudar código,
+rode novamente o script e reabra o arquivo — ou use uma sessão Rojo live-sync
+configurada separadamente.
+
+O atributo `F0Debug=true` do snapshot libera o kit de teste somente no Studio. O
+servidor ainda exige `RunService:IsStudio()`, então o mesmo atributo não ativa esse
+atalho em uma experiência publicada.
+
+Outros gates locais:
+
+```powershell
+lune run tests/run.luau
+selene src tests
+stylua --check --line-endings Windows src tests
+rojo build -o build.rbxl
 ```
 
 O CI (`.github/workflows/ci.yml`) roda lint + format + testes + build em todo push.

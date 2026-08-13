@@ -2,6 +2,9 @@
   "name": "anime-verse-battlegrounds",
   "tree": {
     "$className": "DataModel",
+    "$attributes": {
+      "F0Debug": true
+    },
     "ReplicatedStorage": {
       "Packages": {
         "$path": "Packages"
