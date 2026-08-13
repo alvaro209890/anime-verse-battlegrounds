@@ -95,6 +95,16 @@ Cada modelo usa uma raiz invisível ancorada e peças sem colisão ligadas por `
 > que orbita junto do pivot), `ShardFront`/`ShardBack` e, no elite, coroa
 > `Crown_1..3`. Continua tudo Part/Motor6D greybox até o Gate P1.
 
+> **Decoração do spawn (13/08):** `SpawnDecorations.luau` (shared, dados puros
+> validados por teste) + `buildSpawnDecorations` no WorldService materializam
+> a leitura do Bastião: pilares de canto/portões com cristais umbral no topo,
+> arcos Neon dos portões (visual — a passagem continua livre), obelisco atrás
+> do Marco de Retorno, lanternas ao longo do caminho norte e da praça, e anel
+> Neon delimitando o TrainingPad. A muralha de perímetro continua a do
+> `buildWalls` (GateBlock). Regras travadas por teste: nada invade os volumes
+> de transição, decoração solta fica dentro do volume do bastião e a muralha
+> não engole âncoras críticas.
+
 Somente o root do dummy e dos inimigos vivos possui `CombatTarget`; âncoras de spawn não são alvos de câmera. Essa distinção faz magnetismo/lock-on acompanhar o ator móvel em vez do ponto onde ele nasceu.
 
 ## 5. Animação procedural

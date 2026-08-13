@@ -1,6 +1,6 @@
 # 12 — Testes e evidências
 
-> **Snapshot:** 2026-08-13. `tests/run.luau` declara 205 testes F0 alinhados a `docs/13-F0-SLICE.md`; `tests/animation.luau` soma **34** testes de apresentação/game-feel (easing, follow-through, idle, wrist snap, hit-stop, câmera de impacto, VFX do Cometa, HUD de combate e sync da cadeia leve). Desde o snapshot de 133 casos, foram acrescentados 9 testes dos controllers de cliente, 2 do envelope v2, 1 de coerência bootstrap/Rojo, 10 de telemetria/segurança, 4 da fundação de mundo/apresentação + gate Studio, 1 do piso estrutural, 1 da apresentação do jogador e 5 da interação mínima; em 13/08 entraram mais 5 de VFX do Cometa, 3 do HUD de combate (números de dano/barras) e 1 do syncStep da cadeia.
+> **Snapshot:** 2026-08-13. `tests/run.luau` declara **208** testes F0 alinhados a `docs/13-F0-SLICE.md`; `tests/animation.luau` soma **34** testes de apresentação/game-feel (easing, follow-through, idle, wrist snap, hit-stop, câmera de impacto, VFX do Cometa, HUD de combate e sync da cadeia leve). Desde o snapshot de 133 casos, foram acrescentados 9 testes dos controllers de cliente, 2 do envelope v2, 1 de coerência bootstrap/Rojo, 10 de telemetria/segurança, 4 da fundação de mundo/apresentação + gate Studio, 1 do piso estrutural, 1 da apresentação do jogador e 5 da interação mínima; em 13/08 entraram mais 5 de VFX do Cometa, 3 do HUD de combate (números de dano/barras), 1 do syncStep da cadeia e 3 da decoração do spawn (portões livres, volume, âncoras).
 
 ## 1. Estado da execução
 

@@ -46,6 +46,7 @@ local Npcs = require(ReplicatedStorage.Shared.Data.Npcs)
 local Quests = require(ReplicatedStorage.Shared.Data.Quests)
 local RemoteEnvelope = require(ReplicatedStorage.Shared.RemoteEnvelope)
 local WorldPresentation = require(ReplicatedStorage.Shared.Data.WorldPresentation)
+local SpawnDecorations = require(ReplicatedStorage.Shared.Data.SpawnDecorations)
 local Zones = require(ReplicatedStorage.Shared.Data.Zones)
 
 -- 1. Catálogo — validação em fail-fast
@@ -77,6 +78,7 @@ WorldService.init({
 	zones = Zones,
 	greybox = Zones.greybox,
 	presentation = WorldPresentation,
+	spawnDecorations = SpawnDecorations,
 })
 print("[Bootstrap] greybox construído")
 

@@ -40,6 +40,7 @@ local Characters = require("../src/shared/Data/Characters")
 local EnergyFamilies = require("../src/shared/Data/EnergyFamilies")
 local Npcs = require("../src/shared/Data/Npcs")
 local WorldPresentation = require("../src/shared/Data/WorldPresentation")
+local SpawnDecorations = require("../src/shared/Data/SpawnDecorations")
 local Remotes = require("../src/shared/Remotes")
 local RemoteEnvelope = require("../src/shared/RemoteEnvelope")
 local Zones = require("../src/shared/Data/Zones")
@@ -87,6 +88,76 @@ test("greybox: WorldService gera piso para cada volume canônico de zona", funct
 	assertTrue(source:find("box.max.x - box.min.x", 1, true) ~= nil, "largura vem do volume")
 	assertTrue(source:find("box.max.z - box.min.z", 1, true) ~= nil, "profundidade vem do volume")
 	assertTrue(source:find('floor:SetAttribute("ZoneId", zone.id)', 1, true) ~= nil, "piso rastreável")
+	assertTrue(source:find("buildSpawnDecorations(root)", 1, true) ~= nil, "decoração do spawn entra no bootstrap")
+end)
+
+test("greybox: decoração do spawn valida com os dados reais do Zones", function()
+	local bastion = Zones.get("zone_bastion_safe")
+	local transition = Zones.get("zone_threshold_transition")
+	assertTrue(bastion ~= nil and transition ~= nil, "zonas existem")
+	if not bastion or not transition then
+		return
+	end
+	local anchors = {
+		{ x = 0, y = 0, z = 20 }, -- spawn
+		{ x = 0, y = 0, z = 12 }, -- marco de retorno
+		{ x = 20, y = 0, z = -14 }, -- instrutor
+		{ x = 28, y = 0, z = -20 }, -- treino
+		{ x = 0, y = 0, z = -32 }, -- portão norte
+		{ x = -40, y = 0, z = 0 }, -- portão oeste
+	}
+	local errors = SpawnDecorations.validate(SpawnDecorations.all(), bastion.volumes[1], transition.volumes, anchors)
+	assertEq(#errors, 0, table.concat(errors, "; "))
+end)
+
+test("greybox: decoração do spawn deixa os portões livres e fica no volume", function()
+	local bastion = Zones.get("zone_bastion_safe")
+	local transition = Zones.get("zone_threshold_transition")
+	assertTrue(bastion ~= nil and transition ~= nil, "zonas existem")
+	if not bastion or not transition then
+		return
+	end
+	-- Cada peça, individualmente, não invade os volumes de transição.
+	for _, d in SpawnDecorations.all() do
+		for _, box in transition.volumes do
+			local minX = d.position.x - d.size.x / 2
+			local maxX = d.position.x + d.size.x / 2
+			local minZ = d.position.z - d.size.z / 2
+			local maxZ = d.position.z + d.size.z / 2
+			local invades = minX < box.max.x and maxX > box.min.x and minZ < box.max.z and maxZ > box.min.z
+			assertFalse(invades, ("%s invade o portão"):format(d.name))
+		end
+		if not d.canCollide then
+			local box = bastion.volumes[1]
+			local minX = d.position.x - d.size.x / 2
+			local maxX = d.position.x + d.size.x / 2
+			local minZ = d.position.z - d.size.z / 2
+			local maxZ = d.position.z + d.size.z / 2
+			assertTrue(
+				minX >= box.min.x and maxX <= box.max.x and minZ >= box.min.z and maxZ <= box.max.z,
+				("%s fora do bastião"):format(d.name)
+			)
+		end
+	end
+end)
+
+test("greybox: decoração do spawn não bloqueia o treino nem o spawn", function()
+	local bastion = Zones.get("zone_bastion_safe")
+	local transition = Zones.get("zone_threshold_transition")
+	assertTrue(bastion ~= nil and transition ~= nil, "zonas existem")
+	if not bastion or not transition then
+		return
+	end
+	local anchors = {
+		{ x = 0, y = 0, z = 20 },
+		{ x = 0, y = 0, z = 12 },
+		{ x = 20, y = 0, z = -14 },
+		{ x = 28, y = 0, z = -20 },
+		{ x = 0, y = 0, z = -32 },
+		{ x = -40, y = 0, z = 0 },
+	}
+	local errors = SpawnDecorations.validate(SpawnDecorations.all(), bastion.volumes[1], transition.volumes, anchors)
+	assertEq(#errors, 0, "nenhum erro com as âncoras críticas")
 end)
 
 test("apresentação: quatro atores e estilo do mundo passam validação", function()
