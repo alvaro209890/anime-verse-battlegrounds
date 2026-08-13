@@ -24,13 +24,13 @@ P1 (revisão jurídica) continua obrigatório antes de concept art, áudio final
 
 ## 2. Divergências do código atual
 
-Itens 1–13 estão fechados em código/headless, e o commit `108be31` acrescenta a correção de runtime preparatória I1: pisos para todos os volumes, interação contextual, telegraph acessível e resposta procedural do jogador. O snapshot agora possui 166 testes. O que **não** está comprovado é execução real em Play: o build atual não foi executado, e não há roteiro, Output ou captura dessa revisão. Ainda falta:
+Itens 1–13 estão fechados em código/headless, e o commit `108be31` acrescenta a correção de runtime preparatória I1: pisos para todos os volumes, interação contextual, telegraph acessível e resposta procedural do jogador. Em 13/08 (`d0f6f8d`) o combate ganhou skins procedurais anime, animações mais dramáticas, balanceamento de dano e HUD de combate (números de dano + barras de inimigos). O snapshot agora possui **238 testes** (205 regressão + 33 apresentação/HUD). O que **não** está comprovado é execução real em Play: o build atual não foi executado, e não há roteiro, Output ou captura dessa revisão. Ainda falta:
 
 | Onde | Estado atual | Alvo desta spec |
 |---|---|---|
 | `src/shared/Data/Abilities.luau` | `comet_shoulder`, `broken_cadence`, `pulse_return`; `eclipse_beat` desligada | feito |
 | `src/shared/Data/EnergyFamilies.luau` | Umbral regen 2/6, Fluxo 6 / 120 ms, cap 1,5 s | feito |
-| `src/shared/Data/Npcs.luau` | dummy 10000 HP; `enemy_wandering_shard` 40 HP / dano 6 / alcance 4 / telegraph 400 ms; `npc_threshold_instructor` (ofertante) | **item 9 feito**: `enemy_anchored_shard` (80 HP, slam 12/700 ms, combo 5+5/300 ms, respawn 180 s, XP 80 cooldown 180 s, leeching 1%/8 s) — pathfinding/Studio pendente |
+| `src/shared/Data/Npcs.luau` | dummy 10000 HP; `enemy_wandering_shard` 60 HP / dano 8 / alcance 4 / telegraph 400 ms; `npc_threshold_instructor` (ofertante) | **item 9 feito**: `enemy_anchored_shard` (120 HP, slam 14/700 ms, combo 6+6/300 ms, respawn 180 s, XP 80 cooldown 180 s, leeching 1%/8 s) — pathfinding/Studio pendente |
 | `src/shared/Data/Zones.luau` | 3 zonas com volumes (AABB), 7 âncoras persistidas (`anchor_instructor` incluída) + 6 pontos de Estilhaço, greybox F0-BASELINE | feito |
 | `src/shared/Geometry.luau` | distância, costas, esfera, cápsula, caixa, lunge e passo de perseguição | feito |
 | `SpatialService` | registro de posição/olhar; hitbox à frente, cápsula do trajeto, `resolveCometShoulder` | feito no domínio; leitura do `HumanoidRootPart` só roda no Studio |
@@ -194,12 +194,12 @@ Runner: reserva recurso e cooldown → move no servidor até 7 studs ou primeiro
 | kind / slotCost / impactCost | Skill / 1 / 2 |
 | tags | `melee`, `cancelable` |
 | Custo / cooldown | 16 / 8 s |
-| Golpe 1 | startup 140 ms, active 80 ms, dano 5 |
+| Golpe 1 | startup 140 ms, active 80 ms, dano 7 |
 | Intervalo | 100 ms |
-| Golpe 2 | active 80 ms, dano 6, recovery 280 ms |
+| Golpe 2 | active 80 ms, dano 9, recovery 280 ms |
 | Hitbox | esfera 4,5 studs, máx. 1 alvo por golpe |
 | Reentrada | 120 ms após o fim do active do golpe 2 |
-| Eco | 350 ms depois, dano 4, mesma hitbox; não controla |
+| Eco | 350 ms depois, dano 6, mesma hitbox; não controla |
 | Fluxo | se o eco **acerta**, +6 Umbral; máx. 1 vez / 1,5 s |
 | `serverRunnerId` | `broken_cadence_runner` |
 | Unlock | flag `unlock_broken_cadence` |
@@ -216,7 +216,7 @@ Passiva F0 da família (não da identidade): a primeira ativação de Fluxo a ca
 | tags | `defense`, `melee` |
 | Custo / cooldown | 20 / 12 s |
 | Postura | 250 ms; reduz **50%** de **um** golpe frontal |
-| Contra (se reduzir) | active 180 ms, dano 8, empurrão 8 studs, recovery 300 ms |
+| Contra (se reduzir) | active 180 ms, dano 10, empurrão 8 studs, recovery 300 ms |
 | Erro (nenhum golpe) | recovery 600 ms |
 | Agarrão / costas | vencem a postura |
 | `serverRunnerId` | `pulse_return_runner` |
@@ -527,8 +527,8 @@ Os casos abaixo estão em `tests/run.luau` (166 no total; fonte: chamadas `test(
 
 - roster `eclipse_fist` com 3 skills enabled + 1 ultimate disabled
 - `comet_shoulder` custo 18, CD 7, runner registrado
-- ativação gasta 18, dano 9, recusa sem recurso / cooldown / morto
-- comet no fighter dummy: 9 HP aberto; guarda para o avanço (4 HP + 9 guarda); aparo e i-frame zeram
+- ativação gasta 18, dano 14, recusa sem recurso / cooldown / morto
+- comet no fighter dummy: 14 HP aberto; guarda para o avanço (6 HP + 14 guarda); aparo e i-frame zeram
 - join Ready → comet gasta 18 e dummy fica em 9991 HP
 - `broken_cadence` recusa reentrada fora da janela; Fluxo +6 no eco que acerta, respeita cap 1,5 s
 - `pulse_return` sem golpe → não aplica contra
@@ -561,8 +561,8 @@ Unlock no spawn (recorte do item 7):
 
 Estilhaço Errante (recorte do item 7):
 
-- catálogo: 40 HP, dano 6, alcance 4, telegraph 400 ms, respawn 45 s, XP 25, max 4, zona livre
-- combate: telegraph depois dano 6; `no_aggro` através da fronteira; fora de 4 studs recusa
+- catálogo: 60 HP, dano 8, alcance 4, telegraph 400 ms, respawn 45 s, XP 25, max 4, zona livre
+- combate: telegraph depois dano 8; `no_aggro` através da fronteira; fora de 4 studs recusa
 - combate: recovery bloqueia o próximo golpe; respawn 45 s bloqueia se combate perto; cap 4 vivos
 
 Objetivo 1, XP e Locale (item 7, 2026-08-12):
@@ -618,7 +618,7 @@ Ordem de implementação; cada item fecha com teste automatizado **ou** evidênc
 6. ~~Greybox + `ZoneService` + 5 sinais~~ (regras concluídas em 2026-08-12; fundação visual evoluída em 2026-08-13. O commit `108be31` passou a gerar piso para todos os volumes, cobrindo os buracos norte/oeste, moveu o soft target para os atores, acrescentou telegraph branco + símbolo e sincronizou duração/padrão de apresentação. **Sem execução em Studio**: Parts/Motor6D, pisos, sinais, iluminação, clipping, hold 0,6 s e playtest cego continuam pendentes)
 7. ~~Estilhaços + objetivo 1 + unlock Cometa~~ (completo 2026-08-12; 109 testes — Locale, `Quests.luau`, `QuestService`, XP com retorno decrescente e teto de sessão, unlock no 3º kill, `InteractionIntent` + `StateDelta`, e o `EnemyService` com spawn nas 6 âncoras, perseguição, telegraph e respawn. **Pendente**: persistência do XP/flags, que é o item 11, e execução em Studio)
 8. ~~Cadência + Fluxo~~ (completo 2026-08-12 — janela de reentrada abre 120 ms após o fim do active do golpe 2 (400 ms da ativação), clique prematuro não destrói a janela, reentrada agenda o eco para 350 ms depois (`AbilityService.tick` no Heartbeat), eco 4 com Fluxo +6, cap 1,5 s e bônus +3 a cada 8 s no `ResourceService`. **Pendente**: execução em Studio)
-9. ~~Elite + unlock Cadência~~ (completo 2026-08-12 — `enemy_anchored_shard` no catálogo com slam 12/700 ms unblockable (guarda corta 30%) e combo 5+5/300 ms alternados por ciclo; spawn único na `anchor_elite`; respawn 180 s; leeching ≥ 1% da vida ou 8 s no raio sem último golpe; XP 80 com cooldown de 180 s por jogador; `quest_elite` +60 XP e `unlock_broken_cadence`. **Pendente**: cratera e ciclo no Studio)
+9. ~~Elite + unlock Cadência~~ (completo 2026-08-12 — `enemy_anchored_shard` no catálogo com slam 14/700 ms unblockable (guarda corta 30%) e combo 6+6/300 ms alternados por ciclo; spawn único na `anchor_elite`; respawn 180 s; leeching ≥ 1% da vida ou 8 s no raio sem último golpe; XP 80 com cooldown de 180 s por jogador; `quest_elite` +60 XP e `unlock_broken_cadence`. **Pendente**: cratera e ciclo no Studio)
 10. ~~Pulso + objetivo 45–60 min~~ (completo 2026-08-12 — postura de 250 ms reduz 50% de UM golpe frontal; contra 8 + empurrão 8 studs espacial; erro vira recovery 600 ms; costas e slam do elite vencem a postura; `quest_flow` kind `flow_echo` creditado pelo eco da Cadência, +40 XP e `unlock_pulse_return`. **Pendente**: empurrão e feeling no Studio)
 11. ~~Consolidação + morte + ProfileStore~~ (completo 2026-08-12 — consolidação no Marco de Retorno move todo o não consolidado com recibo `operationId` idempotente e anel de 32 recibos; morte aplica perda por zona: segura 0, livre PvE 10%, PvP 15%, cap 200; `SaveService` com ProfileRoot v1, session lock, autosave 60–120 s com jitter e os 5 cenários de §11.2 cobertos por teste; `lib/ProfileStore.luau` entra no build via `ReplicatedStorage.Shared.vendor`. **Pendente**: DataStore real no place privado e respawn com proteção 8 s no Studio)
 12. ~~HUD/input mobile e gamepad~~ (implementado em código/headless 2026-08-13 — controllers na ordem §12.3, gate `SessionSnapshot.ready`, envelope v2, 8 intenções/s, teclado/mouse/toque/gamepad, soft lock 8°/25 studs apenas no ataque básico, HUD localizado e resposta procedural local. O recorte I1 adicionou `ProximityPrompt` contextual para PC/toque/gamepad. **Pendente**: qualquer playtest do build atual, toque/mobile e gamepad reais)

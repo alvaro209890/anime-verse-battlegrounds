@@ -1308,6 +1308,15 @@ function PlayerCombatAnimator.play(animator: Animator, action: string): boolean
 	return true
 end
 
+-- Sincroniza o degrau da cadeia com o valor autoritativo do servidor
+-- (docs/14 §4.3): acerto confirmado fixa o degrau; whiff (step 0) zera a
+-- pose visual. Só ajusta o degrau — nunca decide acerto nem dano.
+function PlayerCombatAnimator.syncStep(animator: Animator, step: number): ()
+	animator.comboStep = if type(step) == "number" and step > 0
+		then math.clamp(math.floor(step), 1, PlayerCombatAnimator.LightChainLength)
+		else 0
+end
+
 -- Dispara a deixa agendada quando o relógio a alcança. Chamado pelo step e
 -- exposto para teste sem DataModel.
 function PlayerCombatAnimator.flushCue(animator: Animator, now: number): string?

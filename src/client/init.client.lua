@@ -185,6 +185,11 @@ remote(Remotes.Names.CombatEvent).OnClientEvent:Connect(function(payload: { [str
 	CombatCameraController.addImpact(combatCamera, payload.outcome, payload.abilityId)
 	-- Número de dano flutuante (dano > 0, desfecho confirmado).
 	CombatHudController.onCombatEvent(combatHud, payload)
+	-- Sincronização da cadeia leve com o degrau autoritativo (docs/14 §4.3):
+	-- whiff zera a pose visual; acerto confirma o degrau do servidor.
+	if type(payload.step) == "number" then
+		PlayerCombatAnimator.syncStep(playerCombatAnimator, payload.step)
+	end
 end)
 
 remote(Remotes.Names.AbilityRejected).OnClientEvent:Connect(function(payload: { [string]: any })

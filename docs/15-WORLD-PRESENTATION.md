@@ -88,6 +88,13 @@ As receitas vivem em `src/shared/Data/WorldPresentation.luau`; o módulo guarda 
 
 Cada modelo usa uma raiz invisível ancorada e peças sem colisão ligadas por `Motor6D`. A altura da raiz é derivada da receita para manter os pés sobre o piso; cabeça e braços seguem o torso, evitando separação visual ao inclinar. A posição/olhar da raiz vêm do `SpatialService` no servidor e só são replicados quando posição ou direção mudam. O cliente altera apenas `Motor6D.Transform`; portanto a pose nunca muda alcance, alvo, dano ou posição válida.
 
+> **Skins procedurais (13/08, `d0f6f8d`):** os modelos ganharam peças de
+> identidade com joints próprios (não animados — o `ActorAnimator` ignora
+> joints desconhecidos): Instrutor com `Hood`/`Collar`/`Belt` (faixa Neon),
+> dummy com `Target` (disco Neon no peito), estilhaços com `Halo` (anel Neon
+> que orbita junto do pivot), `ShardFront`/`ShardBack` e, no elite, coroa
+> `Crown_1..3`. Continua tudo Part/Motor6D greybox até o Gate P1.
+
 Somente o root do dummy e dos inimigos vivos possui `CombatTarget`; âncoras de spawn não são alvos de câmera. Essa distinção faz magnetismo/lock-on acompanhar o ator móvel em vez do ponto onde ele nasceu.
 
 ## 5. Animação procedural

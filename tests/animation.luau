@@ -182,6 +182,35 @@ test("cadeia: pose nunca declara posição autoritativa", function()
 	end
 end)
 
+test("cadeia: syncStep fixa o degrau do servidor e whiff zera", function()
+	local clock = 0
+	local animator = PlayerCombatAnimator.new({
+		player = { Character = nil },
+		runService = nil,
+		now = function()
+			return clock
+		end,
+	})
+	PlayerCombatAnimator.play(animator, "BasicLight")
+	clock += 0.1
+	PlayerCombatAnimator.play(animator, "BasicLight")
+	assertEq(animator.comboStep, 2, "cliente avançou para o degrau 2")
+	-- Servidor confirmou o degrau 1 (o segundo clique errou): puxa para trás.
+	PlayerCombatAnimator.syncStep(animator, 1)
+	assertEq(animator.comboStep, 1, "servidor puxa o degrau para trás")
+	-- Whiff: zera a cadeia visual.
+	PlayerCombatAnimator.syncStep(animator, 0)
+	assertEq(animator.comboStep, 0, "whiff zera a cadeia")
+	-- Acerto confirmado no degrau 3.
+	PlayerCombatAnimator.syncStep(animator, 3)
+	assertEq(animator.comboStep, 3, "acerto confirma o degrau")
+	-- Degrau inválido clampa no intervalo 1..4 (ou 0).
+	PlayerCombatAnimator.syncStep(animator, 99)
+	assertEq(animator.comboStep, 4, "clampa no finalizador")
+	PlayerCombatAnimator.syncStep(animator, -1)
+	assertEq(animator.comboStep, 0, "negativo zera")
+end)
+
 -- ── Áudio de combate ────────────────────────────────────────────────────────
 
 test("áudio: catálogo passa validação", function()

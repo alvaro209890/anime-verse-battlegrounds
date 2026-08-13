@@ -100,7 +100,13 @@ Três mecanismos sustentam a sensação de peso, todos em número:
 
 Ataque pesado e Ombro Cometa herdaram pausa, elástico e cotovelo.
 
-**Limite conhecido:** o cliente avança o degrau a cada clique, mas o servidor zera `lightStep` quando o golpe erra. Numa sequência de erros a pose pode exibir o chute enquanto o servidor está no jab. A divergência é puramente cosmética — nenhuma decisão de acerto depende dela — e só some quando o servidor devolver o degrau confirmado.
+**Limite conhecido — CORRIGIDO em 13/08:** o cliente avançava o degrau a cada
+clique, mas o servidor zerava `lightStep` quando o golpe errava — numa
+sequência de erros a pose podia exibir o chute enquanto o servidor estava no
+jab. Agora o `CombatEvent` do ataque básico carrega `step` (degrau autoritativo)
+e, no whiff, o servidor zera a cadeia e notifica `outcome="miss"` — o cliente
+sincroniza a pose via `PlayerCombatAnimator.syncStep`. A divergência era
+puramente cosmética e segue sem nenhuma decisão de acerto dependendo dela.
 
 Cobertura: `tests/animation.luau` (silhuetas distintas, extensão de cotovelo, chute como perna, amplitude crescente, retorno exato ao neutro, overshoot, liderança do núcleo, janela de encadeamento).
 

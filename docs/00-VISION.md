@@ -24,6 +24,7 @@ O nome comunica ação competitiva, mas o produto não é um arena fighter de pa
 | VISION-DEC-010 | Um World Place compacto sustenta exploração; um Arena Place separado sustenta o competitivo. | aprovada — 2026-08-12 — Álvaro (seleção delegada ao Codex) |
 | VISION-DEC-011 | Clãs entram sem território; guerra territorial, banco avançado e mercado são opcionais e pós-lançamento. | aprovada — 2026-08-12 — Álvaro (seleção delegada ao Codex) |
 | VISION-DEC-012 | O soft launch tem acesso técnico global e foco operacional no Brasil. | aprovada — 2026-08-12 — Álvaro (seleção delegada ao Codex) |
+| VISION-DEC-013 | O mundo é aberto com várias cidades (distrito neon, vila escondida, porto, academia...), cada uma com identidade e serviços próprios, conectadas sem tela de carregamento. Malha de expansão em `02-WORLD.md` §3.4. | aprovada — 2026-08-13 — Álvaro |
 
 ## 2. Fantasia do jogador
 

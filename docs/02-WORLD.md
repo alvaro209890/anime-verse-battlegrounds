@@ -61,6 +61,51 @@ O lançamento não promete todas essas regiões. A lista é uma malha de expans�
 - Água, abismos e paredes não podem criar atalhos que atravessem a fronteira sem passar pelo aviso de risco.
 - A região inicial precisa ser atravessável em poucos minutos; o tempo deve vir das decisões e dos encontros, não de caminhada vazia.
 
+### 3.4 Cidades do mundo aberto (decisão de planejamento — 2026-08-13)
+
+> **Direção aprovada pelo Álvaro (13/08):** o mundo é **aberto com várias cidades**,
+> no espírito dos grandes centros dos animes de referência (distrito urbano
+> neon, vila escondida, porto, academia) — cada cidade com identidade visual,
+> serviços e cadeias próprias, conectadas por estradas e zonas livres **sem
+> tela de carregamento** (streaming por célula). O F0 continua no Bastião do
+> Limiar; esta seção é a malha de expansão do cenário.
+
+Arquétipos e nomes provisórios (nomes públicos originais obrigatórios — Gate P1):
+
+| Cidade provisória | Arquétipo (referência de atmosfera, não de marca) | Perfil | Função no mundo aberto | Fase |
+|---|---|---|---|---|
+| **Bastião do Limiar** | posto avançado de pedra | segura | spawn inicial, treino, primeira cadeia de missão | F0 (atual) |
+| **Distrito Lumen** | metrópole de letreiros neon e vielas (atmosfera de centro urbano japonês contemporâneo) | segura + borda livre | comércio, quadro de missões avançado, torneio local, primeira grande cidade | F1/F2 |
+| **Vila Sombria** | vila escondida em vale, telhados curvos e muralha de madeira (atmosfera de vila ninja) | segura | cadeias de técnicas, academia local, floresta de treino ao redor | F2 |
+| **Porto Ferro** | cidade portuária, docas e mercado (atmosfera de porto de aventura) | segura + borda livre | rotas marítimas, eventos de entrega, acesso a arquipélago | pós-lançamento |
+| **Setor Cinza** | distrito industrial, fábricas e plataformas (atmosfera cyberpunk industrial) | livre | materiais de forja, PvP urbano vertical, boss de fábrica | pós-lançamento |
+| **Academia Alvorada** | campus escolar com arena e dormitórios (atmosfera de academia de combate) | segura | torneio, ranking, maestria e social | pós-lançamento |
+| **Arquipélago da Tormenta** | ilhas e céu aberto (atmosfera de arquipélago flutuante) | livre/mista | mobilidade avançada, eventos agendados | pós-lançamento |
+
+Regras do mundo aberto multi-cidade:
+
+- **Conectividade:** cada cidade tem no mínimo duas saídas (regra §3.3) e está
+  ligada a pelo menos duas outras regiões por estrada ou rota; nenhum destino
+  é um beco sem saída.
+- **Sem loading:** a malha usa streaming por célula (Roblox StreamingEnabled);
+  o limite de 16 jogadores do World Place é o teto inicial até profiling
+  provar subir para 20/24.
+- **Identidade por cidade:** cada cidade tem paleta, material de solo, marco
+  vertical reconhecível e ao menos um serviço exclusivo (forja, mercado,
+  torneio, academia) — nenhuma cidade é um respawn de outra com cor trocada.
+- **Risco legível entre cidades:** estradas longas passam por zonas livres com
+  os avisos de §4; a viagem rápida só conecta cidades/seguros já descobertos
+  (§3.3) e nunca deposita o jogador fora da proteção de spawn.
+- **Custo por cidade:** cada cidade entra por gate de densidade — só é
+  produzida quando a anterior sustenta rotas, encontros e serviços
+  (docs/14 espírito: poucos lugares muito resolvidos antes de ampliar).
+- **Inspiração ≠ cópia:** nenhuma cidade copia layout, nome de rua, monumento,
+  logotipo ou silhueta reconhecível de obra protegida; a referência é de
+  atmosfera (densidade, iluminação, ritmo), não de planta baixa.
+
+**Primeiro alvo após o F0:** o **Distrito Lumen** (F1/F2) — prova o pipeline de
+cidade urbana densa com streaming antes de comprometer a Vila Sombria.
+
 ## 4. Tipos de zona e transição PvP
 
 ### 4.1 Regras por tipo

@@ -1036,6 +1036,9 @@ RemoteGateway.onClientIntent(Remotes.Names.BasicAttackIntent, function(player: P
 						or target.guarding
 					then "guard"
 					else "hit",
+				-- Degrau autoritativo da cadeia leve: o cliente sincroniza a
+				-- pose com o servidor (docs/14 §4.3 — correção da divergência).
+				step = if isHeavy then 0 else (result.step or 0),
 			})
 			fireVitalsForFighter(target.id)
 		end
@@ -1055,6 +1058,18 @@ RemoteGateway.onClientIntent(Remotes.Names.BasicAttackIntent, function(player: P
 		elseif EnemyService.isElite(target.id) and result.damage > 0 then
 			EnemyService.registerEliteDamage(target.id, player.UserId, result.damage)
 		end
+	else
+		-- Golpe errou (whiff, recovery ou fora da hitbox): a cadeia leve zera
+		-- no servidor e o cliente precisa saber, senão exibe um degrau que o
+		-- servidor não confirmou (docs/14 §4.3 — pose travada no chute).
+		if not isHeavy then
+			attacker.lightStep = 0
+		end
+		RemoteGateway.fireClient(player, Remotes.Names.CombatEvent, {
+			abilityId = if isHeavy then "heavy" else "light",
+			outcome = "miss",
+			step = 0,
+		})
 	end
 end)
 
