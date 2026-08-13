@@ -36,7 +36,9 @@ local PlayerCombatAnimator = require(Presentation.PlayerCombatAnimator)
 local CombatCameraController = require(Presentation.CombatCameraController)
 local CombatAudioPlayer = require(Presentation.CombatAudioPlayer)
 local AbilityVfxPlayer = require(Presentation.AbilityVfxPlayer)
+local CharacterAnimationPlayer = require(Presentation.CharacterAnimationPlayer)
 local CombatAudio = require(Shared.Data.CombatAudio)
+local CombatAnimations = require(Shared.Data.CombatAnimations)
 
 local player = Players.LocalPlayer
 local state = ClientState.new(os.clock)
@@ -62,6 +64,9 @@ local playerCombatAnimator: any = nil
 -- Declarado antes do AbilityController porque o callback de ativação o captura;
 -- a construção fica junto das demais camadas de apresentação, abaixo.
 local abilityVfx: any = nil
+-- Clipes de animação reais (assets livres do Roblox). Mesmo motivo do
+-- abilityVfx: o callback de ativação captura a referência.
+local characterAnimation: any = nil
 local character = CharacterController.new({
 	state = state,
 	input = input,
@@ -89,6 +94,9 @@ local ability = AbilityController.new({
 		local action = if phase == "reentry" then "Ability2Echo" else ("Ability%d"):format(slot)
 		if playerCombatAnimator then
 			PlayerCombatAnimator.play(playerCombatAnimator, action)
+		end
+		if characterAnimation then
+			CharacterAnimationPlayer.play(characterAnimation, action)
 		end
 		if abilityVfx then
 			AbilityVfxPlayer.play(abilityVfx, action)
@@ -129,9 +137,17 @@ local combatCamera = CombatCameraController.new({
 	workspace = Workspace,
 	runService = RunService,
 })
+characterAnimation = CharacterAnimationPlayer.new({
+	player = player,
+	catalog = CombatAnimations,
+	now = os.clock,
+})
 InputController.subscribe(input, function(action: string, _payload: { [string]: any })
 	if string.match(action, "^Ability%d$") == nil then
 		PlayerCombatAnimator.play(playerCombatAnimator, action)
+		-- O degrau da cadeia já foi avançado pelo play acima: é ele que decide
+		-- qual dos quatro clipes leves entra.
+		CharacterAnimationPlayer.play(characterAnimation, action, playerCombatAnimator.comboStep)
 	end
 end)
 local interaction = InteractionController.new({
@@ -254,6 +270,11 @@ end
 InputController.start(input, UserInputService, { mouseOnButton = mouseOnButton })
 ActorAnimator.start(actorAnimator)
 PlayerCombatAnimator.start(playerCombatAnimator)
+CharacterAnimationPlayer.start(characterAnimation)
+-- O rastro do golpe se apaga sozinho quando a ação acaba.
+RunService.RenderStepped:Connect(function()
+	CharacterAnimationPlayer.step(characterAnimation)
+end)
 CombatCameraController.start(combatCamera)
 InteractionController.start(interaction)
 

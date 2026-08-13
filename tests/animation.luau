@@ -34,6 +34,7 @@ local CombatAudioPlayer = require("../src/client/Presentation/CombatAudioPlayer"
 local CombatAudio = require("../src/shared/Data/CombatAudio")
 local AbilityVfx = require("../src/shared/Data/AbilityVfx")
 local CombatHudController = require("../src/client/Controllers/CombatHudController")
+local CombatAnimations = require("../src/shared/Data/CombatAnimations")
 local fs = require("@lune/fs")
 
 local CHAIN = PlayerCombatAnimator.LightChainLength
@@ -258,16 +259,54 @@ test("áudio: impacto depende do desfecho autoritativo, não da intenção", fun
 end)
 
 test("áudio: deixa sem upload é ignorada em silêncio, não quebra", function()
-	-- assetId vazio é o estado atual do catálogo (pré-upload). O player precisa
-	-- devolver nil sem erro, senão o jogo quebra esperando áudio inexistente.
+	-- assetId vazio continua sendo estado suportado (deixa nova, upload
+	-- rejeitado): o player devolve nil sem erro, senão o jogo quebra
+	-- esperando áudio inexistente.
+	local semUpload = {
+		get = function(_id: string)
+			return {
+				id = "sem_upload",
+				assetId = "",
+				sourceFile = "x.ogg",
+				variantFiles = {},
+				volume = 0.5,
+				pitchMin = 1,
+				pitchMax = 1,
+				rolloffMaxStuds = 60,
+				enabled = true,
+			}
+		end,
+	}
 	local player = CombatAudioPlayer.new({
+		catalog = semUpload,
+		now = function()
+			return 0
+		end,
+	})
+	assertEq(CombatAudioPlayer.resolve(player, "sem_upload"), nil, "sem assetId não resolve")
+
+	local real = CombatAudioPlayer.new({
 		catalog = CombatAudio,
 		now = function()
 			return 0
 		end,
 	})
-	assertEq(CombatAudioPlayer.resolve(player, "impact_light"), nil, "sem assetId não resolve")
-	assertEq(CombatAudioPlayer.resolve(player, "inexistente"), nil, "deixa desconhecida não resolve")
+	assertEq(CombatAudioPlayer.resolve(real, "inexistente"), nil, "deixa desconhecida não resolve")
+end)
+
+test("áudio: todo o catálogo aponta para um asset tocável", function()
+	-- O kit placeholder do Roblox tirou o combate do mudo (docs/16 §7). Se
+	-- alguém acrescentar deixa sem asset, o combate volta a ficar em silêncio
+	-- sem ninguém perceber — este teste é o alarme.
+	local count = 0
+	for _, entry in CombatAudio.all() do
+		count += 1
+		assertTrue(
+			string.match(entry.assetId, "^rbxassetid://%d+$") ~= nil,
+			("deixa %s sem assetId válido (%s)"):format(entry.id, entry.assetId)
+		)
+	end
+	assertTrue(count >= 15, "catálogo completo percorrido")
 end)
 
 test("áudio: com assetId publicado, resolve com pitch dentro da faixa", function()
@@ -576,6 +615,97 @@ test("hud: fração da barra clampa em 0..1", function()
 	assertEq(CombatHudController.barFraction(-5, 60), 0, "negativo clampa em 0")
 	assertEq(CombatHudController.barFraction(90, 60), 1, "acima do máximo clampa em 1")
 	assertEq(CombatHudController.barFraction(30, 0), 0, "máximo zero não divide")
+end)
+
+-- ── Clipes de animação (assets livres do Roblox) ────────────────────────────
+
+test("clipes: catálogo válido e todo asset é rbxassetid do conjunto declarado", function()
+	local ok, reason = CombatAnimations.validate()
+	assertTrue(ok, tostring(reason))
+
+	local allowed: { [string]: boolean } = {}
+	for _, assetId in CombatAnimations.assetIds() do
+		assertTrue(string.match(assetId, "^rbxassetid://%d+$") ~= nil, "formato do asset: " .. assetId)
+		allowed[assetId] = true
+	end
+	for _, clip in CombatAnimations.all() do
+		assertTrue(allowed[clip.assetId] == true, clip.action .. " usa asset fora da lista declarada")
+	end
+end)
+
+test("clipes: cadeia leve tem quatro degraus e nenhum passa da duração da ação", function()
+	local seen: { [string]: boolean } = {}
+	for step = 1, CHAIN do
+		local clip = CombatAnimations.forAction("BasicLight", step)
+		assertTrue(clip ~= nil, "degrau " .. step .. " tem clipe")
+		if clip then
+			local budget = PlayerCombatAnimator.lightChainDuration(step)
+			assertTrue(
+				clip.nominalSeconds / clip.speed <= budget + 0.02,
+				("degrau %d dura mais que %.3fs"):format(step, budget)
+			)
+			seen[clip.action] = true
+		end
+	end
+	local count = 0
+	for _ in seen do
+		count += 1
+	end
+	assertEq(count, CHAIN, "um clipe distinto por degrau")
+	-- Degrau fora da faixa clampa em vez de devolver nil (o jogo não pode
+	-- ficar sem animação porque o servidor mandou um step estranho).
+	assertTrue(CombatAnimations.forAction("BasicLight", 0) ~= nil, "step 0 clampa")
+	assertTrue(CombatAnimations.forAction("BasicLight", 99) ~= nil, "step alto clampa")
+end)
+
+test("clipes: duração declarada bate com PlayerCombatAnimator e guarda/dash seguem procedurais", function()
+	for action, seconds in PlayerCombatAnimator.Durations do
+		-- BasicLight não tem duração única: cada degrau da cadeia tem a sua.
+		if action ~= "BasicLight" then
+			local declared = CombatAnimations.actionSeconds(action)
+			if declared ~= nil then
+				assertEq(declared, seconds, "duração divergente em " .. action)
+			end
+		end
+	end
+	for step = 1, CHAIN do
+		assertEq(
+			CombatAnimations.actionSeconds("BasicLight", step),
+			PlayerCombatAnimator.lightChainDuration(step),
+			"degrau " .. step .. " com duração divergente"
+		)
+	end
+	-- Decisão de docs/14 §5.1: não existe clipe livre honesto de aparo/esquiva.
+	assertEq(CombatAnimations.forAction("GuardDown"), nil, "guarda sem clipe")
+	assertEq(CombatAnimations.forAction("Dash"), nil, "dash sem clipe")
+	assertEq(CombatAnimations.forAction("Inexistente"), nil, "ação desconhecida sem clipe")
+end)
+
+test("clipes: clipe que estoura a ação é recusado pela validação", function()
+	local ok, reason = CombatAnimations.validateClip({
+		action = "Falso",
+		assetId = "rbxassetid://1",
+		speed = 0.5,
+		fadeInSeconds = 0.05,
+		fadeOutSeconds = 0.1,
+		weight = 1,
+		nominalSeconds = 1,
+		source = "teste",
+	}, 0.3)
+	assertTrue(not ok, "clipe longo demais deve falhar")
+	assertTrue(reason ~= nil and string.find(reason, "só tem") ~= nil, "motivo explica o estouro")
+
+	local badAsset = CombatAnimations.validateClip({
+		action = "Falso",
+		assetId = "http://exemplo/animacao",
+		speed = 1,
+		fadeInSeconds = 0,
+		fadeOutSeconds = 0,
+		weight = 1,
+		nominalSeconds = 0.2,
+		source = "teste",
+	}, 0.3)
+	assertTrue(not badAsset, "asset fora do formato rbxassetid falha")
 end)
 
 for _, entry in tests do

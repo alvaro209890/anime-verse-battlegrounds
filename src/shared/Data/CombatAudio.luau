@@ -1,13 +1,19 @@
 --!strict
 -- Catálogo de áudio de combate — dirigido por dados (docs/16-COMBAT-AUDIO.md).
 --
--- IMPORTANTE: `assetId` fica vazio até o upload do .ogg para o Roblox. O
--- Roblox não reproduz arquivo local: Sound.SoundId exige rbxassetid://<id> de
--- asset publicado. Enquanto vazio, CombatAudioPlayer ignora a deixa em
+-- `assetId` aponta hoje para áudios do criador **Roblox** (userId 1), que
+-- qualquer experiência pode tocar sem upload — é o kit PLACEHOLDER que tira o
+-- combate do mudo enquanto o upload dos .ogg CC0 não acontece (docs/16 §7).
+-- Verificados em 2026-08-13 via `economy.roblox.com/v2/assets/<id>/details`
+-- (Creator.Id = 1, AssetTypeId = 3):
+--   12222216 swordslash.wav · 12222208 swordlunge.wav · 12222225 unsheath.wav
+--   12222095 "Rocket whoosh 01.wav" · 12222152 splat.wav · 12222005 glassbreak.wav
+-- Vazio continua sendo estado válido: CombatAudioPlayer ignora a deixa em
 -- silêncio — o jogo nunca quebra por falta de som.
 --
--- `sourceFile` é rastreabilidade: aponta o arquivo CC0 de origem, para o
--- upload ser conferível e para trocar o som sem caçar o binário.
+-- `sourceFile` é rastreabilidade: aponta o arquivo CC0 de origem, que continua
+-- sendo o som final pretendido, para o upload ser conferível e para trocar o
+-- som sem caçar o binário.
 --
 -- Tipos inline (export type é compile-time) para manter o módulo carregável em
 -- testes Lune. Contrato canônico: src/shared/Types.luau.
@@ -32,9 +38,18 @@ export type AudioCue = {
 
 local BASE = "assets/audio/"
 
+-- Placeholders livres do Roblox por papel sonoro (ver cabeçalho).
+local RBX_SLASH = "rbxassetid://12222216"
+local RBX_LUNGE = "rbxassetid://12222208"
+local RBX_METAL = "rbxassetid://12222225"
+local RBX_WHOOSH = "rbxassetid://12222095"
+local RBX_IMPACT = "rbxassetid://12222152"
+local RBX_SHATTER = "rbxassetid://12222005"
+
 local function cue(values: {
 	id: string,
 	sourceFile: string,
+	assetId: string?,
 	variantFiles: { string }?,
 	volume: number?,
 	pitchMin: number?,
@@ -48,7 +63,7 @@ local function cue(values: {
 	end
 	return {
 		id = values.id,
-		assetId = "",
+		assetId = values.assetId or "",
 		sourceFile = BASE .. values.sourceFile,
 		variantFiles = variants,
 		volume = values.volume or 0.5,
@@ -66,6 +81,7 @@ local Cues: { [string]: AudioCue } = {
 	-- ── Corte de ar da cadeia leve: um por degrau, subindo em peso ──────────
 	swing_light_1 = cue({
 		id = "swing_light_1",
+		assetId = RBX_SLASH,
 		sourceFile = "rpg-audio/Audio/cloth1.ogg",
 		variantFiles = { "rpg-audio/Audio/cloth2.ogg" },
 		volume = 0.32,
@@ -75,6 +91,7 @@ local Cues: { [string]: AudioCue } = {
 	}),
 	swing_light_2 = cue({
 		id = "swing_light_2",
+		assetId = RBX_SLASH,
 		sourceFile = "rpg-audio/Audio/cloth3.ogg",
 		variantFiles = { "rpg-audio/Audio/cloth4.ogg" },
 		volume = 0.36,
@@ -85,6 +102,7 @@ local Cues: { [string]: AudioCue } = {
 	-- Chute: corte mais grave e mais longo que soco.
 	swing_light_3 = cue({
 		id = "swing_light_3",
+		assetId = RBX_SLASH,
 		sourceFile = "rpg-audio/Audio/clothBelt.ogg",
 		variantFiles = { "rpg-audio/Audio/clothBelt2.ogg" },
 		volume = 0.42,
@@ -95,6 +113,7 @@ local Cues: { [string]: AudioCue } = {
 	-- Finalizador giratório: o mais pesado da cadeia.
 	swing_light_4 = cue({
 		id = "swing_light_4",
+		assetId = RBX_SLASH,
 		sourceFile = "rpg-audio/Audio/chop.ogg",
 		variantFiles = { "rpg-audio/Audio/clothBelt2.ogg" },
 		volume = 0.48,
@@ -104,6 +123,7 @@ local Cues: { [string]: AudioCue } = {
 	}),
 	swing_heavy = cue({
 		id = "swing_heavy",
+		assetId = RBX_LUNGE,
 		sourceFile = "rpg-audio/Audio/clothBelt.ogg",
 		variantFiles = { "rpg-audio/Audio/chop.ogg" },
 		volume = 0.5,
@@ -115,6 +135,7 @@ local Cues: { [string]: AudioCue } = {
 	-- ── Impacto confirmado pelo servidor ───────────────────────────────────
 	impact_light = cue({
 		id = "impact_light",
+		assetId = RBX_IMPACT,
 		sourceFile = "impact-sounds/Audio/impactPunch_medium_000.ogg",
 		variantFiles = {
 			"impact-sounds/Audio/impactPunch_medium_001.ogg",
@@ -128,6 +149,7 @@ local Cues: { [string]: AudioCue } = {
 	}),
 	impact_heavy = cue({
 		id = "impact_heavy",
+		assetId = RBX_IMPACT,
 		sourceFile = "impact-sounds/Audio/impactPunch_heavy_000.ogg",
 		variantFiles = {
 			"impact-sounds/Audio/impactPunch_heavy_001.ogg",
@@ -143,6 +165,7 @@ local Cues: { [string]: AudioCue } = {
 	-- entre "acertei" e "foi bloqueado" precisa ser audível sem olhar o HUD.
 	impact_guard = cue({
 		id = "impact_guard",
+		assetId = RBX_METAL,
 		sourceFile = "impact-sounds/Audio/impactPlate_heavy_000.ogg",
 		variantFiles = {
 			"impact-sounds/Audio/impactPlate_heavy_001.ogg",
@@ -157,6 +180,7 @@ local Cues: { [string]: AudioCue } = {
 	-- ── Técnicas do Punho do Eclipse ───────────────────────────────────────
 	ability_comet_shoulder = cue({
 		id = "ability_comet_shoulder",
+		assetId = RBX_WHOOSH,
 		sourceFile = "sci-fi-sounds/Audio/thrusterFire_000.ogg",
 		variantFiles = { "sci-fi-sounds/Audio/thrusterFire_001.ogg" },
 		volume = 0.55,
@@ -165,6 +189,7 @@ local Cues: { [string]: AudioCue } = {
 	}),
 	ability_broken_cadence = cue({
 		id = "ability_broken_cadence",
+		assetId = RBX_SLASH,
 		sourceFile = "sci-fi-sounds/Audio/laserSmall_000.ogg",
 		variantFiles = { "sci-fi-sounds/Audio/laserSmall_001.ogg" },
 		volume = 0.5,
@@ -173,6 +198,7 @@ local Cues: { [string]: AudioCue } = {
 	}),
 	ability_pulse_return = cue({
 		id = "ability_pulse_return",
+		assetId = RBX_METAL,
 		sourceFile = "sci-fi-sounds/Audio/forceField_000.ogg",
 		variantFiles = { "sci-fi-sounds/Audio/forceField_001.ogg" },
 		volume = 0.58,
@@ -183,6 +209,7 @@ local Cues: { [string]: AudioCue } = {
 	-- precisa soar como repetição do golpe anterior, não como golpe novo.
 	ability_cadence_echo = cue({
 		id = "ability_cadence_echo",
+		assetId = RBX_SLASH,
 		sourceFile = "sci-fi-sounds/Audio/laserSmall_002.ogg",
 		variantFiles = { "sci-fi-sounds/Audio/laserSmall_003.ogg" },
 		volume = 0.42,
@@ -193,6 +220,7 @@ local Cues: { [string]: AudioCue } = {
 	-- de o servidor confirmar — nunca sai por intenção do jogador.
 	ability_pulse_counter = cue({
 		id = "ability_pulse_counter",
+		assetId = RBX_SHATTER,
 		sourceFile = "sci-fi-sounds/Audio/lowFrequency_explosion_000.ogg",
 		variantFiles = { "sci-fi-sounds/Audio/lowFrequency_explosion_001.ogg" },
 		volume = 0.72,
@@ -203,6 +231,7 @@ local Cues: { [string]: AudioCue } = {
 	-- ── Movimento e defesa ─────────────────────────────────────────────────
 	dash = cue({
 		id = "dash",
+		assetId = RBX_WHOOSH,
 		sourceFile = "sci-fi-sounds/Audio/spaceEngineSmall_000.ogg",
 		variantFiles = { "sci-fi-sounds/Audio/spaceEngineSmall_001.ogg" },
 		volume = 0.4,
@@ -212,6 +241,7 @@ local Cues: { [string]: AudioCue } = {
 	}),
 	guard_raise = cue({
 		id = "guard_raise",
+		assetId = RBX_METAL,
 		sourceFile = "rpg-audio/Audio/cloth1.ogg",
 		volume = 0.28,
 		pitchMin = 0.82,
