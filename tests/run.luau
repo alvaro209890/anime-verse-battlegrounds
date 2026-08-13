@@ -5,6 +5,7 @@
 -- Contrato da fatia: docs/13-F0-SLICE.md §19.
 
 require("./harness")
+local fs = require("@lune/fs")
 
 -- ── Miniaframework de teste ─────────────────────────────────────────────────
 local tests = {}
@@ -62,6 +63,12 @@ local AbilityController = require("../src/client/Controllers/AbilityController")
 local CombatFeedbackController = require("../src/client/Controllers/CombatFeedbackController")
 local ResourceController = require("../src/client/Controllers/ResourceController")
 local ZoneController = require("../src/client/Controllers/ZoneController")
+
+test("bootstrap: serviços são filhos do Script Server gerado pelo Rojo", function()
+	local source = fs.readFile("src/server/init.server.lua")
+	assertTrue(source:find('local Services = script:WaitForChild("Services")', 1, true) ~= nil, "raiz de Services")
+	assertTrue(source:find("script.Parent.Services", 1, true) == nil, "não procura Services em ServerScriptService")
+end)
 
 -- ── Relógio injetável (janela de reentrada / cap de Fluxo) ──────────────────
 local fakeNow = 1000

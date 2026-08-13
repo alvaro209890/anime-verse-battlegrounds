@@ -5,7 +5,6 @@
 export type Controller = {
 	state: any,
 	input: any,
-	inputSubscribe: (any, (string, { [string]: any }) -> ()) -> (),
 	send: (string, string, { [string]: any }) -> (),
 	workspace: any?,
 	players: any?,
