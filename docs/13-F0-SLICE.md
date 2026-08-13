@@ -397,7 +397,7 @@ F0 mostra **três** botões de técnica. Slot vazio/bloqueado: ícone cadeado, s
 - PC: câmera livre; lock-on opcional (**Tab** ou clique do meio). A roda do mouse não trava a mira: ela já zooma a câmera Roblox, e o playtest de 13/08 ficou preso sem HUD de saída (`docs/18-ANALISE-VIDEO.md`).
 - Toque/gamepad: magnetismo 8° até 25 studs; some após compromisso e em área
 - Soft lock só no ataque básico, não nas técnicas de deslocamento
-- HUD: botão **?** / tecla **H** abre a lista de comandos; faixa permanente no rodapé; chip "MIRA TRAVADA" enquanto o lock-on está ativo
+- HUD: botão **MENU** / tecla **H** abre Configurações (controles, soltar mira, tremor da câmera); faixa permanente no rodapé; botão **SOLTAR MIRA** no centro quando o lock-on está ativo
 
 ### 12.2 HUD mínimo
 
@@ -409,10 +409,8 @@ F0 mostra **três** botões de técnica. Slot vazio/bloqueado: ícone cadeado, s
 | Zona | “SEGURO” / “PvP ATIVO” + perda resumida | persistente fora da vila |
 | Objetivo | uma linha, máx. 48 caracteres | some ao completar |
 | Feedback | hit confirm, guarda, rejeição (`no_resource`, `cooldown`) | 1 s; sem código interno |
-| Comandos | botão **?** / tecla **H**; faixa permanente no rodapé | não envia remote |
-| Mira | chip “MIRA TRAVADA — Tab para soltar” | só apresentação local |
-| Comandos | botão **?** / tecla **H**; faixa permanente no rodapé | não envia remote |
-| Mira | chip “MIRA TRAVADA — Tab para soltar” | só apresentação local |
+| Menu | botão **MENU** / tecla **H**; controles, mira e tremor da câmera | não envia remote |
+| Mira | botão **SOLTAR MIRA** no centro enquanto travada | só apresentação local; `clearLock` não procura outro alvo |
 
 Mobile: no máximo dois botões simultâneos. Técnicas em cluster direito; dash e guarda separados. Área de combate central sem HUD opaco > 20%.
 

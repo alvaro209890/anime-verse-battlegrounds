@@ -137,6 +137,9 @@ do NPC para o atacante. Sem isso o HUD (`shouldShowDamage` exige `damage > 0`)
 e a barra do inimigo ficavam mudos mesmo no acerto — o playtest de 13/08 leu
 como "golpe morto" (`docs/18-ANALISE-VIDEO.md`).
 
+O tremor da câmera desliga no menu **MENU → Tremor da câmera** (`shakeEnabled`);
+é só apresentação local, não muda dano nem hitbox.
+
 ## 4. Cobertura
 
 Novos testes em `tests/animation.luau` (executado pelo CI junto de

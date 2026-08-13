@@ -14,7 +14,8 @@ mira travada, nem números de dano.
 
 Nenhuma cadeia leve, pesado, Ombro Cometa, Cadência, Pulso ou animação de
 Estilhaço foi observada: o playtest ficou no spawn, andando e passando o mouse
-nas técnicas bloqueadas.
+nas técnicas bloqueadas. Não foi falta de animação no código — o jogador não
+tinha como soltar a mira nem via os golpes (CADEADO + evento sem dano).
 
 ## 2. O que está bom
 
@@ -38,17 +39,36 @@ nas técnicas bloqueadas.
 4. **Zero comandos na tela (P0).** Sem overlay, o jogador tenta as técnicas
    cadeadas em vez do clique esquerdo.
 
-## 4. O que falta (depois desta correção)
+## 4. Animações (julgamento em código + testes)
 
-- Ver a cadeia leve, o dummy e um Estilhaço no Studio (este vídeo não chegou
-  lá). Animações não foram julgadas porque não apareceram.
-- Áudio de combate ainda depende de upload de asset (docs/16).
+O vídeo não mostrou combate. A cadeia, as técnicas e os NPCs *existem* em
+`PlayerCombatAnimator` / `ActorAnimator` e passam `tests/animation.luau`
+(35 casos). Julgamento honesto dessa camada procedural — **não são clipes
+finais** (`docs/14` Gate A1 continua aberto):
+
+| Peça | Leitura | Nota |
+|---|---|---|
+| Cadeia leve 1–4 | silhuetas distintas; soco estende cotovelo, chute levanta perna; follow-through elástico; idle respira | boa gramática greybox |
+| Pesado / guarda / dash | peso maior no ombro; guarda fecha o volume; dash é overlay curto | suficiente para F0 |
+| Ombro Cometa | recolhe, avança, impacto; VFX aura na carga, flash/onda só com confirmação | honesto visualmente |
+| Cadência / Pulso | poses próprias (eco e contra não reusam a ativação) | testado headless |
+| NPCs | telegraph / ataque / queda / late join | scaffolding, não clip |
+
+Como ver no Studio agora: dummy no canto sudeste; clique esquerdo 4 vezes
+seguidas; F guarda; Q dash; 1/2/3 técnicas (KIT DE TESTE no spawn). Se a
+câmera grudar, clique **SOLTAR MIRA** no centro ou abra **MENU**.
+
+## 5. O que ainda falta (runtime)
+
+- Play humano confirmando a cadeia no dummy e um Estilhaço fora do portão norte.
+- Áudio de combate ainda depende de upload de asset (`docs/16`).
 - Play com dois clientes, mobile e gamepad.
 
-## 5. Correção desta rodada
+## 6. Correção desta rodada
 
 - Evento do básico leva `damage` + barra do inimigo no atacante.
 - `F0Debug` também no Script Server; join aplica as 3 técnicas de sessão.
-- Mira: **Tab** ou clique do meio (roda do mouse saiu — conflitava com zoom).
-- Botão **?** / tecla **H** abre a lista de comandos; faixa permanente no
-  rodapé; chip "MIRA TRAVADA" enquanto o lock-on está ativo.
+- Mira: **Tab** ou clique do meio. Botão **SOLTAR MIRA** no centro (não
+  procura outro alvo). A roda do mouse não trava — só zooma.
+- Botão **MENU** (tecla **H**) abre Configurações: controles, soltar/travar
+  mira, ligar/desligar tremor da câmera, onde estão dummy e Estilhaços.

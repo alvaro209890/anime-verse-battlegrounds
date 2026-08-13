@@ -15,6 +15,7 @@ export type Controller = {
 	baseFov: number?,
 	trauma: number,
 	fovPunch: number,
+	shakeEnabled: boolean,
 	connection: any?,
 }
 
@@ -96,11 +97,15 @@ function CombatCameraController.new(deps: {
 		baseFov = nil,
 		trauma = 0,
 		fovPunch = 0,
+		shakeEnabled = true,
 		connection = nil,
 	}
 end
 
 function CombatCameraController.addImpact(controller: Controller, outcome: string, abilityId: string?): ()
+	if controller.shakeEnabled == false then
+		return
+	end
 	local profile = CombatCameraController.profileFor(outcome, abilityId)
 	if not profile then
 		return

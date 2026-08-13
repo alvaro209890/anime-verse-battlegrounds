@@ -136,6 +136,16 @@ local function dashDirection(controller: Controller): { [string]: any }
 	return { x = 0, z = -1 }
 end
 
+function CharacterController.isLocked(controller: Controller): boolean
+	return isCombatTarget(controller.lockTarget)
+end
+
+-- Solta a mira sem procurar outro alvo. O HUD usa isto no botão SOLTAR MIRA:
+-- ToggleLock re-travaria se o jogador ainda estivesse olhando para o inimigo.
+function CharacterController.clearLock(controller: Controller): ()
+	controller.lockTarget = nil
+end
+
 function CharacterController.onAction(controller: Controller, action: string): ()
 	if action == "BasicLight" or action == "BasicHeavy" then
 		if controller.state.platform ~= "KeyboardMouse" then

@@ -495,6 +495,36 @@ test("cliente: ToggleLock solta um alvo já travado sem enviar remote", function
 	assertEq(#sent, 0, "mira não é intenção de combate")
 end)
 
+test("cliente: clearLock solta a mira sem procurar outro alvo", function()
+	local state = ClientState.new(clockNow)
+	ClientState.applySnapshot(state, { ready = true })
+	local input = InputController.new(state, clockNow)
+	local sent: { any } = {}
+	local controller = CharacterController.new({
+		state = state,
+		input = input,
+		inputSubscribe = InputController.subscribe,
+		send = function(remoteName: string, action: string, payload: { [string]: any })
+			table.insert(sent, { remoteName = remoteName, action = action, payload = payload })
+		end,
+	})
+	local fakeTarget = {
+		Parent = {},
+		IsA = function(_self: any, className: string): boolean
+			return className == "BasePart"
+		end,
+		GetAttribute = function(_self: any, name: string): any
+			return name == "CombatTarget"
+		end,
+	}
+	controller.lockTarget = fakeTarget
+	assertTrue(CharacterController.isLocked(controller), "travada")
+	CharacterController.clearLock(controller)
+	assertFalse(CharacterController.isLocked(controller), "botão SOLTAR MIRA limpa")
+	assertEq(controller.lockTarget, nil, "sem alvo")
+	assertEq(#sent, 0, "soltar mira não é remote")
+end)
+
 test("cliente: ToggleHelp não consome o limite de combate", function()
 	local state = ClientState.new(clockNow)
 	ClientState.applySnapshot(state, { ready = true })
@@ -732,6 +762,14 @@ test("cliente: Locale cobre todo texto do HUD F0 em PT-BR e EN", function()
 		"hud.help_interact",
 		"hud.help_close",
 		"hud.lock_on",
+		"hud.menu_button",
+		"hud.lock_release",
+		"hud.lock_engage",
+		"hud.settings_close",
+		"hud.settings_camera",
+		"hud.settings_shake_on",
+		"hud.settings_shake_off",
+		"hud.settings_where",
 		"hud.debug_kit",
 	}
 	for _, key in keys do

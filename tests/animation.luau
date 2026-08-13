@@ -436,6 +436,21 @@ test("câmera: addImpact clampa trauma e fov no teto e decai no tick", function(
 	assertTrue(cam.fovPunch < CombatCameraController.MaxFovPunch, "fov decai após tick")
 end)
 
+test("câmera: shakeEnabled false ignora impacto confirmado", function()
+	local cam = CombatCameraController.new({
+		random = function()
+			return 0.5
+		end,
+	})
+	cam.shakeEnabled = false
+	CombatCameraController.addImpact(cam, "death")
+	assertEq(cam.trauma, 0, "sem tremor")
+	assertEq(cam.fovPunch, 0, "sem punch")
+	cam.shakeEnabled = true
+	CombatCameraController.addImpact(cam, "hit")
+	assertTrue(cam.trauma > 0, "liga de novo")
+end)
+
 -- ── VFX do Ombro Cometa (docs/14 §4.1, docs/18 §4) ─────────────────────────
 
 test("vfx: catálogo do cometa tem aura, flash e onda de choque", function()

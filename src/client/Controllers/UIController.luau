@@ -198,12 +198,9 @@ function UIController.new(deps: { [string]: any }): any
 	hint.TextSize = 12
 	hint.TextColor3 = MUTED
 
-	local lockChip = label("LockOn", gui, UDim2.fromOffset(360, 28), UDim2.new(0.5, -180, 0, 80))
-	lockChip.BackgroundColor3 = BG
-	lockChip.BackgroundTransparency = 0.1
-	lockChip.TextXAlignment = Enum.TextXAlignment.Center
-	lockChip.TextSize = 14
-	lockChip.Visible = false
+	local unlockAim = button("UnlockAim", gui, UDim2.fromOffset(220, 40), UDim2.new(0.5, -110, 0, 78))
+	unlockAim.Visible = false
+	unlockAim.TextSize = 14
 
 	local debugKit = label("DebugKit", gui, UDim2.fromOffset(140, 22), UDim2.fromOffset(18, 16))
 	debugKit.BackgroundColor3 = BG
@@ -213,13 +210,15 @@ function UIController.new(deps: { [string]: any }): any
 	debugKit.TextColor3 = MUTED
 	debugKit.Visible = false
 
-	local helpButton = button("Help", gui, UDim2.fromOffset(40, 40), UDim2.new(1, -58, 0, 14))
-	helpButton.TextSize = 22
-	local helpPanel = frame("HelpPanel", gui, UDim2.fromOffset(420, 280), UDim2.new(0.5, -210, 0.5, -140))
+	local helpButton = button("Help", gui, UDim2.fromOffset(88, 40), UDim2.new(1, -106, 0, 14))
+	helpButton.TextSize = 16
+	local helpPanel = frame("HelpPanel", gui, UDim2.fromOffset(460, 420), UDim2.new(0.5, -230, 0.5, -210))
 	helpPanel.Visible = false
+	helpPanel.ZIndex = 20
 	local helpTitle = label("Title", helpPanel, UDim2.new(1, -16, 0, 28), UDim2.fromOffset(8, 8))
 	helpTitle.TextSize = 16
 	helpTitle.TextXAlignment = Enum.TextXAlignment.Center
+	helpTitle.ZIndex = 21
 	local HELP_LINE_KEYS = {
 		"hud.help_light",
 		"hud.help_heavy",
@@ -228,15 +227,22 @@ function UIController.new(deps: { [string]: any }): any
 		"hud.help_ability",
 		"hud.help_lock",
 		"hud.help_interact",
-		"hud.help_close",
+		"hud.settings_where",
 	}
 	local helpLines: { TextLabel } = {}
 	for index, _ in HELP_LINE_KEYS do
 		local line =
-			label("Line" .. index, helpPanel, UDim2.new(1, -24, 0, 24), UDim2.fromOffset(12, 36 + (index - 1) * 28))
+			label("Line" .. index, helpPanel, UDim2.new(1, -24, 0, 22), UDim2.fromOffset(12, 40 + (index - 1) * 24))
 		line.TextSize = 13
+		line.ZIndex = 21
 		table.insert(helpLines, line)
 	end
+	local lockInPanel = button("LockInPanel", helpPanel, UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 236))
+	lockInPanel.ZIndex = 21
+	local shakeToggle = button("ShakeToggle", helpPanel, UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 280))
+	shakeToggle.ZIndex = 21
+	local closeButton = button("Close", helpPanel, UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 368))
+	closeButton.ZIndex = 21
 
 	local controller = {
 		gui = gui,
@@ -247,6 +253,10 @@ function UIController.new(deps: { [string]: any }): any
 		abilityController = deps.abilityController,
 		abilityApi = deps.abilityApi,
 		characterController = deps.characterController,
+		characterApi = deps.characterApi,
+		combatCamera = deps.combatCamera,
+		input = deps.input,
+		inputApi = deps.inputApi,
 		healthBar = healthBar,
 		guardBar = guardBar,
 		resourceBar = resourceBar,
@@ -260,13 +270,16 @@ function UIController.new(deps: { [string]: any }): any
 		dash = dash,
 		zoneHold = zoneHold,
 		hint = hint,
-		lockChip = lockChip,
+		unlockAim = unlockAim,
 		debugKit = debugKit,
 		helpButton = helpButton,
 		helpPanel = helpPanel,
 		helpTitle = helpTitle,
 		helpLines = helpLines,
 		helpLineKeys = HELP_LINE_KEYS,
+		lockInPanel = lockInPanel,
+		shakeToggle = shakeToggle,
+		closeButton = closeButton,
 		helpVisible = false,
 		displayedHealth = 0,
 		displayedGuard = 0,
@@ -277,7 +290,33 @@ function UIController.new(deps: { [string]: any }): any
 	local function toggleHelp()
 		controller.helpVisible = not controller.helpVisible
 	end
+	local function releaseAim()
+		local characterApi = deps.characterApi
+		if characterApi and deps.characterController then
+			characterApi.clearLock(deps.characterController)
+		elseif deps.characterController then
+			deps.characterController.lockTarget = nil
+		end
+	end
+	local function toggleShake()
+		local camera = deps.combatCamera
+		if camera then
+			camera.shakeEnabled = camera.shakeEnabled ~= true
+		end
+	end
 	helpButton.Activated:Connect(toggleHelp)
+	closeButton.Activated:Connect(function()
+		controller.helpVisible = false
+	end)
+	unlockAim.Activated:Connect(releaseAim)
+	lockInPanel.Activated:Connect(function()
+		if deps.characterApi and deps.characterController and deps.characterApi.isLocked(deps.characterController) then
+			releaseAim()
+		elseif deps.inputApi and deps.input then
+			deps.inputApi.dispatch(deps.input, "ToggleLock", {})
+		end
+	end)
+	shakeToggle.Activated:Connect(toggleShake)
 	if deps.inputApi and deps.input then
 		deps.inputApi.subscribe(deps.input, function(action: string, _payload: { [string]: any })
 			if action == "ToggleHelp" then
@@ -375,18 +414,28 @@ function UIController.render(controller: any, elapsed: number): ()
 	controller.zoneHold.Text = controller.locale.get("hud.pvp_hold", localeId)
 
 	controller.hint.Text = controller.locale.get("hud.help_hint", localeId)
-	controller.helpButton.Text = controller.locale.get("hud.help_button", localeId)
+	controller.helpButton.Text = controller.locale.get("hud.menu_button", localeId)
 	controller.helpTitle.Text = controller.locale.get("hud.help_title", localeId)
+	controller.closeButton.Text = controller.locale.get("hud.settings_close", localeId)
 	controller.helpPanel.Visible = controller.helpVisible == true
 	for index, key in controller.helpLineKeys do
 		controller.helpLines[index].Text = controller.locale.get(key, localeId)
 	end
 
-	local lockedOn = controller.characterController ~= nil and controller.characterController.lockTarget ~= nil
-	controller.lockChip.Visible = lockedOn
-	if lockedOn then
-		controller.lockChip.Text = controller.locale.get("hud.lock_on", localeId)
+	local lockedOn = false
+	if controller.characterApi and controller.characterController then
+		lockedOn = controller.characterApi.isLocked(controller.characterController)
+	elseif controller.characterController ~= nil then
+		lockedOn = controller.characterController.lockTarget ~= nil
 	end
+	controller.unlockAim.Visible = lockedOn
+	controller.unlockAim.Text = controller.locale.get("hud.lock_release", localeId)
+	controller.lockInPanel.Text =
+		controller.locale.get(if lockedOn then "hud.lock_release" else "hud.lock_engage", localeId)
+
+	local shakeOn = controller.combatCamera == nil or controller.combatCamera.shakeEnabled ~= false
+	controller.shakeToggle.Text =
+		controller.locale.get(if shakeOn then "hud.settings_shake_on" else "hud.settings_shake_off", localeId)
 
 	local debugKit = controller.abilityApi.isUnlocked(controller.abilityController, "comet_shoulder")
 		and controller.abilityApi.isUnlocked(controller.abilityController, "broken_cadence")
