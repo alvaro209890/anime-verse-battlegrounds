@@ -4,7 +4,7 @@
 
 ## 1. Estado da execução
 
-Em 2026-08-13, no Windows 11 (`C:\GIS\anime-verse-battlegrounds`, branch `codex/telemetry-security-animation-plan`, commit de código `9ba9b84`), foram executados: Selene 0.31.0 (0 erros, 0 warnings) e 155 testes Lune 0.10.5 (0 falhas). Wally/Rojo e o CI do commit documental final são registrados ao fechar esta rodada. O sourcemap do snapshot anterior confirmou `Services` como filho do Script `Server` e há teste de regressão.
+Em 2026-08-13, no Windows 11 (`C:\GIS\anime-verse-battlegrounds`, branch `codex/telemetry-security-animation-plan`), foram executados no commit `347b0cb`: StyLua 2.5.2 sobre archive LF canônico (0 diffs), Selene 0.31.0 (0 erros, 0 warnings), 155 testes Lune 0.10.5 (0 falhas), Wally 0.3.2 e Rojo 7.7.0 (`rojo build`, exit 0). O build valida que `SecurityService`/`TelemetryService` entram na árvore; não executa seus adapters Roblox. O CI do commit final é evidência externa e seu link fica no handoff após o push.
 
 O checkout está com finais de linha mistos por `core.autocrlf`: o check direto do StyLua 2.5.2 e o check forçado com `--line-endings Windows` retornam diff apenas de EOL em conjuntos opostos. O código alterado foi formatado pelo StyLua, e a validação canônica LF deve ser usada para reproduzir o CI sem converter o repositório inteiro.
 
