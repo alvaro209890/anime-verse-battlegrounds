@@ -25,6 +25,7 @@ export type Controller = {
 	gamepadModifier: boolean,
 	touchPressed: { [string]: boolean },
 	touchCount: number,
+	lastWheelToggleAt: number,
 	connections: { any },
 }
 
@@ -48,6 +49,7 @@ function InputController.new(state: any, now: (() -> number)?): Controller
 		gamepadModifier = false,
 		touchPressed = {},
 		touchCount = 0,
+		lastWheelToggleAt = -math.huge,
 		connections = {},
 	}
 end
@@ -177,13 +179,17 @@ function InputController.start(controller: Controller, userInputService: any): (
 	)
 	table.insert(
 		controller.connections,
-		userInputService.InputEnded:Connect(function(input: any, _processed: boolean)
+		userInputService.InputEnded:Connect(function(input: any, processed: boolean)
 			local key = input.KeyCode
+			-- Uma ação que começou fora da UI precisa sempre poder terminar; caso
+			-- contrário guarda/modificador podem ficar presos se outra interface
+			-- consumir o release. E/Y é a exceção compartilhada com prompts: quando
+			-- processado, não deve emitir ZoneHoldUp colateral.
 			if key == Enum.KeyCode.F or key == Enum.KeyCode.ButtonL2 then
 				dispatch("GuardUp")
 			elseif key == Enum.KeyCode.ButtonL1 then
 				controller.gamepadModifier = false
-			elseif key == Enum.KeyCode.E or key == Enum.KeyCode.ButtonY then
+			elseif not processed and (key == Enum.KeyCode.E or key == Enum.KeyCode.ButtonY) then
 				dispatch("ZoneHoldUp")
 			end
 		end)
@@ -192,7 +198,11 @@ function InputController.start(controller: Controller, userInputService: any): (
 		controller.connections,
 		userInputService.InputChanged:Connect(function(input: any, processed: boolean)
 			if not processed and input.UserInputType == Enum.UserInputType.MouseWheel then
-				dispatch("ToggleLock")
+				local now = controller.now()
+				if now - controller.lastWheelToggleAt >= 0.2 then
+					controller.lastWheelToggleAt = now
+					dispatch("ToggleLock")
+				end
 			end
 		end)
 	)

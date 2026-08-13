@@ -92,6 +92,21 @@ local function emit(fighterId: string, event: { any }): ()
 	end
 end
 
+local function attackOutcome(result: any, target: any): string
+	if result.iframe == true then
+		return "evaded"
+	end
+	if
+		result.parried == true
+		or result.broken == true
+		or result.pulseCounter == true
+		or (target and target.guarding == true)
+	then
+		return "guard"
+	end
+	return "hit"
+end
+
 local function registerEnemy(fighterId: string, npcId: string, anchor: any): EnemyRecord
 	local record: EnemyRecord = {
 		fighterId = fighterId,
@@ -247,6 +262,12 @@ function EnemyService.tick(now: number, deltaSeconds: number): number
 	local hits = 0
 
 	for _, record in EnemyService.list() do
+		-- O Estilhaço Ancorado tem máquina de estado e respawn próprios em
+		-- tickElite. Processá-lo aqui também moveria o elite e aplicaria o
+		-- baseline de 45 s dos Errantes sobre o respawn autoritativo de 180 s.
+		if record.npcId ~= SHARD_NPC_ID then
+			continue
+		end
 		local fighter = deps.combat.getFighter(record.fighterId)
 		if fighter then
 			if fighter.health <= 0 then
@@ -306,11 +327,16 @@ function EnemyService.tick(now: number, deltaSeconds: number): number
 								visualPattern = "strike",
 							})
 						elseif result.ok and result.phase == "attack" then
-							hits += 1
+							if result.iframe ~= true and result.damage > 0 then
+								hits += 1
+							end
 							emit(record.fighterId, {
 								kind = "attack",
 								targetId = target.fighterId,
 								damage = result.damage,
+								outcome = attackOutcome(result, targetFighter),
+								iframe = result.iframe == true,
+								pulseCounter = result.pulseCounter == true,
 								durationSeconds = 0.35,
 								visualPattern = "strike",
 							})
@@ -429,11 +455,16 @@ function EnemyService.tickElite(now: number, deltaSeconds: number): number
 					visualPattern = visualPattern,
 				})
 			elseif result.ok and result.phase == "attack" then
-				hits += 1
+				if result.iframe ~= true and result.damage > 0 then
+					hits += 1
+				end
 				emit(fighterId, {
 					kind = "attack",
 					targetId = target.fighterId,
 					damage = result.damage,
+					outcome = attackOutcome(result, targetFighter),
+					iframe = result.iframe == true,
+					pulseCounter = result.pulseCounter == true,
 					durationSeconds = 0.4,
 					visualPattern = if fighter.elitePattern == "slam" then "slam" else "combo",
 				})

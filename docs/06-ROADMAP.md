@@ -2,9 +2,9 @@
 
 ## 1. Objetivo e estado deste documento
 
-Este roadmap transforma a visão do jogo em uma sequência de entregas verificáveis e passa a ser a referência de escopo para uma equipe de 1–3 pessoas. A implementação **já começou**: os itens 1–13 do backlog de `docs/13-F0-SLICE.md` estão fechados em código/headless — catálogos, serviços de domínio, ProfileStore, camada cliente F0 e segurança/telemetria mínima. A fundação adicional de mundo/apresentação procedural e o unlock seguro de playtest também existem em código, com CI de StyLua, Selene, 159 testes Lune, Wally e build Rojo.
+Este roadmap transforma a visão do jogo em uma sequência de entregas verificáveis e passa a ser a referência de escopo para uma equipe de 1–3 pessoas. A implementação **já começou**: os itens 1–13 do backlog de `docs/13-F0-SLICE.md` estão fechados em código/headless — catálogos, serviços de domínio, ProfileStore, camada cliente F0 e segurança/telemetria mínima. No commit `108be31`, a fundação adicional ganhou pisos coerentes com todos os volumes de zona, interação contextual jogável, telegraph acessível e resposta procedural do personagem local. O snapshot automatizado correspondente declara 166 testes Lune; lint e build continuam gates distintos de runtime.
 
-Esse estado **não** equivale a F0 concluída. A camada cliente e o mundo procedural não receberam playtest nesta rodada: não há evidência registrada de boot/spawn, Parts/Motor6D, HUD/câmera, DataStore real, servidor publicado, mobile ou gamepad. O próximo marco do programa é o Gate W1 (`docs/15-WORLD-PRESENTATION.md`): primeira sessão medida no Studio, que também recalibra a estimativa da fase (§2).
+Esse estado **não** equivale a F0 concluída. O build atual não foi executado em Play: não há evidência registrada de boot/spawn, pisos e prompts reais, Parts/Motor6D, HUD/câmera, telegraph sob latência, DataStore real, servidor publicado, toque, mobile ou gamepad. Também faltam dois clientes simultâneos. O próximo marco do programa é reabrir no Studio o snapshot gerado do commit atual e então executar o Gate W1 (`docs/15-WORLD-PRESENTATION.md`), sem promover o código headless a runtime antes dessa sessão.
 
 O projeto é um **RPG / Action RPG** persistente; “Battlegrounds” permanece como nome de marketing, não como arquitetura de arena exclusiva. A ordem abaixo prioriza combate em rede, persistência e progressão antes de multiplicar conteúdo ou construir sistemas sociais caros.
 
@@ -148,12 +148,14 @@ Curva inicial de aceite: primeiro combate em até 60 segundos; objetivo de progr
 
 Os percentuais definitivos devem ser calibrados com amostra e analytics; os valores acima são gates de protótipo, não metas públicas de produto.
 
-### Próximo recorte executivo — aprovado em 2026-08-13
+### Próximo recorte executivo — atualizado em 2026-08-13
 
-1. **W1, leitura do greybox:** boot solo, duas rotas, dummy/instrutor, cratera, morte/retorno e clipping, primeiro sem unlock de teste e depois com `F0Debug`.
-2. **A1, golpe-modelo:** após P1, produzir somente o blocking original do Ombro Cometa e medir markers, silhueta, foot sliding e sincronismo. Os outros 44 clipes aguardam essa decisão.
-3. **W2, custo em dispositivo:** oito jogadores, quatro Errantes e um Ancorado em PC integrado e Android; separar script, física, render e animação.
-4. **R1, runtime adversarial:** dois clientes, latência simulada, replay/spam e network ownership hostil antes de ampliar conteúdo F1.
+1. **Reabrir o snapshot atual:** gerar e abrir no Studio o place do commit `108be31`, confirmar que o Output identifica essa revisão e que o conteúdo aberto não é um `.rbxl` anterior. Registrar boot ou erro antes de ajustar aparência.
+2. **W1, solo com interação e pisos:** percorrer as duas saídas sem cair, falar com o Instrutor pelo `ProximityPrompt`, observar o tracker, voltar ao Marco e completar o hold de 1,5 s. Incluir dummy, cratera, telegraph branco + símbolo, resposta procedural de leve/pesado/guarda/dash, morte/retorno e clipping, primeiro sem `F0Debug` e depois com ele.
+3. **A1, golpe-modelo:** somente após P1 e W1 sem bloqueio estrutural, produzir o blocking original do Ombro Cometa e medir markers, silhueta, foot sliding e sincronismo. Os outros 44 clipes aguardam essa decisão.
+4. **R1, runtime adversarial:** dois clientes, latência simulada, replay/spam, hold adulterado e network ownership hostil antes de ampliar conteúdo F1.
+
+W2 permanece obrigatório depois desse recorte: PC integrado e Android, quatro Errantes, um Ancorado e métricas separadas de script, física, render e animação. Toque, gamepad e mobile reais não podem ser marcados como validados a partir do prompt nativo ou dos testes headless.
 
 Essa ordem transforma o próximo investimento em evidência. Um build verde não promove W1/A1/W2/R1; cada gate exige a captura descrita em `12-TESTING.md` e `15-WORLD-PRESENTATION.md`.
 

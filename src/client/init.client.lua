@@ -31,6 +31,10 @@ local UIController = require(Controllers.UIController)
 local ClientState = require(Controllers.ClientState)
 local ActorAnimator = require(Presentation.ActorAnimator)
 local PlayerCombatAnimator = require(Presentation.PlayerCombatAnimator)
+local CombatCameraController = require(Presentation.CombatCameraController)
+local CombatAudioPlayer = require(Presentation.CombatAudioPlayer)
+local AbilityVfxPlayer = require(Presentation.AbilityVfxPlayer)
+local CombatAudio = require(Shared.Data.CombatAudio)
 
 local player = Players.LocalPlayer
 local state = ClientState.new(os.clock)
@@ -52,6 +56,10 @@ end
 
 -- Ordem obrigatória de controllers (docs/13 §12.3).
 local input = InputController.new(state, os.clock)
+local playerCombatAnimator: any = nil
+-- Declarado antes do AbilityController porque o callback de ativação o captura;
+-- a construção fica junto das demais camadas de apresentação, abaixo.
+local abilityVfx: any = nil
 local character = CharacterController.new({
 	state = state,
 	input = input,
@@ -72,6 +80,18 @@ local ability = AbilityController.new({
 	guid = function()
 		return HttpService:GenerateGUID(false)
 	end,
+	onActivated = function(slot: number, _abilityId: string, phase: string)
+		-- A reentrada da Cadência não é "a técnica de novo": o servidor resolve
+		-- um eco 350 ms depois, com dano próprio. Repetir a pose de ativação
+		-- faria o jogador ler dois golpes iguais onde a regra mudou.
+		local action = if phase == "reentry" then "Ability2Echo" else ("Ability%d"):format(slot)
+		if playerCombatAnimator then
+			PlayerCombatAnimator.play(playerCombatAnimator, action)
+		end
+		if abilityVfx then
+			AbilityVfxPlayer.play(abilityVfx, action)
+		end
+	end,
 })
 local feedback = CombatFeedbackController.new(state, ClientState)
 local resource = ResourceController.new(state, ClientState)
@@ -82,13 +102,30 @@ local actorAnimator = ActorAnimator.new({
 	recipes = WorldPresentation,
 	now = os.clock,
 })
-local playerCombatAnimator = PlayerCombatAnimator.new({
+-- Áudio de combate: o corte de ar sai da própria ação do jogador (2D, preso à
+-- câmera); o impacto espera o desfecho autoritativo em CombatEvent.
+local combatAudio = CombatAudioPlayer.new({
+	catalog = CombatAudio,
+	soundParent = workspace.CurrentCamera,
+	now = os.clock,
+})
+playerCombatAnimator = PlayerCombatAnimator.new({
 	player = player,
 	runService = RunService,
 	now = os.clock,
+	emitCue = function(cueId: string)
+		CombatAudioPlayer.play(combatAudio, cueId)
+	end,
+})
+-- Câmera de impacto: shake/FOV locais disparados apenas por desfecho confirmado.
+local combatCamera = CombatCameraController.new({
+	workspace = Workspace,
+	runService = RunService,
 })
 InputController.subscribe(input, function(action: string, _payload: { [string]: any })
-	PlayerCombatAnimator.play(playerCombatAnimator, action)
+	if string.match(action, "^Ability%d$") == nil then
+		PlayerCombatAnimator.play(playerCombatAnimator, action)
+	end
 end)
 local interaction = InteractionController.new({
 	state = state,
@@ -99,6 +136,7 @@ local interaction = InteractionController.new({
 	workspace = Workspace,
 	locale = Locale,
 	catalog = Interactions,
+	now = os.clock,
 })
 local characterStarted = false
 
@@ -124,6 +162,15 @@ end)
 
 remote(Remotes.Names.CombatEvent).OnClientEvent:Connect(function(payload: { [string]: any })
 	CombatFeedbackController.onCombatEvent(feedback, payload)
+	-- Impacto é reação a resultado do servidor, nunca a intenção local: só soa
+	-- quando o acerto/guarda já foi decidido (docs/14 §5, PresentationImpact).
+	local impactCue = CombatAudio.impactId(payload.abilityId, payload.outcome)
+	if impactCue then
+		CombatAudioPlayer.play(combatAudio, impactCue)
+	end
+	-- Hit-stop e câmera também reagem ao desfecho, nunca à intenção local.
+	PlayerCombatAnimator.confirmHit(playerCombatAnimator, payload.outcome)
+	CombatCameraController.addImpact(combatCamera, payload.outcome, payload.abilityId)
 end)
 
 remote(Remotes.Names.AbilityRejected).OnClientEvent:Connect(function(payload: { [string]: any })
@@ -153,6 +200,7 @@ local ui = UIController.new({
 InputController.start(input, UserInputService)
 ActorAnimator.start(actorAnimator)
 PlayerCombatAnimator.start(playerCombatAnimator)
+CombatCameraController.start(combatCamera)
 InteractionController.start(interaction)
 
 -- Mantém referência forte e torna explícito que UI é o último controller.

@@ -11,8 +11,10 @@ export type Controller = {
 	workspace: any,
 	locale: any,
 	catalog: any,
+	now: () -> number,
+	worldRoot: Instance?,
 	prompts: { [any]: any },
-	holding: { [any]: boolean },
+	holdStartedAt: { [any]: number },
 	connections: { any },
 	started: boolean,
 }
@@ -30,7 +32,7 @@ function InteractionController.onAction(controller: Controller, action: string, 
 		return
 	end
 	local phase = payload.phase
-	if phase ~= "begin" and phase ~= "complete" then
+	if phase ~= "begin" and phase ~= "complete" and phase ~= "cancel" then
 		return
 	end
 	controller.send("InteractionIntent", "InteractionIntent", {
@@ -49,6 +51,7 @@ function InteractionController.new(deps: {
 	workspace: any,
 	locale: any,
 	catalog: any,
+	now: (() -> number)?,
 }): Controller
 	local controller: Controller = {
 		state = deps.state,
@@ -58,8 +61,10 @@ function InteractionController.new(deps: {
 		workspace = deps.workspace,
 		locale = deps.locale,
 		catalog = deps.catalog,
+		now = deps.now or os.clock,
+		worldRoot = nil,
 		prompts = {},
-		holding = {},
+		holdStartedAt = {},
 		connections = {},
 		started = false,
 	}
@@ -120,12 +125,14 @@ local function attachPrompt(controller: Controller, candidate: Instance): ()
 		controller.connections,
 		prompt.PromptButtonHoldBegan:Connect(function()
 			if definition.holdDuration > 0 then
-				controller.holding[candidate] = true
-				controller.inputApi.dispatch(controller.input, "Interact", {
+				local dispatched = controller.inputApi.dispatch(controller.input, "Interact", {
 					npcId = if definition.kind == "npc" then definition.targetId else nil,
 					anchorId = if definition.kind == "anchor" then definition.targetId else nil,
 					phase = "begin",
 				})
+				if dispatched then
+					controller.holdStartedAt[candidate] = controller.now()
+				end
 			end
 		end)
 	)
@@ -134,7 +141,10 @@ local function attachPrompt(controller: Controller, candidate: Instance): ()
 		prompt.Triggered:Connect(function()
 			-- O servidor exige um `begin` correspondente para holds. Não dependemos
 			-- da ordem entre HoldEnded/Triggered para concluir um hold legítimo.
-			controller.holding[candidate] = nil
+			if definition.holdDuration > 0 and controller.holdStartedAt[candidate] == nil then
+				return
+			end
+			controller.holdStartedAt[candidate] = nil
 			controller.inputApi.dispatch(controller.input, "Interact", {
 				npcId = if definition.kind == "npc" then definition.targetId else nil,
 				anchorId = if definition.kind == "anchor" then definition.targetId else nil,
@@ -145,7 +155,23 @@ local function attachPrompt(controller: Controller, candidate: Instance): ()
 	table.insert(
 		controller.connections,
 		prompt.PromptButtonHoldEnded:Connect(function()
-			controller.holding[candidate] = nil
+			local startedAt = controller.holdStartedAt[candidate]
+			if startedAt then
+				-- A ordem relativa entre HoldEnded e Triggered não é usada como
+				-- autoridade. O defer deixa o Triggered legítimo consumir o begin no
+				-- mesmo ciclo; se ele não vier, cancelamos o pending no servidor.
+				task.defer(function()
+					if controller.holdStartedAt[candidate] ~= startedAt then
+						return
+					end
+					controller.holdStartedAt[candidate] = nil
+					controller.inputApi.dispatch(controller.input, "Interact", {
+						npcId = if definition.kind == "npc" then definition.targetId else nil,
+						anchorId = if definition.kind == "anchor" then definition.targetId else nil,
+						phase = "cancel",
+					})
+				end)
+			end
 		end)
 	)
 	table.insert(
@@ -153,7 +179,31 @@ local function attachPrompt(controller: Controller, candidate: Instance): ()
 		candidate.AncestryChanged:Connect(function(_, parent: Instance?)
 			if parent == nil then
 				controller.prompts[candidate] = nil
-				controller.holding[candidate] = nil
+				controller.holdStartedAt[candidate] = nil
+			end
+		end)
+	)
+end
+
+local function attachWorldRoot(controller: Controller, root: Instance): ()
+	if root.Name ~= "GreyboxF0" or controller.worldRoot == root then
+		return
+	end
+	controller.worldRoot = root
+	for _, descendant in root:GetDescendants() do
+		attachPrompt(controller, descendant)
+	end
+	table.insert(
+		controller.connections,
+		root.DescendantAdded:Connect(function(descendant: Instance)
+			attachPrompt(controller, descendant)
+		end)
+	)
+	table.insert(
+		controller.connections,
+		root.AncestryChanged:Connect(function(_, parent: Instance?)
+			if parent == nil and controller.worldRoot == root then
+				controller.worldRoot = nil
 			end
 		end)
 	)
@@ -164,13 +214,14 @@ function InteractionController.start(controller: Controller): ()
 		return
 	end
 	controller.started = true
-	for _, descendant in controller.workspace:GetDescendants() do
-		attachPrompt(controller, descendant)
+	local root = controller.workspace:FindFirstChild("GreyboxF0")
+	if root then
+		attachWorldRoot(controller, root)
 	end
 	table.insert(
 		controller.connections,
-		controller.workspace.DescendantAdded:Connect(function(descendant: Instance)
-			attachPrompt(controller, descendant)
+		controller.workspace.ChildAdded:Connect(function(child: Instance)
+			attachWorldRoot(controller, child)
 		end)
 	)
 end
@@ -186,7 +237,8 @@ function InteractionController.stop(controller: Controller): ()
 	end
 	table.clear(controller.connections)
 	table.clear(controller.prompts)
-	table.clear(controller.holding)
+	table.clear(controller.holdStartedAt)
+	controller.worldRoot = nil
 	controller.started = false
 end
 

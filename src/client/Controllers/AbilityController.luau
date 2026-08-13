@@ -2,6 +2,13 @@
 -- Três slots F0, execução correlacionada e cooldown de apresentação. O servidor
 -- continua sendo a única autoridade de custo, cooldown final e resultado.
 
+export type CadenceReentry = {
+	executionId: string,
+	opensAt: number,
+	expiresAt: number,
+	sent: boolean,
+}
+
 export type Controller = {
 	state: any,
 	stateApi: any,
@@ -10,9 +17,17 @@ export type Controller = {
 	send: (string, string, { [string]: any }) -> (),
 	guid: () -> string,
 	slotIds: { string },
+	executions: { [string]: string },
+	cadenceReentry: CadenceReentry?,
+	onActivated: ((number, string, string) -> ())?,
 }
 
 local AbilityController = {}
+
+local BROKEN_CADENCE_ID = "broken_cadence"
+-- O servidor usa 120 ms de janela + até 80 ms de compensação. O cliente mantém
+-- 220 ms apenas como buffer/predição de input (§6.2).
+local CADENCE_CLIENT_BUFFER_SECONDS = 0.22
 
 local function buildSlots(abilities: any, characters: any): { string }
 	local slots: { string } = {}
@@ -39,6 +54,7 @@ function AbilityController.new(deps: {
 	characters: any,
 	send: (string, string, { [string]: any }) -> (),
 	guid: () -> string,
+	onActivated: ((number, string, string) -> ())?,
 }): Controller
 	local controller: Controller = {
 		state = deps.state,
@@ -48,6 +64,9 @@ function AbilityController.new(deps: {
 		send = deps.send,
 		guid = deps.guid,
 		slotIds = buildSlots(deps.abilities, deps.characters),
+		executions = {},
+		cadenceReentry = nil,
+		onActivated = deps.onActivated,
 	}
 	deps.inputSubscribe(deps.input, function(action: string, _payload: { [string]: any })
 		local slot = string.match(action, "^Ability(%d)$")
@@ -56,6 +75,38 @@ function AbilityController.new(deps: {
 		end
 	end)
 	return controller
+end
+
+local function currentTime(controller: Controller): number
+	local stateNow = controller.state.now
+	return if type(stateNow) == "function" then stateNow() else os.clock()
+end
+
+local function tryCadenceReentry(controller: Controller, ability: any, slot: number): (boolean, string?)
+	local reentry = controller.cadenceReentry
+	if not reentry then
+		return false, "cooldown"
+	end
+	local current = currentTime(controller)
+	if reentry.sent or current < reentry.opensAt or current > reentry.expiresAt then
+		if current > reentry.expiresAt then
+			controller.cadenceReentry = nil
+		end
+		return false, "reentry_window"
+	end
+
+	-- Este gate local é só buffer: o servidor mede a janela real e pode rejeitar.
+	reentry.sent = true
+	controller.send("AbilityIntent", "AbilityIntent", {
+		abilityId = BROKEN_CADENCE_ID,
+		inputMode = ability.inputMode,
+		executionId = reentry.executionId,
+		phase = "reentry",
+	})
+	if controller.onActivated then
+		controller.onActivated(slot, BROKEN_CADENCE_ID, "reentry")
+	end
+	return true, reentry.executionId
 end
 
 function AbilityController.isUnlocked(controller: Controller, abilityId: string): boolean
@@ -75,26 +126,69 @@ function AbilityController.activateSlot(controller: Controller, slot: number): (
 		return false, "locked"
 	end
 	if controller.stateApi.cooldownRemaining(controller.state, abilityId) > 0 then
+		if abilityId == BROKEN_CADENCE_ID then
+			return tryCadenceReentry(controller, ability, slot)
+		end
 		return false, "cooldown"
 	end
 
 	local executionId = controller.guid()
+	controller.executions[abilityId] = executionId
+	local activatedAt = currentTime(controller)
 	-- Resposta visual imediata; StateDelta/rejeição reconciliam este valor.
 	controller.stateApi.setCooldown(controller.state, abilityId, ability.cooldown.baseSeconds)
+	if abilityId == BROKEN_CADENCE_ID then
+		local opensAt = activatedAt + (ability.startupMs + ability.activeMs) / 1000
+		controller.cadenceReentry = {
+			executionId = executionId,
+			opensAt = opensAt,
+			expiresAt = opensAt + CADENCE_CLIENT_BUFFER_SECONDS,
+			sent = false,
+		}
+	end
 	controller.send("AbilityIntent", "AbilityIntent", {
 		abilityId = abilityId,
 		inputMode = ability.inputMode,
 		executionId = executionId,
 		phase = "press",
 	})
+	if controller.onActivated then
+		controller.onActivated(slot, abilityId, "press")
+	end
 	return true, executionId
 end
 
 function AbilityController.onRejected(controller: Controller, payload: { [string]: any }): ()
 	local abilityId = payload.abilityId
-	if type(abilityId) == "string" then
-		controller.stateApi.setCooldown(controller.state, abilityId, 0)
+	if type(abilityId) ~= "string" then
+		return
 	end
+	local rejectedExecutionId = payload.executionId
+	local currentExecutionId = controller.executions[abilityId]
+	if
+		type(rejectedExecutionId) == "string"
+		and type(currentExecutionId) == "string"
+		and rejectedExecutionId ~= currentExecutionId
+	then
+		return
+	end
+	if abilityId == BROKEN_CADENCE_ID then
+		local reentry = controller.cadenceReentry
+		if reentry and type(rejectedExecutionId) == "string" and rejectedExecutionId ~= reentry.executionId then
+			return
+		end
+		local sameExecution = type(rejectedExecutionId) ~= "string" or reentry ~= nil
+		local isReentry = reentry
+			and reentry.sent
+			and sameExecution
+			and (payload.phase == nil or payload.phase == "reentry")
+		controller.cadenceReentry = nil
+		if isReentry then
+			-- Rejeição da predição não desfaz o cooldown autoritativo já iniciado.
+			return
+		end
+	end
+	controller.stateApi.setCooldown(controller.state, abilityId, 0)
 end
 
 return AbilityController

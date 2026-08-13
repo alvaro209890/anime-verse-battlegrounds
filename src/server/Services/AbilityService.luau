@@ -28,6 +28,7 @@ export type ServerPlayerState = {
 
 export type AbilityPayload = {
 	phase: string?,
+	executionId: string?,
 }
 
 export type AbilityDeps = {
@@ -39,20 +40,28 @@ export type AbilityDeps = {
 	tryGrantFlow: (number) -> number,
 	isAlive: (ServerPlayerState) -> boolean,
 	applyDamage: (ServerPlayerState, number, number?) -> boolean,
+	tryCadenceHit: ((any, any, number, number, string) -> any)?,
+	revalidateCadenceTarget: ((number, any) -> boolean)?,
+	onPulseCounter: ((number, any, number) -> boolean?)?,
 	now: (() -> number)?,
 	isAbilityUnlocked: ((number, string) -> boolean)?,
 	getAttackerFighter: ((number) -> any?)?,
 	getAbilityTarget: ((number) -> any?)?,
 	tryCometShoulder: ((any, any, number, string) -> any)?,
-	onCombatHit: ((number, string, number, string) -> ())?,
+	onCombatHit: ((number, string, number, string, string?) -> ())?,
+	onCombatKill: ((number, string, string) -> ())?,
 	-- Camada espacial (item 5): resolve o avanço de 7 studs, commita a posição
 	-- e devolve alvo + lado do golpe. Ausente = fatia headless usa
 	-- `getAbilityTarget` (dummy fixo), que é o comportamento anterior.
 	resolveCometShoulder: ((number) -> any)?,
 	getFighterById: ((string) -> any?)?,
+	-- Cadência Quebrada: o bootstrap resolve no espaço autoritativo um único
+	-- alvo no início da execução. O runner guarda esse mesmo fighter para o eco;
+	-- o segundo AbilityIntent não declara nem troca alvo.
+	resolveCadenceTarget: ((number) -> any?)?,
 	-- Retorno de Pulso (item 10): abre a postura no FighterState do jogador e
 	-- expira a postura sem golpe (erro → recovery 600 ms).
-	setPulseStance: ((any, number) -> ())?,
+	setPulseStance: ((any, number) -> (boolean, string?))?,
 	expirePulseStance: ((any, number) -> ())?,
 	-- Eco da Cadência acertou (item 10 — objetivo quest_flow): o bootstrap
 	-- liga ao QuestService.creditFlowEcho. `abilityId` é quem gerou o eco.
@@ -68,13 +77,29 @@ local AbilityService = {
 -- (docs/13 §6.2). Fim do active do golpe 2 = startup 140 + active 80 + intervalo
 -- 100 + active 80 = 400 ms da ativação; janela de 120 ms.
 local CADENCE_REENTRY_OPENS_MS = 400
-local CADENCE_REENTRY_WINDOW_MS = 120
+-- Janela base de 120 ms + compensação máxima de 80 ms prevista pela spec.
+local CADENCE_REENTRY_WINDOW_MS = 200
 -- Eco: 350 ms após a reentrada (docs/13 §6.2).
 local CADENCE_ECHO_DELAY_MS = 350
 -- Postura do Retorno de Pulso: 250 ms (docs/13 §6.3).
 local PULSE_STANCE_MS = 250
 
-local reentryUntil: { [number]: { abilityId: string, opensAt: number, expiresAt: number } } = {}
+local reentryUntil: {
+	[number]: { abilityId: string, opensAt: number, expiresAt: number, target: any?, executionId: string? },
+} =
+	{}
+-- Os dois impactos da Cadência são resolvidos nos instantes autoritativos do
+-- active (140 ms e 320 ms), não no recebimento do remote.
+local pendingCadenceStrikes: {
+	[number]: {
+		abilityId: string,
+		target: any,
+		firstAt: number,
+		secondAt: number,
+		firstResolved: boolean,
+	},
+} =
+	{}
 -- userId → eco pendente da Cadência (resolvido no tick).
 local pendingEchos: { [number]: { at: number, target: any, abilityId: string } } = {}
 -- userId → postura ativa do Retorno de Pulso (expira no tick sem golpe).
@@ -88,6 +113,75 @@ local function now(): number
 	return os.clock()
 end
 
+local function notifyCombatHit(
+	attackerUserId: number,
+	target: any,
+	damage: number,
+	abilityId: string,
+	killed: boolean?,
+	outcome: string?
+): ()
+	local deps = AbilityService.deps
+	if not deps or type(target.id) ~= "string" or damage < 0 then
+		return
+	end
+	if killed and type(target.diedAt) == "number" and target.diedAt <= 0 then
+		target.diedAt = now()
+	end
+	if deps.onCombatHit then
+		deps.onCombatHit(attackerUserId, target.id, damage, abilityId, outcome)
+	end
+	if killed and deps.onCombatKill then
+		deps.onCombatKill(attackerUserId, target.id, abilityId)
+	end
+end
+
+-- Executa um impacto da Cadência por uma única porta. No runtime, essa porta
+-- passa pelo CombatService (i-frame, guarda e Pulso); nos testes puros antigos,
+-- o fallback preserva o adapter de dano mínimo. `connected` só é verdadeiro
+-- quando HP foi realmente retirado, portanto iframe não concede Fluxo.
+local function applyCadenceHit(
+	attackerUserId: number,
+	target: any,
+	damage: number,
+	abilityId: string,
+	currentNow: number
+): (boolean, boolean, boolean)
+	local deps = AbilityService.deps
+	if not deps then
+		return false, false, false
+	end
+	if deps.tryCadenceHit then
+		local attackerFighter = if deps.getAttackerFighter then deps.getAttackerFighter(attackerUserId) else nil
+		if not attackerFighter then
+			return false, false, false
+		end
+		local result = deps.tryCadenceHit(attackerFighter, target, currentNow, damage, "front")
+		if not result or result.ok ~= true then
+			return false, false, false
+		end
+		local attackerKilled = false
+		if result.pulseCounter == true and deps.onPulseCounter then
+			attackerKilled = deps.onPulseCounter(attackerUserId, target, currentNow) == true
+		end
+		local applied = if type(result.damage) == "number" then result.damage else 0
+		local killed = result.killed == true
+		if applied <= 0 then
+			if result.parried == true then
+				notifyCombatHit(attackerUserId, target, 0, abilityId, false, "guard")
+			end
+			return false, killed, attackerKilled
+		end
+		local outcome = if result.parried or result.stoppedOnGuard or result.pulseCounter then "guard" else "hit"
+		notifyCombatHit(attackerUserId, target, applied, abilityId, killed, outcome)
+		return true, killed, attackerKilled
+	end
+
+	local killed = deps.applyDamage(target, damage, attackerUserId)
+	notifyCombatHit(attackerUserId, target, damage, abilityId, killed, "hit")
+	return true, killed, false
+end
+
 -- Resolve ecos pendentes da Cadência (docs/13 §6.2): 350 ms após a reentrada,
 -- dano 4 na mesma hitbox; o eco que acerta gera Fluxo e dispara onFlowEcho.
 -- Também expira posturas do Pulso sem golpe (erro → recovery 600 ms, §6.3).
@@ -97,15 +191,54 @@ function AbilityService.tick(currentNow: number): ()
 	if not deps then
 		return
 	end
+	for userId, strikes in pendingCadenceStrikes do
+		local target = strikes.target
+		if not strikes.firstResolved and currentNow >= strikes.firstAt then
+			strikes.firstResolved = true
+			if
+				target
+				and target.health > 0
+				and (not deps.revalidateCadenceTarget or deps.revalidateCadenceTarget(userId, target))
+			then
+				local _, targetKilled, attackerKilled =
+					applyCadenceHit(userId, target, 5, strikes.abilityId, currentNow)
+				if targetKilled or attackerKilled then
+					pendingCadenceStrikes[userId] = nil
+					reentryUntil[userId] = nil
+					continue
+				end
+			end
+		end
+		if currentNow >= strikes.secondAt then
+			pendingCadenceStrikes[userId] = nil
+			if
+				target
+				and target.health > 0
+				and (not deps.revalidateCadenceTarget or deps.revalidateCadenceTarget(userId, target))
+			then
+				local _, targetKilled, attackerKilled =
+					applyCadenceHit(userId, target, 6, strikes.abilityId, currentNow)
+				if targetKilled or attackerKilled then
+					reentryUntil[userId] = nil
+				end
+			end
+		end
+	end
 	for userId, echo in pendingEchos do
 		if currentNow >= echo.at then
 			pendingEchos[userId] = nil
 			local target = echo.target
-			if target and target.health > 0 then
-				deps.applyDamage(target, 4, userId)
-				local flowGranted = deps.tryGrantFlow(userId)
-				if deps.onFlowEcho then
-					deps.onFlowEcho(userId, echo.abilityId, flowGranted)
+			if
+				target
+				and target.health > 0
+				and (not deps.revalidateCadenceTarget or deps.revalidateCadenceTarget(userId, target))
+			then
+				local connected = select(1, applyCadenceHit(userId, target, 4, echo.abilityId, currentNow))
+				if connected then
+					local flowGranted = deps.tryGrantFlow(userId)
+					if deps.onFlowEcho then
+						deps.onFlowEcho(userId, echo.abilityId, flowGranted)
+					end
 				end
 			end
 		end
@@ -137,9 +270,21 @@ local function cometShoulderRunner(attacker: ServerPlayerState, target: ServerPl
 			if resolution and resolution.targetId then
 				local targetFighter = deps.getFighterById(resolution.targetId)
 				if targetFighter then
-					local hit = deps.tryCometShoulder(attackerFighter, targetFighter, now(), resolution.facing)
-					if deps.onCombatHit and hit and hit.ok then
-						deps.onCombatHit(attacker.userId, targetFighter.id, hit.damage, "comet_shoulder")
+					local hitAt = now()
+					local hit = deps.tryCometShoulder(attackerFighter, targetFighter, hitAt, resolution.facing)
+					if hit and hit.ok and not hit.iframe then
+						if hit.pulseCounter and deps.onPulseCounter then
+							deps.onPulseCounter(attacker.userId, targetFighter, hitAt)
+						end
+						local outcome = if hit.parried or hit.stoppedOnGuard or hit.pulseCounter then "guard" else "hit"
+						notifyCombatHit(
+							attacker.userId,
+							targetFighter,
+							hit.damage,
+							"comet_shoulder",
+							hit.killed,
+							outcome
+						)
 					end
 				end
 			end
@@ -150,9 +295,14 @@ local function cometShoulderRunner(attacker: ServerPlayerState, target: ServerPl
 		local attackerFighter = deps.getAttackerFighter(attacker.userId)
 		local targetFighter = deps.getAbilityTarget(attacker.userId)
 		if attackerFighter and targetFighter then
-			local hit = deps.tryCometShoulder(attackerFighter, targetFighter, now(), "front")
-			if deps.onCombatHit and hit and hit.ok then
-				deps.onCombatHit(attacker.userId, targetFighter.id, hit.damage, "comet_shoulder")
+			local hitAt = now()
+			local hit = deps.tryCometShoulder(attackerFighter, targetFighter, hitAt, "front")
+			if hit and hit.ok and not hit.iframe then
+				if hit.pulseCounter and deps.onPulseCounter then
+					deps.onPulseCounter(attacker.userId, targetFighter, hitAt)
+				end
+				local outcome = if hit.parried or hit.stoppedOnGuard or hit.pulseCounter then "guard" else "hit"
+				notifyCombatHit(attacker.userId, targetFighter, hit.damage, "comet_shoulder", hit.killed, outcome)
 			end
 			return
 		end
@@ -163,25 +313,34 @@ local function cometShoulderRunner(attacker: ServerPlayerState, target: ServerPl
 	deps.applyDamage(target, 9, attacker.userId)
 end
 
-local function brokenCadenceRunner(attacker: ServerPlayerState, target: ServerPlayerState?, _payload: AbilityPayload)
+local function brokenCadenceRunner(attacker: ServerPlayerState, target: ServerPlayerState?, payload: AbilityPayload)
 	local deps = AbilityService.deps
 	if not deps then
 		return
 	end
-	-- Golpe 1 (dano 5) e golpe 2 (dano 6) conectam na ativação; o timing de
-	-- startup/active/recovery é executado no Studio (a fatia headless confirma
-	-- o dano). O golpe 2 só sai se o golpe 1 não matou.
-	if target then
-		if deps.applyDamage(target, 5, attacker.userId) then
-			return
-		end
-		deps.applyDamage(target, 6, attacker.userId)
+	local resolvedTarget: any = target
+	if not resolvedTarget and deps.resolveCadenceTarget then
+		resolvedTarget = deps.resolveCadenceTarget(attacker.userId)
+	end
+	local activatedAt = now()
+	-- O alvo é preservado, mas cada active revalida hitbox/zona. O cliente nunca
+	-- escolhe vítima nem antecipa o resultado pelo timestamp local.
+	if resolvedTarget then
+		pendingCadenceStrikes[attacker.userId] = {
+			abilityId = "broken_cadence",
+			target = resolvedTarget,
+			firstAt = activatedAt + 0.14,
+			secondAt = activatedAt + 0.32,
+			firstResolved = false,
+		}
 	end
 	-- Janela de reentrada: 120 ms após o fim do active do golpe 2.
 	reentryUntil[attacker.userId] = {
 		abilityId = "broken_cadence",
-		opensAt = now() + CADENCE_REENTRY_OPENS_MS / 1000,
-		expiresAt = now() + (CADENCE_REENTRY_OPENS_MS + CADENCE_REENTRY_WINDOW_MS) / 1000,
+		opensAt = activatedAt + CADENCE_REENTRY_OPENS_MS / 1000,
+		expiresAt = activatedAt + (CADENCE_REENTRY_OPENS_MS + CADENCE_REENTRY_WINDOW_MS) / 1000,
+		target = resolvedTarget,
+		executionId = payload.executionId,
 	}
 end
 
@@ -196,7 +355,10 @@ local function pulseReturnRunner(attacker: ServerPlayerState, _target: ServerPla
 	if deps.getAttackerFighter and deps.setPulseStance then
 		local fighter = deps.getAttackerFighter(attacker.userId)
 		if fighter then
-			deps.setPulseStance(fighter, now())
+			local opened = deps.setPulseStance(fighter, now())
+			if not opened then
+				return
+			end
 			pulseStances[attacker.userId] = {
 				fighterId = fighter.id,
 				expiresAt = now() + PULSE_STANCE_MS / 1000,
@@ -212,6 +374,7 @@ end
 function AbilityService.init(deps: AbilityDeps): ()
 	AbilityService.deps = deps
 	table.clear(reentryUntil)
+	table.clear(pendingCadenceStrikes)
 	table.clear(pendingEchos)
 	table.clear(pulseStances)
 	AbilityService.runners = {
@@ -222,11 +385,18 @@ function AbilityService.init(deps: AbilityDeps): ()
 	}
 end
 
+function AbilityService.clearPlayer(userId: number): ()
+	reentryUntil[userId] = nil
+	pendingCadenceStrikes[userId] = nil
+	pendingEchos[userId] = nil
+	pulseStances[userId] = nil
+end
+
 local function tryReentry(
 	attacker: ServerPlayerState,
 	abilityId: string,
 	target: ServerPlayerState?,
-	_payload: AbilityPayload
+	payload: AbilityPayload
 ): (boolean, string?)
 	local deps = AbilityService.deps
 	if not deps then
@@ -236,6 +406,9 @@ local function tryReentry(
 	if not window or window.abilityId ~= abilityId then
 		reentryUntil[attacker.userId] = nil
 		return false, "reentry_window"
+	end
+	if window.executionId ~= nil and payload.executionId ~= window.executionId then
+		return false, "execution_mismatch"
 	end
 	if now() < window.opensAt then
 		-- Ainda não abriu: clique prematuro NÃO destrói a janela (o jogador
@@ -254,7 +427,9 @@ local function tryReentry(
 	-- A reentrada não gasta recurso nem reinicia cooldown: só agenda o eco.
 	pendingEchos[attacker.userId] = {
 		at = now() + CADENCE_ECHO_DELAY_MS / 1000,
-		target = target,
+		-- O alvo da ativação inicial prevalece. O fallback preserva chamadas
+		-- headless antigas que só fornecem alvo no segundo passo.
+		target = window.target or target,
 		abilityId = abilityId,
 	}
 	return true
@@ -301,6 +476,18 @@ function AbilityService.tryActivate(
 	local remaining = deps.getCooldownRemaining(attacker.userId, abilityId)
 	if remaining > 0 then
 		return false, ("cooldown:%.1f"):format(remaining)
+	end
+
+	-- Preflight do Pulso antes de consumir recurso/cooldown. A tentativa real no
+	-- runner usa o mesmo instante lógico e só materializa o estado.
+	if abilityId == "pulse_return" and deps.getAttackerFighter and deps.setPulseStance then
+		local fighter = deps.getAttackerFighter(attacker.userId)
+		if not fighter then
+			return false, "missing_fighter"
+		end
+		if fighter.pulseRecoveryUntil and now() < fighter.pulseRecoveryUntil then
+			return false, "recovery"
+		end
 	end
 
 	if not deps.trySpendResource(attacker.userId, ability.resourceCost.amount) then

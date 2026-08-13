@@ -55,6 +55,7 @@ export type HitResult = {
 	broken: boolean?,
 	iframe: boolean?,
 	stoppedOnGuard: boolean?,
+	pulseCounter: boolean?,
 	phase: string?,
 	-- true só na transição vivo → morto (crédito de XP/objetivo é idempotente).
 	killed: boolean?,
@@ -156,6 +157,11 @@ function CombatService.setGuard(fighter: FighterState, down: boolean, now: numbe
 		if now < fighter.cannotGuardUntil then
 			return false, "guard_broken"
 		end
+		-- A janela de aparo nasce apenas na borda false → true. Repetir o
+		-- mesmo GuardIntent não pode renovar indefinidamente os 120 ms.
+		if fighter.guarding then
+			return true, nil
+		end
 		fighter.guarding = true
 		fighter.guardDownAt = now
 		return true, nil
@@ -164,15 +170,31 @@ function CombatService.setGuard(fighter: FighterState, down: boolean, now: numbe
 	return true, nil
 end
 
-function CombatService.tryDash(fighter: FighterState, now: number): (boolean, string?)
+function CombatService.canDash(fighter: FighterState, now: number): (boolean, string?)
+	if fighter.health <= 0 then
+		return false, "dead"
+	end
 	if CombatService.isPulseRecovery(fighter, now) then
 		return false, "recovery"
 	end
 	if now < fighter.dashCooldownUntil then
 		return false, "cooldown"
 	end
+	return true, nil
+end
+
+function CombatService.commitDash(fighter: FighterState, now: number): ()
 	fighter.dashCooldownUntil = now + DASH_COOLDOWN
 	fighter.iframeUntil = now + DASH_IFRAME
+	return
+end
+
+function CombatService.tryDash(fighter: FighterState, now: number): (boolean, string?)
+	local allowed, reason = CombatService.canDash(fighter, now)
+	if not allowed then
+		return false, reason
+	end
+	CombatService.commitDash(fighter, now)
 	return true, nil
 end
 
@@ -226,7 +248,7 @@ local function applyHit(
 	local hp = blockedHp
 	local nextGuard = target.guard - guardDamage
 	local broken = false
-	if nextGuard < 0 then
+	if nextGuard <= 0 then
 		hp += math.floor(-nextGuard * 0.5)
 		target.guard = 0
 		target.guarding = false
@@ -350,6 +372,26 @@ function CombatService.tryCometShoulder(
 	end
 	local wasGuarding = target.guarding and now >= target.cannotGuardUntil and facing ~= "back"
 	local result = applyHit(target, now, 9, 9, 4, facing, true)
+	if result.ok and wasGuarding and not result.iframe then
+		result.stoppedOnGuard = true
+	end
+	return result
+end
+
+-- Impacto da Cadência/eco: respeita i-frame, guarda, aparo e Retorno de Pulso
+-- como qualquer golpe frontal.
+function CombatService.tryCadenceHit(
+	attacker: FighterState,
+	target: FighterState,
+	now: number,
+	damage: number,
+	facing: HitFacing
+): HitResult
+	if attacker.health <= 0 then
+		return fail("dead")
+	end
+	local wasGuarding = target.guarding and now >= target.cannotGuardUntil and facing ~= "back"
+	local result = applyHit(target, now, damage, damage, math.floor(damage * 0.4), facing, true)
 	if result.ok and wasGuarding and not result.iframe then
 		result.stoppedOnGuard = true
 	end
@@ -554,7 +596,10 @@ function CombatService.tryEliteCycle(
 			if not first.ok then
 				return first
 			end
-			if first.killed then
+			-- Aparo, i-frame ou Retorno de Pulso interrompem o combo no primeiro
+			-- contato. O flag do Pulso precisa chegar ao EnemyService para que o
+			-- contra de 8 e o empurrão sejam resolvidos no agressor.
+			if first.killed or first.pulseCounter or first.parried or first.iframe then
 				result = first
 			else
 				result = applyHit(
@@ -567,6 +612,7 @@ function CombatService.tryEliteCycle(
 					true
 				)
 				result.damage += first.damage
+				result.broken = result.broken or first.broken
 			end
 		end
 		elite.aiPhase = "recovery"

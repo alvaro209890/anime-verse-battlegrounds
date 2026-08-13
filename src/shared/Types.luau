@@ -145,18 +145,34 @@ export type NetworkContract = {
 -- Zonas e âncoras (docs/13-F0-SLICE.md §4, §8)
 export type ZoneId = string
 export type AnchorId = string
+export type InteractionId = string
+export type Vec3 = { x: number, y: number, z: number }
+export type Box = { min: Vec3, max: Vec3 }
 
 export type ZoneDefinition = {
 	id: ZoneId,
 	displayNameKey: string,
 	kind: "safe" | "transition" | "free",
 	pvp: boolean,
+	volumes: { Box },
 }
 
 export type AnchorDefinition = {
 	id: AnchorId,
 	zoneId: ZoneId,
-	position: { x: number, y: number, z: number },
+	position: Vec3,
+}
+
+export type InteractionDefinition = {
+	id: InteractionId,
+	kind: "npc" | "anchor",
+	targetId: string,
+	anchorId: AnchorId,
+	actionTextKey: string,
+	objectTextKey: string,
+	holdDuration: number,
+	maxDistance: number,
+	requiresLineOfSight: boolean,
 }
 
 -- Evento S→C de fronteira (docs/13-F0-SLICE.md §13 — ZoneEvent)

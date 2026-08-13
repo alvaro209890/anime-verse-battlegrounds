@@ -115,13 +115,14 @@ local function validateDash(payload: { [string]: any }): boolean
 	if type(x) ~= "number" or type(z) ~= "number" or not isFinite(x) or not isFinite(z) then
 		return false
 	end
-	return math.abs(x) <= 1 and math.abs(z) <= 1 and x * x + z * z <= 1.01
+	local magnitudeSquared = x * x + z * z
+	return math.abs(x) <= 1 and math.abs(z) <= 1 and magnitudeSquared >= 0.01 and magnitudeSquared <= 1.01
 end
 
 local function validateZone(payload: { [string]: any }): boolean
-	return hasOnlyKeys(payload, { toZoneId = true, holdConfirmed = true })
+	return hasOnlyKeys(payload, { toZoneId = true, phase = true })
 		and validId(payload.toZoneId)
-		and (payload.holdConfirmed == nil or type(payload.holdConfirmed) == "boolean")
+		and (payload.phase == "begin" or payload.phase == "complete" or payload.phase == "cancel")
 end
 
 local function validateInteraction(payload: { [string]: any }): boolean
@@ -130,7 +131,7 @@ local function validateInteraction(payload: { [string]: any }): boolean
 	end
 	local npcValid = payload.npcId ~= nil and validId(payload.npcId)
 	local anchorValid = payload.anchorId ~= nil and validId(payload.anchorId)
-	local phaseValid = payload.phase == "begin" or payload.phase == "complete"
+	local phaseValid = payload.phase == "begin" or payload.phase == "complete" or payload.phase == "cancel"
 	return npcValid ~= anchorValid and phaseValid
 end
 

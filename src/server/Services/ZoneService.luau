@@ -26,6 +26,12 @@ export type EnterZoneResult = {
 	lockoutRemaining: number?,
 }
 
+export type CrossingHoldResult = {
+	ok: boolean,
+	reason: string?,
+	anchorId: string?,
+}
+
 export type ZoneServiceDeps = {
 	getZone: (string) -> any?,
 	getAnchor: (string) -> any?,
@@ -50,6 +56,9 @@ local ZoneService = {
 	holdConfirmed = {} :: { [number]: boolean },
 	-- Evita repetir o banner de hold a cada Heartbeat dentro do volume.
 	holdPromptedTarget = {} :: { [number]: string },
+	-- Hold remoto da primeira saída: o servidor mede o intervalo e vincula o
+	-- begin ao mesmo portão físico usado no complete.
+	crossingHolds = {} :: { [number]: { anchorId: string, startedAt: number, expiresAt: number } },
 }
 
 local ZONE_SAFE = "zone_bastion_safe"
@@ -57,6 +66,10 @@ local ZONE_TRANSITION = "zone_threshold_transition"
 local ZONE_FREE = "zone_plain_free"
 local TRANSITION_SECONDS = 5
 local COMBAT_LOCKOUT_SECONDS = 15
+local CROSSING_HOLD_SECONDS = 0.6
+local CROSSING_HOLD_EXPIRES_SECONDS = 3
+local CROSSING_HOLD_MAX_DISTANCE = 8
+local GATE_ANCHORS: { string } = { "anchor_gate_north", "anchor_gate_west" }
 
 -- Os 5 sinais da fronteira (docs/02-WORLD.md §4.2, docs/13-F0-SLICE.md §8.2).
 local FRONTIER_SIGNALS: { string } = {
@@ -105,6 +118,7 @@ function ZoneService.init(deps: ZoneServiceDeps): ()
 	table.clear(ZoneService.pvpCombatAt)
 	table.clear(ZoneService.holdConfirmed)
 	table.clear(ZoneService.holdPromptedTarget)
+	table.clear(ZoneService.crossingHolds)
 end
 
 function ZoneService.registerPlayer(userId: number): ()
@@ -117,6 +131,17 @@ function ZoneService.unregisterPlayer(userId: number): ()
 	ZoneService.transitions[userId] = nil
 	ZoneService.pvpCombatAt[userId] = nil
 	ZoneService.holdConfirmed[userId] = nil
+	ZoneService.holdPromptedTarget[userId] = nil
+	ZoneService.crossingHolds[userId] = nil
+end
+
+-- Respawn é autoridade do servidor, não uma travessia voluntária. Volta ao
+-- Bastião e limpa proteção/lockout/pending da vida anterior.
+function ZoneService.forceRespawnSafe(userId: number): ()
+	ZoneService.zones[userId] = ZONE_SAFE
+	ZoneService.transitions[userId] = nil
+	ZoneService.pvpCombatAt[userId] = nil
+	ZoneService.crossingHolds[userId] = nil
 	ZoneService.holdPromptedTarget[userId] = nil
 end
 
@@ -138,6 +163,91 @@ end
 
 function ZoneService.getPlayerZone(userId: number): string
 	return ZoneService.zones[userId] or ZONE_SAFE
+end
+
+local function finite(value: number): boolean
+	return value == value and value > -math.huge and value < math.huge
+end
+
+local function nearestGate(position: { [string]: number }): string?
+	local deps = ZoneService.deps
+	if
+		not deps
+		or type(position.x) ~= "number"
+		or type(position.y) ~= "number"
+		or type(position.z) ~= "number"
+		or not finite(position.x)
+		or not finite(position.y)
+		or not finite(position.z)
+	then
+		return nil
+	end
+	local nearest: string? = nil
+	local nearestDistance = math.huge
+	for _, anchorId in GATE_ANCHORS do
+		local anchor = deps.getAnchor(anchorId)
+		if anchor and anchor.position then
+			local dx = position.x - anchor.position.x
+			local dz = position.z - anchor.position.z
+			local distance = math.sqrt(dx * dx + dz * dz)
+			if distance < nearestDistance then
+				nearest = anchorId
+				nearestDistance = distance
+			end
+		end
+	end
+	return if nearestDistance <= CROSSING_HOLD_MAX_DISTANCE then nearest else nil
+end
+
+-- O cliente só declara a fase semântica. Posição, portão e relógio vêm do
+-- servidor; complete sempre consome o pending, inclusive quando prematuro.
+function ZoneService.handleCrossingHold(
+	userId: number,
+	toZoneId: string,
+	phase: string,
+	currentNow: number,
+	position: { [string]: number }
+): CrossingHoldResult
+	if toZoneId ~= ZONE_TRANSITION or ZoneService.getPlayerZone(userId) ~= ZONE_SAFE then
+		ZoneService.crossingHolds[userId] = nil
+		return { ok = false, reason = "invalid_crossing" }
+	end
+	if phase == "cancel" then
+		ZoneService.crossingHolds[userId] = nil
+		return { ok = true }
+	end
+	local anchorId = nearestGate(position)
+	if not anchorId then
+		ZoneService.crossingHolds[userId] = nil
+		return { ok = false, reason = "too_far" }
+	end
+	if phase == "begin" then
+		ZoneService.crossingHolds[userId] = {
+			anchorId = anchorId,
+			startedAt = currentNow,
+			expiresAt = currentNow + CROSSING_HOLD_EXPIRES_SECONDS,
+		}
+		return { ok = true, anchorId = anchorId }
+	end
+	if phase ~= "complete" then
+		return { ok = false, reason = "invalid_phase" }
+	end
+
+	local pending = ZoneService.crossingHolds[userId]
+	ZoneService.crossingHolds[userId] = nil
+	if not pending then
+		return { ok = false, reason = "hold_required" }
+	end
+	if pending.anchorId ~= anchorId then
+		return { ok = false, reason = "target_mismatch" }
+	end
+	if currentNow > pending.expiresAt then
+		return { ok = false, reason = "hold_expired" }
+	end
+	if currentNow - pending.startedAt < CROSSING_HOLD_SECONDS then
+		return { ok = false, reason = "hold_incomplete" }
+	end
+	return { ok = true, anchorId = anchorId }
 end
 
 function ZoneService.isInTransition(userId: number, now: number): boolean
@@ -193,19 +303,18 @@ end
 -- ativa PvP se o destino for a livre (docs/13-F0-SLICE.md §8.2).
 -- Treino na segura (dummy) NÃO marca combate PvP — senão o lockout de 15 s
 -- bloquearia o retorno ao Bastião depois de bater no boneco.
-function ZoneService.markHostileAction(userId: number, now: number): ()
+function ZoneService.markHostileAction(userId: number, _now: number): boolean
 	local transition = ZoneService.transitions[userId]
 	if transition then
 		ZoneService.transitions[userId] = nil
 		if transition.to == ZONE_FREE then
 			ZoneService.zones[userId] = ZONE_FREE
-			ZoneService.pvpCombatAt[userId] = now
+			return true
 		end
-		return
+		return false
 	end
-	if ZoneService.getPlayerZone(userId) == ZONE_FREE then
-		ZoneService.pvpCombatAt[userId] = now
-	end
+	-- O lockout de retorno é exclusivamente PvP e fica em markPvpCombat.
+	return false
 end
 
 local function lockoutRemaining(userId: number, now: number): number?
@@ -274,8 +383,21 @@ local function rejectLockout(
 	return { ok = false, reason = "combat_lockout", lockoutRemaining = remaining, event = event }
 end
 
--- Cruzamento de zona. `opts.holdConfirmed` é o flag do prompt "manter
--- pressionado" (0,6 s é cliente; o servidor só aceita o flag — SLICE-DEC-005).
+function ZoneService.notifyCrossingRejection(userId: number, toZoneId: string, currentNow: number, reason: string): ()
+	local fromZoneId = ZoneService.getPlayerZone(userId)
+	emit(userId, fromZoneId, toZoneId, currentNow, { rejectedReason = reason })
+end
+
+-- Quando uma ação hostil encerra a proteção ainda dentro da faixa, o
+-- bootstrap move o avatar para o primeiro ponto livre e confirma a mudança
+-- visual ao cliente somente depois desse commit físico.
+function ZoneService.notifyHostileTransition(userId: number, currentNow: number): ()
+	emit(userId, ZONE_TRANSITION, ZONE_FREE, currentNow, { holdConfirmed = true })
+end
+
+-- Cruzamento de zona. O hold de 0,6 s é medido por handleCrossingHold; este
+-- método recebe `holdConfirmed` apenas do próprio bootstrap após begin,
+-- complete, proximidade e portão terem sido revalidados no servidor.
 --
 -- Fluxo físico: segura → transição → livre → transição → segura.
 function ZoneService.tryEnterZone(
@@ -318,7 +440,7 @@ function ZoneService.tryEnterZone(
 	end
 
 	-- Cruzando da transição para a livre: proteção restante continua valendo.
-	if toZoneId == ZONE_FREE then
+	if toZoneId == ZONE_FREE and fromZoneId == ZONE_TRANSITION then
 		if not ZoneService.holdConfirmed[userId] and opts.holdConfirmed ~= true then
 			local event: ZoneEventPayload? = nil
 			if ZoneService.holdPromptedTarget[userId] ~= toZoneId then

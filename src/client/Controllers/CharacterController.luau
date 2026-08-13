@@ -11,6 +11,7 @@ export type Controller = {
 	runService: any?,
 	lockTarget: any?,
 	connection: any?,
+	characterAddedConnection: any?,
 }
 
 local SOFT_LOCK_DEGREES = 8
@@ -36,11 +37,19 @@ function CharacterController.new(deps: {
 		runService = deps.runService,
 		lockTarget = nil,
 		connection = nil,
+		characterAddedConnection = nil,
 	}
 	deps.inputSubscribe(deps.input, function(action: string, _payload: { [string]: any })
 		CharacterController.onAction(controller, action)
 	end)
 	return controller
+end
+
+local function isCombatTarget(target: any?): boolean
+	return target ~= nil
+		and target.Parent ~= nil
+		and target:IsA("BasePart")
+		and target:GetAttribute("CombatTarget") == true
 end
 
 local function findAimTarget(controller: Controller, maxDistance: number, maxDegrees: number): any?
@@ -75,9 +84,35 @@ end
 local function aimAt(controller: Controller, target: any?): ()
 	local workspace = controller.workspace
 	local camera = if workspace then workspace.CurrentCamera else nil
-	if camera and target and target.Parent then
+	if camera and isCombatTarget(target) then
 		camera.CFrame = CFrame.lookAt(camera.CFrame.Position, target.Position)
 	end
+end
+
+local function reconcileCamera(controller: Controller, character: Model): ()
+	controller.lockTarget = nil
+	local function assignSubject(humanoid: Humanoid): ()
+		local workspace = controller.workspace
+		local players = controller.players
+		local player = if players then players.LocalPlayer else nil
+		local camera = if workspace then workspace.CurrentCamera else nil
+		if camera and player and player.Character == character and character.Parent then
+			camera.CameraType = Enum.CameraType.Custom
+			camera.CameraSubject = humanoid
+		end
+	end
+
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		assignSubject(humanoid)
+		return
+	end
+	task.defer(function()
+		local added = character:WaitForChild("Humanoid", 5)
+		if added and added:IsA("Humanoid") then
+			assignSubject(added)
+		end
+	end)
 end
 
 local function dashDirection(controller: Controller): { [string]: any }
@@ -117,22 +152,26 @@ function CharacterController.onAction(controller: Controller, action: string): (
 	elseif action == "Dash" then
 		controller.send("DashIntent", "DashIntent", { direction = dashDirection(controller) })
 	elseif action == "ToggleLock" then
-		controller.lockTarget = if controller.lockTarget then nil else findAimTarget(controller, 60, 35)
+		controller.lockTarget = if isCombatTarget(controller.lockTarget) then nil else findAimTarget(controller, 60, 35)
 	end
 end
 
 function CharacterController.start(controller: Controller): ()
-	local workspace = controller.workspace
 	local players = controller.players
-	local camera = if workspace then workspace.CurrentCamera else nil
 	local player = if players then players.LocalPlayer else nil
-	if camera and player then
-		camera.CameraType = Enum.CameraType.Custom
-		local character = player.Character or player.CharacterAdded:Wait()
-		camera.CameraSubject = character:FindFirstChildOfClass("Humanoid")
+	if player then
+		controller.characterAddedConnection = player.CharacterAdded:Connect(function(character: Model)
+			reconcileCamera(controller, character)
+		end)
+		if player.Character then
+			reconcileCamera(controller, player.Character)
+		end
 	end
 	if controller.runService then
 		controller.connection = controller.runService.RenderStepped:Connect(function()
+			if controller.lockTarget and not isCombatTarget(controller.lockTarget) then
+				controller.lockTarget = nil
+			end
 			aimAt(controller, controller.lockTarget)
 		end)
 	end

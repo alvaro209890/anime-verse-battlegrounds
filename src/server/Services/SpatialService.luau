@@ -224,6 +224,49 @@ function SpatialService.resolveLunge(
 	return deps.geometry.resolveLunge(attacker.position, attacker.look, maxDistance, hardCap, blockers)
 end
 
+export type DashDirection = {
+	x: number,
+	y: number?,
+	z: number,
+}
+
+export type DashResolution = {
+	position: Vec3,
+	traveled: number,
+	blocked: boolean,
+	blockedBy: string?,
+}
+
+-- Dash autoritativo no plano do chão. `distance`, `hardCap` e `walls` são
+-- configuração do servidor; o cliente fornece somente a direção semântica.
+-- A direção é normalizada aqui e a posição resolvida é commitada no registro.
+function SpatialService.resolveDash(
+	fighterId: string,
+	direction: DashDirection,
+	distance: number,
+	hardCap: number,
+	walls: { any }?
+): DashResolution
+	local deps = SpatialService.deps
+	local transform = SpatialService.transforms[fighterId]
+	if not deps or not transform then
+		return {
+			position = { x = 0, y = 0, z = 0 },
+			traveled = 0,
+			blocked = false,
+		}
+	end
+	local normalized = deps.geometry.normalize({
+		x = direction.x,
+		y = 0,
+		z = direction.z,
+	})
+	local resolution =
+		deps.geometry.resolveLunge(transform.position, normalized, distance, hardCap, walls or {}) :: DashResolution
+	SpatialService.setTransform(fighterId, resolution.position, transform.look)
+	return resolution
+end
+
 export type CometParams = {
 	distance: number,
 	hardCap: number,

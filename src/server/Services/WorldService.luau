@@ -193,7 +193,7 @@ end
 
 local function setActorVisible(model: Model, visible: boolean): ()
 	for _, descendant in model:GetDescendants() do
-		if descendant:IsA("BasePart") and descendant.Name ~= "Root" then
+		if descendant:IsA("BasePart") and descendant.Name ~= "Root" and descendant.Name ~= "VisualRoot" then
 			descendant.Transparency = if visible then 0 else 1
 		end
 	end
@@ -257,13 +257,26 @@ local function createActorModel(name: string, actorId: string, npcId: string, re
 		rightLeg.Name = "RightLeg"
 		attach(root, rightLeg, CFrame.new(0.58 * scale, -2.2 * scale, 0), "Joint_RightLeg")
 	else
+		-- Pivot visual comum: todas as peças do shard recebem bob/lean/spin sem
+		-- deslocar o root autoritativo nem se separar umas das outras.
+		local visualRoot = makeVisualPart(
+			"Part",
+			"VisualRoot",
+			Vector3.new(0.2, 0.2, 0.2),
+			COLORS.darkStone,
+			Enum.Material.SmoothPlastic
+		)
+		visualRoot.Transparency = 1
+		visualRoot.CastShadow = false
+		attach(root, visualRoot, CFrame.identity, "Joint_VisualRoot")
+
 		local torso =
 			makeVisualPart("Part", "Torso", Vector3.new(2.2, 2.8, 1.6) * scale, bodyColor, Enum.Material.Slate)
-		attach(root, torso, CFrame.Angles(0, 0, math.rad(45)), "Joint_Torso")
+		attach(visualRoot, torso, CFrame.Angles(0, 0, math.rad(45)), "Joint_Torso")
 		local core =
 			makeVisualPart("Part", "Core", Vector3.new(1.25, 1.25, 1.25) * scale, coreColor, Enum.Material.Neon)
 		core.Shape = Enum.PartType.Ball
-		attach(root, core, CFrame.new(0, 0, -0.75 * scale), "Joint_Core")
+		attach(visualRoot, core, CFrame.new(0, 0, -0.75 * scale), "Joint_Core")
 		local left = makeVisualPart(
 			"WedgePart",
 			"ShardLeft",
@@ -271,11 +284,16 @@ local function createActorModel(name: string, actorId: string, npcId: string, re
 			accentColor,
 			Enum.Material.Slate
 		)
-		attach(root, left, CFrame.new(-1.35 * scale, 0.1, 0) * CFrame.Angles(0, 0, math.rad(28)), "Joint_ShardLeft")
+		attach(
+			visualRoot,
+			left,
+			CFrame.new(-1.35 * scale, 0.1, 0) * CFrame.Angles(0, 0, math.rad(28)),
+			"Joint_ShardLeft"
+		)
 		local right = left:Clone()
 		right.Name = "ShardRight"
 		attach(
-			root,
+			visualRoot,
 			right,
 			CFrame.new(1.35 * scale, 0.1, 0) * CFrame.Angles(0, math.pi, math.rad(-28)),
 			"Joint_ShardRight"
@@ -287,7 +305,7 @@ local function createActorModel(name: string, actorId: string, npcId: string, re
 			accentColor,
 			Enum.Material.Slate
 		)
-		attach(root, top, CFrame.new(0, 2 * scale, 0), "Joint_ShardTop")
+		attach(visualRoot, top, CFrame.new(0, 2 * scale, 0), "Joint_ShardTop")
 	end
 
 	buildTelegraphPresentation(model, root, rootHeight)
@@ -407,8 +425,8 @@ local function buildFloors(root: Folder, greybox: any, style: any, zones: any): 
 	trainingPath.Parent = folder
 	local westPath = makePart(
 		"PathWestGate",
-		Vector3.new(42, 0.3, style.pathWidth),
-		Vector3.new(-21, 0.16, 0),
+		Vector3.new(40, 0.3, style.pathWidth),
+		Vector3.new(-20, 0.16, 0),
 		COLORS.path,
 		"Safe",
 		true
@@ -416,7 +434,7 @@ local function buildFloors(root: Folder, greybox: any, style: any, zones: any): 
 	westPath.Parent = folder
 	local wildPath = makePart(
 		"PathToCrater",
-		Vector3.new(style.pathWidth, 0.24, 62),
+		Vector3.new(style.pathWidth, 0.24, 60),
 		Vector3.new(0, 0.13, -70),
 		COLORS.crater,
 		"Free",

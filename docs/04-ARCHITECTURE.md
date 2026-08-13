@@ -2,7 +2,7 @@
 
 ## 1. Escopo e decisões arquiteturais
 
-Este documento descreve a arquitetura-alvo e distingue o que já existe do que ainda precisa ser entregue. O repositório contém um **esqueleto executável da F0**: bootstrap de servidor/cliente, catálogos, mundo greybox, modelos/animação procedural de NPCs, domínio, save/ProfileStore, controllers de Input/HUD, registry v2, `SecurityService` e `TelemetryService`. A CI versionada executa StyLua, Selene, 159 testes Lune, instalação Wally e build Rojo. Isso comprova estrutura e lógica automatizada; **não comprova** roteiro runtime no Studio, DataStore real, teleporte, servidor publicado, mobile ou gamepad.
+Este documento descreve a arquitetura-alvo e distingue o que já existe do que ainda precisa ser entregue. O repositório contém um **esqueleto executável da F0**: bootstrap de servidor/cliente, catálogos, mundo greybox, modelos/animação procedural de NPCs, apresentação local do jogador, interação contextual, domínio, save/ProfileStore, controllers de Input/HUD, registry v2, `SecurityService` e `TelemetryService`. A CI versionada executa StyLua, Selene, 166 testes Lune, instalação Wally e build Rojo. Isso comprova estrutura e lógica automatizada; **não comprova** roteiro runtime no Studio, DataStore real, teleporte, servidor publicado, mobile ou gamepad.
 
 Decisões principais:
 
@@ -115,10 +115,11 @@ Regras adicionais:
 - `src/server/init.server.lua` liga os serviços iniciais por dependências explícitas;
 - `src/shared/Data` e `src/shared/Remotes.luau` fornecem catálogos e contratos iniciais (incl. `Zones.luau` e o remote `ZoneEvent` S→C);
 - `WorldPresentation.luau` mantém proporções/paleta/amplitudes sem Instances; `WorldService` traduz essas receitas para Parts/Motor6D e sincroniza somente a raiz autoritativa dos NPCs;
-- `ActorAnimator.luau` é apresentação local greybox: consome `EnemyEvent`, cacheia joints e nunca altera root, hitbox ou regra de combate;
+- `ActorAnimator.luau` apresenta NPCs a partir de `EnemyEvent`; `PlayerCombatAnimator.luau` compõe resposta local para leve, pesado, guarda e dash. Ambos cacheiam joints e nunca alteram root, hitbox ou regra de combate;
+- `InteractionController` envia somente alvo/fase semânticos; `InteractionService` fecha catálogo, distância e hold no servidor. Prompts e fluxo real continuam pendentes de Play;
 - existem implementações iniciais de `AbilityService`, `CatalogService`, `CombatService`, `CooldownService`, `PlayerSessionService`, `ProgressionService` (flags de unlock; spawn sem técnicas), `RemoteGateway`, `ResourceService`, `SaveService` e `ZoneService` (zona atual, `canPvp`, transição 5 s, lockout 15 s e os 5 sinais da fronteira — domínio headless, item 6 do backlog);
-- `src/client/init.client.lua` é apenas o ponto de entrada mínimo; controllers e UX descritos abaixo continuam alvo;
-- os 159 testes Lune cobrem dados, domínio, controllers, apresentação pura e segurança/telemetria, mas ainda não substituem os testes de integração e runtime previstos neste documento.
+- `src/client/init.client.lua` monta os controllers F0, a extensão contextual de interação e as utilities de apresentação; layout, dispositivos e feeling continuam pendentes de runtime;
+- os 166 testes Lune cobrem dados, domínio, controllers, interação, apresentação pura e segurança/telemetria, mas ainda não substituem os testes de integração e runtime previstos neste documento.
 
 As tabelas seguintes são o mapa-alvo. Uma linha em F0 não significa que o contrato inteiro esteja pronto; o roadmap e os testes de aceite determinam a conclusão.
 
@@ -165,12 +166,13 @@ Serviços de fases futuras não devem ser antecipados com implementação vazia 
 | CombatFeedbackController | Hit confirm confirmado, dano recebido e feedback de guarda | Não recebe fórmulas secretas nem escolhe alvo válido |
 | ResourceController | Exibir snapshot/delta de recurso | Não regenera nem desconta valor persistente |
 | ZoneController | Avisos, borda visual e confirmação de entrada PvP | O servidor define a zona efetiva |
+| InteractionController | Exibir prompts localizados e enviar alvo/fase semânticos | O servidor revalida catálogo, distância, hold e efeito |
 | LoadoutController | Editar rascunho e enviar comando de ativação | O servidor recalcula slots e ressonância |
 | InventoryController | Exibir inventário e solicitar mutações | Não cria, move ou destrói item localmente como verdade |
 | SocialController | Clã, torneio, ranking e convites | Exibe projeções autorizadas |
 | UIController | Roteamento de telas, acessibilidade e estado transitório | Não chama remotes fora dos controllers de domínio |
 
-`ActorAnimator` não entra na ordem dos sete controllers F0: é uma utility de apresentação sem intenção de input ou remote próprio. O servidor replica a raiz do modelo a partir do `SpatialService`; o cliente amostra apenas `Motor6D.Transform`. A migração futura para clipes R15 não pode mudar essa fronteira de autoridade.
+`ActorAnimator` e `PlayerCombatAnimator` não entram na ordem dos sete controllers F0: são utilities de apresentação sem autoridade de domínio. O servidor replica a raiz dos NPCs a partir do `SpatialService`; o cliente amostra apenas `Motor6D.Transform`. `InteractionController` é uma extensão contextual subordinada ao input, não um oitavo controller de domínio. A migração futura para clipes R15 não pode mudar essas fronteiras de autoridade.
 
 ### 4.3 Topologia de places e operação regional
 
@@ -387,7 +389,7 @@ Regras de implementação futura:
 | ProfileStore | Session locking e ciclo de perfil atrás de adaptador | Dependência presente; contrato, takeover e DataStore real ainda precisam de teste publicado |
 | GitHub Actions | Formato, lint, testes, dependências e build no push/PR | Pipeline existente; sem credencial ou deploy automático |
 
-Pipeline atual: StyLua check → Selene → 159 testes Lune → instalação Wally → build Rojo. A evolução aprovada acrescenta type check Roblox e fixtures de migração sem remover os gates existentes. A CI não terá credenciais de produção e não publicará place automaticamente.
+Pipeline atual: StyLua check → Selene → 166 testes Lune → instalação Wally → build Rojo. A evolução aprovada acrescenta type check Roblox e fixtures de migração sem remover os gates existentes. A CI não terá credenciais de produção e não publicará place automaticamente.
 
 ## 13. Ordem arquitetural por fase
 

@@ -24,7 +24,9 @@ jobs:
         run: selene src tests
 
       - name: Testes unitários (Lune)
-        run: lune run tests/run.luau
+        run: |
+          lune run tests/run.luau
+          lune run tests/animation.luau
 
       - name: Wally — instalar dependências
         run: |

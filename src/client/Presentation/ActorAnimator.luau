@@ -27,7 +27,15 @@ local function clamp01(value: number): number
 	return math.clamp(value, 0, 1)
 end
 
-function ActorAnimator.sample(recipe: any, kind: string, elapsed: number, now: number, moving: boolean): PoseSample
+function ActorAnimator.sample(
+	recipe: any,
+	kind: string,
+	elapsed: number,
+	now: number,
+	moving: boolean,
+	visualPattern: string?,
+	durationSeconds: number?
+): PoseSample
 	local cycle = math.sin(now * math.pi * 2 * recipe.idleCyclesPerSecond)
 	local bob = cycle * recipe.idleBobStuds
 	local lean = 0
@@ -35,13 +43,28 @@ function ActorAnimator.sample(recipe: any, kind: string, elapsed: number, now: n
 	local spin = if recipe.shape == "shard" then now * 22 else 0
 
 	if kind == "telegraph" then
-		local anticipation = math.sin(clamp01(elapsed / 0.4) * math.pi / 2)
-		lean = -recipe.telegraphLeanDegrees * anticipation
-		limbs *= 0.2
+		local duration = math.max(0.1, durationSeconds or 0.4)
+		local anticipation = math.sin(clamp01(elapsed / duration) * math.pi / 2)
+		local patternWeight = if visualPattern == "slam" then 1.3 else (if visualPattern == "combo" then 0.72 else 1)
+		lean = -recipe.telegraphLeanDegrees * patternWeight * anticipation
+		limbs = if visualPattern == "combo"
+			then recipe.strideDegrees * 0.45 * math.sin(clamp01(elapsed / duration) * math.pi * 2)
+			else limbs * 0.2
+		if visualPattern == "slam" then
+			bob -= recipe.idleBobStuds * 0.65 * anticipation
+		end
 	elseif kind == "attack" then
-		local strike = math.sin(clamp01(elapsed / 0.24) * math.pi)
-		lean = recipe.attackLeanDegrees * strike
-		limbs = recipe.attackLeanDegrees * 0.65 * strike
+		local duration = math.max(0.1, durationSeconds or 0.35)
+		local progress = clamp01(elapsed / duration)
+		local strike = if visualPattern == "combo"
+			then math.abs(math.sin(progress * math.pi * 2))
+			else math.sin(progress * math.pi)
+		local patternWeight = if visualPattern == "slam" then 1.25 else (if visualPattern == "combo" then 0.78 else 1)
+		lean = recipe.attackLeanDegrees * patternWeight * strike
+		limbs = recipe.attackLeanDegrees * 0.65 * patternWeight * strike
+		if visualPattern == "slam" then
+			bob -= recipe.idleBobStuds * 1.1 * strike
+		end
 	elseif kind == "died" then
 		local fall = 1 - (1 - clamp01(elapsed / 0.55)) ^ 3
 		lean = recipe.deathTiltDegrees * fall
@@ -113,21 +136,28 @@ end
 local function applyPose(animator: Animator, model: Model, recipe: any, sample: PoseSample): ()
 	local lean = math.rad(sample.leanDegrees)
 	local limb = math.rad(sample.limbDegrees)
-	setTransform(animator, model, "Joint_Torso", CFrame.new(0, sample.bobStuds, 0) * CFrame.Angles(lean, 0, 0))
 	if recipe.shape == "humanoid" then
+		setTransform(animator, model, "Joint_Torso", CFrame.new(0, sample.bobStuds, 0) * CFrame.Angles(lean, 0, 0))
 		setTransform(animator, model, "Joint_LeftArm", CFrame.Angles(limb, 0, 0))
 		setTransform(animator, model, "Joint_RightArm", CFrame.Angles(-limb, 0, 0))
 		setTransform(animator, model, "Joint_LeftLeg", CFrame.Angles(-limb, 0, 0))
 		setTransform(animator, model, "Joint_RightLeg", CFrame.Angles(limb, 0, 0))
 	else
 		local spin = math.rad(sample.spinDegrees)
-		setTransform(animator, model, "Joint_Core", CFrame.Angles(lean, spin, 0))
+		-- O shard inteiro se move por um pivot visual comum. Assim bob, lean e
+		-- spin nunca separam o torso do núcleo ou das cunhas.
+		setTransform(
+			animator,
+			model,
+			"Joint_VisualRoot",
+			CFrame.new(0, sample.bobStuds, 0) * CFrame.Angles(lean, spin, 0)
+		)
 		setTransform(animator, model, "Joint_ShardLeft", CFrame.Angles(0, 0, limb * 0.35))
 		setTransform(animator, model, "Joint_ShardRight", CFrame.Angles(0, 0, -limb * 0.35))
 	end
 end
 
-local function presentationKind(animator: Animator, model: Model, actorId: string): (string, number)
+local function presentationKind(animator: Animator, model: Model, actorId: string): (string, number, string?, number?)
 	local event = animator.events[actorId]
 	if event then
 		local replicatedSerial = model:GetAttribute("PoseSerial")
@@ -143,7 +173,7 @@ local function presentationKind(animator: Animator, model: Model, actorId: strin
 		}
 		local duration = event.durationSeconds or durationByKind[event.kind]
 		if not duration or elapsed <= duration then
-			return event.kind, elapsed
+			return event.kind, elapsed, event.visualPattern, duration
 		end
 		animator.events[actorId] = nil
 	end
@@ -160,16 +190,17 @@ local function presentationKind(animator: Animator, model: Model, actorId: strin
 			if replicatedKind == "spawn" or replicatedKind == "respawn" then
 				model:SetAttribute("SpawnPresentation", false)
 			end
-			return replicatedKind, elapsed
+			local visualPattern = model:GetAttribute("VisualPattern")
+			return replicatedKind, elapsed, if type(visualPattern) == "string" then visualPattern else nil, duration
 		end
 	end
 	-- Um modelo recém-replicado preserva a apresentação de spawn mesmo se o
 	-- RemoteEvent ocorreu antes deste cliente existir.
 	if model:GetAttribute("SpawnPresentation") == true then
 		model:SetAttribute("SpawnPresentation", false)
-		return "spawn", 0
+		return "spawn", 0, "arrival", 0.6
 	end
-	return if replicatedKind == "died" then "died" else "idle", 1
+	return if replicatedKind == "died" then "died" else "idle", 1, nil, nil
 end
 
 function ActorAnimator.step(animator: Animator): ()
@@ -186,9 +217,14 @@ function ActorAnimator.step(animator: Animator): ()
 			if type(npcId) == "string" and type(actorId) == "string" then
 				local recipe = animator.recipes.getActor(npcId)
 				if recipe then
-					local kind, elapsed = presentationKind(animator, child, actorId)
+					local kind, elapsed, visualPattern, durationSeconds = presentationKind(animator, child, actorId)
 					local moving = child:GetAttribute("Moving") == true
-					applyPose(animator, child, recipe, ActorAnimator.sample(recipe, kind, elapsed, now, moving))
+					applyPose(
+						animator,
+						child,
+						recipe,
+						ActorAnimator.sample(recipe, kind, elapsed, now, moving, visualPattern, durationSeconds)
+					)
 				end
 			end
 		end

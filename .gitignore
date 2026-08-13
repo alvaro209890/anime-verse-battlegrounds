@@ -4,6 +4,7 @@ Packages/
 # Rojo build artifacts
 *.rbxl
 *.rbxlx
+*.rbxl.lock
 
 # luau-lsp
 .luau-aliases

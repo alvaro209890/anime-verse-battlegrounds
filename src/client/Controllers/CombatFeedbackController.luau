@@ -17,6 +17,9 @@ local OUTCOME_KEYS: { [string]: string } = {
 	hit = "hud.feedback_hit",
 	guard = "hud.feedback_guard",
 	death = "hud.feedback_death",
+	-- Contra do Retorno de Pulso: o defensor devolveu dano. Precisa de rótulo
+	-- próprio — ler "ACERTO" ao aparar não distingue defesa de ataque.
+	counter = "hud.feedback_counter",
 }
 
 local CombatFeedbackController = {}
@@ -39,7 +42,12 @@ function CombatFeedbackController.onRejected(controller: Controller, payload: { 
 	if controller.state.ready ~= true then
 		return
 	end
-	local key = REJECTION_KEYS[payload.reason] or "hud.feedback_rejected"
+	local reason = payload.reason
+	local key = REJECTION_KEYS[reason]
+	if not key and type(reason) == "string" and string.sub(reason, 1, 8) == "cooldown" then
+		key = "hud.feedback_cooldown"
+	end
+	key = key or "hud.feedback_rejected"
 	controller.stateApi.setFeedback(controller.state, key, 1)
 end
 

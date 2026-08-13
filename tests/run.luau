@@ -56,6 +56,7 @@ local Quests = require("../src/shared/Data/Quests")
 local Locale = require("../src/shared/Data/Locale")
 local Geometry = require("../src/shared/Geometry")
 local SpatialService = require("../src/server/Services/SpatialService")
+local PlayerMotionGuard = require("../src/server/Services/PlayerMotionGuard")
 local EnemyService = require("../src/server/Services/EnemyService")
 local ClientState = require("../src/client/Controllers/ClientState")
 local InputController = require("../src/client/Controllers/InputController")
@@ -103,11 +104,29 @@ test("apresentação: poses procedurais preservam antecipação, impacto e queda
 		return
 	end
 	local telegraph = ActorAnimator.sample(recipe, "telegraph", 0.4, 0, false)
-	local attack = ActorAnimator.sample(recipe, "attack", 0.12, 0, false)
+	local attack = ActorAnimator.sample(recipe, "attack", 0.175, 0, false, "strike", 0.35)
 	local died = ActorAnimator.sample(recipe, "died", 0.55, 0, false)
 	assertEq(telegraph.leanDegrees, -recipe.telegraphLeanDegrees, "antecipação recua")
 	assertEq(attack.leanDegrees, recipe.attackLeanDegrees, "ataque compromete")
 	assertEq(died.leanDegrees, recipe.deathTiltDegrees, "queda limitada pela receita")
+end)
+
+test("apresentação: combo e slam usam timing e peso visual distintos", function()
+	local recipe = WorldPresentation.getActor("enemy_anchored_shard")
+	assertTrue(recipe ~= nil, "receita do elite")
+	if not recipe then
+		return
+	end
+	local comboTelegraph = ActorAnimator.sample(recipe, "telegraph", 0.3, 0, false, "combo", 0.3)
+	local slamTelegraph = ActorAnimator.sample(recipe, "telegraph", 0.3, 0, false, "slam", 0.7)
+	local comboAttack = ActorAnimator.sample(recipe, "attack", 0.1, 0, false, "combo", 0.4)
+	local slamAttack = ActorAnimator.sample(recipe, "attack", 0.1, 0, false, "slam", 0.4)
+	assertTrue(
+		math.abs(slamTelegraph.leanDegrees) > math.abs(comboTelegraph.leanDegrees),
+		"slam antecipa com mais peso"
+	)
+	assertTrue(math.abs(slamAttack.leanDegrees) > math.abs(comboAttack.leanDegrees), "slam ataca com mais compromisso")
+	assertTrue(slamTelegraph.bobStuds < comboTelegraph.bobStuds, "slam comprime a silhueta")
 end)
 
 test("studio debug: exige Studio + atributo e nunca inclui ultimate", function()
@@ -234,6 +253,13 @@ test("dados: remotes registrados com contrato", function()
 	if c then
 		assertEq(c.direction, "ClientToServer", "direção")
 		assertEq(c.version, 2, "versão")
+	end
+	local rejected = Remotes.Contracts.get(Remotes.Names.AbilityRejected)
+	assertTrue(rejected ~= nil, "AbilityRejected deveria ter contrato")
+	if rejected then
+		assertEq(rejected.version, 2, "rejeicao correlacionada")
+		assertTrue(rejected.payload:find("executionId", 1, true) ~= nil, "rejeicao carrega executionId")
+		assertTrue(rejected.payload:find("phase", 1, true) ~= nil, "rejeicao carrega fase")
 	end
 	local snap = Remotes.Contracts.get(Remotes.Names.SessionSnapshot)
 	assertTrue(snap ~= nil, "SessionSnapshot deveria ter contrato")
@@ -376,6 +402,72 @@ test("cliente: AbilityController mantém 3 slots, oculta ultimate e exige unlock
 	assertTrue(ClientState.cooldownRemaining(state, "comet_shoulder") > 0, "cooldown radial recebe estado")
 end)
 
+test("cliente: Cadência reentra no cooldown com o mesmo executionId e preserva cooldown se rejeitada", function()
+	fakeNow = 12000
+	local state = ClientState.new(clockNow)
+	ClientState.applySnapshot(state, {
+		ready = true,
+		unlocks = { "unlock_broken_cadence", "unlock_pulse_return" },
+	})
+	local input = InputController.new(state, clockNow)
+	local sent: { any } = {}
+	local guidCalls = 0
+	local controller = AbilityController.new({
+		state = state,
+		stateApi = ClientState,
+		input = input,
+		inputSubscribe = InputController.subscribe,
+		abilities = Abilities,
+		characters = Characters,
+		send = function(_remoteName: string, _action: string, payload: { [string]: any })
+			table.insert(sent, payload)
+		end,
+		guid = function()
+			guidCalls += 1
+			return ("execution-%d"):format(guidCalls)
+		end,
+	})
+
+	local activated, executionId = AbilityController.activateSlot(controller, 2)
+	assertTrue(activated, "ativação inicial envia")
+	assertEq(executionId, "execution-1", "execução inicial")
+	assertEq(sent[1].phase, "press", "fase inicial")
+	local initialCooldown = state.cooldowns.broken_cadence
+	assertTrue(initialCooldown ~= nil, "cooldown inicial previsto")
+
+	fakeNow = 12000.2
+	local early, earlyReason = AbilityController.activateSlot(controller, 2)
+	assertFalse(early, "buffer não envia antes dos 400 ms")
+	assertEq(earlyReason, "reentry_window", "fora da janela local")
+	assertEq(#sent, 1, "sem remote prematuro")
+
+	fakeNow = 12000.45
+	local reentered, reentryExecutionId = AbilityController.activateSlot(controller, 2)
+	assertTrue(reentered, "reentrada atravessa o cooldown")
+	assertEq(reentryExecutionId, executionId, "reusa executionId inicial")
+	assertEq(sent[2].phase, "reentry", "fase semântica de reentrada")
+	assertEq(sent[2].executionId, sent[1].executionId, "mesma execução nos dois intents")
+	assertEq(guidCalls, 1, "reentrada não cria execução nova")
+	assertEq(state.cooldowns.broken_cadence, initialCooldown, "reentrada não reinicia cooldown local")
+
+	local remainingBeforeRejection = ClientState.cooldownRemaining(state, "broken_cadence")
+	AbilityController.onRejected(controller, {
+		abilityId = "broken_cadence",
+		reason = "reentry_window",
+	})
+	assertEq(
+		ClientState.cooldownRemaining(state, "broken_cadence"),
+		remainingBeforeRejection,
+		"rejeição da reentrada preserva cooldown inicial"
+	)
+
+	local pulseOk, pulseExecutionId = AbilityController.activateSlot(controller, 3)
+	assertTrue(pulseOk, "outro slot continua independente")
+	assertEq(pulseExecutionId, "execution-2", "outro slot recebe execução própria")
+	assertEq(sent[3].abilityId, "pulse_return", "slot 3 intacto")
+	assertEq(sent[3].phase, "press", "outro slot não vira reentrada")
+end)
+
 test("cliente: rejeição reconcilia cooldown e feedback nunca mostra código", function()
 	local state = ClientState.new(clockNow)
 	ClientState.applySnapshot(state, { ready = true })
@@ -449,13 +541,17 @@ test("cliente: hold de fronteira exige 0,6 s e usa apenas destino oferecido pelo
 	ZoneController.onAction(zone, "ZoneHoldDown")
 	fakeNow += 0.59
 	ZoneController.onAction(zone, "ZoneHoldUp")
-	assertEq(#sent, 0, "hold curto não cruza")
+	assertEq(#sent, 2, "hold curto envia begin e cancel")
+	assertEq(sent[1].payload.phase, "begin", "servidor inicia relógio")
+	assertEq(sent[2].payload.phase, "cancel", "soltura curta cancela")
 	ZoneController.onAction(zone, "ZoneHoldDown")
-	fakeNow += 0.61
+	fakeNow += 0.65
 	ZoneController.onAction(zone, "ZoneHoldUp")
-	assertEq(#sent, 1, "hold confirmado")
-	assertEq(sent[1].payload.toZoneId, "zone_threshold_transition", "destino do evento autoritativo")
-	assertEq(sent[1].payload.position, nil, "sem posição declarada pelo cliente")
+	assertEq(#sent, 4, "hold confirmado envia begin e complete")
+	assertEq(sent[3].payload.phase, "begin", "nova tentativa começa")
+	assertEq(sent[4].payload.phase, "complete", "servidor confirma duração")
+	assertEq(sent[4].payload.toZoneId, "zone_threshold_transition", "destino do evento autoritativo")
+	assertEq(sent[4].payload.position, nil, "sem posição declarada pelo cliente")
 end)
 
 test("cliente: Locale cobre todo texto do HUD F0 em PT-BR e EN", function()
@@ -498,6 +594,51 @@ test("apresentação: jogador tem antecipação, impacto, guarda e recuperação
 	assertTrue(guard.leftShoulderPitchDegrees < -40, "guarda fecha a silhueta")
 end)
 
+test("apresentação: Ability1 comunica avanço e impacto sem posição autoritativa", function()
+	local beats = PlayerCombatAnimator.AuthoritativeBeats
+	local windup = PlayerCombatAnimator.sample("Ability1", 0.18, false)
+	local impact = PlayerCombatAnimator.sample("Ability1", beats.cometImpact, false)
+	local recovered = PlayerCombatAnimator.sample("Ability1", PlayerCombatAnimator.Durations.Ability1, false)
+	assertTrue(windup.rootPitchDegrees < 0, "Ombro Cometa recolhe antes do avanço")
+	assertTrue(impact.rootPitchDegrees > 20, "impacto inclina o rig para a frente")
+	assertTrue(impact.rightShoulderPitchDegrees < -100, "ombro lidera o impacto")
+	-- É ombro, não soco: se o cotovelo estender, a técnica passa a competir com
+	-- o ataque pesado na silhueta e o jogador perde a leitura.
+	assertTrue(impact.rightElbowPitchDegrees < -60, "cotovelo permanece fechado no contato")
+	assertEq((impact :: any).rootPosition, nil, "pose não declara posição autoritativa")
+	assertEq(recovered.rootPitchDegrees, 0, "técnica retorna ao baseline")
+end)
+
+test("apresentação: Ability2 possui dois golpes alternados e recuperação", function()
+	local beats = PlayerCombatAnimator.AuthoritativeBeats
+	-- Os instantes amostrados são os mesmos em que o AbilityService resolve dano.
+	local first = PlayerCombatAnimator.sample("Ability2", beats.cadenceFirstHit, false)
+	local broken = PlayerCombatAnimator.sample("Ability2", 0.24, false)
+	local second = PlayerCombatAnimator.sample("Ability2", beats.cadenceSecondHit, false)
+	local recovered = PlayerCombatAnimator.sample("Ability2", PlayerCombatAnimator.Durations.Ability2, false)
+	assertTrue(first.rootYawDegrees > 15, "primeiro golpe cruza à direita")
+	assertTrue(math.abs(broken.rootYawDegrees) < math.abs(first.rootYawDegrees), "cadência recolhe entre golpes")
+	assertTrue(second.rootYawDegrees < -20, "segundo golpe alterna o lado")
+	assertTrue(first.rightShoulderPitchDegrees < -70, "primeiro golpe usa braço direito")
+	assertTrue(second.leftShoulderPitchDegrees < -80, "segundo golpe usa braço esquerdo")
+	-- Cotovelada curta seguida de revés estendido: os dois golpes não repetem a
+	-- mesma mecânica de braço.
+	assertTrue(first.rightElbowPitchDegrees < -60, "golpe 1 é cotovelada — cotovelo fechado")
+	assertTrue(second.leftElbowPitchDegrees > -30, "golpe 2 estende o braço")
+	assertEq(recovered.rootYawDegrees, 0, "cadência termina neutra")
+end)
+
+test("apresentação: Ability3 forma pulso defensivo simétrico e visual", function()
+	local gathered = PlayerCombatAnimator.sample("Ability3", 0.1, false)
+	local released = PlayerCombatAnimator.sample("Ability3", 0.22, false)
+	local recovered = PlayerCombatAnimator.sample("Ability3", PlayerCombatAnimator.Durations.Ability3, false)
+	assertTrue(gathered.leftShoulderPitchDegrees < -55, "pulso fecha a guarda")
+	assertEq(released.leftShoulderPitchDegrees, released.rightShoulderPitchDegrees, "liberação simétrica")
+	assertEq(released.leftShoulderYawDegrees, -released.rightShoulderYawDegrees, "braços abrem em oposição")
+	assertEq(released.rootYawDegrees, 0, "pulso não escolhe direção ou alvo")
+	assertEq(recovered.leftShoulderPitchDegrees, 0, "pulso retorna ao baseline")
+end)
+
 test("interação: catálogo fecha Instrutor e Marco com texto localizado", function()
 	local ok, reason = Interactions.validate()
 	assertTrue(ok, reason)
@@ -521,7 +662,7 @@ test("cliente: interação respeita ready e envia somente alvo e fase sem recomp
 	local state = ClientState.new(clockNow)
 	local input = InputController.new(state, clockNow)
 	local sent: { any } = {}
-	InteractionController.new({
+	local interactionController = InteractionController.new({
 		state = state,
 		input = input,
 		inputSubscribe = InputController.subscribe,
@@ -532,7 +673,9 @@ test("cliente: interação respeita ready e envia somente alvo e fase sem recomp
 		workspace = {},
 		locale = Locale,
 		catalog = Interactions,
+		now = clockNow,
 	})
+	assertEq(interactionController.now(), fakeNow, "relógio do hold injetado")
 	local beforeReady, beforeReason = InputController.dispatch(input, "Interact", {
 		npcId = "npc_threshold_instructor",
 		phase = "complete",
@@ -612,9 +755,36 @@ test("interação: Marco mede hold 1,5 s no relógio do servidor", function()
 	local early = InteractionService.tryInteract(601, payload, 21.49)
 	assertFalse(early.ok, "cliente não autoriza janela")
 	assertEq(early.reason, "hold_incomplete", "faltou tempo")
-	local completed = InteractionService.tryInteract(601, payload, 21.5)
+	local consumed = InteractionService.tryInteract(601, payload, 21.5)
+	assertEq(consumed.reason, "hold_required", "complete cedo consome o begin")
+	assertTrue(
+		InteractionService.tryInteract(601, { anchorId = "anchor_bastion_return", phase = "begin" }, 22).ok,
+		"novo hold inicia"
+	)
+	local completed = InteractionService.tryInteract(601, payload, 23.5)
 	assertTrue(completed.ok, "servidor confirmou 1,5 s")
 	assertEq(#calls, 1, "consolida uma vez")
+end)
+
+test("interação: cancel consome o hold sem executar efeito", function()
+	local position = { value = { x = 0, y = 0, z = 12 } }
+	local calls: { any } = {}
+	InteractionService.init(makeInteractionDeps(position, calls))
+	assertTrue(
+		InteractionService.tryInteract(603, { anchorId = "anchor_bastion_return", phase = "begin" }, 50).ok,
+		"hold inicia"
+	)
+	local cancelled = InteractionService.tryInteract(603, {
+		anchorId = "anchor_bastion_return",
+		phase = "cancel",
+	}, 50.2)
+	assertTrue(cancelled.ok, "cancel aceito")
+	local completed = InteractionService.tryInteract(603, {
+		anchorId = "anchor_bastion_return",
+		phase = "complete",
+	}, 52)
+	assertEq(completed.reason, "hold_required", "cancel remove pending")
+	assertEq(#calls, 0, "sem consolidação")
 end)
 
 test("interação: Marco revalida distância ao completar e limpa pending no leave", function()
@@ -834,6 +1004,8 @@ test("segurança: rejeita vetor impossível, NaN e payload ambíguo", function()
 	local nan = 0 / 0
 	local notNumber = RemoteEnvelope.create("DashIntent", { direction = { x = nan, z = 0 } }, "dash-2", 2)
 	assertEq(SecurityService.inspect(54, "DashIntent", notNumber), nil, "NaN descartado")
+	local neutral = RemoteEnvelope.create("DashIntent", { direction = { x = 0, z = 0 } }, "dash-3", 3)
+	assertEq(SecurityService.inspect(54, "DashIntent", neutral), nil, "dash neutro não concede i-frame")
 	local ambiguous = RemoteEnvelope.create("InteractionIntent", {
 		npcId = "npc_threshold_instructor",
 		anchorId = "anchor_bastion_return",
@@ -966,6 +1138,17 @@ test("combate: aparo nos 120 ms zera dano e guarda", function()
 	assertEq(tgt.health, 100, "HP intacto")
 end)
 
+test("combate: repetir guarda não renova a janela de aparo", function()
+	CombatService.clear()
+	local atk = CombatService.createFighter("p:a", "player", 100, 100)
+	local tgt = CombatService.createFighter("p:b", "player", 100, 100)
+	CombatService.setGuard(tgt, true, 25.0)
+	CombatService.setGuard(tgt, true, 25.19)
+	local result = CombatService.tryLight(atk, tgt, 25.2, "front")
+	assertEq(result.parried, nil, "down redundante não reabre os 120 ms")
+	assertEq(result.damage, 2, "golpe é bloqueado normalmente")
+end)
+
 test("combate: costas ignoram guarda", function()
 	CombatService.clear()
 	local atk = CombatService.createFighter("p:a", "player", 100, 100)
@@ -1001,6 +1184,17 @@ test("combate: quebra de guarda aplica overflow", function()
 	assertEq(refused, false, "não guarda durante break")
 end)
 
+test("combate: guarda quebra ao chegar exatamente a zero", function()
+	CombatService.clear()
+	local atk = CombatService.createFighter("p:a", "player", 100, 100)
+	local tgt = CombatService.createFighter("p:b", "player", 100, 28)
+	CombatService.setGuard(tgt, true, 3.0)
+	local result = CombatService.tryHeavy(atk, tgt, 3.2, "front")
+	assertEq(result.broken, true, "zero também é quebra")
+	assertEq(tgt.guard, 0, "guarda zerada")
+	assertEq(tgt.health, 98, "sem overflow quando o saldo fecha em zero")
+end)
+
 test("combate: pesado que erra bloqueia leve por 0,5 s", function()
 	CombatService.clear()
 	local atk = CombatService.createFighter("p:a", "player", 100, 100)
@@ -1029,6 +1223,18 @@ test("combate: dash aplica i-frame e cooldown", function()
 	assertEq(cd, false, "cooldown")
 	local after = CombatService.tryLight(atk, tgt, 8.1, "front")
 	assertEq(after.damage, 5, "depois do i-frame")
+end)
+
+test("combate: preflight de dash não concede i-frame antes do commit", function()
+	CombatService.clear()
+	local fighter = CombatService.createFighter("p:dash-preflight", "player", 100, 100)
+	local allowed = CombatService.canDash(fighter, 9.0)
+	assertEq(allowed, true, "estado permite resolver espaço")
+	assertEq(fighter.iframeUntil, 0, "preflight não materializa defesa")
+	assertEq(fighter.dashCooldownUntil, 0, "preflight não consome cooldown")
+	CombatService.commitDash(fighter, 9.0)
+	assertTrue(fighter.iframeUntil > 9.0, "commit materializa i-frame")
+	assertTrue(fighter.dashCooldownUntil > 9.0, "commit materializa cooldown")
 end)
 
 test("combate: dummy ataca a 8 studs e recusa longe", function()
@@ -1418,6 +1624,8 @@ test("ability: cadência acerta 5+6 e eco 4 com Fluxo no tick", function()
 	end
 	local ok, reason = AbilityService.tryActivate(attacker, "broken_cadence", target)
 	assertTrue(ok, "cadência: " .. tostring(reason))
+	AbilityService.tick(4000.14)
+	AbilityService.tick(4000.32)
 	assertEq(target.health, 89, "5+6")
 	assertEq(attacker.resource, 84, "custo 16")
 	-- A reentrada só abre 120 ms após o fim do active do golpe 2 (400 ms).
@@ -1435,6 +1643,50 @@ test("ability: cadência acerta 5+6 e eco 4 com Fluxo no tick", function()
 	assertEq(attacker.resource, 93, "fluxo 6+3")
 end)
 
+test("ability: cadência resolve alvo autoritativo uma vez e o preserva no eco", function()
+	fakeNow = 4500
+	CombatService.clear()
+	ResourceService.init(makeResourceDeps())
+	CooldownService.clear(84)
+	local target = CombatService.createFighter("enemy_wandering_shard@anchor_shard_1#1", "npc", 100, 0)
+	local resolveCalls = 0
+	local confirmedHits: { number } = {}
+	local deps = makeAbilityDeps()
+	deps.resolveCadenceTarget = function(userId: number)
+		assertEq(userId, 84, "resolver recebe somente o autor da intenção")
+		resolveCalls += 1
+		return target
+	end
+	deps.onCombatHit = function(userId: number, targetId: string, damage: number, abilityId: string)
+		assertEq(userId, 84, "autor confirmado")
+		assertEq(targetId, target.id, "alvo confirmado")
+		assertEq(abilityId, "broken_cadence", "habilidade confirmada")
+		table.insert(confirmedHits, damage)
+	end
+	AbilityService.init(deps)
+	local attacker = ResourceService.createState(84, "umbral_aether")
+	assertTrue(attacker ~= nil, "attacker criado")
+	if not attacker then
+		return
+	end
+
+	local ok, reason = AbilityService.tryActivate(attacker, "broken_cadence", nil)
+	assertTrue(ok, "cadência espacial: " .. tostring(reason))
+	AbilityService.tick(4500.14)
+	AbilityService.tick(4500.32)
+	assertEq(target.health, 89, "alvo resolvido recebe 5+6")
+	assertEq(resolveCalls, 1, "alvo resolvido uma vez no início")
+
+	fakeNow = 4500.45
+	local reOk, reReason = AbilityService.tryActivate(attacker, "broken_cadence", nil, { phase = "reentry" })
+	assertTrue(reOk, "reentrada sem alvo declarado: " .. tostring(reReason))
+	assertEq(target.health, 89, "reentrada apenas agenda o eco")
+	AbilityService.tick(4500.8)
+	assertEq(table.concat(confirmedHits, ","), "5,6,4", "feedback acompanha os tres impactos")
+	assertEq(target.health, 85, "eco 4 reutiliza o alvo autoritativo inicial")
+	assertEq(resolveCalls, 1, "reentrada e eco não escolhem outro alvo")
+end)
+
 test("ability: cadência recusa reentrada fora da janela", function()
 	fakeNow = 5000
 	ResourceService.init(makeResourceDeps())
@@ -1447,12 +1699,187 @@ test("ability: cadência recusa reentrada fora da janela", function()
 		return
 	end
 	AbilityService.tryActivate(attacker, "broken_cadence", target)
+	AbilityService.tick(5000.14)
+	AbilityService.tick(5000.32)
 	fakeNow = 5000.2
 	local ok, reason = AbilityService.tryActivate(attacker, "broken_cadence", target, { phase = "reentry" })
 	assertFalse(ok, "fora da janela")
 	assertEq(reason, "reentry_window", "motivo")
 	assertEq(target.health, 89, "sem eco")
 	assertEq(attacker.resource, 84, "sem fluxo extra")
+end)
+
+test("ability: cadencia aceita compensacao de lag ate 80 ms", function()
+	fakeNow = 5500
+	ResourceService.init(makeResourceDeps())
+	CooldownService.clear(86)
+	AbilityService.init(makeAbilityDeps())
+	local attacker = ResourceService.createState(86, "umbral_aether")
+	local target = makePlayerState(87, 100)
+	assertTrue(attacker ~= nil, "attacker criado")
+	if not attacker then
+		return
+	end
+	assertTrue(AbilityService.tryActivate(attacker, "broken_cadence", target), "ativacao inicial")
+	fakeNow = 5500.58
+	local ok, reason = AbilityService.tryActivate(attacker, "broken_cadence", target, { phase = "reentry" })
+	assertTrue(ok, "120 ms + 80 ms aceitos: " .. tostring(reason))
+end)
+
+test("ability: cadencia carimba e notifica kill uma unica vez", function()
+	fakeNow = 5600
+	CombatService.clear()
+	ResourceService.init(makeResourceDeps())
+	CooldownService.clear(88)
+	local target = CombatService.createFighter("enemy_wandering_shard@anchor_shard_1#9", "npc", 7, 0)
+	local kills: { any } = {}
+	local deps = makeAbilityDeps()
+	deps.resolveCadenceTarget = function()
+		return target
+	end
+	deps.onCombatKill = function(userId: number, targetId: string, abilityId: string)
+		table.insert(kills, { userId = userId, targetId = targetId, abilityId = abilityId })
+	end
+	AbilityService.init(deps)
+	local attacker = ResourceService.createState(88, "umbral_aether")
+	assertTrue(attacker ~= nil, "attacker criado")
+	if not attacker then
+		return
+	end
+	assertTrue(AbilityService.tryActivate(attacker, "broken_cadence", nil), "cadencia ativa")
+	fakeNow = 5600.14
+	AbilityService.tick(5600.14)
+	fakeNow = 5600.32
+	AbilityService.tick(5600.32)
+	assertEq(target.health, 0, "segundo golpe mata")
+	assertEq(target.diedAt, 5600.32, "morte usa instante autoritativo do segundo active")
+	assertEq(#kills, 1, "notifica uma vez")
+	assertEq(kills[1].targetId, target.id, "alvo correlacionado")
+end)
+
+test("ability: cadência respeita i-frame e eco sem dano não concede Fluxo", function()
+	fakeNow = 5700
+	CombatService.clear()
+	ResourceService.init(makeResourceDeps())
+	CooldownService.clear(89)
+	local attackerFighter = CombatService.createFighter("player:89", "player", 100, 100)
+	local target = CombatService.createFighter("enemy_wandering_shard@anchor_shard_2#1", "npc", 100, 0)
+	target.iframeUntil = 5701
+	local hits = 0
+	local flowEchos = 0
+	local deps = makeAbilityDeps()
+	deps.getAttackerFighter = function()
+		return attackerFighter
+	end
+	deps.resolveCadenceTarget = function()
+		return target
+	end
+	deps.revalidateCadenceTarget = function()
+		return true
+	end
+	deps.tryCadenceHit = CombatService.tryCadenceHit
+	deps.onCombatHit = function()
+		hits += 1
+	end
+	deps.onFlowEcho = function()
+		flowEchos += 1
+	end
+	AbilityService.init(deps)
+	local attacker = ResourceService.createState(89, "umbral_aether")
+	assertTrue(attacker ~= nil, "recurso criado")
+	if not attacker then
+		return
+	end
+	assertTrue(
+		AbilityService.tryActivate(attacker, "broken_cadence", nil, { executionId = "exec-iframe" }),
+		"cadência ativa"
+	)
+	AbilityService.tick(5700.14)
+	AbilityService.tick(5700.32)
+	fakeNow = 5700.45
+	assertTrue(
+		AbilityService.tryActivate(attacker, "broken_cadence", nil, {
+			phase = "reentry",
+			executionId = "exec-iframe",
+		}),
+		"reentrada correlacionada"
+	)
+	AbilityService.tick(5700.8)
+	assertEq(target.health, 100, "i-frame evita os três impactos")
+	assertEq(attacker.resource, 84, "sem Fluxo fantasma")
+	assertEq(hits, 0, "sem feedback de hit falso")
+	assertEq(flowEchos, 0, "objetivo não recebe eco falso")
+end)
+
+test("ability: Cadência revalida hitbox em cada active", function()
+	fakeNow = 5800
+	ResourceService.init(makeResourceDeps())
+	CooldownService.clear(96)
+	local target = makePlayerState(97, 100)
+	local allowed = true
+	local deps = makeAbilityDeps()
+	deps.revalidateCadenceTarget = function(_userId: number, sameTarget: any)
+		return allowed and sameTarget == target
+	end
+	AbilityService.init(deps)
+	local attacker = ResourceService.createState(96, "umbral_aether")
+	assertTrue(attacker ~= nil, "recurso criado")
+	if not attacker then
+		return
+	end
+	assertTrue(AbilityService.tryActivate(attacker, "broken_cadence", target), "cadência ativa")
+	AbilityService.tick(5800.14)
+	allowed = false
+	AbilityService.tick(5800.32)
+	assertEq(target.health, 95, "segundo golpe não acerta alvo que saiu da hitbox")
+end)
+
+test("ability: reentrada exige executionId da ativação inicial", function()
+	fakeNow = 5900
+	ResourceService.init(makeResourceDeps())
+	CooldownService.clear(98)
+	AbilityService.init(makeAbilityDeps())
+	local attacker = ResourceService.createState(98, "umbral_aether")
+	local target = makePlayerState(99, 100)
+	assertTrue(attacker ~= nil, "recurso criado")
+	if not attacker then
+		return
+	end
+	assertTrue(
+		AbilityService.tryActivate(attacker, "broken_cadence", target, { executionId = "exec-original" }),
+		"cadência ativa"
+	)
+	fakeNow = 5900.45
+	local wrong, reason = AbilityService.tryActivate(attacker, "broken_cadence", target, {
+		phase = "reentry",
+		executionId = "exec-outra",
+	})
+	assertFalse(wrong, "execução diferente recusada")
+	assertEq(reason, "execution_mismatch", "correlação fechada")
+	assertTrue(
+		AbilityService.tryActivate(attacker, "broken_cadence", target, {
+			phase = "reentry",
+			executionId = "exec-original",
+		}),
+		"execução original ainda pode reentrar"
+	)
+end)
+
+test("combate: Cadência respeita guarda, aparo e Retorno de Pulso", function()
+	CombatService.clear()
+	local attacker = CombatService.createFighter("player:cadence", "player", 100, 100)
+	local target = CombatService.createFighter("player:defender", "player", 100, 100)
+	CombatService.setGuard(target, true, 6000)
+	local parry = CombatService.tryCadenceHit(attacker, target, 6000.05, 5, "front")
+	assertTrue(parry.parried == true and parry.damage == 0, "aparo zera Cadência")
+	local guarded = CombatService.tryCadenceHit(attacker, target, 6000.2, 5, "front")
+	assertTrue(guarded.stoppedOnGuard == true, "guarda reconhecida")
+	assertEq(guarded.damage, 2, "guarda deixa 40% do dano")
+	CombatService.setGuard(target, false, 6000.3)
+	CombatService.setPulseStance(target, 6001)
+	local pulse = CombatService.tryCadenceHit(attacker, target, 6001.05, 6, "front")
+	assertTrue(pulse.pulseCounter == true, "Pulso reduz o golpe frontal")
+	assertEq(pulse.damage, 3, "Pulso reduz 50%")
 end)
 
 test("ability: pulse_return abre postura sem dano; erro vira recovery 600 ms", function()
@@ -1990,6 +2417,66 @@ test("zona: sem holdConfirmed recusa a primeira ida à livre", function()
 	assertEq(ZoneService.canPvp(210), false, "sem PvP")
 end)
 
+test("zona: hold autoritativo exige 0,6 s e o mesmo portão", function()
+	ZoneService.init(makeZoneDeps())
+	ZoneService.registerPlayer(211)
+	local north = { x = 0, y = 0, z = -32 }
+	local west = { x = -40, y = 0, z = 0 }
+	assertTrue(
+		ZoneService.handleCrossingHold(211, "zone_threshold_transition", "begin", 6100, north).ok,
+		"begin junto ao norte"
+	)
+	local early = ZoneService.handleCrossingHold(211, "zone_threshold_transition", "complete", 6100.59, north)
+	assertFalse(early.ok, "complete prematuro recusado")
+	assertEq(early.reason, "hold_incomplete", "motivo estável")
+	assertTrue(ZoneService.handleCrossingHold(211, "zone_threshold_transition", "begin", 6101, north).ok, "novo begin")
+	local swapped = ZoneService.handleCrossingHold(211, "zone_threshold_transition", "complete", 6101.6, west)
+	assertFalse(swapped.ok, "não troca de portão no complete")
+	assertEq(swapped.reason, "target_mismatch", "mesmo alvo físico")
+	assertTrue(
+		ZoneService.handleCrossingHold(211, "zone_threshold_transition", "begin", 6102, north).ok,
+		"terceiro begin"
+	)
+	local complete = ZoneService.handleCrossingHold(211, "zone_threshold_transition", "complete", 6102.6, north)
+	assertTrue(complete.ok, "0,6 s autoritativos aceitos")
+	assertEq(complete.anchorId, "anchor_gate_north", "portão correlacionado")
+	assertEq(ZoneService.getPlayerZone(211), "zone_bastion_safe", "hold sozinho não declara posição")
+end)
+
+test("zona: hold revalida distância, expira e cancel consome pending", function()
+	ZoneService.init(makeZoneDeps())
+	ZoneService.registerPlayer(212)
+	local north = { x = 0, y = 0, z = -32 }
+	local far = { x = 40, y = 0, z = 20 }
+	local tooFar = ZoneService.handleCrossingHold(212, "zone_threshold_transition", "begin", 6200, far)
+	assertEq(tooFar.reason, "too_far", "posição do servidor é obrigatória")
+	ZoneService.handleCrossingHold(212, "zone_threshold_transition", "begin", 6201, north)
+	local expired = ZoneService.handleCrossingHold(212, "zone_threshold_transition", "complete", 6204.1, north)
+	assertEq(expired.reason, "hold_expired", "pending tem prazo curto")
+	ZoneService.handleCrossingHold(212, "zone_threshold_transition", "begin", 6205, north)
+	assertTrue(
+		ZoneService.handleCrossingHold(212, "zone_threshold_transition", "cancel", 6205.1, north).ok,
+		"cancel aceito"
+	)
+	local afterCancel = ZoneService.handleCrossingHold(212, "zone_threshold_transition", "complete", 6206, north)
+	assertEq(afterCancel.reason, "hold_required", "cancel remove pending")
+end)
+
+test("zona: segura nunca pula direto para livre e respawn força Bastião", function()
+	ZoneService.init(makeZoneDeps())
+	ZoneService.registerPlayer(213)
+	local direct = ZoneService.tryEnterZone(213, "zone_plain_free", 6300, { holdConfirmed = true })
+	assertFalse(direct.ok, "aresta segura para livre é inválida")
+	assertEq(direct.reason, "invalid_crossing", "sem salto de volume")
+	ZoneService.tryEnterZone(213, "zone_threshold_transition", 6301, { holdConfirmed = true })
+	ZoneService.tryEnterZone(213, "zone_plain_free", 6302, {})
+	ZoneService.markPvpCombat(213, 6303)
+	ZoneService.forceRespawnSafe(213)
+	assertEq(ZoneService.getPlayerZone(213), "zone_bastion_safe", "respawn ignora lockout da vida anterior")
+	local transition = ZoneService.tryEnterZone(213, "zone_threshold_transition", 6304, { holdConfirmed = true })
+	assertTrue(transition.ok, "lockout anterior foi limpo")
+end)
+
 test("zona: com hold entra em transição 5 s e canPvp false", function()
 	fakeNow = 7000
 	local events: { any } = {}
@@ -2016,13 +2503,19 @@ end)
 
 test("zona: ação hostil na transição encerra a proteção na hora", function()
 	fakeNow = 8000
-	ZoneService.init(makeZoneDeps())
+	local events: { any } = {}
+	ZoneService.init(makeZoneDeps(events))
 	ZoneService.registerPlayer(230)
 	ZoneService.tryEnterZone(230, "zone_threshold_transition", fakeNow, { holdConfirmed = true })
 	assertEq(ZoneService.canPvp(230), false, "protegido na transição")
 	ZoneService.markHostileAction(230, fakeNow + 1)
 	assertEq(ZoneService.getPlayerZone(230), "zone_plain_free", "ativa PvP indo à livre")
 	assertEq(ZoneService.canPvp(230), true, "ação hostil encerra a proteção")
+	ZoneService.notifyHostileTransition(230, fakeNow + 1)
+	assertEq(#events, 2, "travessia hostil emite a passagem final")
+	assertEq(events[2].event.from, "zone_threshold_transition", "evento parte da faixa")
+	assertEq(events[2].event.to, "zone_plain_free", "evento confirma a planície")
+	assertEq(events[2].event.pvp, true, "HUD recebe PvP ativo")
 end)
 
 test("zona: ação hostil na segura não marca lockout PvP", function()
@@ -2133,7 +2626,7 @@ test("dados: ZoneEvent registrado como remote S→C", function()
 		assertEq(zc.direction, "ServerToClient", "direção")
 		assertEq(zc.version, 1, "versão")
 		assertTrue(zc.payload:find("signals") ~= nil, "payload com signals")
-		assertTrue(zc.payload:find("holdConfirmed") ~= nil, "payload com holdConfirmed")
+		assertTrue(zc.payload:find("holdConfirmed") ~= nil, "evento autoritativo confirma hold")
 	end
 end)
 
@@ -2144,7 +2637,8 @@ test("dados: ZoneCrossingIntent registrado como remote C→S", function()
 		assertEq(zc.direction, "ClientToServer", "direção")
 		assertEq(zc.version, 2, "versão")
 		assertTrue(zc.payload:find("toZoneId") ~= nil, "payload com toZoneId")
-		assertTrue(zc.payload:find("holdConfirmed") ~= nil, "payload com holdConfirmed")
+		assertTrue(zc.payload:find("phase") ~= nil, "payload com begin/complete/cancel")
+		assertTrue(zc.payload:find("holdConfirmed") == nil, "cliente não declara holdConfirmed")
 	end
 end)
 
@@ -2695,6 +3189,112 @@ local function vec(x: number, y: number, z: number): any
 	return { x = x, y = y, z = z }
 end
 
+test("movimento: caminhada legítima consome e repõe orçamento horizontal", function()
+	PlayerMotionGuard.init()
+	assertTrue(PlayerMotionGuard.register(1101, vec(0, 2, 0), 10), "registro inicial")
+	local firstOk, firstPosition = PlayerMotionGuard.authorize(1101, vec(4, 7, 0), 10.25, 16)
+	assertTrue(firstOk, "primeiro passo dentro do burst")
+	assertEq((firstPosition :: any).y, 7, "altura aceita é preservada")
+	local secondOk, secondPosition = PlayerMotionGuard.authorize(1101, vec(8, 3, 0), 10.5, 16)
+	assertTrue(secondOk, "WalkSpeed repõe quatro studs em 250 ms")
+	assertEq((secondPosition :: any).x, 8, "posição horizontal aceita")
+	assertEq((secondPosition :: any).y, 3, "nova altura fica no registro")
+end)
+
+test("combate: morto não inicia dash nem i-frame", function()
+	CombatService.clear()
+	local fighter = CombatService.createFighter("player:dead-dash", "player", 100, 100)
+	fighter.health = 0
+	local ok, reason = CombatService.tryDash(fighter, 10)
+	assertFalse(ok, "morto não desloca")
+	assertEq(reason, "dead", "motivo estável")
+	assertEq(fighter.iframeUntil, 0, "sem iframe")
+	assertEq(fighter.dashCooldownUntil, 0, "sem cooldown")
+end)
+
+test("movimento: burst inicial não autoriza teleport acima de 8 studs", function()
+	PlayerMotionGuard.init()
+	PlayerMotionGuard.register(1102, vec(0, 0, 0), 20)
+	local ok, reason = PlayerMotionGuard.authorize(1102, vec(8.01, 0, 0), 20, 16)
+	assertFalse(ok, "teleport recusado")
+	assertEq(reason, "movement_budget", "motivo estável")
+end)
+
+test("movimento: orçamento recupera proporcionalmente ao WalkSpeed", function()
+	PlayerMotionGuard.init()
+	PlayerMotionGuard.register(1103, vec(0, 0, 0), 30)
+	assertTrue(PlayerMotionGuard.authorize(1103, vec(8, 0, 0), 30, 16), "consome burst")
+	assertFalse(PlayerMotionGuard.authorize(1103, vec(9, 0, 0), 30, 16), "sem orçamento imediato")
+	assertFalse(PlayerMotionGuard.authorize(1103, vec(13, 0, 0), 31, 16), "refill limita elapsed a 250 ms")
+	local recovered, position = PlayerMotionGuard.authorize(1103, vec(12, 0, 0), 31, 16)
+	assertTrue(recovered, "recupera somente quatro studs após intervalo longo")
+	assertEq((position :: any).x, 12, "commit após recuperação")
+end)
+
+test("movimento: commit server-side realinha dash sem falsa recusa", function()
+	PlayerMotionGuard.init()
+	PlayerMotionGuard.register(1104, vec(0, 1, 0), 40)
+	assertTrue(PlayerMotionGuard.authorize(1104, vec(8, 1, 0), 40, 16), "esgota burst")
+	assertTrue(PlayerMotionGuard.commitServerMove(1104, vec(20, 4, 0), 40.01), "dash do servidor")
+	local ok, position = PlayerMotionGuard.authorize(1104, vec(20, 4, 0), 40.01, 16)
+	assertTrue(ok, "replicação do dash não parece teleport")
+	assertEq((position :: any).x, 20, "base realinhada")
+	assertEq((position :: any).y, 4, "altura do commit preservada")
+end)
+
+test("movimento: posição NaN ou infinita nunca entra no registro", function()
+	PlayerMotionGuard.init()
+	PlayerMotionGuard.register(1105, vec(0, 0, 0), 50)
+	local nanOk, nanReason = PlayerMotionGuard.authorize(1105, vec(0 / 0, 0, 0), 50, 16)
+	assertFalse(nanOk, "NaN recusado")
+	assertEq(nanReason, "invalid_position", "motivo NaN")
+	local infOk, infReason = PlayerMotionGuard.authorize(1105, vec(0, math.huge, 0), 50, 16)
+	assertFalse(infOk, "infinito recusado")
+	assertEq(infReason, "invalid_position", "motivo infinito")
+	local valid, position = PlayerMotionGuard.authorize(1105, vec(1, 9, 0), 50, 16)
+	assertTrue(valid, "tentativas inválidas não corrompem estado")
+	assertEq((position :: any).y, 9, "posição válida posterior")
+end)
+
+test("movimento: clear remove estado da sessão anterior", function()
+	PlayerMotionGuard.init()
+	PlayerMotionGuard.register(1106, vec(0, 0, 0), 60)
+	PlayerMotionGuard.clearPlayer(1106)
+	local ok, reason = PlayerMotionGuard.authorize(1106, vec(1, 0, 0), 60.1, 16)
+	assertFalse(ok, "jogador limpo não é autorizado")
+	assertEq(reason, "unregistered", "precisa registrar a nova sessão")
+end)
+
+test("movimento: teleporte vertical absurdo é recusado", function()
+	PlayerMotionGuard.init()
+	PlayerMotionGuard.register(1107, vec(0, 3, 0), 70)
+	local ok, reason = PlayerMotionGuard.authorize(1107, vec(0, 100, 0), 70.1, 16)
+	assertFalse(ok, "salto vertical impossível")
+	assertEq(reason, "vertical_movement", "motivo vertical estável")
+end)
+
+test("movimento: subidas pequenas não acumulam fly por Heartbeat", function()
+	PlayerMotionGuard.init()
+	PlayerMotionGuard.register(1109, vec(0, 3, 0), 75)
+	assertTrue(PlayerMotionGuard.authorize(1109, vec(0, 8, 0), 75.1, 16), "primeira metade do salto")
+	assertTrue(PlayerMotionGuard.authorize(1109, vec(0, 13, 0), 75.2, 16), "teto acumulado do salto")
+	local flyOk, reason = PlayerMotionGuard.authorize(1109, vec(0, 14, 0), 75.3, 16)
+	assertFalse(flyOk, "subida monotônica não renova orçamento vertical")
+	assertEq(reason, "vertical_movement", "motivo vertical")
+	assertTrue(PlayerMotionGuard.authorize(1109, vec(0, 3, 0), 75.4, 16), "descida legítima aceita")
+	assertTrue(PlayerMotionGuard.authorize(1109, vec(0, 10, 0), 75.5, 16), "novo salto após descer")
+end)
+
+test("movimento: margem pequena absorve jitter sem ampliar burst", function()
+	PlayerMotionGuard.init()
+	PlayerMotionGuard.register(1108, vec(0, 3, 0), 80)
+	assertTrue(PlayerMotionGuard.authorize(1108, vec(8, 3, 0), 80, 16), "consome burst")
+	local jitterOk = PlayerMotionGuard.authorize(1108, vec(8.45, 3, 0), 80.025, 16)
+	assertTrue(jitterOk, "15% de margem cobre jitter de frame")
+	local teleportOk = PlayerMotionGuard.authorize(1108, vec(17, 3, 0), 80.025, 16)
+	assertFalse(teleportOk, "burst de 8 continua fechando teleport")
+end)
+
 test("geometria: distância, distância horizontal e normalize", function()
 	assertEq(Geometry.distance(vec(0, 0, 0), vec(3, 4, 0)), 5, "distância 3-4-5")
 	assertEq(Geometry.horizontalDistance(vec(0, 0, 0), vec(3, 99, 4)), 5, "altura é ignorada no plano")
@@ -2848,6 +3448,59 @@ test("espaço: hitbox à frente acerta o alvo e ignora quem está atrás", funct
 	assertEq(SpatialService.distanceBetween("player:900", "fantasma"), nil, "sem transform devolve nil")
 end)
 
+test("espaço: dash avança 12 studs e ignora distância declarada na direção", function()
+	SpatialService.init({ geometry = Geometry })
+	SpatialService.setTransform("player:dash-1", vec(0, 2, 0), vec(0, 0, -1))
+	local clientDirection: any = { x = 0, z = -1, distance = 999 }
+	local resolution = SpatialService.resolveDash("player:dash-1", clientDirection, 12, 12)
+	assertEq(resolution.traveled, 12, "distância definida pelo servidor")
+	assertEq(resolution.position.y, 2, "preserva altura")
+	assertTrue(math.abs(resolution.position.z + 12) < 1e-6, "avança 12 para o norte")
+	local committed = SpatialService.getPosition("player:dash-1")
+	assertTrue(committed ~= nil and math.abs(committed.z + 12) < 1e-6, "posição commitada")
+end)
+
+test("espaço: dash normaliza a direção no plano do chão", function()
+	SpatialService.init({ geometry = Geometry })
+	SpatialService.setTransform("player:dash-2", vec(1, 3, 2), vec(0, 0, -1))
+	local resolution = SpatialService.resolveDash("player:dash-2", { x = 3, y = 100, z = 4 }, 12, 12)
+	assertEq(resolution.traveled, 12, "magnitude da entrada não multiplica o dash")
+	assertTrue(math.abs(resolution.position.x - 8.2) < 1e-6, "componente x normalizado")
+	assertTrue(math.abs(resolution.position.z - 11.6) < 1e-6, "componente z normalizado")
+	assertEq(resolution.position.y, 3, "componente vertical é ignorado")
+end)
+
+test("espaço: dash respeita hard cap do servidor", function()
+	SpatialService.init({ geometry = Geometry })
+	SpatialService.setTransform("player:dash-3", vec(0, 0, 0), vec(1, 0, 0))
+	local resolution = SpatialService.resolveDash("player:dash-3", { x = 1, z = 0 }, 20, 12)
+	assertEq(resolution.traveled, 12, "pedido interno maior é limitado")
+	assertEq(resolution.position.x, 12, "para no cap")
+end)
+
+test("espaço: dash para na parede e commita o ponto seguro", function()
+	SpatialService.init({ geometry = Geometry })
+	SpatialService.setTransform("player:dash-4", vec(0, 0, 0), vec(0, 0, -1))
+	local walls = { { id = "wall_north", position = vec(0, 0, -7), radius = 2 } }
+	local resolution = SpatialService.resolveDash("player:dash-4", { x = 0, z = -1 }, 12, 12, walls)
+	assertTrue(resolution.blocked, "parede bloqueia")
+	assertEq(resolution.blockedBy, "wall_north", "parede autoritativa")
+	assertTrue(resolution.traveled > 0 and resolution.traveled < 12, "para antes da parede")
+	local committed = SpatialService.getPosition("player:dash-4")
+	assertTrue(committed ~= nil, "posição bloqueada commitada")
+	if committed then
+		assertEq(committed.z, resolution.position.z, "registro usa o ponto resolvido")
+	end
+end)
+
+test("espaço: dash sem transform não cria posição", function()
+	SpatialService.init({ geometry = Geometry })
+	local resolution = SpatialService.resolveDash("player:ausente", { x = 0, z = -1 }, 12, 12)
+	assertEq(resolution.traveled, 0, "sem avanço")
+	assertFalse(resolution.blocked, "sem bloqueio inventado")
+	assertEq(SpatialService.getPosition("player:ausente"), nil, "não cria transform")
+end)
+
 test("espaço: Ombro Cometa avança 7, commita a posição e acerta 1 alvo", function()
 	SpatialService.init({ geometry = Geometry })
 	SpatialService.setTransform("player:901", vec(0, 0, 0), vec(0, 0, -1))
@@ -2912,7 +3565,7 @@ test("espaço: Cometa sem ninguém no trajeto avança e não acerta", function()
 end)
 
 -- Monta EnemyService + CombatService + SpatialService reais.
-local function makeEnemyWorld(targets: { any }): ()
+local function makeEnemyWorld(targets: { any }, events: { any }?): ()
 	CombatService.clear()
 	SpatialService.init({ geometry = Geometry })
 	EnemyService.init({
@@ -2924,6 +3577,11 @@ local function makeEnemyWorld(targets: { any }): ()
 		geometry = Geometry,
 		listTargets = function(): { any }
 			return targets
+		end,
+		onEnemyEvent = function(fighterId: string, event: { any })
+			if events then
+				table.insert(events, { fighterId = fighterId, event = event })
+			end
 		end,
 	})
 end
@@ -2989,6 +3647,64 @@ test("inimigo: persegue a 12 studs/s e ataca só depois do telegraph", function(
 	EnemyService.tick(1000.5, 0.1)
 	assertEq(player.health, 94, "dano 6 após o telegraph")
 	assertEq(shard.aiPhase, "recovery", "entra em recovery")
+end)
+
+test("inimigo: i-frame não vira hit confirmado no evento", function()
+	local playerId = "player:919"
+	local targets = { { fighterId = playerId, userId = 919, zoneId = "zone_plain_free" } }
+	local events: { any } = {}
+	makeEnemyWorld(targets, events)
+	EnemyService.spawnInitial()
+	local shardId = "enemy_wandering_shard@anchor_shard_1#1"
+	local anchor = Zones.getAnchor("anchor_shard_1")
+	if not anchor then
+		return
+	end
+	local player = CombatService.createFighter(playerId, "player", 100, 100)
+	SpatialService.setTransform(playerId, vec(anchor.position.x, 0, anchor.position.z - 4), vec(0, 0, 1))
+	EnemyService.tick(1500, 0.1)
+	player.iframeUntil = 1501
+	local hits = EnemyService.tick(1500.5, 0.1)
+	assertEq(hits, 0, "i-frame não conta conexão")
+	local attack: any = nil
+	for _, emitted in events do
+		if emitted.fighterId == shardId and emitted.event.kind == "attack" then
+			attack = emitted.event
+		end
+	end
+	assertTrue(attack ~= nil, "animação de ataque ainda é emitida")
+	assertEq(attack.iframe, true, "metadata de evasão preservada")
+	assertEq(attack.outcome, "evaded", "cliente não recebe hit falso")
+	assertEq(player.health, 100, "HP intacto")
+end)
+
+test("inimigo: Retorno de Pulso preserva contra no evento", function()
+	local playerId = "player:918"
+	local targets = { { fighterId = playerId, userId = 918, zoneId = "zone_plain_free" } }
+	local events: { any } = {}
+	makeEnemyWorld(targets, events)
+	EnemyService.spawnInitial()
+	local shardId = "enemy_wandering_shard@anchor_shard_1#1"
+	local anchor = Zones.getAnchor("anchor_shard_1")
+	if not anchor then
+		return
+	end
+	local player = CombatService.createFighter(playerId, "player", 100, 100)
+	SpatialService.setTransform(playerId, vec(anchor.position.x, 0, anchor.position.z - 4), vec(0, 0, 1))
+	EnemyService.tick(1600, 0.1)
+	CombatService.setPulseStance(player, 1600.3)
+	local hits = EnemyService.tick(1600.41, 0.1)
+	assertEq(hits, 1, "contato reduzido ainda conecta")
+	local attack: any = nil
+	for _, emitted in events do
+		if emitted.fighterId == shardId and emitted.event.kind == "attack" then
+			attack = emitted.event
+		end
+	end
+	assertTrue(attack ~= nil, "evento de ataque")
+	assertEq(attack.pulseCounter, true, "flag chega ao bootstrap")
+	assertEq(attack.outcome, "guard", "feedback defensivo")
+	assertEq(attack.damage, 3, "6 reduzido pela metade")
 end)
 
 test("inimigo: sem aggro através da fronteira", function()
@@ -3212,6 +3928,27 @@ test("combate: elite alterna combo 5+5 e slam 12, com guarda cortada em 30%", fu
 	assertEq(player.health, 78, "HP após o slam")
 end)
 
+test("combate: Pulso interrompe o combo do elite no primeiro golpe", function()
+	CombatService.clear()
+	local elite = CombatService.createFighter("enemy_anchored_shard@anchor_elite#1", "npc", 80, 0)
+	local player = CombatService.createFighter("player:956", "player", 100, 100)
+	local params = {
+		range = 8,
+		recoverySeconds = 0.8,
+		comboDamage = 5,
+		comboTelegraphSeconds = 0.3,
+		slamDamage = 12,
+		slamTelegraphSeconds = 0.7,
+		slamBlockedPct = 0.7,
+	}
+	CombatService.tryEliteCycle(elite, player, 1050, 5, true, params)
+	CombatService.setPulseStance(player, 1050.2)
+	local hit = CombatService.tryEliteCycle(elite, player, 1050.31, 5, true, params)
+	assertEq(hit.pulseCounter, true, "contra preservado")
+	assertEq(hit.damage, 2, "primeiro golpe reduzido em 50%")
+	assertEq(player.health, 98, "segundo golpe não atravessa o contra")
+end)
+
 test("combate: slam do elite atravessa a guarda (reduz só 30%)", function()
 	CombatService.clear()
 	local elite = CombatService.createFighter("enemy_anchored_shard@anchor_elite#1", "npc", 80, 0)
@@ -3287,6 +4024,63 @@ test("inimigo: elite spawna único na âncora da cratera", function()
 			assertEq(position.x, anchor.position.x, "x da cratera")
 			assertEq(position.z, anchor.position.z, "z da cratera")
 		end
+	end
+	EnemyService.despawnAll()
+end)
+
+test("inimigo: tick comum ignora elite e tickElite preserva respawn de 180 s", function()
+	local playerId = "player:969"
+	local targets = { { fighterId = playerId, userId = 969, zoneId = "zone_plain_free" } }
+	makeEnemyWorld(targets)
+	EnemyService.spawnInitial()
+	assertTrue(EnemyService.spawnElite(), "elite spawna junto dos Errantes")
+
+	local fighterId = "enemy_anchored_shard@anchor_elite#1"
+	local elite = CombatService.getFighter(fighterId)
+	local anchor = Zones.getAnchor("anchor_elite")
+	assertTrue(elite ~= nil and anchor ~= nil, "elite e âncora existem")
+	if not elite or not anchor then
+		return
+	end
+
+	CombatService.createFighter(playerId, "player", 100, 100)
+	SpatialService.setTransform(
+		playerId,
+		vec(anchor.position.x, anchor.position.y, anchor.position.z + 12),
+		vec(0, 0, -1)
+	)
+
+	-- Sem o filtro por npcId, o tick dos Errantes moveria o elite ancorado em
+	-- direção ao jogador usando moveSpeed/attackRange do inimigo comum.
+	EnemyService.tick(6000, 0.5)
+	local afterCommonTick = SpatialService.getPosition(fighterId)
+	assertTrue(afterCommonTick ~= nil, "transform do elite permanece registrado")
+	if afterCommonTick then
+		assertEq(afterCommonTick.x, anchor.position.x, "tick comum não move o elite em x")
+		assertEq(afterCommonTick.z, anchor.position.z, "tick comum não move o elite em z")
+	end
+	assertEq(elite.aiPhase, "idle", "tick comum não abre ciclo de ataque do elite")
+
+	-- Área limpa para isolar o relógio de respawn. Aos 46 s o baseline comum de
+	-- 45 s já teria revivido o elite se ele ainda passasse por EnemyService.tick.
+	SpatialService.setTransform(
+		playerId,
+		vec(anchor.position.x + 40, anchor.position.y, anchor.position.z),
+		vec(-1, 0, 0)
+	)
+	elite.health = 0
+	elite.diedAt = 6000
+	EnemyService.tick(6046, 0.1)
+	assertEq(elite.health, 0, "tick comum não aplica respawn de 45 s ao elite")
+
+	EnemyService.tickElite(6179, 0.1)
+	assertEq(elite.health, 0, "tickElite ainda aguarda aos 179 s")
+	EnemyService.tickElite(6180, 0.1)
+	assertEq(elite.health, 80, "tickElite respawna somente aos 180 s")
+	local respawnedPosition = SpatialService.getPosition(fighterId)
+	if respawnedPosition then
+		assertEq(respawnedPosition.x, anchor.position.x, "respawn volta à âncora em x")
+		assertEq(respawnedPosition.z, anchor.position.z, "respawn volta à âncora em z")
 	end
 	EnemyService.despawnAll()
 end)
@@ -3815,6 +4609,14 @@ end)
 print("")
 print("== Testes F0 — Anime Verse Battlegrounds ==")
 print("")
+
+test("cliente: cooldown parametrizado nunca aparece como codigo interno", function()
+	local state = ClientState.new(clockNow)
+	ClientState.applySnapshot(state, { ready = true })
+	local feedback = CombatFeedbackController.new(state, ClientState)
+	CombatFeedbackController.onRejected(feedback, { reason = "cooldown:6.9" })
+	assertEq(ClientState.feedback(state), "hud.feedback_cooldown", "chave localizada")
+end)
 
 local function runAll()
 	for _, t in tests do

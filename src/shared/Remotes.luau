@@ -57,8 +57,8 @@ local RemoteContracts = {
 	[REMOTES.AbilityRejected] = {
 		name = REMOTES.AbilityRejected,
 		direction = "ServerToClient",
-		version = 1,
-		payload = "{ abilityId: string, reason: string }",
+		version = 2,
+		payload = "{ abilityId: string, reason: string, executionId: string, phase: string }",
 	} :: NetworkContract,
 	[REMOTES.ResourceChanged] = {
 		name = REMOTES.ResourceChanged,
@@ -66,11 +66,15 @@ local RemoteContracts = {
 		version = 1,
 		payload = "{ familyId: string, current: number, max: number, depleted: boolean }",
 	} :: NetworkContract,
+	-- v3 acrescenta o desfecho "counter": o contra do Retorno de Pulso é o único
+	-- caso em que quem apanha devolve dano, e o defensor precisa saber disso.
+	-- Antes o servidor resolvia o contra em silêncio para quem usou a técnica.
 	[REMOTES.CombatEvent] = {
 		name = REMOTES.CombatEvent,
 		direction = "ServerToClient",
-		version = 2,
-		payload = '{ executionId: string?, abilityId: string, outcome: "hit" | "guard" | "death" }',
+		version = 3,
+		payload = '{ executionId: string?, abilityId: string, targetId: string?, damage: number?, '
+			.. 'outcome: "hit" | "guard" | "death" | "counter" }',
 	} :: NetworkContract,
 	[REMOTES.PlayerDied] = {
 		name = REMOTES.PlayerDied,
@@ -112,14 +116,14 @@ local RemoteContracts = {
 		name = REMOTES.ZoneCrossingIntent,
 		direction = "ClientToServer",
 		version = 2,
-		payload = "EnvelopeV2<{ toZoneId: string, holdConfirmed: boolean? }>",
+		payload = 'EnvelopeV2<{ toZoneId: string, phase: "begin" | "complete" | "cancel" }>',
 	} :: NetworkContract,
 	-- Aceite de objetivo / uso de âncora. O cliente nunca informa recompensa.
 	[REMOTES.InteractionIntent] = {
 		name = REMOTES.InteractionIntent,
 		direction = "ClientToServer",
 		version = 2,
-		payload = 'EnvelopeV2<{ npcId: string?, anchorId: string?, phase: "begin" | "complete" }>',
+		payload = 'EnvelopeV2<{ npcId: string?, anchorId: string?, phase: "begin" | "complete" | "cancel" }>',
 	} :: NetworkContract,
 	-- Delta autoritativo de estado; carrega o tracker do objetivo e as flags.
 	[REMOTES.StateDelta] = {
@@ -134,7 +138,7 @@ local RemoteContracts = {
 		name = REMOTES.EnemyEvent,
 		direction = "ServerToClient",
 		version = 1,
-		payload = '{ fighterId: string, kind: "spawn" | "telegraph" | "attack" | "died" | "respawn", targetId: string?, damage: number?, durationSeconds: number?, visualPattern: "arrival" | "strike" | "combo" | "slam" | "collapse"? }',
+		payload = '{ fighterId: string, kind: "spawn" | "telegraph" | "attack" | "died" | "respawn", targetId: string?, damage: number?, outcome: "hit" | "guard" | "evaded"?, iframe: boolean?, pulseCounter: boolean?, durationSeconds: number?, visualPattern: "arrival" | "strike" | "combo" | "slam" | "collapse"? }',
 	} :: NetworkContract,
 }
 

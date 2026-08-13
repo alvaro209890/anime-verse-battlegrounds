@@ -8,7 +8,7 @@ export type Vec3 = { x: number, y: number, z: number }
 export type InteractionResult = {
 	ok: boolean,
 	reason: string?,
-	phase: ("begin" | "complete")?,
+	phase: ("begin" | "complete" | "cancel")?,
 	interactionId: string?,
 	targetId: string?,
 	value: any?,
@@ -79,6 +79,24 @@ function InteractionService.tryInteract(userId: number, payload: { [string]: any
 	if not definition then
 		return reject(resolveReason or "unknown_target")
 	end
+	local phase = payload.phase
+	if phase ~= "begin" and phase ~= "complete" and phase ~= "cancel" then
+		return reject("invalid_phase")
+	end
+	if phase == "cancel" then
+		local pending = InteractionService.pending[userId]
+		if pending and pending.interactionId == definition.id then
+			InteractionService.pending[userId] = nil
+		end
+		return {
+			ok = true,
+			reason = nil,
+			phase = "cancel",
+			interactionId = definition.id,
+			targetId = definition.targetId,
+			value = nil,
+		}
+	end
 	local anchor = deps.getAnchor(definition.anchorId)
 	if not anchor or not isFinitePosition(anchor.position) then
 		return reject("target_unavailable")
@@ -92,10 +110,6 @@ function InteractionService.tryInteract(userId: number, payload: { [string]: any
 	if distanceBetween(authoritativePosition, targetPosition) > definition.maxDistance then
 		InteractionService.pending[userId] = nil
 		return reject("too_far")
-	end
-	local phase = payload.phase
-	if phase ~= "begin" and phase ~= "complete" then
-		return reject("invalid_phase")
 	end
 	if phase == "begin" then
 		if definition.holdDuration <= 0 then
@@ -122,6 +136,7 @@ function InteractionService.tryInteract(userId: number, payload: { [string]: any
 		end
 		local elapsed = now - pending.startedAt
 		if elapsed < definition.holdDuration then
+			InteractionService.pending[userId] = nil
 			return reject("hold_incomplete")
 		end
 		InteractionService.pending[userId] = nil

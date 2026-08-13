@@ -3,8 +3,8 @@
 RPG / Action RPG de mundo aberto no Roblox (Luau) — combate estilo battlegrounds com
 progressão persistente, loadout customizável e ressonância de famílias de energia.
 
-> **Status em 2026-08-13:** itens 1–13 do backlog F0 fechados em código/headless, além da fundação procedural de mundo/apresentação e do gate seguro de playtest no Studio.
-> **Runtime ainda não validado formalmente.** O arquivo local foi aberto manualmente no Studio, mas não há roteiro registrado de Play, feeling, save real, mobile, gamepad ou teste adversarial com dois clientes.
+> **Status em 2026-08-13:** itens 1–13 do backlog F0 fechados em código/headless, além da fundação procedural de mundo/apresentação, animação local de combate, interações mínimas e do gate seguro de playtest no Studio, além do polimento de game-feel (easing, follow-through, idle, wrist snap, hit-stop e câmera de impacto).
+> **Runtime atual ainda não validado.** O Play das 09:26 abriu um artefato antigo de 128744 bytes, gerado às 08:20; ele iniciou o servidor antigo sem erro do jogo, mas não comprova o código atual. O novo `.rbxl` ainda não foi reaberto ou executado por nós.
 
 ## Estado comprovado
 
@@ -12,8 +12,8 @@ progressão persistente, loadout customizável e ressonância de famílias de en
 |---|---|
 | Produto | Q-001 a Q-030 decididas; `docs/09-OPEN-QUESTIONS.md` é o registro canônico |
 | Planejamento | visão, GDD, mundo, social, arquitetura, schemas, segurança, roster, roadmap, benchmark e plano de animação documentados |
-| Implementado | domínio F0, mundo greybox com rotas/marcos/modelos low-poly, animação procedural de NPCs, save/ProfileStore, cliente Input/HUD, envelope v2, `SecurityService` e `TelemetryService` mínimo |
-| Validado automaticamente | 159 testes Lune + Selene + StyLua + Wally + build Rojo |
+| Implementado | domínio F0, mundo greybox com rotas/marcos/modelos low-poly, animação procedural de NPCs e do jogador, interações semânticas com Instrutor/Marco, save/ProfileStore, cliente Input/HUD, envelope v2, `SecurityService` e `TelemetryService` mínimo |
+| Validado automaticamente | 205/205 testes em `tests/run.luau` + 25/25 em `tests/animation.luau`, Selene limpo, StyLua canônico, Wally e build Rojo |
 | Ainda não comprovado | roteiro Play no Studio, physics/collision groups, DataStore real, dois clientes, latência, mobile, gamepad, performance, UX visual e assets de animação |
 
 O CI em pushes para `main` valida contratos headless e a árvore Rojo; não substitui playtest. O snapshot e os links de evidência ficam em `docs/12-TESTING.md`.
@@ -47,6 +47,10 @@ reabra esse `.rbxl` antes de clicar em **Play**.
 Esse `.rbxl` é um artefato local ignorado pelo Git: atualizar ou baixar a branch
 `main` não reconstrói o arquivo. Rode o script novamente depois de cada atualização.
 
+Snapshot canônico gerado em 2026-08-13 09:48:52 -03: `160553` bytes, SHA256
+`8C6D136AE9B6186F5DF6E51F6E6306C085C13BBEF0868097FB8FE6A86831D32F`. Esses
+dados comprovam a geração do arquivo, não a execução dele no Studio.
+
 **Build não é Play:** o build apenas copia o estado atual de `src/` para um arquivo
 `.rbxl`; ele não inicia o jogo nem atualiza um place que já está aberto. O **Play**
 executa o snapshot atualmente carregado no Studio. Portanto, depois de mudar código,
@@ -76,8 +80,8 @@ src/
     Data/            catálogos dirigidos por dados (personagens, habilidades, famílias, NPCs, zonas, objetivos, locale)
   server/            services (domínio F0, save, rede, segurança e telemetria)
   client/            controllers (bootstrap de apresentação)
-tests/               harness Lune + 159 testes unitários
-docs/                produto, arquitetura, decisões, testes e planos (00 a 15)
+tests/               harness Lune + 230 testes unitários (205 run.luau + 25 animation.luau)
+docs/                produto, arquitetura, decisões, testes e planos (00 a 17)
 lib/                 bibliotecas pinadas (ProfileStore)
 ```
 
@@ -94,6 +98,8 @@ lib/                 bibliotecas pinadas (ProfileStore)
 - [docs/13-F0-SLICE.md](docs/13-F0-SLICE.md) — spec de execução da fatia vertical (kit, mapa, roteiro, backlog)
 - [docs/14-ANIMATION-PLAN.md](docs/14-ANIMATION-PLAN.md) — pipeline, qualidade, budgets e gates das animações
 - [docs/15-WORLD-PRESENTATION.md](docs/15-WORLD-PRESENTATION.md) — mundo procedural, modelos greybox, animação dos atores e roteiro de validação
+- [docs/16-COMBAT-AUDIO.md](docs/16-COMBAT-AUDIO.md) — áudio de combate: catálogo, player, integração e pendência de upload
+- [docs/17-COMBAT-FEEL.md](docs/17-COMBAT-FEEL.md) — game-feel: easing, follow-through, idle, wrist snap, hit-stop e câmera de impacto
 
 `PROMPT_AnimeVerseBattlegrounds_v2.md` é o briefing histórico que originou o
 planejamento. Em conflito, os documentos canônicos em `docs/` prevalecem.

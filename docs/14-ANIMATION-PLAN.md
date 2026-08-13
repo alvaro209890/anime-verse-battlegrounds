@@ -1,6 +1,8 @@
 # 14 — Plano de animação e apresentação de combate
 
-> **Status em 2026-08-13:** a fundação greybox procedural de NPCs foi implementada; nenhum dos 45 clipes finais foi criado ou validado. A F0 continua usando modelos em Parts e apresentação genérica até o Gate P1. Este documento transforma “animações bem bonitas” em entregas e critérios verificáveis, sem autorizar cópia de pose, timing, câmera ou efeito de uma franquia.
+> **Status em 2026-08-13 (`108be31` + cadeia leve):** existe uma fundação procedural para NPCs e para o personagem local em ataque leve, ataque pesado, guarda e dash. O ataque leve virou uma **cadeia de quatro golpes de silhueta distinta** (§4.3), com cotovelo e joelho articulados. Validação apenas por análise estática, build e testes headless. **Nenhum dos 45 clipes finais foi criado ou validado, nenhuma das três técnicas possui animação dedicada e não houve Play atual no Studio.** A F0 continua usando apresentação genérica até os gates W1, P1 e A1.
+>
+> Áudio de combate tem documento próprio: `16-COMBAT-AUDIO.md`. Polimento procedural de game-feel (easing, follow-through, idle, wrist snap, hit-stop e câmera de impacto) está em `17-COMBAT-FEEL.md`.
 
 ## 1. Objetivo
 
@@ -18,7 +20,9 @@ Qualidade vem de poucos movimentos muito bem resolvidos antes de ampliar o catá
 
 ### 1.1 Fundação implementada — não confundir com asset final
 
-`WorldPresentation.luau` e `ActorAnimator.luau` introduzem receitas e poses procedurais para dummy, instrutor e dois Estilhaços. Essa camada serve para verificar estados, silhueta básica, telegraph e custo de atualização antes da produção R15. Ela não usa timeline, keyframe, marker ou asset publicado e não conta como nenhum dos 45 clipes planejados. A árvore, o contrato de autoridade e o roteiro de evidência ficam em `15-WORLD-PRESENTATION.md`.
+`WorldPresentation.luau` e `ActorAnimator.luau` fornecem receitas e poses procedurais para dummy, instrutor e dois Estilhaços. `PlayerCombatAnimator.luau` acrescenta um overlay local para a cadeia leve de quatro golpes, pesado, entrada/saída de guarda e dash. As duas camadas compõem `Motor6D.Transform` em `PreSimulation`; eventos de inimigo carregam apenas duração e padrão visual, e o late join recupera a apresentação pelos atributos replicados.
+
+Essa fundação serve para verificar estados, silhueta básica, telegraph e custo antes da produção R15. Ela não usa timeline, keyframe, marker ou asset publicado e **não conta como nenhum dos 45 clipes planejados**. Ombro Cometa, Cadência Quebrada e Retorno de Pulso ainda não possuem animação dedicada. A árvore, o contrato de autoridade e o roteiro de evidência ficam em `15-WORLD-PRESENTATION.md`.
 
 ## 2. Invariantes técnicos e jurídicos
 
@@ -49,6 +53,8 @@ Regras de pose:
 
 ## 4. Escopo de clipes da primeira onda
 
+Os movimentos procedurais atuais são scaffolding descartável e não reduzem as contagens abaixo. Um ataque básico responder visualmente ao input em código não equivale a um clip aprovado.
+
 ### 4.1 Jogador — prioridade A
 
 | Grupo | Clipes | Observação |
@@ -72,6 +78,31 @@ Total de planejamento: **32 clipes de jogador**, contando variantes funcionais e
 | NPC/dummy | 2 | idle e reação funcional |
 
 Total de planejamento: **13 clipes de NPC**. Variações de idle, finais cosméticos e ultimate ficam depois do gate do golpe-modelo.
+
+### 4.3 Cadeia leve procedural — implementada
+
+Substitui a pose única de ataque leve por quatro golpes encadeáveis. Continua procedural: nenhum keyframe, timeline ou asset, e **não conta como clipe planejado**. Serve para medir leitura, ritmo e contra-jogo antes de encomendar arte.
+
+| Degrau | Golpe | Duração | Antecipação | O que muda na silhueta |
+|---:|---|---:|---:|---|
+| 1 | jab (mão da frente) | 0,240 s | 0,065 s | compacto, guarda intacta |
+| 2 | direto (mão de trás) | 0,300 s | 0,070 s | quadril entrega o golpe, tronco gira 34° |
+| 3 | chute circular | 0,380 s | 0,110 s | perna sobe, tronco contrabalança ao lado oposto |
+| 4 | finalizador giratório | 0,480 s | 0,135 s | giro de 74°, chute com a outra perna |
+
+Encadeia dentro de **0,65 s**, espelhando `LIGHT_WINDOW` do `CombatService`. Dash, guarda e técnicas quebram a cadeia, como no servidor. O degrau é decisão de apresentação: quem resolve o `lightStep` autoritativo continua sendo o servidor.
+
+Três mecanismos sustentam a sensação de peso, todos em número:
+
+- **Cotovelo e joelho articulados.** O rig só compunha ombro e quadril, então nenhum soco estendia e chute era impossível. O cotovelo sai de −92° e estala perto de reto no impacto; o joelho encaixa a perna dobrada e estende no chute.
+- **Peso atrasado.** Quadril e tronco são amostrados 25% à frente da extremidade. Sem esse deslocamento de fase o corpo inteiro chega junto e o rig parece girar de uma peça só.
+- **Pausa de impacto e retorno elástico.** A pose do golpe segura alguns quadros e a volta usa `easeOutBack`, que ultrapassa levemente o neutro antes de assentar. `easeOutBack(1)` é exatamente 1, então toda ação termina em neutro cravado, sem resíduo entre golpes.
+
+Ataque pesado e Ombro Cometa herdaram pausa, elástico e cotovelo.
+
+**Limite conhecido:** o cliente avança o degrau a cada clique, mas o servidor zera `lightStep` quando o golpe erra. Numa sequência de erros a pose pode exibir o chute enquanto o servidor está no jab. A divergência é puramente cosmética — nenhuma decisão de acerto depende dela — e só some quando o servidor devolver o degrau confirmado.
+
+Cobertura: `tests/animation.luau` (silhuetas distintas, extensão de cotovelo, chute como perna, amplitude crescente, retorno exato ao neutro, overshoot, liderança do núcleo, janela de encadeamento).
 
 ## 5. Fases e markers
 
@@ -111,6 +142,21 @@ Baselines de feeling para playtest, não regras finais:
 
 ## 7. Pipeline de produção
 
+### Gate W1 — runtime da fundação
+
+W1 é pré-requisito para produzir o golpe-modelo. O código e o RBXL construído não bastam: o roteiro completo e os critérios de aprovação estão em `15-WORLD-PRESENTATION.md` §9.
+
+Para W1 passar, a evidência precisa mostrar, no mínimo:
+
+- Play Solo por 20 minutos com Output limpo de erros do projeto;
+- leve, pesado, guarda e dash retornando à pose-base sem joint preso;
+- telegraph de inimigo legível por contorno branco e símbolo, inclusive sem depender de cor;
+- spawn/respawn e entrada tardia sem ator invisível, duplicado ou congelado;
+- percurso completo pelas duas saídas sem queda entre pisos;
+- prompt do Instrutor e hold de 1,5 s do Marco de Retorno funcionando com validação server-side.
+
+Até essa execução existir, W1 permanece **pendente**, mesmo com 166 testes verdes.
+
 ### Gate A0 — direção e originalidade
 
 - moodboard abstrato de peso, ritmo e materiais, sem copiar frames de anime;
@@ -120,12 +166,26 @@ Baselines de feeling para playtest, não regras finais:
 
 ### Gate A1 — golpe-modelo
 
-- blocking do Ombro Cometa;
-- segunda passada de curvas/arcos;
-- markers e integração somente de apresentação;
-- variantes impacto aberto, guarda e whiff;
-- captura PC + emulação touch + gamepad;
-- relatório de tempo de produção, bugs e custo de revisão.
+**Entrada obrigatória:** W1 aprovado, P1 concluído, rig R15 canônico congelado e conta/grupo proprietário definidos.
+
+**Execução:**
+
+- produzir somente o blocking original do Ombro Cometa e preservar o arquivo-fonte;
+- fazer uma segunda passada de curvas, arcos, peso e retorno à locomoção;
+- declarar `AnticipationEnd`, `PresentationImpact`, `RecoveryPose` e `ClipEnd`;
+- integrar variantes visuais de impacto aberto, guarda e whiff sem conceder autoridade ao marker;
+- capturar frente, perfil e três quartos a 1× e 0,25×, sem VFX e com efeitos reduzidos;
+- executar no Studio em PC, touch e gamepad, incluindo ao menos um dispositivo real antes do PASS.
+
+**Aceite mensurável:**
+
+- 4 de 5 observadores identificam o golpe em silhueta sem áudio/VFX;
+- pé plantado deriva no máximo 0,15 stud e não há clipping evidente a 0,25×;
+- pontos de apresentação ficam a no máximo um frame de 60 FPS do contrato visual esperado;
+- aberto, guarda e whiff são distinguíveis e nunca exibem hit sem confirmação autoritativa;
+- nenhum joint fica preso após cancelar, morrer, respawnar ou alternar para guarda/dash;
+- o cenário-alvo atende ao budget de §8 no dispositivo medido;
+- a revisão registra resultado `PASS`, `REWORK` ou `CUT`, IDs, versões, capturas, métricas e divergências.
 
 Não produzir os outros 44 clipes antes de A1 comprovar o pipeline.
 
@@ -178,13 +238,16 @@ Para cada revisão aprovada, guardar:
 
 ## 10. Estado e próximos passos
 
-Comprovado agora: regras de combate, eventos autoritativos, receitas/poses procedurais puras e build/testes headless descritos em `12-TESTING.md`. A inspeção visual e o profiling do runtime continuam ausentes.
+Comprovado agora: regras de combate, eventos autoritativos, receitas/poses procedurais puras para NPC e jogador local, cadeia leve de quatro golpes (§4.3), catálogo e integração de áudio de combate (`16-COMBAT-AUDIO.md`), contrato visual de telegraph/late join e os testes headless. Um RBXL também foi reconstruído, mas build não comprova execução, aparência nem feeling. **A inspeção visual e o profiling do runtime continuam ausentes** — nada aqui foi visto rodando.
 
 Ainda pendente:
 
 1. concluir P1;
 2. definir conta/grupo proprietário dos assets;
 3. escolher animador e ferramenta-fonte;
-4. produzir o blocking original do Ombro Cometa;
-5. substituir gradualmente o greybox procedural por um futuro `AnimationController` somente quando houver asset real — não criar serviço vazio;
-6. executar A1 no Studio e em dispositivo antes de ampliar a lista.
+4. executar e aprovar W1 no Studio;
+5. **ver a cadeia leve rodando no Studio** — quatro cliques seguidos num Estilhaço, conferindo leitura do chute e do finalizador na câmera padrão;
+6. publicar os 29 `.ogg` e preencher `assetId` em `CombatAudio.luau` (`16-COMBAT-AUDIO.md` §5);
+7. produzir o blocking original do Ombro Cometa;
+8. substituir gradualmente o procedural somente quando houver asset real aprovado — não criar serviço vazio;
+9. executar A1 no Studio e em dispositivo real antes de animar Cadência Quebrada ou Retorno de Pulso.

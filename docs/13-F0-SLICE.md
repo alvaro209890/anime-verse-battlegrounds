@@ -24,18 +24,18 @@ P1 (revisão jurídica) continua obrigatório antes de concept art, áudio final
 
 ## 2. Divergências do código atual
 
-Itens 1–13 estão fechados em código/headless, e a fundação procedural de mundo/apresentação foi acrescentada. O que **não** está comprovado é execução real em Play: o arquivo chegou a ser aberto manualmente no editor, mas não há roteiro, Output ou captura de uma sessão. Ainda falta:
+Itens 1–13 estão fechados em código/headless, e o commit `108be31` acrescenta a correção de runtime preparatória I1: pisos para todos os volumes, interação contextual, telegraph acessível e resposta procedural do jogador. O snapshot agora possui 166 testes. O que **não** está comprovado é execução real em Play: o build atual não foi executado, e não há roteiro, Output ou captura dessa revisão. Ainda falta:
 
 | Onde | Estado atual | Alvo desta spec |
 |---|---|---|
 | `src/shared/Data/Abilities.luau` | `comet_shoulder`, `broken_cadence`, `pulse_return`; `eclipse_beat` desligada | feito |
 | `src/shared/Data/EnergyFamilies.luau` | Umbral regen 2/6, Fluxo 6 / 120 ms, cap 1,5 s | feito |
 | `src/shared/Data/Npcs.luau` | dummy 10000 HP; `enemy_wandering_shard` 40 HP / dano 6 / alcance 4 / telegraph 400 ms; `npc_threshold_instructor` (ofertante) | **item 9 feito**: `enemy_anchored_shard` (80 HP, slam 12/700 ms, combo 5+5/300 ms, respawn 180 s, XP 80 cooldown 180 s, leeching 1%/8 s) — pathfinding/Studio pendente |
-| `src/shared/Data/Zones.luau` | 3 zonas com volumes (AABB), 6 âncoras persistidas + 6 pontos de Estilhaço, greybox F0-BASELINE | feito |
+| `src/shared/Data/Zones.luau` | 3 zonas com volumes (AABB), 7 âncoras persistidas (`anchor_instructor` incluída) + 6 pontos de Estilhaço, greybox F0-BASELINE | feito |
 | `src/shared/Geometry.luau` | distância, costas, esfera, cápsula, caixa, lunge e passo de perseguição | feito |
 | `SpatialService` | registro de posição/olhar; hitbox à frente, cápsula do trajeto, `resolveCometShoulder` | feito no domínio; leitura do `HumanoidRootPart` só roda no Studio |
 | `EnemyService` | spawn nas 6 âncoras, perseguição 12 studs/s, ciclo de ataque, respawn 45 s, teto 4 | feito no domínio; nunca rodou em Studio |
-| `WorldService` / `WorldPresentation` | constrói chão, rotas, praça, portões, cratera segmentada, marcos, iluminação, modelos low-poly, âncoras/volumes invisíveis e collision groups a partir de dados puros | **código/headless/build feitos; aparência, colisão e performance não verificadas em Play** |
+| `WorldService` / `WorldPresentation` | constrói piso para cada volume canônico — inclusive transições norte/oeste e braço livre oeste —, rotas, praça, portões, cratera, marcos, iluminação, modelos low-poly, telegraph branco + símbolo e collision groups | **código/headless/build feitos; aparência, colisão, legibilidade e performance não verificadas em Play** |
 | `src/shared/Data/Quests.luau` | `quest_hunt`: 3 Estilhaços, +40 XP, unlock Cometa, aceite forçado em 90 s | **itens 9/10 feitos**: `quest_elite` (1 Ancorado, +60 XP, unlock Cadência, aceite 900 s) e `quest_flow` (kind `flow_echo`, +40 XP, unlock Pulso, aceite 2700 s); cadeia sequencial caça → elite → timing |
 | `src/shared/Data/Locale.luau` | chaves §16 em PT-BR e EN; validado no boot contra os catálogos | copy final e P1 |
 | `CombatService` | cadeia leve, guarda, aparo, pesado, quebra, dash, dummy, comet, Estilhaço, `killed` na transição vivo → morto; alvo e lado do golpe agora vêm do `SpatialService` | **itens 8/10 feitos**: postura do Pulso (250 ms, 50%, contra 8, erro 600 ms) e ciclo do elite (combo/slam alternados, slam unblockable com guarda 30%) — Studio pendente |
@@ -45,16 +45,17 @@ Itens 1–13 estão fechados em código/headless, e a fundação procedural de m
 | `ZoneService` | zona atual, `canPvp`, transição 5 s, lockout 15 s, `ZoneEvent` + `ZoneCrossingIntent`; hostil na segura não marca PvP | 5 sinais visíveis/audíveis, volumes e collision groups no Studio |
 | `PlayerSessionService` | snapshot Ready lê zona, unlocks, objetivo e XP não consolidado | feito no domínio |
 | `TelemetryService` / `SecurityService` | sete eventos allowlisted; envelope/payload fechado; replay, sequência e rate limit por classe | feito em código/headless; sink F0 é log estruturado, adversarial runtime pendente |
-| `src/client/init.client.lua` | sete controllers na ordem §12.3; espera `SessionSnapshot.ready`; sem intenção no boot; envelope v2 e HUD localizado; `ActorAnimator` separado anima somente Motor6D de apresentação | feito em código/headless; Studio e dispositivos pendentes |
+| `InteractionService` / `Interactions` | Instrutor e Marco allowlisted; alvo, âncora, posição, distância e hold do Marco medido por 1,5 s no relógio do servidor; pending limpo no leave | feito em código/headless; prompt e fluxo real pendentes no Studio/dispositivos |
+| `src/client/init.client.lua` | sete controllers na ordem §12.3; espera `SessionSnapshot.ready`; sem intenção no boot; envelope v2 e HUD localizado; `InteractionController` usa `ProximityPrompt`; `ActorAnimator` e `PlayerCombatAnimator` alteram somente apresentação | feito em código/headless; Studio e dispositivos pendentes |
 | `SaveService` | stub em memória; persiste `wallet` | **item 11 feito**: ProfileRoot v1 sem wallet, ProfileStore via `Shared.vendor` (lock, autosave 60–120 s, release); DataStore real e respawn no Studio pendentes |
 | `StudioDebug` | exige `RunService:IsStudio()` + atributo `F0Debug = true`; concede as 3 técnicas como flags de sessão fora do save; sem remote de cheat | feito em código/headless; uso real no Studio pendente |
-| Mapa/HUD | greybox enriquecido e HUD mínimo implementados por código; build Rojo verde | execução, layout, animação e feeling no Studio/dispositivos pendentes |
+| Mapa/HUD | greybox enriquecido, buracos norte/oeste cobertos a partir dos volumes, HUD mínimo, prompts localizados e telegraph acessível implementados por código | execução, layout, colisão, animação e feeling no Studio/dispositivos pendentes |
 
-Testes Lune: 159 casos em `tests/run.luau` (`docs/12-TESTING.md`).
+Testes Lune: 166 casos em `tests/run.luau` no commit `108be31` (`docs/12-TESTING.md`).
 
-**Comprovado neste recorte:** técnicas locked no spawn; Estilhaço Errante completo (spawn nas 6 âncoras, perseguição a 12 studs/s, telegraph 400 ms, dano 6, alcance 4, sem aggro através da fronteira, respawn 45 s, teto de 4); XP com retorno decrescente por âncora e teto de sessão; objetivo 1 do aceite ao prêmio; unlock do Ombro Cometa no 3º kill; geometria do greybox coerente com as âncoras; hitbox à frente; lunge de 7 studs com cap 8 e parada na guarda.
+**Comprovado neste recorte:** técnicas locked no spawn; Estilhaço Errante completo no domínio; XP e objetivo 1; geometria do greybox; hitbox e lunge; uma receita de piso por volume canônico; resposta procedural pura de leve, pesado, guarda e dash; catálogo fechado de interação; gate `ready`; alvo exclusivo; proximidade e hold de 1,5 s revalidados pelo servidor, sem recompensa declarada pelo cliente.
 
-**Não comprovado — e esta é a linha que importa:** não há playtest Studio registrado. O `WorldService` constrói o greybox/modelos e o `UIController` constrói o HUD por código, mas faltam boot/spawn, Parts/Motor6D reais, layout, clipping, feeling, hold de 0,6 s no toque, gamepad, collision groups e teste cego da fronteira. Persistência entre sessões no DataStore real também segue ausente. Um `rojo build` verde prova que a árvore monta, não que o jogo roda.
+**Não comprovado — e esta é a linha que importa:** não há playtest Studio do build atual. O código constrói pisos, prompts, modelos, telegraph e HUD, mas faltam boot/spawn, Parts/Motor6D reais, layout, clipping, colisão, feeling, hold de fronteira, interação com Instrutor/Marco e sincronismo visual em Play. Toque, mobile e gamepad reais, DataStore real, servidor publicado e dois clientes continuam pendentes. Um teste headless ou `rojo build` verde prova estrutura/regra, não runtime Roblox.
 
 **Arquitetura da camada espacial (2026-08-12).** A regra fica em módulos puros e testáveis; só a tradução para Instances é intocada por teste.
 
@@ -69,7 +70,7 @@ Testes Lune: 159 casos em `tests/run.luau` (`docs/12-TESTING.md`).
 
 Regra de manutenção: se o `WorldService` precisar de um `if` de gameplay, o `if` está no lugar errado. Ele traduz dados em parts e nada mais.
 
-**Inferência de layout do Portão Oeste.** §8.1 dimensiona a planície em 160 × 120 ao norte, mas não diz onde o Portão Oeste desemboca. `Zones.luau` acrescenta um braço oeste à zona livre para o portão não dar em lugar nenhum. É F0-BASELINE, revisável no greybox do Studio.
+**Inferência de layout do Portão Oeste.** §8.1 dimensiona a planície em 160 × 120 ao norte, mas não diz onde o Portão Oeste desemboca. `Zones.luau` acrescenta um braço oeste à zona livre para o portão não dar em lugar nenhum. O `WorldService` agora deriva piso de cada volume e cobre tanto esse braço quanto as transições norte/oeste; isso corrige em código os vãos que poderiam derrubar o jogador, mas a travessia ainda precisa ser observada em Play. É F0-BASELINE, revisável no greybox do Studio.
 
 **Interpretação registrada do retorno decrescente (§9.2).** A spec diz “retorno decrescente após 6 kills da mesma âncora na sessão (12, depois 0)” sem fechar onde o 12 termina. A implementação adota **6 kills a 25, os 6 seguintes a 12, o resto a 0**, expresso como dados em `Npcs.luau` (`xpFullKills` / `xpReducedKills` / `xpReducedValue`). É F0-BASELINE: muda com evidência de playtest, sem reabrir política.
 
@@ -283,7 +284,7 @@ Alto risco **não existe** na fatia.
 
 ### 8.3 Âncoras de spawn
 
-IDs persistidos, nunca CFrame cru: `anchor_bastion_spawn`, `anchor_bastion_return`, `anchor_training`, `anchor_gate_north`, `anchor_gate_west`, `anchor_elite`. Morte na planície respawna em `anchor_bastion_return`.
+IDs persistidos, nunca CFrame cru: `anchor_bastion_spawn`, `anchor_bastion_return`, `anchor_training`, `anchor_instructor`, `anchor_gate_north`, `anchor_gate_west`, `anchor_elite`. Morte na planície respawna em `anchor_bastion_return`.
 
 ## 9. Inimigos
 
@@ -412,7 +413,7 @@ Mobile: no máximo dois botões simultâneos. Técnicas em cluster direito; dash
 
 ### 12.3 Controllers a criar
 
-Ordem: `InputController` → `CharacterController` → `AbilityController` → `CombatFeedbackController` → `ResourceController` → `ZoneController` → `UIController`. Sem `LoadoutController` nesta fatia.
+Ordem principal: `InputController` → `CharacterController` → `AbilityController` → `CombatFeedbackController` → `ResourceController` → `ZoneController` → `UIController`. `InteractionController` é uma extensão contextual entre input e UI: cria prompts nativos localizados e emite apenas a intenção; não muda a autoridade nem introduz `LoadoutController`. `PlayerCombatAnimator` é apresentação subordinada ao input, não controller de domínio.
 
 Remover o `FireServer` de boot em `init.client.lua`.
 
@@ -431,7 +432,7 @@ Envelope: `protocolVersion`, `requestId`, `clientSequence`, `action`, `payload`.
 | `CombatEvent` | S→C | `executionId`, `abilityId`, hit/guarda/morte | fórmulas |
 | `ZoneEvent` | S→C | de, para, regra PvP, instante, sinais, lockoutRemaining | — |
 | `ZoneCrossingIntent` | C→S | `toZoneId`, `holdConfirmed?`, `requestId` | posição, “já cruzei” |
-| `InteractionIntent` | C→S | `anchorId` / `npcId` | recompensa |
+| `InteractionIntent` | C→S | exatamente um de `anchorId` / `npcId`; `phase = begin/complete/cancel` | distância, duração, recompensa |
 | `AbilityRejected` | S→C | `abilityId`, `reason` estável | — |
 
 `AbilityActivate` atual vira `AbilityIntent` (mesmo remote pode ser renomeado numa mudança só, com versão 2). Rate limit: 8 intenções de combate/s; excesso descarta sem efeito.
@@ -498,7 +499,9 @@ Permitido: parts, cores neutras, luz, UI retangular, som de beep, animação R15
 
 Proibido até P1: silhueta/roupa/cabelo reconhecíveis, VFX cromático de referência, áudio temático, ícones de franquia, nomes canônicos em textura.
 
-Telegraph de perigo: contorno branco + ícone, não só vermelho. Mobile reduz partículas; mantém o contorno.
+Telegraph de perigo: contorno branco + símbolo `!`/`!!`, não só vermelho. A implementação procedural recebe duração e padrão autoritativos, preserva apresentação de late join e não abre hitbox. Mobile reduz partículas; mantém o contorno. Tudo isso continua pendente de inspeção em Play.
+
+O personagem local possui overlay procedural de antecipação, impacto, guarda, dash e retorno ao neutro sobre `Motor6D`, sem decidir acerto, dano, custo ou deslocamento final. É resposta greybox testável, não substitui o golpe-modelo A1 nem conta como clip final.
 
 A direção de produção, lista de clipes, markers, gates de qualidade e budgets de dispositivo estão em `docs/14-ANIMATION-PLAN.md`. Esse plano não muda a proibição de assets finais antes de P1 nem transforma animação em autoridade de combate.
 
@@ -520,7 +523,7 @@ Cheat de unlock: remote **inexistente** no cliente. O gate `StudioDebug` só con
 
 ## 19. Testes da mudança de catálogo
 
-Os casos abaixo estão em `tests/run.luau` (159 no total; fonte: chamadas `test(...)`):
+Os casos abaixo estão em `tests/run.luau` (166 no total; fonte: chamadas `test(...)`):
 
 - roster `eclipse_fist` com 3 skills enabled + 1 ultimate disabled
 - `comet_shoulder` custo 18, CD 7, runner registrado
@@ -601,7 +604,7 @@ Camada espacial (greybox, hitbox, lunge e AI — 2026-08-12):
 - inimigo: kill reporta âncora e autor para o crédito de XP
 - remote: `EnemyEvent` S→C (version 1) com telegraph no payload
 
-Integração Lune não cobre Studio. Evidência runtime: `12-TESTING.md` §6. O que segue **sem nenhuma evidência de execução**: abrir o place, ver as parts do `WorldService`, feeling do combate, sinais visíveis/audíveis, hold 0,6 s no toque, collision groups reais, latência, mobile e gamepad.
+Integração Lune não cobre Studio. Evidência runtime: `12-TESTING.md` §6. O que segue **sem nenhuma evidência de execução no build atual**: reabrir o snapshot, ver pisos/parts/prompts do `WorldService`, falar com o Instrutor, consolidar no Marco, avaliar telegraph e resposta procedural, feeling do combate, sinais visíveis/audíveis, hold 0,6 s da fronteira, collision groups reais, latência, toque, mobile, gamepad, DataStore e múltiplos clientes.
 
 ## 20. Backlog priorizado
 
@@ -612,15 +615,17 @@ Ordem de implementação; cada item fecha com teste automatizado **ou** evidênc
 3. ~~Spawn + movimento + leve/guarda/dash contra dummy~~ (domínio headless 2026-08-12; movimento/Studio pendente)
 4. ~~Pesado + quebra de guarda~~ (feito 2026-08-12; 43 testes)
 5. ~~Ombro Cometa~~ (feito 2026-08-12; lunge espacial de 7 studs com cap 8, parada na guarda e cápsula do trajeto entraram em 2026-08-12 via `SpatialService.resolveCometShoulder`)
-6. ~~Greybox + `ZoneService` + 5 sinais~~ (regras concluídas em 2026-08-12; fundação visual evoluída em 2026-08-13 — praça/rotas, portais, cratera segmentada, Marco de Retorno, marcos da planície, iluminação neutra, modelos low-poly e animação procedural de NPCs. Volumes/âncoras ficaram invisíveis e o servidor sincroniza a raiz dos inimigos pelo `SpatialService`. **Sem execução em Studio**: Parts/Motor6D, sinais visíveis/audíveis, iluminação, clipping, hold 0,6 s no toque e playtest cego continuam pendentes)
+6. ~~Greybox + `ZoneService` + 5 sinais~~ (regras concluídas em 2026-08-12; fundação visual evoluída em 2026-08-13. O commit `108be31` passou a gerar piso para todos os volumes, cobrindo os buracos norte/oeste, moveu o soft target para os atores, acrescentou telegraph branco + símbolo e sincronizou duração/padrão de apresentação. **Sem execução em Studio**: Parts/Motor6D, pisos, sinais, iluminação, clipping, hold 0,6 s e playtest cego continuam pendentes)
 7. ~~Estilhaços + objetivo 1 + unlock Cometa~~ (completo 2026-08-12; 109 testes — Locale, `Quests.luau`, `QuestService`, XP com retorno decrescente e teto de sessão, unlock no 3º kill, `InteractionIntent` + `StateDelta`, e o `EnemyService` com spawn nas 6 âncoras, perseguição, telegraph e respawn. **Pendente**: persistência do XP/flags, que é o item 11, e execução em Studio)
 8. ~~Cadência + Fluxo~~ (completo 2026-08-12 — janela de reentrada abre 120 ms após o fim do active do golpe 2 (400 ms da ativação), clique prematuro não destrói a janela, reentrada agenda o eco para 350 ms depois (`AbilityService.tick` no Heartbeat), eco 4 com Fluxo +6, cap 1,5 s e bônus +3 a cada 8 s no `ResourceService`. **Pendente**: execução em Studio)
 9. ~~Elite + unlock Cadência~~ (completo 2026-08-12 — `enemy_anchored_shard` no catálogo com slam 12/700 ms unblockable (guarda corta 30%) e combo 5+5/300 ms alternados por ciclo; spawn único na `anchor_elite`; respawn 180 s; leeching ≥ 1% da vida ou 8 s no raio sem último golpe; XP 80 com cooldown de 180 s por jogador; `quest_elite` +60 XP e `unlock_broken_cadence`. **Pendente**: cratera e ciclo no Studio)
 10. ~~Pulso + objetivo 45–60 min~~ (completo 2026-08-12 — postura de 250 ms reduz 50% de UM golpe frontal; contra 8 + empurrão 8 studs espacial; erro vira recovery 600 ms; costas e slam do elite vencem a postura; `quest_flow` kind `flow_echo` creditado pelo eco da Cadência, +40 XP e `unlock_pulse_return`. **Pendente**: empurrão e feeling no Studio)
 11. ~~Consolidação + morte + ProfileStore~~ (completo 2026-08-12 — consolidação no Marco de Retorno move todo o não consolidado com recibo `operationId` idempotente e anel de 32 recibos; morte aplica perda por zona: segura 0, livre PvE 10%, PvP 15%, cap 200; `SaveService` com ProfileRoot v1, session lock, autosave 60–120 s com jitter e os 5 cenários de §11.2 cobertos por teste; `lib/ProfileStore.luau` entra no build via `ReplicatedStorage.Shared.vendor`. **Pendente**: DataStore real no place privado e respawn com proteção 8 s no Studio)
-12. ~~HUD/input mobile e gamepad~~ (implementado em código/headless 2026-08-13 — controllers na ordem §12.3, gate `SessionSnapshot.ready`, envelope v2, 8 intenções/s, teclado/mouse/toque/gamepad, soft lock 8°/25 studs apenas no ataque básico de toque/gamepad, 3 técnicas com unlock/cooldown, ultimate oculta, feedback/Umbral/zona/objetivo e Locale PT-BR/EN. **Pendente**: qualquer playtest Studio, toque em dispositivo e gamepad real)
+12. ~~HUD/input mobile e gamepad~~ (implementado em código/headless 2026-08-13 — controllers na ordem §12.3, gate `SessionSnapshot.ready`, envelope v2, 8 intenções/s, teclado/mouse/toque/gamepad, soft lock 8°/25 studs apenas no ataque básico, HUD localizado e resposta procedural local. O recorte I1 adicionou `ProximityPrompt` contextual para PC/toque/gamepad. **Pendente**: qualquer playtest do build atual, toque/mobile e gamepad reais)
 13. ~~Telemetria + rejeição adversarial de remotes~~ (implementado em código/headless 2026-08-13 — `TelemetryService` aceita somente os sete eventos da §15 e remove campos arbitrários; `SecurityService` fecha schema de envelope/payload, bloqueia replay de `requestId`/sequência, NaN/vetor impossível/campo extra e aplica 8 intenções de combate/s com orçamento separado para interação. Rejeição é amostrada por contrato/motivo para não inundar logs. **Pendente**: fuzz/spam em Studio com dois clientes e sink operacional fora do log do servidor)
-14. Playtest interno 20 min (PC, um Android, um gamepad), começando pelo Gate W1 de `15-WORLD-PRESENTATION.md`
+**Recorte preparatório I1 concluído em código/headless (snapshot final desta rodada, 169 testes):** `anchor_instructor`; prompts localizados para Instrutor/Marco; `InteractionIntent` fechado com `begin/complete/cancel`; alvo, distância e hold de 1,5 s autoritativos; pisos das duas transições e do braço oeste; telegraph acessível; resposta procedural do jogador. Nenhuma dessas Instances foi observada em Play.
+
+14. Playtest interno 20 min: primeiro reabrir o snapshot atual, então executar W1 solo com os dois pisos/portões e as duas interações; depois A1 e R1. Android, gamepad, DataStore real e múltiplos clientes só mudam de pendente quando forem realmente executados.
 
 Não puxar item 8 antes do 5. Não puxar ProfileStore real antes do loop dummy existir — senão o save testa um jogo que ainda não se joga.
 

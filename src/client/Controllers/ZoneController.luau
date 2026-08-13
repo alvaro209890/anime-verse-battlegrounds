@@ -11,6 +11,7 @@ export type Controller = {
 }
 
 local ZoneController = {}
+local CLIENT_HOLD_SECONDS = 0.65
 
 function ZoneController.new(
 	state: any,
@@ -52,25 +53,27 @@ function ZoneController.onZoneEvent(controller: Controller, payload: { [string]:
 	end
 	if type(payload.lockoutRemaining) == "number" and payload.lockoutRemaining > 0 then
 		controller.stateApi.setFeedback(controller.state, "hud.feedback_zone_lockout", 1)
+	elseif rejected and payload.rejectedReason ~= "hold_required" then
+		controller.stateApi.setFeedback(controller.state, "hud.feedback_rejected", 1)
 	end
 end
 
 function ZoneController.onAction(controller: Controller, action: string): ()
 	if action == "ZoneHoldDown" and controller.state.zoneHoldRequired then
 		controller.holdStartedAt = controller.now()
+		if controller.state.pendingZoneId and controller.send then
+			controller.send("ZoneCrossingIntent", "ZoneCrossingIntent", {
+				toZoneId = controller.state.pendingZoneId,
+				phase = "begin",
+			})
+		end
 	elseif action == "ZoneHoldUp" then
 		local startedAt = controller.holdStartedAt
 		controller.holdStartedAt = nil
-		if
-			startedAt
-			and controller.now() - startedAt >= 0.6
-			and controller.state.zoneHoldRequired
-			and controller.state.pendingZoneId
-			and controller.send
-		then
+		if startedAt and controller.state.pendingZoneId and controller.send then
 			controller.send("ZoneCrossingIntent", "ZoneCrossingIntent", {
 				toZoneId = controller.state.pendingZoneId,
-				holdConfirmed = true,
+				phase = if controller.now() - startedAt >= CLIENT_HOLD_SECONDS then "complete" else "cancel",
 			})
 		end
 	end

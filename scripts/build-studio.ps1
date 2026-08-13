@@ -8,6 +8,11 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $projectPath = Join-Path $repoRoot "default.project.json"
 $packagesPath = Join-Path $repoRoot "Packages"
 $artifactPath = Join-Path $repoRoot "anime-verse-battlegrounds.rbxl"
+$artifactLockPath = "$artifactPath.lock"
+
+if (Test-Path -LiteralPath $artifactLockPath) {
+	throw "Build abortado: o lock '$artifactLockPath' existe. Feche o place no Roblox Studio e tente novamente. O script preservou o lock e nao sobrescreveu o RBXL."
+}
 
 function Resolve-ProjectTool {
 	param([Parameter(Mandatory = $true)][string] $Name)
