@@ -33,6 +33,7 @@ local CombatCameraController = require("../src/client/Presentation/CombatCameraC
 local CombatAudioPlayer = require("../src/client/Presentation/CombatAudioPlayer")
 local CombatAudio = require("../src/shared/Data/CombatAudio")
 local AbilityVfx = require("../src/shared/Data/AbilityVfx")
+local CombatHudController = require("../src/client/Controllers/CombatHudController")
 local fs = require("@lune/fs")
 
 local CHAIN = PlayerCombatAnimator.LightChainLength
@@ -493,6 +494,44 @@ test("vfx: nenhum raio do cometa ultrapassa o alcance da habilidade", function()
 			("camada %s raio %.1f <= alcance %.1f"):format(entry.id, entry.radiusStuds, technique.rangeStuds)
 		)
 	end
+end)
+
+-- ── HUD de combate: números de dano + barras de inimigos (docs/17) ─────────
+
+test("hud: número de dano só com desfecho e dano positivo", function()
+	assertTrue(CombatHudController.shouldShowDamage({ outcome = "hit", damage = 14 }), "acerto mostra")
+	assertTrue(CombatHudController.shouldShowDamage({ outcome = "counter", damage = 10 }), "contra mostra")
+	assertTrue(
+		CombatHudController.shouldShowDamage({ outcome = "guard", damage = 6 }),
+		"guarda com dano reduzido mostra"
+	)
+	assertTrue(not CombatHudController.shouldShowDamage({ outcome = "hit", damage = 0 }), "dano zero não mostra")
+	assertTrue(not CombatHudController.shouldShowDamage({ outcome = "miss", damage = 10 }), "erro não mostra")
+	assertTrue(not CombatHudController.shouldShowDamage({ outcome = "hit" }), "sem dano não mostra")
+	assertTrue(not CombatHudController.shouldShowDamage({}), "payload vazio não mostra")
+end)
+
+test("hud: cor do número varia com o desfecho", function()
+	local function assertRgb(outcome: string?, expected: { number }, msg: string)
+		local rgb = CombatHudController.damageColor(outcome)
+		assertEq(rgb[1], expected[1], msg .. " r")
+		assertEq(rgb[2], expected[2], msg .. " g")
+		assertEq(rgb[3], expected[3], msg .. " b")
+	end
+	assertRgb("hit", { 255, 255, 255 }, "acerto branco")
+	assertRgb("guard", { 150, 190, 255 }, "guarda azul")
+	assertRgb("counter", { 255, 200, 120 }, "contra âmbar")
+	assertRgb("death", { 255, 90, 90 }, "morte vermelho")
+	assertRgb(nil, { 255, 255, 255 }, "sem desfecho cai no branco")
+end)
+
+test("hud: fração da barra clampa em 0..1", function()
+	assertEq(CombatHudController.barFraction(60, 60), 1, "vida cheia")
+	assertEq(CombatHudController.barFraction(30, 60), 0.5, "meia vida")
+	assertEq(CombatHudController.barFraction(0, 60), 0, "morta")
+	assertEq(CombatHudController.barFraction(-5, 60), 0, "negativo clampa em 0")
+	assertEq(CombatHudController.barFraction(90, 60), 1, "acima do máximo clampa em 1")
+	assertEq(CombatHudController.barFraction(30, 0), 0, "máximo zero não divide")
 end)
 
 for _, entry in tests do

@@ -256,6 +256,29 @@ local function createActorModel(name: string, actorId: string, npcId: string, re
 		local rightLeg = leftLeg:Clone()
 		rightLeg.Name = "RightLeg"
 		attach(root, rightLeg, CFrame.new(0.58 * scale, -2.2 * scale, 0), "Joint_RightLeg")
+
+		-- ── Toques de skin (pós-P1 vira arte; hoje são silhueta de cor) ──────
+		if npcId == "npc_threshold_instructor" then
+			-- Capuz do mensageiro: meia carapaça atrás da cabeça, energia umbral
+			-- na borda. Não anima (joint próprio) — presença, não movimento.
+			local hood =
+				makeVisualPart("Part", "Hood", Vector3.new(1.5, 1.2, 1.1) * scale, accentColor, Enum.Material.Slate)
+			hood.Shape = Enum.PartType.Ball
+			attach(head, hood, CFrame.new(0, 0.35 * scale, -0.55 * scale), "Joint_Hood")
+			-- Gola alta e faixa de energia no peito (Neon = o "fio" umbral).
+			local collar =
+				makeVisualPart("Part", "Collar", Vector3.new(1.6, 0.5, 1.5) * scale, accentColor, Enum.Material.Slate)
+			attach(torso, collar, CFrame.new(0, 1.55 * scale, 0), "Joint_Collar")
+			local belt =
+				makeVisualPart("Part", "Belt", Vector3.new(1.7, 0.34, 1.25) * scale, coreColor, Enum.Material.Neon)
+			attach(torso, belt, CFrame.new(0, -0.55 * scale, 0.02 * scale), "Joint_Belt")
+		elseif npcId == "npc_training_dummy" then
+			-- Alvo de treino: disco pálido neon no peito — o ponto onde bater.
+			local target =
+				makeVisualPart("Part", "Target", Vector3.new(1.05, 0.22, 1.05) * scale, coreColor, Enum.Material.Neon)
+			target.Shape = Enum.PartType.Cylinder
+			attach(torso, target, CFrame.new(0, 0.15 * scale, 0.42 * scale), "Joint_Target")
+		end
 	else
 		-- Pivot visual comum: todas as peças do shard recebem bob/lean/spin sem
 		-- deslocar o root autoritativo nem se separar umas das outras.
@@ -306,6 +329,52 @@ local function createActorModel(name: string, actorId: string, npcId: string, re
 			Enum.Material.Slate
 		)
 		attach(visualRoot, top, CFrame.new(0, 2 * scale, 0), "Joint_ShardTop")
+
+		-- ── Toques de skin dos estilhaços ──────────────────────────────────
+		-- Halo de energia: anel Neon fino girando com o pivot visual (o
+		-- ActorAnimator já roda o VisualRoot, então o anel "orbita" sozinho).
+		local halo =
+			makeVisualPart("Part", "Halo", Vector3.new(0.14, 3.6 * scale, 3.6 * scale), coreColor, Enum.Material.Neon)
+		halo.Shape = Enum.PartType.Cylinder
+		attach(visualRoot, halo, CFrame.new(0, 0.2 * scale, 0) * CFrame.Angles(0, 0, math.rad(90)), "Joint_Halo")
+		-- Cristais menores flanqueando o corpo: mais volume sem mudar a hitbox.
+		local front = makeVisualPart(
+			"WedgePart",
+			"ShardFront",
+			Vector3.new(0.55, 1.5, 0.55) * scale,
+			accentColor,
+			Enum.Material.Slate
+		)
+		attach(visualRoot, front, CFrame.new(0, -0.3 * scale, -1.7 * scale), "Joint_ShardFront")
+		local back = front:Clone()
+		back.Name = "ShardBack"
+		attach(
+			visualRoot,
+			back,
+			CFrame.new(0, -0.3 * scale, 1.7 * scale) * CFrame.Angles(0, math.pi, 0),
+			"Joint_ShardBack"
+		)
+		-- Coroa do elite: três cunhas apontando para cima, a assinatura do
+		-- Estilhaço Ancorado à distância.
+		if npcId == "enemy_anchored_shard" then
+			for crownIndex = 1, 3 do
+				local angle = (crownIndex - 1) / 3 * math.pi * 2
+				local crown = makeVisualPart(
+					"WedgePart",
+					("Crown_%d"):format(crownIndex),
+					Vector3.new(0.5, 1.9, 0.5) * scale,
+					accentColor,
+					Enum.Material.Neon
+				)
+				attach(
+					visualRoot,
+					crown,
+					CFrame.new(math.cos(angle) * 0.95 * scale, 3.1 * scale, math.sin(angle) * 0.95 * scale)
+						* CFrame.Angles(0, -angle, math.rad(-28)),
+					("Joint_Crown_%d"):format(crownIndex)
+				)
+			end
+		end
 	end
 
 	buildTelegraphPresentation(model, root, rootHeight)

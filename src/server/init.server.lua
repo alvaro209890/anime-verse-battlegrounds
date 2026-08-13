@@ -251,20 +251,35 @@ if dummyDef then
 	end
 end
 
-local function fireVitalsForFighter(fighterId: string): ()
-	local userIdText = string.match(fighterId, "^player:(%d+)$")
-	if not userIdText then
+local function fireVitalsForFighter(fighterId: string, viewerUserId: number?): ()
+	local fighter = CombatService.getFighter(fighterId)
+	if not fighter then
 		return
 	end
-	local player = game.Players:GetPlayerByUserId(tonumber(userIdText) :: number)
-	local fighter = CombatService.getFighter(fighterId)
-	if player and fighter then
-		RemoteGateway.fireClient(player, Remotes.Names.StateDelta, {
-			health = fighter.health,
-			maxHealth = fighter.maxHealth,
-			guard = fighter.guard,
-			maxGuard = fighter.maxGuard,
-		})
+	local userIdText = string.match(fighterId, "^player:(%d+)$")
+	if userIdText then
+		local player = game.Players:GetPlayerByUserId(tonumber(userIdText) :: number)
+		if player then
+			RemoteGateway.fireClient(player, Remotes.Names.StateDelta, {
+				health = fighter.health,
+				maxHealth = fighter.maxHealth,
+				guard = fighter.guard,
+				maxGuard = fighter.maxGuard,
+			})
+		end
+		return
+	end
+	-- NPC: o delta carrega fighterId e vai para quem causou/observou o dano.
+	-- O cliente usa isso para desenhar a barra de vida do inimigo.
+	if viewerUserId then
+		local player = game.Players:GetPlayerByUserId(viewerUserId)
+		if player then
+			RemoteGateway.fireClient(player, Remotes.Names.StateDelta, {
+				fighterId = fighterId,
+				health = fighter.health,
+				maxHealth = fighter.maxHealth,
+			})
+		end
 	end
 end
 
@@ -519,8 +534,9 @@ AbilityService.init({
 			targetId = targetId,
 			abilityId = abilityId,
 			outcome = outcome or "hit",
+			damage = damage,
 		})
-		fireVitalsForFighter(targetId)
+		fireVitalsForFighter(targetId, userId)
 	end,
 	onCombatKill = function(userId: number, targetId: string, abilityId: string)
 		if resolveAbilityKill then

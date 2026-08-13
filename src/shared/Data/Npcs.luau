@@ -65,7 +65,7 @@ local Npcs: { [string]: NpcDefinition } = {
 		kind = "dummy",
 		maxHealth = 10000,
 		maxGuard = 0,
-		attackDamage = 4,
+		attackDamage = 5,
 		attackRange = 8,
 		attackPeriodSeconds = 2.5,
 		telegraphMs = 400,
@@ -76,9 +76,9 @@ local Npcs: { [string]: NpcDefinition } = {
 		id = "enemy_wandering_shard",
 		displayNameKey = "enemy.wandering_shard.name",
 		kind = "enemy",
-		maxHealth = 40,
+		maxHealth = 60,
 		maxGuard = 0,
-		attackDamage = 6,
+		attackDamage = 8,
 		attackRange = 4,
 		attackPeriodSeconds = 1.0,
 		telegraphMs = 400,
@@ -96,18 +96,18 @@ local Npcs: { [string]: NpcDefinition } = {
 		combatClearRadius = 20,
 	},
 	-- Estilhaço Ancorado — elite da cratera (docs/13 §9.3). Fica na âncora
-	-- `anchor_elite` (não persegue: moveSpeed ausente), alterna slam (dano 12,
+	-- `anchor_elite` (não persegue: moveSpeed ausente), alterna slam (dano 14,
 	-- telegraph 700 ms, `unblockable` para o Retorno de Pulso, guarda reduz 30%)
-	-- com combo leve 5+5 (telegraph 300 ms). Respawn 180 s. XP 80 uma vez por
+	-- com combo leve 6+6 (telegraph 300 ms). Respawn 180 s. XP 80 uma vez por
 	-- 3 min por jogador, com leeching: crédito se causou ≥ 1% da vida ou ficou
 	-- 8 s no raio 20 da cratera. Sem último golpe.
 	enemy_anchored_shard = {
 		id = "enemy_anchored_shard",
 		displayNameKey = "enemy.anchored_shard.name",
 		kind = "enemy",
-		maxHealth = 80,
+		maxHealth = 120,
 		maxGuard = 0,
-		attackDamage = 12,
+		attackDamage = 14,
 		attackRange = 8,
 		attackPeriodSeconds = 1.0,
 		telegraphMs = 700,
@@ -119,9 +119,9 @@ local Npcs: { [string]: NpcDefinition } = {
 		recoverySeconds = 0.8,
 		xpUnconsolidated = 80,
 		xpCooldownSeconds = 180,
-		eliteSlamDamage = 12,
+		eliteSlamDamage = 14,
 		eliteSlamTelegraphMs = 700,
-		eliteComboDamage = 5,
+		eliteComboDamage = 6,
 		eliteComboTelegraphMs = 300,
 		leechDamagePct = 0.01,
 		leechStaySeconds = 8,

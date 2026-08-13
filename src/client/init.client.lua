@@ -25,6 +25,7 @@ local InteractionController = require(Controllers.InteractionController)
 local CharacterController = require(Controllers.CharacterController)
 local AbilityController = require(Controllers.AbilityController)
 local CombatFeedbackController = require(Controllers.CombatFeedbackController)
+local CombatHudController = require(Controllers.CombatHudController)
 local ResourceController = require(Controllers.ResourceController)
 local ZoneController = require(Controllers.ZoneController)
 local UIController = require(Controllers.UIController)
@@ -94,6 +95,11 @@ local ability = AbilityController.new({
 	end,
 })
 local feedback = CombatFeedbackController.new(state, ClientState)
+local combatHud = CombatHudController.new({
+	player = player,
+	workspace = Workspace,
+	now = os.clock,
+})
 local resource = ResourceController.new(state, ClientState)
 local zone = ZoneController.new(state, ClientState, input, InputController.subscribe, send, os.clock)
 local actorAnimator = ActorAnimator.new({
@@ -148,6 +154,12 @@ remote(Remotes.Names.SessionSnapshot).OnClientEvent:Connect(function(payload: { 
 end)
 
 remote(Remotes.Names.StateDelta).OnClientEvent:Connect(function(payload: { [string]: any })
+	-- Delta de inimigo (vida de NPC) não toca o estado do jogador: alimenta
+	-- as barras do HUD de combate.
+	if type(payload.fighterId) == "string" then
+		CombatHudController.onFighterDelta(combatHud, payload)
+		return
+	end
 	ClientState.applyDelta(state, payload)
 	ZoneController.onDelta(zone, payload)
 end)
@@ -171,6 +183,8 @@ remote(Remotes.Names.CombatEvent).OnClientEvent:Connect(function(payload: { [str
 	-- Hit-stop e câmera também reagem ao desfecho, nunca à intenção local.
 	PlayerCombatAnimator.confirmHit(playerCombatAnimator, payload.outcome)
 	CombatCameraController.addImpact(combatCamera, payload.outcome, payload.abilityId)
+	-- Número de dano flutuante (dano > 0, desfecho confirmado).
+	CombatHudController.onCombatEvent(combatHud, payload)
 end)
 
 remote(Remotes.Names.AbilityRejected).OnClientEvent:Connect(function(payload: { [string]: any })

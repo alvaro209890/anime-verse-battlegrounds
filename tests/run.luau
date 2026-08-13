@@ -1026,7 +1026,7 @@ test("dados: dummy de treino no catálogo", function()
 	assertTrue(dummy ~= nil, "dummy deveria existir")
 	if dummy then
 		assertEq(dummy.maxHealth, 10000, "vida")
-		assertEq(dummy.attackDamage, 4, "dano")
+		assertEq(dummy.attackDamage, 5, "dano")
 		assertEq(dummy.attackRange, 8, "alcance")
 		assertEq(dummy.grantsXp, false, "sem XP")
 	end
@@ -1037,8 +1037,8 @@ test("dados: estilhaço errante segue o baseline da fatia", function()
 	assertTrue(shard ~= nil, "estilhaço deveria existir")
 	if shard then
 		assertEq(shard.kind, "enemy", "kind")
-		assertEq(shard.maxHealth, 40, "vida")
-		assertEq(shard.attackDamage, 6, "dano")
+		assertEq(shard.maxHealth, 60, "vida")
+		assertEq(shard.attackDamage, 8, "dano")
 		assertEq(shard.attackRange, 4, "esfera 4 studs")
 		assertEq(shard.telegraphMs, 400, "telegraph")
 		assertEq(shard.moveSpeed, 12, "velocidade")
@@ -1094,15 +1094,15 @@ test("combate: dano negativo não cura", function()
 	assertEq(target.health, 50, "vida inalterada")
 end)
 
-test("combate: cadeia leve 5+5+6+10", function()
+test("combate: cadeia leve 6+6+8+12", function()
 	CombatService.clear()
 	local atk = CombatService.createFighter("p:a", "player", 100, 100)
 	local tgt = CombatService.createFighter("p:b", "player", 100, 100)
-	assertEq(CombatService.tryLight(atk, tgt, 1.0, "front").damage, 5, "hit 1")
-	assertEq(CombatService.tryLight(atk, tgt, 1.2, "front").damage, 5, "hit 2")
-	assertEq(CombatService.tryLight(atk, tgt, 1.4, "front").damage, 6, "hit 3")
-	assertEq(CombatService.tryLight(atk, tgt, 1.6, "front").damage, 10, "hit 4")
-	assertEq(tgt.health, 74, "26 de dano")
+	assertEq(CombatService.tryLight(atk, tgt, 1.0, "front").damage, 6, "hit 1")
+	assertEq(CombatService.tryLight(atk, tgt, 1.2, "front").damage, 6, "hit 2")
+	assertEq(CombatService.tryLight(atk, tgt, 1.4, "front").damage, 8, "hit 3")
+	assertEq(CombatService.tryLight(atk, tgt, 1.6, "front").damage, 12, "hit 4")
+	assertEq(tgt.health, 68, "32 de dano")
 end)
 
 test("combate: janela 0,65 s reinicia a cadeia", function()
@@ -1112,7 +1112,7 @@ test("combate: janela 0,65 s reinicia a cadeia", function()
 	CombatService.tryLight(atk, tgt, 1.0, "front")
 	local result = CombatService.tryLight(atk, tgt, 1.7, "front")
 	assertEq(result.step, 1, "reset")
-	assertEq(result.damage, 5, "primeiro golpe de novo")
+	assertEq(result.damage, 6, "primeiro golpe de novo")
 end)
 
 test("combate: guarda frontal reduz HP a 40%", function()
@@ -1122,7 +1122,7 @@ test("combate: guarda frontal reduz HP a 40%", function()
 	CombatService.setGuard(tgt, true, 10.0)
 	local result = CombatService.tryLight(atk, tgt, 10.2, "front")
 	assertEq(result.damage, 2, "floor(5*0.4)")
-	assertEq(tgt.guard, 95, "guarda perde o dano cheio")
+	assertEq(tgt.guard, 94, "guarda perde o dano cheio")
 	assertEq(tgt.health, 98, "HP reduzido")
 end)
 
@@ -1155,15 +1155,15 @@ test("combate: costas ignoram guarda", function()
 	local tgt = CombatService.createFighter("p:b", "player", 100, 100)
 	CombatService.setGuard(tgt, true, 30.0)
 	local result = CombatService.tryLight(atk, tgt, 30.2, "back")
-	assertEq(result.damage, 5, "dano cheio")
+	assertEq(result.damage, 6, "dano cheio")
 	assertEq(tgt.guard, 100, "guarda não consome")
 end)
 
-test("combate: pesado 10 HP, 28 guarda, 2 se bloqueado", function()
+test("combate: pesado 12 HP, 28 guarda, 2 se bloqueado", function()
 	CombatService.clear()
 	local atk = CombatService.createFighter("p:a", "player", 100, 100)
 	local open = CombatService.createFighter("p:b", "player", 100, 100)
-	assertEq(CombatService.tryHeavy(atk, open, 1.0, "front").damage, 10, "sem guarda")
+	assertEq(CombatService.tryHeavy(atk, open, 1.0, "front").damage, 12, "sem guarda")
 	local guarded = CombatService.createFighter("p:c", "player", 100, 100)
 	CombatService.setGuard(guarded, true, 2.0)
 	local blocked = CombatService.tryHeavy(atk, guarded, 2.2, "front")
@@ -1222,7 +1222,7 @@ test("combate: dash aplica i-frame e cooldown", function()
 	local cd = CombatService.tryDash(tgt, 5.5)
 	assertEq(cd, false, "cooldown")
 	local after = CombatService.tryLight(atk, tgt, 8.1, "front")
-	assertEq(after.damage, 5, "depois do i-frame")
+	assertEq(after.damage, 6, "depois do i-frame")
 end)
 
 test("combate: preflight de dash não concede i-frame antes do commit", function()
@@ -1254,24 +1254,24 @@ end)
 
 test("combate: estilhaço telegraph depois dano 6", function()
 	CombatService.clear()
-	local shard = CombatService.createFighter("enemy_wandering_shard:1", "npc", 40, 0)
+	local shard = CombatService.createFighter("enemy_wandering_shard:1", "npc", 60, 0)
 	local player = CombatService.createFighter("p:a", "player", 100, 100)
-	local windup = CombatService.tryShardCycle(shard, player, 1.0, 4, true, 6, 4, 0.4, 0.6)
+	local windup = CombatService.tryShardCycle(shard, player, 1.0, 4, true, 8, 4, 0.4, 0.6)
 	assertEq(windup.phase, "telegraph", "telegraph")
 	assertEq(windup.damage, 0, "ainda sem dano")
 	assertEq(player.health, 100, "HP intacto")
 	local early = CombatService.tryShardCycle(shard, player, 1.2, 4, true, 6, 4, 0.4, 0.6)
 	assertEq(early.reason, "telegraph", "ainda no telegraph")
-	local hit = CombatService.tryShardCycle(shard, player, 1.4, 4, true, 6, 4, 0.4, 0.6)
+	local hit = CombatService.tryShardCycle(shard, player, 1.4, 4, true, 8, 4, 0.4, 0.6)
 	assertEq(hit.ok, true, "acerto")
-	assertEq(hit.damage, 6, "dano")
+	assertEq(hit.damage, 8, "dano")
 	assertEq(hit.phase, "attack", "fase")
-	assertEq(player.health, 94, "HP")
+	assertEq(player.health, 92, "HP")
 end)
 
 test("combate: estilhaço sem aggro através da fronteira", function()
 	CombatService.clear()
-	local shard = CombatService.createFighter("enemy_wandering_shard:1", "npc", 40, 0)
+	local shard = CombatService.createFighter("enemy_wandering_shard:1", "npc", 60, 0)
 	local player = CombatService.createFighter("p:a", "player", 100, 100)
 	local denied = CombatService.tryShardCycle(shard, player, 1.0, 2, false, 6, 4, 0.4, 0.6)
 	assertEq(denied.reason, "no_aggro", "sem aggro")
@@ -1281,7 +1281,7 @@ end)
 
 test("combate: estilhaço recusa fora da esfera de 4 studs", function()
 	CombatService.clear()
-	local shard = CombatService.createFighter("enemy_wandering_shard:1", "npc", 40, 0)
+	local shard = CombatService.createFighter("enemy_wandering_shard:1", "npc", 60, 0)
 	local player = CombatService.createFighter("p:a", "player", 100, 100)
 	local far = CombatService.tryShardCycle(shard, player, 1.0, 5, true, 6, 4, 0.4, 0.6)
 	assertEq(far.reason, "out_of_range", "fora")
@@ -1289,27 +1289,28 @@ end)
 
 test("combate: estilhaço recovery bloqueia o próximo golpe", function()
 	CombatService.clear()
-	local shard = CombatService.createFighter("enemy_wandering_shard:1", "npc", 40, 0)
+	local shard = CombatService.createFighter("enemy_wandering_shard:1", "npc", 60, 0)
 	local player = CombatService.createFighter("p:a", "player", 100, 100)
-	CombatService.tryShardCycle(shard, player, 1.0, 4, true, 6, 4, 0.4, 0.6)
-	CombatService.tryShardCycle(shard, player, 1.4, 4, true, 6, 4, 0.4, 0.6)
-	local blocked = CombatService.tryShardCycle(shard, player, 1.5, 4, true, 6, 4, 0.4, 0.6)
+	CombatService.tryShardCycle(shard, player, 1.0, 4, true, 8, 4, 0.4, 0.6)
+	CombatService.tryShardCycle(shard, player, 1.4, 4, true, 8, 4, 0.4, 0.6)
+	local blocked = CombatService.tryShardCycle(shard, player, 1.5, 4, true, 8, 4, 0.4, 0.6)
 	assertEq(blocked.reason, "recovery", "recovery")
-	assertEq(player.health, 94, "um único acerto")
+	assertEq(player.health, 92, "um único acerto")
 end)
 
 test("combate: estilhaço respawn 45 s e bloqueia com combate perto", function()
 	CombatService.clear()
-	local shard = CombatService.createFighter("enemy_wandering_shard:1", "npc", 40, 0)
+	local shard = CombatService.createFighter("enemy_wandering_shard:1", "npc", 60, 0)
 	local player = CombatService.createFighter("p:a", "player", 100, 100)
 	CombatService.tryLight(player, shard, 1.0, "front")
-	-- 5+5+6+10 = 26, precisa de mais para matar 40
+	-- 6+6+8+12 = 32, precisa de mais para matar 60
 	CombatService.tryLight(player, shard, 1.2, "front")
 	CombatService.tryLight(player, shard, 1.4, "front")
 	CombatService.tryLight(player, shard, 1.6, "front")
 	CombatService.tryLight(player, shard, 2.3, "front")
 	CombatService.tryLight(player, shard, 2.5, "front")
 	CombatService.tryLight(player, shard, 2.7, "front")
+	CombatService.tryLight(player, shard, 2.9, "front")
 	assertEq(shard.health, 0, "morto")
 	assertTrue(shard.diedAt > 0, "diedAt")
 	local tooSoon = CombatService.tryRespawn(shard, 20, 45, false)
@@ -1318,14 +1319,14 @@ test("combate: estilhaço respawn 45 s e bloqueia com combate perto", function()
 	assertEq(nearby, false, "combate perto")
 	local ok = CombatService.tryRespawn(shard, 50, 45, false)
 	assertEq(ok, true, "respawn")
-	assertEq(shard.health, 40, "vida cheia")
+	assertEq(shard.health, 60, "vida cheia")
 	assertEq(shard.aiPhase, "idle", "idle")
 end)
 
 test("combate: no máximo 4 estilhaços vivos", function()
 	CombatService.clear()
 	for i = 1, 4 do
-		CombatService.createFighter("enemy_wandering_shard:" .. tostring(i), "npc", 40, 0)
+		CombatService.createFighter("enemy_wandering_shard:" .. tostring(i), "npc", 60, 0)
 	end
 	assertEq(CombatService.countAliveNpcs("enemy_wandering_shard"), 4, "4 vivos")
 	assertEq(CombatService.canSpawnNpc("enemy_wandering_shard", 4), false, "cap")
@@ -1337,14 +1338,14 @@ test("combate: no máximo 4 estilhaços vivos", function()
 	assertEq(CombatService.canSpawnNpc("enemy_wandering_shard", 4), true, "vaga após morte")
 end)
 
-test("combate: comet 9 HP aberto", function()
+test("combate: comet 14 HP aberto", function()
 	CombatService.clear()
 	local atk = CombatService.createFighter("p:a", "player", 100, 100)
 	local tgt = CombatService.createFighter("npc_training_dummy", "npc", 10000, 0)
 	local result = CombatService.tryCometShoulder(atk, tgt, 1.0, "front")
 	assertEq(result.ok, true, "hit")
-	assertEq(result.damage, 9, "dano aberto")
-	assertEq(tgt.health, 9991, "HP dummy")
+	assertEq(result.damage, 14, "dano aberto")
+	assertEq(tgt.health, 9986, "HP dummy")
 	assertEq(result.stoppedOnGuard, nil, "sem guarda")
 end)
 
@@ -1354,9 +1355,9 @@ test("combate: comet na guarda para o avanço", function()
 	local tgt = CombatService.createFighter("p:b", "player", 100, 100)
 	CombatService.setGuard(tgt, true, 10.0)
 	local result = CombatService.tryCometShoulder(atk, tgt, 10.2, "front")
-	assertEq(result.damage, 4, "HP bloqueado")
-	assertEq(tgt.guard, 91, "9 de guarda")
-	assertEq(tgt.health, 96, "HP")
+	assertEq(result.damage, 6, "HP bloqueado")
+	assertEq(tgt.guard, 86, "14 de guarda")
+	assertEq(tgt.health, 94, "HP")
 	assertEq(result.stoppedOnGuard, true, "avanço interrompe")
 end)
 
@@ -1502,7 +1503,7 @@ local function makeAbilityDeps(unlock: ((number, string) -> boolean)?)
 	}
 end
 
-test("ability: comet_shoulder aplica dano 9 sem Fluxo", function()
+test("ability: comet_shoulder aplica dano 14 sem Fluxo", function()
 	ResourceService.init(makeResourceDeps())
 	CooldownService.clear(20)
 	AbilityService.init(makeAbilityDeps())
@@ -1514,7 +1515,7 @@ test("ability: comet_shoulder aplica dano 9 sem Fluxo", function()
 	end
 	local ok, reason = AbilityService.tryActivate(attacker, "comet_shoulder", target)
 	assertTrue(ok, "deveria ativar: " .. tostring(reason))
-	assertEq(target.health, 91, "dano 9")
+	assertEq(target.health, 86, "dano 14")
 	assertEq(attacker.resource, 82, "custo 18, sem fluxo")
 end)
 
@@ -1611,7 +1612,7 @@ test("ability: técnica locked rejeita", function()
 	assertEq(attacker.resource, 100, "não gasta")
 end)
 
-test("ability: cadência acerta 5+6 e eco 4 com Fluxo no tick", function()
+test("ability: cadência acerta 7+9 e eco 6 com Fluxo no tick", function()
 	fakeNow = 4000
 	ResourceService.init(makeResourceDeps())
 	CooldownService.clear(80)
@@ -1626,7 +1627,7 @@ test("ability: cadência acerta 5+6 e eco 4 com Fluxo no tick", function()
 	assertTrue(ok, "cadência: " .. tostring(reason))
 	AbilityService.tick(4000.14)
 	AbilityService.tick(4000.32)
-	assertEq(target.health, 89, "5+6")
+	assertEq(target.health, 84, "7+9")
 	assertEq(attacker.resource, 84, "custo 16")
 	-- A reentrada só abre 120 ms após o fim do active do golpe 2 (400 ms).
 	local early, earlyReason = AbilityService.tryActivate(attacker, "broken_cadence", target, { phase = "reentry" })
@@ -1635,11 +1636,11 @@ test("ability: cadência acerta 5+6 e eco 4 com Fluxo no tick", function()
 	fakeNow = 4000.45
 	local reOk, reReason = AbilityService.tryActivate(attacker, "broken_cadence", target, { phase = "reentry" })
 	assertTrue(reOk, "reentrada na janela: " .. tostring(reReason))
-	assertEq(target.health, 89, "reentrada não aplica dano (eco agendado)")
+	assertEq(target.health, 84, "reentrada não aplica dano (eco agendado)")
 	assertEq(attacker.resource, 84, "reentrada não gasta")
 	-- Eco sai 350 ms depois, no tick.
 	AbilityService.tick(4000.8)
-	assertEq(target.health, 85, "eco 4")
+	assertEq(target.health, 78, "eco 6")
 	assertEq(attacker.resource, 93, "fluxo 6+3")
 end)
 
@@ -1674,16 +1675,16 @@ test("ability: cadência resolve alvo autoritativo uma vez e o preserva no eco",
 	assertTrue(ok, "cadência espacial: " .. tostring(reason))
 	AbilityService.tick(4500.14)
 	AbilityService.tick(4500.32)
-	assertEq(target.health, 89, "alvo resolvido recebe 5+6")
+	assertEq(target.health, 84, "alvo resolvido recebe 7+9")
 	assertEq(resolveCalls, 1, "alvo resolvido uma vez no início")
 
 	fakeNow = 4500.45
 	local reOk, reReason = AbilityService.tryActivate(attacker, "broken_cadence", nil, { phase = "reentry" })
 	assertTrue(reOk, "reentrada sem alvo declarado: " .. tostring(reReason))
-	assertEq(target.health, 89, "reentrada apenas agenda o eco")
+	assertEq(target.health, 84, "reentrada apenas agenda o eco")
 	AbilityService.tick(4500.8)
-	assertEq(table.concat(confirmedHits, ","), "5,6,4", "feedback acompanha os tres impactos")
-	assertEq(target.health, 85, "eco 4 reutiliza o alvo autoritativo inicial")
+	assertEq(table.concat(confirmedHits, ","), "7,9,6", "feedback acompanha os tres impactos")
+	assertEq(target.health, 78, "eco 6 reutiliza o alvo autoritativo inicial")
 	assertEq(resolveCalls, 1, "reentrada e eco não escolhem outro alvo")
 end)
 
@@ -1705,7 +1706,7 @@ test("ability: cadência recusa reentrada fora da janela", function()
 	local ok, reason = AbilityService.tryActivate(attacker, "broken_cadence", target, { phase = "reentry" })
 	assertFalse(ok, "fora da janela")
 	assertEq(reason, "reentry_window", "motivo")
-	assertEq(target.health, 89, "sem eco")
+	assertEq(target.health, 84, "sem eco")
 	assertEq(attacker.resource, 84, "sem fluxo extra")
 end)
 
@@ -1731,7 +1732,7 @@ test("ability: cadencia carimba e notifica kill uma unica vez", function()
 	CombatService.clear()
 	ResourceService.init(makeResourceDeps())
 	CooldownService.clear(88)
-	local target = CombatService.createFighter("enemy_wandering_shard@anchor_shard_1#9", "npc", 7, 0)
+	local target = CombatService.createFighter("enemy_wandering_shard@anchor_shard_1#9", "npc", 12, 0)
 	local kills: { any } = {}
 	local deps = makeAbilityDeps()
 	deps.resolveCadenceTarget = function()
@@ -1831,7 +1832,7 @@ test("ability: Cadência revalida hitbox em cada active", function()
 	AbilityService.tick(5800.14)
 	allowed = false
 	AbilityService.tick(5800.32)
-	assertEq(target.health, 95, "segundo golpe não acerta alvo que saiu da hitbox")
+	assertEq(target.health, 93, "segundo golpe não acerta alvo que saiu da hitbox")
 end)
 
 test("ability: reentrada exige executionId da ativação inicial", function()
@@ -1926,7 +1927,7 @@ test("ability: pulse_return abre postura sem dano; erro vira recovery 600 ms", f
 	end
 end)
 
-test("ability: pulse_return reduz 50% de um golpe frontal e contra-ataca 8", function()
+test("ability: pulse_return reduz 50% de um golpe frontal e contra-ataca 10", function()
 	fakeNow = 9100
 	ResourceService.init(makeResourceDeps())
 	CooldownService.clear(92)
@@ -1957,15 +1958,15 @@ test("ability: pulse_return reduz 50% de um golpe frontal e contra-ataca 8", fun
 	local hit = CombatService.tryHeavy(striker, defender, 9100.1, "front")
 	assertTrue(hit.ok, "golpe conecta")
 	assertEq(hit.pulseCounter, true, "contra disparado")
-	assertEq(defender.health, 95, "dano reduzido a 50% (5 de 10)")
+	assertEq(defender.health, 94, "dano reduzido a 50% (6 de 12)")
 	-- O contra: 8 de dano no atacante (empurrão é espacial, fora do serviço).
 	local counter = CombatService.tryPulseCounter(striker, 9100.1)
-	assertEq(counter.damage, 8, "contra 8")
-	assertEq(striker.health, 92, "atacante tomou 8")
+	assertEq(counter.damage, 10, "contra 10")
+	assertEq(striker.health, 90, "atacante tomou 10")
 	-- Segundo golpe na mesma postura: já foi usado, dano cheio.
 	local second = CombatService.tryHeavy(striker, defender, 9100.2, "front")
 	assertEq(second.pulseCounter, nil, "postura consumida (um golpe por postura)")
-	assertEq(defender.health, 85, "dano cheio no segundo golpe")
+	assertEq(defender.health, 82, "dano cheio no segundo golpe")
 end)
 
 test("ability: pulse_return costas e slam do elite vencem a postura", function()
@@ -1977,16 +1978,16 @@ test("ability: pulse_return costas e slam do elite vencem a postura", function()
 	-- Costas ignoram a postura (docs/13 §6.3: agarrão/costas vencem).
 	local backHit = CombatService.tryHeavy(striker, defender, 9200.05, "back")
 	assertEq(backHit.pulseCounter, nil, "costas não reduzem")
-	assertEq(defender.health, 90, "dano cheio 10")
+	assertEq(defender.health, 88, "dano cheio 12")
 	-- Slam do elite é unblockable para o Pulso.
-	local elite = CombatService.createFighter("enemy_anchored_shard@anchor_elite#1", "npc", 80, 0)
+	local elite = CombatService.createFighter("enemy_anchored_shard@anchor_elite#1", "npc", 120, 0)
 	CombatService.setPulseStance(striker, 9200.1)
 	local slam = CombatService.tryEliteCycle(elite, striker, 9200.2, 5, true, {
 		range = 8,
 		recoverySeconds = 0.8,
-		comboDamage = 5,
+		comboDamage = 6,
 		comboTelegraphSeconds = 0.3,
-		slamDamage = 12,
+		slamDamage = 14,
 		slamTelegraphSeconds = 0.7,
 		slamBlockedPct = 0.7,
 	})
@@ -1995,15 +1996,15 @@ test("ability: pulse_return costas e slam do elite vencem a postura", function()
 	slam = CombatService.tryEliteCycle(elite, striker, 9200.9, 5, true, {
 		range = 8,
 		recoverySeconds = 0.8,
-		comboDamage = 5,
+		comboDamage = 6,
 		comboTelegraphSeconds = 0.3,
-		slamDamage = 12,
+		slamDamage = 14,
 		slamTelegraphSeconds = 0.7,
 		slamBlockedPct = 0.7,
 	})
 	assertEq(slam.ok, true, "slam conecta")
-	assertEq(slam.damage, 12, "slam não é reduzido pela postura")
-	assertEq(striker.health, 88, "dano cheio do slam")
+	assertEq(slam.damage, 14, "slam não é reduzido pela postura")
+	assertEq(striker.health, 86, "dano cheio do slam")
 end)
 
 test("ability: comet no fighter dummy via deps", function()
@@ -2037,11 +2038,11 @@ test("ability: comet no fighter dummy via deps", function()
 	end
 	local ok, reason = AbilityService.tryActivate(attacker, "comet_shoulder", nil)
 	assertTrue(ok, "deveria ativar: " .. tostring(reason))
-	assertEq(dummy.health, 9991, "dummy HP")
+	assertEq(dummy.health, 9986, "dummy HP")
 	assertEq(attacker.resource, 82, "custo 18")
 	assertEq(#hits, 1, "CombatHit")
 	assertEq(hits[1].targetId, "npc_training_dummy", "alvo")
-	assertEq(hits[1].damage, 9, "dano")
+	assertEq(hits[1].damage, 14, "dano")
 	assertEq(hits[1].abilityId, "comet_shoulder", "ability")
 end)
 
@@ -2246,7 +2247,7 @@ test("fatia: ready + comet locked no spawn; grant libera 9 HP no dummy", functio
 	local dummy = CombatService.getFighter("npc_training_dummy")
 	assertTrue(dummy ~= nil, "dummy existe")
 	if dummy then
-		assertEq(dummy.health, 9991, "9 de dano")
+		assertEq(dummy.health, 9986, "14 de dano")
 	end
 	PlayerSessionService.onPlayerLeft({ UserId = 100, Name = "Comet" })
 	ProgressionService.unregisterPlayer(100)
@@ -2709,7 +2710,7 @@ test("fatia: sessão Ready com ZoneService e comet intacto", function()
 	local dummy = CombatService.getFighter("npc_training_dummy")
 	assertTrue(dummy ~= nil, "dummy existe")
 	if dummy then
-		assertEq(dummy.health, 9991, "dummy intacto")
+		assertEq(dummy.health, 9986, "dummy intacto")
 	end
 	PlayerSessionService.onPlayerLeft({ UserId = 250, Name = "Zona" })
 	ZoneService.unregisterPlayer(250)
@@ -3046,7 +3047,7 @@ test("combate: killed só na transição vivo → morto", function()
 	local attacker = CombatService.createFighter("player:400", "player", 100, 100)
 	local shard = CombatService.createFighter("enemy_wandering_shard@anchor_gate_north#1", "npc", 10, 0)
 	local hit = CombatService.tryLight(attacker, shard, 100, "front")
-	assertEq(hit.damage, 5, "primeiro golpe")
+	assertEq(hit.damage, 6, "primeiro golpe")
 	assertEq(hit.killed, nil, "ainda vivo")
 	local kill = CombatService.tryLight(attacker, shard, 100.2, "front")
 	assertEq(shard.health, 0, "morto")
@@ -3169,7 +3170,7 @@ test("fatia: roteiro 0–5 min — spawn locked, objetivo, 3 kills e Cometa libe
 	assertEq(attacker.resource, 82, "custo 18")
 	local dummy = CombatService.getFighter("npc_training_dummy")
 	if dummy then
-		assertEq(dummy.health, 9991, "dano 9 no alvo")
+		assertEq(dummy.health, 9986, "dano 14 no alvo")
 	end
 	-- As outras duas técnicas continuam trancadas
 	assertFalse(ProgressionService.hasUnlock(320, "unlock_broken_cadence"), "Cadência ainda locked (item 9)")
@@ -3645,7 +3646,7 @@ test("inimigo: persegue a 12 studs/s e ataca só depois do telegraph", function(
 
 	-- Passados os 400 ms, o golpe conecta com 6 de dano.
 	EnemyService.tick(1000.5, 0.1)
-	assertEq(player.health, 94, "dano 6 após o telegraph")
+	assertEq(player.health, 92, "dano 8 após o telegraph")
 	assertEq(shard.aiPhase, "recovery", "entra em recovery")
 end)
 
@@ -3704,7 +3705,7 @@ test("inimigo: Retorno de Pulso preserva contra no evento", function()
 	assertTrue(attack ~= nil, "evento de ataque")
 	assertEq(attack.pulseCounter, true, "flag chega ao bootstrap")
 	assertEq(attack.outcome, "guard", "feedback defensivo")
-	assertEq(attack.damage, 3, "6 reduzido pela metade")
+	assertEq(attack.damage, 4, "8 reduzido pela metade")
 end)
 
 test("inimigo: sem aggro através da fronteira", function()
@@ -3773,7 +3774,7 @@ test("inimigo: respawn de 45 s bloqueia com jogador perto da âncora", function(
 		vec(0, 0, 1)
 	)
 	EnemyService.tick(3000 + 51, 0.5)
-	assertEq(shard.health, 40, "respawn com a área limpa")
+	assertEq(shard.health, 60, "respawn com a área limpa")
 	local back = SpatialService.getPosition(shardId)
 	if back then
 		assertEq(back.z, anchor.position.z, "volta para a mesma âncora")
@@ -3830,11 +3831,11 @@ test("dados: Estilhaço Ancorado é o baseline da spec §9.3", function()
 		return
 	end
 	assertEq(elite.kind, "enemy", "kind")
-	assertEq(elite.maxHealth, 80, "vida 80")
+	assertEq(elite.maxHealth, 120, "vida 120")
 	assertEq(elite.attackPattern, "elite", "padrão")
-	assertEq(elite.eliteSlamDamage, 12, "slam 12")
+	assertEq(elite.eliteSlamDamage, 14, "slam 14")
 	assertEq(elite.eliteSlamTelegraphMs, 700, "slam telegraph 700 ms")
-	assertEq(elite.eliteComboDamage, 5, "combo 5")
+	assertEq(elite.eliteComboDamage, 6, "combo 6")
 	assertEq(elite.eliteComboTelegraphMs, 300, "combo telegraph 300 ms")
 	assertEq(elite.respawnSeconds, 180, "respawn 180 s")
 	assertEq(elite.xpUnconsolidated, 80, "XP 80")
@@ -3890,20 +3891,20 @@ test("catálogo: dados reais validam com elite e os 3 objetivos", function()
 	assertTrue(ok, "catálogo completo deveria validar")
 end)
 
-test("combate: elite alterna combo 5+5 e slam 12, com guarda cortada em 30%", function()
+test("combate: elite alterna combo 6+6 e slam 14, com guarda cortada em 30%", function()
 	CombatService.clear()
-	local elite = CombatService.createFighter("enemy_anchored_shard@anchor_elite#1", "npc", 80, 0)
+	local elite = CombatService.createFighter("enemy_anchored_shard@anchor_elite#1", "npc", 120, 0)
 	local player = CombatService.createFighter("player:950", "player", 100, 100)
 	local params = {
 		range = 8,
 		recoverySeconds = 0.8,
-		comboDamage = 5,
+		comboDamage = 6,
 		comboTelegraphSeconds = 0.3,
-		slamDamage = 12,
+		slamDamage = 14,
 		slamTelegraphSeconds = 0.7,
 		slamBlockedPct = 0.7,
 	}
-	-- Ciclo 1: combo (5+5) após o telegraph de 300 ms.
+	-- Ciclo 1: combo (6+6) após o telegraph de 300 ms.
 	local combo = CombatService.tryEliteCycle(elite, player, 1000, 5, true, params)
 	assertEq(combo.ok, true, "ciclo abre")
 	assertEq(combo.phase, "telegraph", "telegraph primeiro")
@@ -3911,55 +3912,55 @@ test("combate: elite alterna combo 5+5 e slam 12, com guarda cortada em 30%", fu
 	local comboHit = CombatService.tryEliteCycle(elite, player, 1000.31, 5, true, params)
 	assertEq(comboHit.ok, true, "combo conecta")
 	assertEq(comboHit.phase, "attack", "ataque")
-	assertEq(comboHit.damage, 10, "5+5")
-	assertEq(player.health, 90, "HP após o combo")
+	assertEq(comboHit.damage, 12, "6+6")
+	assertEq(player.health, 88, "HP após o combo")
 	-- Recovery: golpe dentro do recovery não sai.
 	local during = CombatService.tryEliteCycle(elite, player, 1000.5, 5, true, params)
 	assertEq(during.ok, false, "em recovery")
 	assertEq(during.reason, "recovery", "motivo")
-	-- Ciclo 2: slam (12) após o telegraph de 700 ms. Recovery termina em
+	-- Ciclo 2: slam (14) após o telegraph de 700 ms. Recovery termina em
 	-- 1000.31 + 0.8 = 1001.11; o próximo ciclo abre depois disso.
 	local slamTelegraph = CombatService.tryEliteCycle(elite, player, 1001.2, 5, true, params)
 	assertEq(slamTelegraph.phase, "telegraph", "slam em telegraph")
 	assertEq(slamTelegraph.damage, 0, "sem dano")
 	local slamHit = CombatService.tryEliteCycle(elite, player, 1001.91, 5, true, params)
 	assertEq(slamHit.ok, true, "slam conecta")
-	assertEq(slamHit.damage, 12, "dano 12")
-	assertEq(player.health, 78, "HP após o slam")
+	assertEq(slamHit.damage, 14, "dano 14")
+	assertEq(player.health, 74, "HP após o slam")
 end)
 
 test("combate: Pulso interrompe o combo do elite no primeiro golpe", function()
 	CombatService.clear()
-	local elite = CombatService.createFighter("enemy_anchored_shard@anchor_elite#1", "npc", 80, 0)
+	local elite = CombatService.createFighter("enemy_anchored_shard@anchor_elite#1", "npc", 120, 0)
 	local player = CombatService.createFighter("player:956", "player", 100, 100)
 	local params = {
 		range = 8,
 		recoverySeconds = 0.8,
-		comboDamage = 5,
+		comboDamage = 6,
 		comboTelegraphSeconds = 0.3,
-		slamDamage = 12,
+		slamDamage = 14,
 		slamTelegraphSeconds = 0.7,
 		slamBlockedPct = 0.7,
 	}
 	CombatService.tryEliteCycle(elite, player, 1050, 5, true, params)
 	CombatService.setPulseStance(player, 1050.2)
-	local hit = CombatService.tryEliteCycle(elite, player, 1050.31, 5, true, params)
+	local hit = CombatService.tryEliteCycle(elite, player, 1050.31, 6, true, params)
 	assertEq(hit.pulseCounter, true, "contra preservado")
-	assertEq(hit.damage, 2, "primeiro golpe reduzido em 50%")
-	assertEq(player.health, 98, "segundo golpe não atravessa o contra")
+	assertEq(hit.damage, 3, "primeiro golpe reduzido em 50%")
+	assertEq(player.health, 97, "segundo golpe não atravessa o contra")
 end)
 
 test("combate: slam do elite atravessa a guarda (reduz só 30%)", function()
 	CombatService.clear()
-	local elite = CombatService.createFighter("enemy_anchored_shard@anchor_elite#1", "npc", 80, 0)
+	local elite = CombatService.createFighter("enemy_anchored_shard@anchor_elite#1", "npc", 120, 0)
 	local guard = CombatService.createFighter("player:951", "player", 100, 100)
 	CombatService.setGuard(guard, true, 1100)
 	local params = {
 		range = 8,
 		recoverySeconds = 0.8,
-		comboDamage = 5,
+		comboDamage = 6,
 		comboTelegraphSeconds = 0.3,
-		slamDamage = 12,
+		slamDamage = 14,
 		slamTelegraphSeconds = 0.7,
 		slamBlockedPct = 0.7,
 	}
@@ -3967,10 +3968,10 @@ test("combate: slam do elite atravessa a guarda (reduz só 30%)", function()
 	CombatService.tryEliteCycle(elite, guard, 1100, 5, true, params)
 	local slam = CombatService.tryEliteCycle(elite, guard, 1100.71, 5, true, params)
 	assertEq(slam.ok, true, "slam conecta")
-	-- Guarda reduz 30% → 70% do dano passa: ceil(12 * 0.7) = 9.
-	assertEq(slam.damage, 9, "dano bloqueado 70%")
-	assertEq(guard.health, 91, "HP após slam na guarda")
-	assertEq(guard.guard, 88, "guarda sofre o dano cheio (12)")
+	-- Guarda reduz 30% → 70% do dano passa: ceil(14 * 0.7) = 10.
+	assertEq(slam.damage, 10, "dano bloqueado 70%")
+	assertEq(guard.health, 90, "HP após slam na guarda")
+	assertEq(guard.guard, 86, "guarda sofre o dano cheio (14)")
 end)
 
 test("XP: elite paga 80 com cooldown de 3 min por jogador", function()
@@ -4016,7 +4017,7 @@ test("inimigo: elite spawna único na âncora da cratera", function()
 	local elite = CombatService.getFighter("enemy_anchored_shard@anchor_elite#1")
 	assertTrue(elite ~= nil, "fighter do elite existe")
 	if elite then
-		assertEq(elite.maxHealth, 80, "80 de vida")
+		assertEq(elite.maxHealth, 120, "120 de vida")
 		local position = SpatialService.getPosition("enemy_anchored_shard@anchor_elite#1")
 		local anchor = Zones.getAnchor("anchor_elite")
 		assertTrue(position ~= nil and anchor ~= nil, "posicionado")
@@ -4076,7 +4077,7 @@ test("inimigo: tick comum ignora elite e tickElite preserva respawn de 180 s", f
 	EnemyService.tickElite(6179, 0.1)
 	assertEq(elite.health, 0, "tickElite ainda aguarda aos 179 s")
 	EnemyService.tickElite(6180, 0.1)
-	assertEq(elite.health, 80, "tickElite respawna somente aos 180 s")
+	assertEq(elite.health, 120, "tickElite respawna somente aos 180 s")
 	local respawnedPosition = SpatialService.getPosition(fighterId)
 	if respawnedPosition then
 		assertEq(respawnedPosition.x, anchor.position.x, "respawn volta à âncora em x")

@@ -61,20 +61,20 @@ export type HitResult = {
 	killed: boolean?,
 }
 
-local LIGHT_DAMAGE = { 5, 5, 6, 10 }
+local LIGHT_DAMAGE = { 6, 6, 8, 12 }
 local LIGHT_WINDOW = 0.65
 local PARRY_WINDOW = 0.12
-local HEAVY_HP = 10
+local HEAVY_HP = 12
 local HEAVY_GUARD = 28
 local HEAVY_BLOCKED_HP = 2
 local HEAVY_MISS_LOCK = 0.5
 local BREAK_NO_GUARD = 1.2
 local DASH_COOLDOWN = 3.0
 local DASH_IFRAME = 0.08
--- Retorno de Pulso (docs/13 §6.3): postura 250 ms, contra 8, empurrão 8 studs
+-- Retorno de Pulso (docs/13 §6.3): postura 250 ms, contra 10, empurrão 8 studs
 -- (espacial — fora deste serviço), erro 600 ms.
 local PULSE_STANCE_MS = 250
-local PULSE_COUNTER_DAMAGE = 8
+local PULSE_COUNTER_DAMAGE = 10
 local PULSE_MISS_RECOVERY_MS = 600
 
 local CombatService = {
@@ -371,7 +371,7 @@ function CombatService.tryCometShoulder(
 		return fail("dead")
 	end
 	local wasGuarding = target.guarding and now >= target.cannotGuardUntil and facing ~= "back"
-	local result = applyHit(target, now, 9, 9, 4, facing, true)
+	local result = applyHit(target, now, 14, 14, 6, facing, true)
 	if result.ok and wasGuarding and not result.iframe then
 		result.stoppedOnGuard = true
 	end

@@ -53,6 +53,18 @@ resto da pose permanece legível.
 desfecho **confirmado** pelo servidor, nunca na intenção local — o mesmo
 contrato do áudio de impacto (`16-COMBAT-AUDIO.md` §3.1).
 
+### 2.6 Câmera de impacto (`CombatCameraController`)
+
+Novo módulo de apresentação local:
+
+- **shake** com curva quadrática de trauma (impactos pequenos quase não mexem);
+- **FOV punch** curto que decai com o tempo;
+- perfis por desfecho (`hit`/ `death`/ `guard`) e reforço para técnicas
+  pesadas (`comet_shoulder`, `broken_cadence`, `eclipse_beat`).
+
+Baselines de `docs/14` §6 respeitadas: shake limitado a 2° e 0,3 stud, sempre
+local. Nunca altera a mira autoritativa nem a câmera de outro jogador.
+
 ### 2.7 Pacote VFX do Ombro Cometa (estilo battlegrounds)
 
 O golpe-modelo ganhou uma leitura completa de "golpe pesado de anime", toda
@@ -74,17 +86,40 @@ Regras de honestidade visual intactas: nenhum raio passa do alcance (8 studs),
 nenhum efeito de acerto acende sem `CombatEvent`, nada sobrevive à duração da
 ação. Continua scaffolding procedural — não conta como clip do gate A1.
 
-### 2.6 Câmera de impacto (`CombatCameraController`)
 
-Novo módulo de apresentação local:
+### 2.8 HUD de combate: números de dano e barras dos inimigos
 
-- **shake** com curva quadrática de trauma (impactos pequenos quase não mexem);
-- **FOV punch** curto que decai com o tempo;
-- perfis por desfecho (`hit`/ `death`/ `guard`) e reforço para técnicas
-  pesadas (`comet_shoulder`, `broken_cadence`, `eclipse_beat`).
+`CombatHudController.luau` (cliente, 13/08) desenha o resultado dos golpes:
 
-Baselines de `docs/14` §6 respeitadas: shake limitado a 2° e 0,3 stud, sempre
-local. Nunca altera a mira autoritativa nem a câmera de outro jogador.
+- **Número de dano flutuante** no alvo (BillboardGui, sobe e some em 0,8 s):
+  só com `damage > 0` num `CombatEvent` — desfecho autoritativo, nunca
+  intenção local. Cores: acerto branco, guarda azul (dano reduzido), contra
+  âmbar, morte vermelho.
+- **Barra de vida dos inimigos** acima do modelo: alimentada por
+  `StateDelta {fighterId, health, maxHealth}` que o servidor envia ao jogador
+  que causou o dano; muda de cor abaixo de 50%/25% e some com fade na morte.
+
+Para isso o `CombatEvent` do atacante passou a carregar `damage` e o
+`fireVitalsForFighter` ganhou o caminho NPC → atacante (antes só o jogador
+recebia vitals).
+
+### 2.9 Balanceamento da primeira passada (13/08)
+
+| Golpe | Antes | Depois |
+|---|---:|---:|
+| Cadeia leve (jab/direto/chute/finalizador) | 5/5/6/10 | 6/6/8/12 |
+| Pesado | 10 | 12 |
+| Ombro Cometa | 9 | 14 |
+| Cadência (golpe 1 / golpe 2 / eco) | 5/6/4 | 7/9/6 |
+| Contra do Pulso | 8 | 10 |
+| Estilhaço Errante (vida / dano) | 40 / 6 | 60 / 8 |
+| Estilhaço Ancorado (vida / slam / combo) | 80 / 12 / 5+5 | 120 / 14 / 6+6 |
+| Dummy (dano) | 4 | 5 |
+
+O jogador continua com 100 de vida (baseHealth do catálogo); a subida do dano
+foi compensada na vida dos inimigos para manter o tempo de kill parecido, com
+mais peso por golpe. Baselines do `CatalogService` e testes atualizados.
+
 
 ## 3. Regra de autoridade preservada
 

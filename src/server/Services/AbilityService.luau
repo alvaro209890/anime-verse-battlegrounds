@@ -183,7 +183,7 @@ local function applyCadenceHit(
 end
 
 -- Resolve ecos pendentes da Cadência (docs/13 §6.2): 350 ms após a reentrada,
--- dano 4 na mesma hitbox; o eco que acerta gera Fluxo e dispara onFlowEcho.
+-- dano 6 na mesma hitbox; o eco que acerta gera Fluxo e dispara onFlowEcho.
 -- Também expira posturas do Pulso sem golpe (erro → recovery 600 ms, §6.3).
 -- Chamado pelo Heartbeat do bootstrap (e pelos testes com relógio fake).
 function AbilityService.tick(currentNow: number): ()
@@ -201,7 +201,7 @@ function AbilityService.tick(currentNow: number): ()
 				and (not deps.revalidateCadenceTarget or deps.revalidateCadenceTarget(userId, target))
 			then
 				local _, targetKilled, attackerKilled =
-					applyCadenceHit(userId, target, 5, strikes.abilityId, currentNow)
+					applyCadenceHit(userId, target, 7, strikes.abilityId, currentNow)
 				if targetKilled or attackerKilled then
 					pendingCadenceStrikes[userId] = nil
 					reentryUntil[userId] = nil
@@ -217,7 +217,7 @@ function AbilityService.tick(currentNow: number): ()
 				and (not deps.revalidateCadenceTarget or deps.revalidateCadenceTarget(userId, target))
 			then
 				local _, targetKilled, attackerKilled =
-					applyCadenceHit(userId, target, 6, strikes.abilityId, currentNow)
+					applyCadenceHit(userId, target, 9, strikes.abilityId, currentNow)
 				if targetKilled or attackerKilled then
 					reentryUntil[userId] = nil
 				end
@@ -233,7 +233,7 @@ function AbilityService.tick(currentNow: number): ()
 				and target.health > 0
 				and (not deps.revalidateCadenceTarget or deps.revalidateCadenceTarget(userId, target))
 			then
-				local connected = select(1, applyCadenceHit(userId, target, 4, echo.abilityId, currentNow))
+				local connected = select(1, applyCadenceHit(userId, target, 6, echo.abilityId, currentNow))
 				if connected then
 					local flowGranted = deps.tryGrantFlow(userId)
 					if deps.onFlowEcho then
@@ -310,7 +310,7 @@ local function cometShoulderRunner(attacker: ServerPlayerState, target: ServerPl
 	if not target then
 		return
 	end
-	deps.applyDamage(target, 9, attacker.userId)
+	deps.applyDamage(target, 14, attacker.userId)
 end
 
 local function brokenCadenceRunner(attacker: ServerPlayerState, target: ServerPlayerState?, payload: AbilityPayload)

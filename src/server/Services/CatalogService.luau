@@ -114,8 +114,8 @@ function CatalogService.validate(): ()
 			end
 			if npc.id == "enemy_wandering_shard" then
 				hasShard = true
-				if npc.maxHealth ~= 40 or npc.attackDamage ~= 6 or npc.attackRange ~= 4 then
-					fail("enemy_wandering_shard fora do baseline F0 (40 HP / dano 6 / alcance 4)")
+				if npc.maxHealth ~= 60 or npc.attackDamage ~= 8 or npc.attackRange ~= 4 then
+					fail("enemy_wandering_shard fora do baseline F0 (60 HP / dano 8 / alcance 4)")
 				end
 				if npc.zoneId ~= "zone_plain_free" then
 					fail("enemy_wandering_shard deve viver em zone_plain_free")
@@ -135,11 +135,11 @@ function CatalogService.validate(): ()
 		for _, npc in deps.Npcs.all() do
 			if npc.id == "enemy_anchored_shard" then
 				hasElite = true
-				if npc.maxHealth ~= 80 or npc.eliteSlamDamage ~= 12 or npc.eliteSlamTelegraphMs ~= 700 then
-					fail("enemy_anchored_shard fora do baseline F0 (80 HP / slam 12 / telegraph 700)")
+				if npc.maxHealth ~= 120 or npc.eliteSlamDamage ~= 14 or npc.eliteSlamTelegraphMs ~= 700 then
+					fail("enemy_anchored_shard fora do baseline F0 (120 HP / slam 14 / telegraph 700)")
 				end
-				if npc.eliteComboDamage ~= 5 or npc.eliteComboTelegraphMs ~= 300 then
-					fail("enemy_anchored_shard combo leve fora do baseline (5+5 / 300 ms)")
+				if npc.eliteComboDamage ~= 6 or npc.eliteComboTelegraphMs ~= 300 then
+					fail("enemy_anchored_shard combo leve fora do baseline (6+6 / 300 ms)")
 				end
 				if npc.respawnSeconds ~= 180 then
 					fail("enemy_anchored_shard respawn deve ser 180 s")
