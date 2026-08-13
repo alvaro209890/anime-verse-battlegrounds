@@ -12,9 +12,9 @@ export type CombatAction =
 	| "Ability1"
 	| "Ability2"
 	| "Ability3"
-	-- Eco da Cadência (reentrada) e contra do Pulso são momentos próprios da
-	-- técnica: reusar a pose da ativação faria o jogador ler "de novo o mesmo
-	-- golpe" onde a regra mudou (docs/18 §2.2 e §2.3).
+	-- Eco da Cadência (reentrada) e contra do Pulso são momentos próprios da
+	-- técnica: reusar a pose da ativação faria o jogador ler "de novo o mesmo
+	-- golpe" onde a regra mudou (docs/18 §2.2 e §2.3).
 	| "Ability2Echo"
 	| "Ability3Counter"
 

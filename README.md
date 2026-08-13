@@ -3,8 +3,8 @@
 RPG / Action RPG de mundo aberto no Roblox (Luau) — combate estilo battlegrounds com
 progressão persistente, loadout customizável e ressonância de famílias de energia.
 
-> **Status em 2026-08-13 (15h):** itens 1–13 do backlog F0 fechados em código/headless, mais MENU/configurações, mira soltável, golpe com número de dano e, nesta rodada, **saída do Bastião destravada**, **clipes de animação reais no ataque** e **áudio de combate ligado** (`docs/18-ANALISE-VIDEO.md` §7).
-> **Runtime:** o Play das 14:26 mostrou HUD e técnicas funcionando, mas o portão era intransponível (prompt de travessia só existia no toque e o servidor devolvia a posição a cada frame). Corrigido: chegue no vão do portão norte e **SEGURE E**.
+> **Status em 2026-08-13 (17h):** itens 1–13 do backlog F0 fechados em código/headless, mais MENU/configurações, mira soltável, golpe com número de dano e, nesta rodada, **combate conectando de verdade**: toque/clique = golpe leve (botão de ataque removido da HUD), **corpo vira para a mira antes do golpe** (o servidor lê o look replicado), **aquisição de alvo em cone** no lugar da esfera (a esfera mediava centro-a-centro e o golpe passava a 11 studs), **reconciliação de zona** (quem já está fisicamente na planície é da planície — acabou o estado fantasma z=−100), **tempos de clipe medidos no Studio** (slash 0,5 s / lunge 1,5 s) com corte por fade no fim da ação, e **skin do boneco de treino com assets** (couro, bandagens, botas, bullseye neon, rosto de boneco e base de madeira).
+> **Runtime:** o Play das 17h roda com o dummy de treino já na skin nova (Belt/Wrap/Boot/Core/Base/Post + DummyFace). Correções da rodada anterior seguem valendo: chegue no vão do portão norte e **SEGURE E**.
 
 ## Estado comprovado
 
@@ -13,7 +13,7 @@ progressão persistente, loadout customizável e ressonância de famílias de en
 | Produto | Q-001 a Q-030 decididas; `docs/09-OPEN-QUESTIONS.md` é o registro canônico |
 | Planejamento | visão, GDD, mundo, social, arquitetura, schemas, segurança, roster, roadmap, benchmark e plano de animação documentados |
 | Implementado | domínio F0, mundo greybox com rotas/marcos/modelos low-poly, animação procedural de NPCs e do jogador, interações semânticas com Instrutor/Marco, save/ProfileStore, cliente Input/HUD, envelope v2, `SecurityService` e `TelemetryService` mínimo |
-| Validado automaticamente | 215/215 testes em `tests/run.luau` + 40/40 em `tests/animation.luau`, Selene limpo, StyLua canônico, Wally e build Rojo |
+| Validado automaticamente | 217/217 testes em `tests/run.luau` + 40/40 em `tests/animation.luau`, Selene limpo, StyLua canônico, Wally e build Rojo |
 | Ainda não comprovado | roteiro Play no Studio, physics/collision groups, DataStore real, dois clientes, latência, mobile, gamepad, performance, UX visual e assets de animação |
 
 O CI em pushes para `main` valida contratos headless e a árvore Rojo; não substitui playtest. O snapshot e os links de evidência ficam em `docs/12-TESTING.md`.

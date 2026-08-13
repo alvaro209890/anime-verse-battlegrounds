@@ -187,7 +187,15 @@ function InputController.start(
 			if not InputController.shouldAcceptInput(processed, typing, isMouseCombat, onButton) then
 				return
 			end
-			if inputType == Enum.UserInputType.MouseButton1 or key == Enum.KeyCode.ButtonR2 then
+			if
+				inputType == Enum.UserInputType.MouseButton1
+				or inputType == Enum.UserInputType.Touch
+				or key == Enum.KeyCode.ButtonR2
+			then
+				-- Clique do mouse OU toque no mundo = ataque simples. Sem o
+				-- botão de atacar na HUD (decisão do Álvaro, 13/08), o toque
+				-- fora de botões vira o golpe leve; cliques em botões de
+				-- habilidade continuam com os botões (shouldAcceptInput).
 				dispatch("BasicLight")
 			elseif inputType == Enum.UserInputType.MouseButton2 or key == Enum.KeyCode.ButtonR1 then
 				dispatch("BasicHeavy")

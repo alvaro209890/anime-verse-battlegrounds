@@ -95,6 +95,16 @@ Cada modelo usa uma raiz invisível ancorada e peças sem colisão ligadas por `
 > que orbita junto do pivot), `ShardFront`/`ShardBack` e, no elite, coroa
 > `Crown_1..3`. Continua tudo Part/Motor6D greybox até o Gate P1.
 
+> **Skin do boneco de treino (13/08, 16h):** o dummy ganhou assets além do
+> disco alvo: couro (torso/braços/pernas em `Leather`), cinto e botas de
+> couro escuro, bandagens pálidas (`Fabric`) nos antebraços, rosto clássico
+> de boneco (decal `DummyFace`, asset livre), alvo bullseye (`Core` Neon
+> vermelho no centro do `Target`) e base/poste de madeira (`WoodPlanks`/
+> `Wood`) que ancoram o visual sem mexer no root. Todos os novos joints
+> (`Joint_Belt`, `Joint_Wrap*`, `Joint_Boot*`, `Joint_Core`,
+> `Joint_Base`, `Joint_Post`) são ignorados pelo `ActorAnimator`, então a
+> animação procedural continua intacta.
+
 > **Decoração do spawn (13/08):** `SpawnDecorations.luau` (shared, dados puros
 > validados por teste) + `buildSpawnDecorations` no WorldService materializam
 > a leitura do Bastião: pilares de canto/portões com cristais umbral no topo,

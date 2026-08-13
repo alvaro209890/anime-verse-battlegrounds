@@ -250,6 +250,34 @@ function ZoneService.handleCrossingHold(
 	return { ok = true, anchorId = anchorId }
 end
 
+-- Reconciliação geométrica (docs/02 §4.3, docs/18 §8 — 13/08 15h30).
+--
+-- O servidor NÃO consegue segurar fisicamente um personagem cujo cliente tem a
+-- network ownership: empurrar a HumanoidRootPart todo Heartbeat vira borracha,
+-- e um cliente que insiste passa. O playtest com MCP provou o estrago: o
+-- jogador andou até z = −100 (fundo da planície) com o HUD escrito SEGURO.
+-- Nesse estado fantasma nada funciona — `canDamageCrossBoundary` recusa todo
+-- dano nos dois sentidos, então os golpes "não acertam os bichos", os
+-- Estilhaços não revidam e o objetivo nunca anda.
+--
+-- Regra: quem já está fisicamente na zona livre É da zona livre. O hold
+-- continua sendo a porta da frente no portão (prompt + confirmação), mas
+-- estado lógico e mundo nunca mais divergem. A proteção de 5 s da travessia
+-- vale igual, então ninguém aparece na planície já vulnerável.
+function ZoneService.reconcile(userId: number, geometricZoneId: string, now: number): EnterZoneResult
+	local result = ZoneService.tryEnterZone(userId, geometricZoneId, now, {})
+	if result.ok or geometricZoneId ~= ZONE_FREE then
+		return result
+	end
+	-- Pulou o volume de transição (dash, queda, ou simplesmente andou):
+	-- a travessia é registrada degrau a degrau para a proteção de 5 s valer.
+	-- Lockout é barreira de VOLTA para a segura; não cai aqui.
+	if ZoneService.getPlayerZone(userId) == ZONE_SAFE then
+		ZoneService.tryEnterZone(userId, ZONE_TRANSITION, now, { holdConfirmed = true })
+	end
+	return ZoneService.tryEnterZone(userId, geometricZoneId, now, { holdConfirmed = true })
+end
+
 -- Uma recusa de travessia devolve o jogador à posição anterior? `hold_required`
 -- não: ele está parado no vão do portão esperando confirmar o SEGURE E, e
 -- empurrá-lo a cada Heartbeat vira parede invisível (docs/18 §7). Lockout e

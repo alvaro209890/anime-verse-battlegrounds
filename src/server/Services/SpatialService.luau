@@ -187,6 +187,67 @@ function SpatialService.overlapInFront(
 	end, maxTargets)
 end
 
+-- Aquisição de alvo em cone (docs/13 §5.1, corrigido em 13/08 15h).
+--
+-- A esfera à frente exigia o centro do alvo dentro de ~6 studs do centro do
+-- atacante: no Studio, "colado no bicho" media 11 studs e o golpe passava
+-- longe. Pior, a esfera é toda-ou-nada — 1 stud a mais e o golpe some sem
+-- nenhuma leitura de por quê.
+--
+-- O cone é o padrão de battlegrounds: alcance generoso, abertura horizontal e
+-- **o mais próximo** dentro dela. Continua 100% servidor: quem informa posição
+-- e direção é o transform replicado, nunca o cliente.
+function SpatialService.acquireTarget(
+	attackerId: string,
+	maxDistance: number,
+	halfAngleDegrees: number,
+	predicate: ((string) -> boolean)?
+): string?
+	local deps = SpatialService.deps
+	local attacker = SpatialService.transforms[attackerId]
+	if not deps or not attacker or maxDistance <= 0 then
+		return nil
+	end
+	-- Projeta no plano do chão antes de normalizar: o look da HumanoidRootPart
+	-- tem componente vertical e ela encolheria o cosseno sem motivo.
+	local rawLook = attacker.look
+	local look = deps.geometry.normalize(deps.geometry.vec(rawLook.x, 0, rawLook.z))
+	local cosLimit = math.cos(math.rad(math.clamp(halfAngleDegrees, 0, 180)))
+
+	local best: string? = nil
+	local bestDistance = math.huge
+	local ids: { string } = {}
+	for fighterId in SpatialService.transforms do
+		table.insert(ids, fighterId)
+	end
+	-- Mesma razão do `collect`: empate não pode depender da ordem da tabela.
+	table.sort(ids)
+
+	for _, fighterId in ids do
+		if fighterId ~= attackerId and (not predicate or predicate(fighterId)) then
+			local transform = SpatialService.transforms[fighterId]
+			if transform then
+				local delta = deps.geometry.sub(transform.position, attacker.position)
+				local distance = deps.geometry.horizontalDistance(attacker.position, transform.position)
+				if distance <= maxDistance and distance < bestDistance then
+					-- Alvo praticamente em cima do atacante não tem direção
+					-- confiável: o cone não pode recusar um abraço.
+					local inCone = distance <= 1
+					if not inCone then
+						local flat = deps.geometry.normalize(deps.geometry.vec(delta.x, 0, delta.z))
+						inCone = deps.geometry.dot(flat, look) >= cosLimit
+					end
+					if inCone then
+						best = fighterId
+						bestDistance = distance
+					end
+				end
+			end
+		end
+	end
+	return best
+end
+
 -- Avanço do Ombro Cometa (docs/13 §6.1: 7 studs, cap absoluto 8, para em
 -- parede e em guarda inimiga). Os bloqueadores são os outros fighters que
 -- `blocks` marcar; paredes entram como bloqueadores estáticos via `extra`.

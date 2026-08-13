@@ -274,11 +274,82 @@ local function createActorModel(name: string, actorId: string, npcId: string, re
 				makeVisualPart("Part", "Belt", Vector3.new(1.7, 0.34, 1.25) * scale, coreColor, Enum.Material.Neon)
 			attach(torso, belt, CFrame.new(0, -0.55 * scale, 0.02 * scale), "Joint_Belt")
 		elseif npcId == "npc_training_dummy" then
-			-- Alvo de treino: disco pálido neon no peito — o ponto onde bater.
+			-- Boneco de treino com skin: couro escuro, braços de couro claro,
+			-- bandagens pálidas, botas, rosto clássico e alvo bullseye neon.
+			-- O poste de madeira atrás ancora o visual sem mexer no root.
+			torso.Material = Enum.Material.Leather
+			leftLeg.Material = Enum.Material.Leather
+			rightLeg.Material = Enum.Material.Leather
+			leftArm.Material = Enum.Material.Leather
+			rightArm.Material = Enum.Material.Leather
+
+			-- Cinto de couro mais escuro na cintura.
+			local belt =
+				makeVisualPart("Part", "Belt", Vector3.new(1.7, 0.34, 1.25) * scale, accentColor, Enum.Material.Leather)
+			attach(torso, belt, CFrame.new(0, -0.75 * scale, 0.02 * scale), "Joint_Belt")
+
+			-- Bandagens pálidas nos antebraços (o "saco" de treino).
+			local wrapLeft =
+				makeVisualPart("Part", "Wrap", Vector3.new(0.78, 0.7, 0.78) * scale, coreColor, Enum.Material.Fabric)
+			attach(leftArm, wrapLeft, CFrame.new(0, -0.55 * scale, 0), "Joint_WrapLeft")
+			local wrapRight = wrapLeft:Clone()
+			wrapRight.Name = "Wrap"
+			attach(rightArm, wrapRight, CFrame.new(0, -0.55 * scale, 0), "Joint_WrapRight")
+
+			-- Botas escuras para fechar as pernas.
+			local bootLeft = makeVisualPart(
+				"Part",
+				"Boot",
+				Vector3.new(0.95, 0.55, 1.05) * scale,
+				accentColor,
+				Enum.Material.Leather
+			)
+			attach(leftLeg, bootLeft, CFrame.new(0, -0.85 * scale, 0.05 * scale), "Joint_BootLeft")
+			local bootRight = bootLeft:Clone()
+			bootRight.Name = "Boot"
+			attach(rightLeg, bootRight, CFrame.new(0, -0.85 * scale, 0.05 * scale), "Joint_BootRight")
+
+			-- Rosto clássico do boneco de treino (decal livre).
+			local face = Instance.new("Decal")
+			face.Name = "DummyFace"
+			face.Face = Enum.NormalId.Front
+			face.Texture = "rbxassetid://2338267135"
+			face.Parent = head
+
+			-- Alvo bullseye: disco pálido neon + núcleo vermelho — o ponto de bater.
 			local target =
 				makeVisualPart("Part", "Target", Vector3.new(1.05, 0.22, 1.05) * scale, coreColor, Enum.Material.Neon)
 			target.Shape = Enum.PartType.Cylinder
 			attach(torso, target, CFrame.new(0, 0.15 * scale, 0.42 * scale), "Joint_Target")
+			local core = makeVisualPart(
+				"Part",
+				"Core",
+				Vector3.new(0.5, 0.26, 0.5) * scale,
+				Color3.fromRGB(255, 82, 82),
+				Enum.Material.Neon
+			)
+			core.Shape = Enum.PartType.Cylinder
+			attach(target, core, CFrame.new(0, 0.02 * scale, -0.02 * scale), "Joint_Core")
+
+			-- Base e poste de madeira: o boneco fica "montado" no chão.
+			local base = makeVisualPart(
+				"Part",
+				"Base",
+				Vector3.new(3.0, 0.22, 3.0) * scale,
+				Color3.fromRGB(139, 105, 60),
+				Enum.Material.WoodPlanks
+			)
+			base.Shape = Enum.PartType.Cylinder
+			attach(root, base, CFrame.new(0, -3.3 * scale, 0), "Joint_Base")
+			local post = makeVisualPart(
+				"Part",
+				"Post",
+				Vector3.new(0.42, 3.2, 0.42) * scale,
+				Color3.fromRGB(96, 70, 40),
+				Enum.Material.Wood
+			)
+			post.Shape = Enum.PartType.Cylinder
+			attach(root, post, CFrame.new(0, -1.55 * scale, -1.05 * scale), "Joint_Post")
 		end
 	else
 		-- Pivot visual comum: todas as peças do shard recebem bob/lean/spin sem

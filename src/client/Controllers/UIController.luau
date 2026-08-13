@@ -151,34 +151,14 @@ function UIController.new(deps: { [string]: any }): any
 
 	local touch = frame("TouchControls", gui, UDim2.fromOffset(250, 80), UDim2.new(1, -268, 1, -194))
 	touch.BackgroundTransparency = 1
-	local attack = button("Attack", touch, UDim2.fromOffset(90, 68), UDim2.fromOffset(160, 8))
-	attack.TextSize = 16
+	-- Sem botão de atacar (decisão do Álvaro, 13/08): ataque simples é o clique
+	-- do mouse / toque no mundo (InputController dispara BasicLight). A tela
+	-- fica limpa; Guard e Dash continuam como botões de apoio no toque.
 	local guard = button("Guard", touch, UDim2.fromOffset(76, 58), UDim2.fromOffset(88, 18))
 	local dash = button("Dash", touch, UDim2.fromOffset(76, 58), UDim2.fromOffset(4, 18))
 	local function isPointer(input: InputObject): boolean
 		return input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1
 	end
-	local attackStartedAt = 0
-	attack.InputBegan:Connect(function(input: InputObject)
-		if not isPointer(input) then
-			return
-		end
-		attackStartedAt = os.clock()
-		if input.UserInputType == Enum.UserInputType.Touch then
-			deps.inputApi.touchBegin(deps.input, "attack", nil, {})
-		end
-	end)
-	attack.InputEnded:Connect(function(input: InputObject)
-		if not isPointer(input) then
-			return
-		end
-		local action = if os.clock() - attackStartedAt >= 0.35 then "BasicHeavy" else "BasicLight"
-		if input.UserInputType == Enum.UserInputType.Touch then
-			deps.inputApi.touchEnd(deps.input, "attack", action, {})
-		else
-			deps.inputApi.dispatch(deps.input, action, {})
-		end
-	end)
 	guard.InputBegan:Connect(function(input: InputObject)
 		if not isPointer(input) then
 			return
@@ -297,7 +277,6 @@ function UIController.new(deps: { [string]: any }): any
 		feedback = feedback,
 		abilityViews = abilityViews,
 		touch = touch,
-		attack = attack,
 		guard = guard,
 		dash = dash,
 		zoneHold = zoneHold,
@@ -440,7 +419,6 @@ function UIController.render(controller: any, elapsed: number): ()
 	end
 
 	controller.touch.Visible = true
-	controller.attack.Text = controller.locale.get("hud.control_attack", localeId)
 	controller.guard.Text = controller.locale.get("hud.control_guard", localeId)
 	controller.dash.Text = controller.locale.get("hud.control_dash", localeId)
 	-- O prompt de travessia vale em qualquer plataforma. Enquanto era só Touch,

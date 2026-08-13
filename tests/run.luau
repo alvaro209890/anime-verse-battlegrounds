@@ -2649,6 +2649,32 @@ end)
 -- docs/18 §7: a recusa por hold não pode virar parede invisível. O jogador
 -- fica parado no vão do portão até segurar E; só recusa de outro tipo devolve
 -- o avatar à posição anterior.
+-- docs/18 §8: o playtest pelo MCP flagrou o jogador em z = −100 (planície) com
+-- o HUD escrito SEGURO. Nesse estado fantasma nenhum dano entra ou sai.
+test("zona: quem está fisicamente na planície é reconciliado para a zona livre", function()
+	fakeNow = 7000
+	ZoneService.init(makeZoneDeps())
+	ZoneService.registerPlayer(310)
+
+	-- No vão do portão continua pedindo o hold: a porta da frente não muda.
+	local naTransicao = ZoneService.reconcile(310, "zone_threshold_transition", fakeNow)
+	assertEq(naTransicao.ok, false, "transição ainda exige hold")
+	assertEq(naTransicao.reason, "hold_required", "motivo do prompt")
+	assertEq(ZoneService.getPlayerZone(310), "zone_bastion_safe", "continua seguro no vão")
+
+	-- Já fisicamente na planície: aceita, com a proteção da travessia.
+	local naPlanicie = ZoneService.reconcile(310, "zone_plain_free", fakeNow + 1)
+	assertTrue(naPlanicie.ok, "planície é aceita")
+	assertEq(ZoneService.getPlayerZone(310), "zone_plain_free", "zona lógica acompanha o mundo")
+	assertTrue(ZoneService.isInTransition(310, fakeNow + 1), "ganha a proteção de travessia")
+	assertFalse(ZoneService.canPvp(310), "protegido não entra em PvP na hora")
+
+	-- Volta para a segura continua livre (sem combate PvP recente).
+	local volta = ZoneService.reconcile(310, "zone_bastion_safe", fakeNow + 30)
+	assertTrue(volta.ok, "voltar para a segura")
+	assertEq(ZoneService.getPlayerZone(310), "zone_bastion_safe", "voltou")
+end)
+
 test("zona: hold_required não devolve o jogador; lockout e recusa inválida devolvem", function()
 	assertFalse(ZoneService.shouldRestorePosition("hold_required"), "hold não empurra de volta")
 	assertTrue(ZoneService.shouldRestorePosition("zone_lockout"), "lockout devolve")
@@ -3685,6 +3711,55 @@ test("espaço: hitbox à frente acerta o alvo e ignora quem está atrás", funct
 	assertEq(SpatialService.facingOf("alvo_atras", "player:900"), "back", "atacante pelas costas")
 	assertEq(SpatialService.distanceBetween("player:900", "alvo_frente"), 3, "distância")
 	assertEq(SpatialService.distanceBetween("player:900", "fantasma"), nil, "sem transform devolve nil")
+end)
+
+-- docs/18 §8: medido no Studio, "colado no bicho" eram 11 studs de centro a
+-- centro e a esfera de 6 studs nunca conectava. O cone corrige alcance E
+-- abertura, e sempre escolhe o alvo mais próximo dentro dela.
+test("espaço: cone de aquisição pega o mais próximo dentro do alcance e da abertura", function()
+	SpatialService.init({ geometry = Geometry })
+	SpatialService.setTransform("player:cone", vec(0, 0, 0), vec(0, 0, -1))
+	SpatialService.setTransform("perto", vec(0, 0, -9), vec(0, 0, 1))
+	SpatialService.setTransform("mais_longe", vec(0, 0, -10.5), vec(0, 0, 1))
+	SpatialService.setTransform("fora_do_alcance", vec(0, 0, -20), vec(0, 0, 1))
+	SpatialService.setTransform("atras", vec(0, 0, 5), vec(0, 0, 1))
+	-- Um pouco mais longe que "perto" de propósito: empate de distância é
+	-- resolvido pela ordem estável dos ids, não pelo ângulo.
+	SpatialService.setTransform("lateral", vec(9.5, 0, 0), vec(0, 0, 1))
+
+	assertEq(SpatialService.acquireTarget("player:cone", 11, 65), "perto", "o mais próximo à frente")
+	assertEq(
+		SpatialService.acquireTarget("player:cone", 11, 65, function(id)
+			return id ~= "perto"
+		end),
+		"mais_longe",
+		"predicado descarta e o próximo assume"
+	)
+	assertEq(SpatialService.acquireTarget("player:cone", 8, 65), nil, "alcance curto não alcança 9 studs")
+	-- 90° de meio-ângulo ainda não pega quem está exatamente ao lado (limite),
+	-- mas 91° pega: a abertura é medida no plano do chão.
+	assertEq(SpatialService.acquireTarget("player:cone", 11, 30), "perto", "abertura estreita mantém o da frente")
+	assertEq(
+		SpatialService.acquireTarget("player:cone", 11, 91),
+		"perto",
+		"abertura larga continua preferindo o próximo"
+	)
+	assertEq(SpatialService.acquireTarget("player:cone", 4, 65), nil, "ninguém dentro do alcance curto")
+	assertEq(SpatialService.acquireTarget("fantasma", 11, 65), nil, "atacante sem transform devolve nil")
+
+	-- Look com componente vertical não pode encolher o cone.
+	SpatialService.setTransform("player:cone", vec(0, 0, 0), vec(0, -0.7, -0.7))
+	assertEq(SpatialService.acquireTarget("player:cone", 11, 65), "perto", "look inclinado ainda mira à frente")
+
+	-- Virando o corpo, quem estava atrás entra no cone e quem estava à frente sai.
+	SpatialService.setTransform("player:cone", vec(0, 0, 0), vec(0, 0, 1))
+	assertEq(SpatialService.acquireTarget("player:cone", 11, 65), "atras", "de costas para o alvo antigo")
+
+	-- Alvo praticamente em cima do atacante não pode ser recusado por ângulo.
+	SpatialService.init({ geometry = Geometry })
+	SpatialService.setTransform("player:abraco", vec(0, 0, 0), vec(0, 0, -1))
+	SpatialService.setTransform("grudado", vec(0, 0, 0.5), vec(0, 0, 1))
+	assertEq(SpatialService.acquireTarget("player:abraco", 11, 65), "grudado", "colado acerta mesmo por trás")
 end)
 
 test("espaço: dash avança 12 studs e ignora distância declarada na direção", function()

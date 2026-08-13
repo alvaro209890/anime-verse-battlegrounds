@@ -148,3 +148,77 @@ de contato a 6–15 fps nos momentos de interesse e uma tira do medidor UMBRAL a
 O playtest humano desta rodada. Nada aqui foi visto rodando: as correções são
 julgadas por leitura de código e cobertas por 255 testes headless. Falta
 gravar o Play mostrando a travessia do portão e a cadeia no dummy.
+
+## 8. Playtest pelo MCP (13/08 15h): golpes que não conectam, corpo virado e estado fantasma
+
+O playtest foi dirigido pelo MCP (câmera e inputs injetados no Studio), medindo
+distâncias no próprio mundo em vez de ler o código. Três achados que mudaram a
+regra de combate:
+
+### 8.1 O que o playtest mostrou
+
+1. **Golpe passava longe (P0).** "Colado no bicho" media **11 studs de centro a
+   centro** (torso 2,2 × escala 0,9 + jogador). A hitbox era uma esfera à frente
+   de ~6 studs, toda-ou-nada: 1 stud a mais e o golpe sumia sem nenhuma leitura
+   de por quê (docs/13 §5.1).
+2. **O corpo não virava para a mira (P0).** Com a câmera apontada exatamente
+   para o Estilhaço (0°), o corpo estava **122°** virado para outro lado — o
+   AutoRotate do Humanoid só gira quem está andando. Como o servidor resolve
+   a hitbox pelo look da HumanoidRootPart replicada, o golpe saía para trás do
+   jogador e nunca acertava nada.
+3. **Estado fantasma de zona (P0).** O jogador andou até **z = −100** (fundo da
+   planície) com o HUD escrito SEGURO. Nesse estado nada funciona:
+   canDamageCrossBoundary recusa todo dano nos dois sentidos, então golpes
+   "não acertam os bichos", os Estilhaços não revidam e o objetivo nunca anda
+   (docs/02 §4.3).
+
+### 8.2 Correções desta rodada
+
+- **Aquisição de alvo em cone** (SpatialService.acquireTarget): alcance
+  generoso (6 studs de corpo + 3 de folga, cresce no degrau da cadeia),
+  abertura horizontal (65° leve / 50° pesado) e **o mais próximo** dentro dela.
+  Medido de centro a centro, mas com a folga de corpo: encostar agora conecta.
+  O cone é o padrão de battlegrounds e continua 100% servidor — o transform
+  replicado informa posição e direção, nunca o cliente.
+- **Corpo vira para a mira** (CharacterController.faceAim): o avatar local
+  gira a HRP para a direção do alvo travado ou da câmera, desliga o AutoRotate
+  por 0,6 s (cobre a ação mais longa da cadeia) e devolve o giro depois. Apenas
+  rotação — posição idêntica, então o PlayerMotionGuard não vê deslocamento.
+- **Reconciliação de zona** (ZoneService.reconcile): quem já está fisicamente
+  na zona livre É da zona livre. O hold continua sendo a porta da frente no
+  portão, mas estado lógico e mundo nunca mais divergem; a proteção de 5 s da
+  travessia vale igual.
+- **Log de combate de Studio** (F0Debug): quando o golpe não conecta, o Output
+  diz por quê — fora do alcance? fora do cone? bloqueado pela fronteira?
+  (substitui a única evidência anterior, "não acertou nada").
+- **Tempos de clipe medidos no Studio** (CombatAnimations.luau): slash = 0,5 s,
+  lunge = 1,5 s (AnimationTrack.Length via MCP). A primeira versão chutou
+  0,53/0,60 e acelerava o lunge a 1,65× para "caber" — em 1,5 s de clipe isso
+  mostrava um quarto do movimento e lia como espasmo (a reclamação "as
+  animações estão feias"). Regra nova: o clipe pode passar no máximo 15% da ação
+  e quem corta é o runtime (CharacterAnimationPlayer.step para o track com
+  fade), não a validação.
+- **Toque = ataque leve**: sem botão de atacar na HUD (decisão do Álvaro,
+  13/08), tocar no mundo vira o golpe leve; cliques em botões de habilidade
+  continuam com os botões.
+- **Skin do boneco de treino com assets** (16h): couro, cinto, botas,
+  bandagens, rosto clássico (decal), bullseye Neon e base/poste de madeira —
+  todos com joints próprios ignorados pelo ActorAnimator (detalhes em docs/15
+  §4).
+
+### 8.3 Como conferir no Studio
+
+1. Play: aproxime do Estilhaço e golpeie — agora conecta mesmo "colado".
+2. Mire na direção oposta e ataque: o corpo vira para a mira antes do golpe.
+3. Ande até a planície sem passar pelo portão (dash/queda): a HUD troca para
+   LIVRE e o combate funciona nos dois sentidos.
+4. No dummy: a cadeia leve tem 4 degraus com leitura diferente (jab estalado,
+   meio com peso, lunge no fim) e o rastro morre com a ação.
+5. O boneco de treino já aparece na skin nova (couro + bullseye + madeira).
+
+### 8.4 O que continua não comprovado
+
+Playtest humano completo do combate com os novos alcances, dois clientes,
+latência e performance. As correções são cobertas por 257 testes headless
+(217 run + 40 animation).
+

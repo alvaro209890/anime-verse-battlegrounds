@@ -15,12 +15,13 @@
 -- São PLACEHOLDER honesto: leem como golpe de braço, não são os clipes finais
 -- do jogo (Gate A1 de docs/14 continua aberto).
 --
--- `nominalSeconds` é a duração do clipe na velocidade 1. Foi tirada da
--- documentação dos assets e precisa ser reconferida no Studio — o plugin de
--- debug faz isso sem palpite:
---   lune run scripts/avb-debug.luau eval "local a=Instance.new('Animation')
---   a.AnimationId='rbxassetid://522635514' return a"
--- (ver docs/19-DEBUG-BRIDGE.md; `TimeLength` só existe com o track carregado).
+-- `nominalSeconds` é a duração do clipe na velocidade 1, **medida no Studio**
+-- em 2026-08-13 15h30 (`AnimationTrack.Length` com o track carregado, via MCP):
+--   522635514 → 0,500 s   ·   522638767 → 1,500 s
+-- A primeira versão deste catálogo chutou 0,53/0,60 e o lunge acabou tocando a
+-- 1,65× para "caber": em 1,5 s de clipe, isso mostrava um quarto do movimento
+-- e lia como espasmo. Era a reclamação "as animações estão feias" (docs/18 §8).
+-- Nunca declare esses números de cabeça: meça de novo se trocar de asset.
 --
 -- Tipos inline para o módulo carregar em teste Lune (sem DataModel).
 
@@ -39,8 +40,8 @@ export type Clip = {
 
 local SLASH = "rbxassetid://522635514"
 local LUNGE = "rbxassetid://522638767"
-local SLASH_SECONDS = 0.53
-local LUNGE_SECONDS = 0.60
+local SLASH_SECONDS = 0.5
+local LUNGE_SECONDS = 1.5
 
 local CombatAnimations = {}
 
@@ -70,24 +71,28 @@ local function clip(values: {
 		action = values.action,
 		assetId = values.assetId,
 		speed = values.speed,
-		fadeInSeconds = values.fadeInSeconds or 0.05,
-		fadeOutSeconds = values.fadeOutSeconds or 0.12,
-		weight = values.weight or 1,
+		fadeInSeconds = values.fadeInSeconds or 0.03,
+		fadeOutSeconds = values.fadeOutSeconds or 0.16,
+		weight = values.weight or 1.15,
 		nominalSeconds = values.nominalSeconds,
 		source = "Roblox (userId 1) — placeholder livre, docs/14 §5.1",
 	}
 end
 
--- Cadeia leve: quatro degraus com leitura diferente. Slash nos dois primeiros
--- (mais curtos e rápidos), lunge nos dois últimos (avanço, corpo inteiro).
+-- Cadeia leve: os três primeiros degraus usam o clipe CURTO (slash),
+-- desacelerando de 1,92× até 1,22×. O jab sai estalado e o meio da cadeia
+-- ganha peso sem virar borrão. O FINALIZADOR (degrau 4) troca para o clipe
+-- LONGO (lunge) a 2,9×: é o único degrau com janela para ele (0,48 s de ação
+-- vs 1,5/2,9 = 0,52 s de clipe — o jogador vê ~93% do movimento, quase em
+-- tempo real). Fecha a cadeia com corpo inteiro em vez do 4º slash repetido.
 local LIGHT_CHAIN: { Clip } = {
-	clip({ action = "BasicLight1", assetId = SLASH, speed = 2.3, nominalSeconds = SLASH_SECONDS }),
-	clip({ action = "BasicLight2", assetId = SLASH, speed = 1.85, nominalSeconds = SLASH_SECONDS }),
-	clip({ action = "BasicLight3", assetId = LUNGE, speed = 1.65, nominalSeconds = LUNGE_SECONDS }),
+	clip({ action = "BasicLight1", assetId = SLASH, speed = 1.92, nominalSeconds = SLASH_SECONDS }),
+	clip({ action = "BasicLight2", assetId = SLASH, speed = 1.55, nominalSeconds = SLASH_SECONDS }),
+	clip({ action = "BasicLight3", assetId = SLASH, speed = 1.22, nominalSeconds = SLASH_SECONDS }),
 	clip({
 		action = "BasicLight4",
 		assetId = LUNGE,
-		speed = 1.3,
+		speed = 2.9,
 		nominalSeconds = LUNGE_SECONDS,
 		fadeInSeconds = 0.04,
 	}),
@@ -100,19 +105,19 @@ local ACTION_CLIPS: { [string]: Clip } = {
 	BasicHeavy = clip({
 		action = "BasicHeavy",
 		assetId = LUNGE,
-		speed = 1.2,
+		speed = 2.7,
 		nominalSeconds = LUNGE_SECONDS,
 		weight = 1,
 	}),
-	Ability1 = clip({ action = "Ability1", assetId = LUNGE, speed = 0.85, nominalSeconds = LUNGE_SECONDS }),
-	Ability2 = clip({ action = "Ability2", assetId = SLASH, speed = 1.05, nominalSeconds = SLASH_SECONDS }),
-	Ability3 = clip({ action = "Ability3", assetId = SLASH, speed = 0.95, nominalSeconds = SLASH_SECONDS }),
-	Ability2Echo = clip({ action = "Ability2Echo", assetId = SLASH, speed = 1.3, nominalSeconds = SLASH_SECONDS }),
+	Ability1 = clip({ action = "Ability1", assetId = LUNGE, speed = 1.9, nominalSeconds = LUNGE_SECONDS }),
+	Ability2 = clip({ action = "Ability2", assetId = SLASH, speed = 0.7, nominalSeconds = SLASH_SECONDS }),
+	Ability3 = clip({ action = "Ability3", assetId = SLASH, speed = 0.65, nominalSeconds = SLASH_SECONDS }),
+	Ability2Echo = clip({ action = "Ability2Echo", assetId = SLASH, speed = 0.9, nominalSeconds = SLASH_SECONDS }),
 	Ability3Counter = clip({
 		action = "Ability3Counter",
-		assetId = LUNGE,
-		speed = 1.55,
-		nominalSeconds = LUNGE_SECONDS,
+		assetId = SLASH,
+		speed = 1.06,
+		nominalSeconds = SLASH_SECONDS,
 	}),
 }
 
@@ -150,10 +155,12 @@ function CombatAnimations.actionSeconds(action: string, comboStep: number?): num
 	return ACTION_SECONDS[action]
 end
 
--- Honestidade visual (docs/14 §5.1, mesma regra do VFX): o clipe não pode
--- durar mais que a ação. Se durar, o jogador vê o braço ainda voando depois de
--- o golpe já ter acabado no servidor.
-local TOLERANCE_SECONDS = 0.02
+-- Honestidade visual (docs/14 §4.4, mesma regra do VFX): nenhuma pose
+-- sobrevive à ação. Forçar o clipe INTEIRO dentro da janela exigiria acelerar
+-- 4× um clipe de 1,5 s — foi o que deixou tudo feio. A regra prática: o clipe
+-- pode passar no máximo 15% da ação, e quem garante o corte é o runtime
+-- (`CharacterAnimationPlayer.step` para o track com fade no fim da ação).
+local OVERRUN_LIMIT = 1.15
 
 function CombatAnimations.validate(): (boolean, string?)
 	for index, entry in LIGHT_CHAIN do
@@ -192,9 +199,19 @@ function CombatAnimations.validateClip(entry: Clip, budgetSeconds: number?): (bo
 		return false, ("%s: ação sem duração declarada"):format(entry.action)
 	end
 	local playedSeconds = entry.nominalSeconds / entry.speed
-	if playedSeconds > budgetSeconds + TOLERANCE_SECONDS then
+	if playedSeconds > budgetSeconds * OVERRUN_LIMIT then
 		return false,
-			("%s: clipe dura %.3fs e a ação só tem %.3fs"):format(entry.action, playedSeconds, budgetSeconds)
+			("%s: clipe dura %.3fs e a ação só tem %.3fs (limite %.0f%%)"):format(
+				entry.action,
+				playedSeconds,
+				budgetSeconds,
+				OVERRUN_LIMIT * 100
+			)
+	end
+	-- Velocidade fora de 0,5×–3× não existe como leitura: ou é câmera lenta ou
+	-- é borrão. Se um clipe novo pedir isso, o problema é a escolha do clipe.
+	if entry.speed < 0.5 or entry.speed > 3 then
+		return false, ("%s: velocidade %.2f× fora da faixa legível (0,5×–3×)"):format(entry.action, entry.speed)
 	end
 	return true, nil
 end

@@ -33,6 +33,8 @@ function CharacterAnimationPlayer.new(deps: {
 		tracks = {},
 		failed = {},
 		current = nil,
+		currentUntil = 0,
+		currentFadeOut = 0.12,
 		trail = nil,
 		trailUntil = 0,
 		characterAddedConnection = nil,
@@ -187,19 +189,32 @@ function CharacterAnimationPlayer.play(player: any, action: string, comboStep: n
 	end
 	player.current = track
 
+	local budget = player.catalog.actionSeconds(action, comboStep) or 0.3
+	-- Honestidade visual: a pose morre com a ação. O clipe pode ser mais longo
+	-- que a janela (docs/14 §4.4) — quem corta é este prazo, com fade.
+	player.currentUntil = player.now() + budget
+	player.currentFadeOut = clip.fadeOutSeconds
+
 	if player.trail then
 		player.trail.Enabled = true
-		local budget = player.catalog.actionSeconds(action, comboStep) or 0.3
 		player.trailUntil = player.now() + budget + TRAIL_HOLD_SECONDS
 	end
 	return true
 end
 
--- Chamado todo frame pelo bootstrap: desliga o rastro quando a ação acaba.
+-- Chamado todo frame pelo bootstrap: corta o clipe e o rastro no fim da ação.
 function CharacterAnimationPlayer.step(player: any): ()
+	local now = player.now()
 	local trail = player.trail
-	if trail and trail.Enabled and player.now() >= player.trailUntil then
+	if trail and trail.Enabled and now >= player.trailUntil then
 		trail.Enabled = false
+	end
+	local track = player.current
+	if track and now >= player.currentUntil then
+		player.current = nil
+		pcall(function()
+			track:Stop(player.currentFadeOut or 0.12)
+		end)
 	end
 end
 

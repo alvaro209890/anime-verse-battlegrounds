@@ -640,10 +640,13 @@ test("clipes: cadeia leve tem quatro degraus e nenhum passa da duração da aç�
 		assertTrue(clip ~= nil, "degrau " .. step .. " tem clipe")
 		if clip then
 			local budget = PlayerCombatAnimator.lightChainDuration(step)
+			-- O clipe pode passar até 15% da ação: o corte com fade é do
+			-- runtime (docs/14 §4.4). O que não pode é virar borrão.
 			assertTrue(
-				clip.nominalSeconds / clip.speed <= budget + 0.02,
-				("degrau %d dura mais que %.3fs"):format(step, budget)
+				clip.nominalSeconds / clip.speed <= budget * 1.15,
+				("degrau %d estoura o limite de 15%% sobre %.3fs"):format(step, budget)
 			)
+			assertTrue(clip.speed >= 0.5 and clip.speed <= 3, ("degrau %d com velocidade ilegível"):format(step))
 			seen[clip.action] = true
 		end
 	end
@@ -694,6 +697,19 @@ test("clipes: clipe que estoura a ação é recusado pela validação", function
 	}, 0.3)
 	assertTrue(not ok, "clipe longo demais deve falhar")
 	assertTrue(reason ~= nil and string.find(reason, "só tem") ~= nil, "motivo explica o estouro")
+
+	-- Velocidade fora da faixa legível é o que deixou o lunge feio.
+	local borrao = CombatAnimations.validateClip({
+		action = "Borrao",
+		assetId = "rbxassetid://1",
+		speed = 4,
+		fadeInSeconds = 0.05,
+		fadeOutSeconds = 0.1,
+		weight = 1,
+		nominalSeconds = 1.5,
+		source = "teste",
+	}, 0.5)
+	assertTrue(not borrao, "4× é borrão e deve falhar")
 
 	local badAsset = CombatAnimations.validateClip({
 		action = "Falso",

@@ -84,6 +84,35 @@ print("[Bootstrap] greybox construído")
 
 -- 1.2. Espaço — produz distância, costas e hitbox para o combate.
 SpatialService.init({ geometry = Geometry })
+
+-- Alcance e abertura do golpe (docs/13 §5.1, medido no Studio em 13/08).
+--
+-- A distância é medida de CENTRO a CENTRO. O alcance declarado do golpe (6
+-- studs na spec) é distância entre corpos, então a aquisição precisa somar o
+-- raio dos dois: ~1,5 stud do jogador + ~1,5 stud do alvo (torso 2,2 × escala
+-- 0,9 do Estilhaço). Sem essa folga, encostar no inimigo ainda media mais que
+-- o alcance e o golpe passava reto — foi o que o playtest das 15h mostrou.
+local BODY_ALLOWANCE_STUDS = 3
+local BASIC_RANGE_STUDS = 6
+-- Cresce com o degrau da cadeia, como a amplitude da pose.
+local BASIC_LIGHT_REACH_STUDS: { number } = {
+	BASIC_RANGE_STUDS + BODY_ALLOWANCE_STUDS,
+	BASIC_RANGE_STUDS + BODY_ALLOWANCE_STUDS,
+	BASIC_RANGE_STUDS + BODY_ALLOWANCE_STUDS + 0.5,
+	BASIC_RANGE_STUDS + BODY_ALLOWANCE_STUDS + 1,
+}
+local BASIC_HEAVY_REACH_STUDS = BASIC_RANGE_STUDS + BODY_ALLOWANCE_STUDS + 0.5
+-- Cadência Quebrada declara range 6 no catálogo: mesma folga de corpo.
+local CADENCE_REACH_STUDS = BASIC_RANGE_STUDS + BODY_ALLOWANCE_STUDS
+-- Abertura horizontal (meio-ângulo). O pesado é mais preciso que a cadeia.
+local BASIC_LIGHT_HALF_ANGLE_DEGREES = 65
+local BASIC_HEAVY_HALF_ANGLE_DEGREES = 50
+
+-- Log de combate só no Studio com F0Debug (mesmo gate das técnicas de teste).
+local combatDebugEnabled = StudioDebug.isEnabled(
+	RunService:IsStudio(),
+	StudioDebug.resolveAttribute(game:GetAttribute("F0Debug"), script:GetAttribute("F0Debug"))
+)
 PlayerMotionGuard.init()
 
 -- 1.3. Observabilidade/segurança — somente campos allowlisted chegam ao log.
@@ -606,14 +635,20 @@ AbilityService.init({
 	-- referência para a reentrada/eco. O cliente não informa target nem hit.
 	resolveCadenceTarget = function(userId: number)
 		local attackerId = CombatService.playerFighterId(userId)
-		local hits = SpatialService.overlapInFront(attackerId, 2, 4.5, function(fighterId: string): boolean
-			local other = CombatService.getFighter(fighterId)
-			if not other or other.health <= 0 then
-				return false
+		-- Mesma aquisição em cone do golpe básico: a esfera antiga fazia a
+		-- técnica errar mesmo com o inimigo na cara do jogador.
+		local targetId = SpatialService.acquireTarget(
+			attackerId,
+			CADENCE_REACH_STUDS,
+			BASIC_LIGHT_HALF_ANGLE_DEGREES,
+			function(fighterId: string): boolean
+				local other = CombatService.getFighter(fighterId)
+				if not other or other.health <= 0 then
+					return false
+				end
+				return canPlayerDamageFighter(userId, fighterId)
 			end
-			return canPlayerDamageFighter(userId, fighterId)
-		end, 1)
-		local targetId = hits[1]
+		)
 		return if targetId then CombatService.getFighter(targetId) else nil
 	end,
 	revalidateCadenceTarget = function(userId: number, target: any): boolean
@@ -624,10 +659,15 @@ AbilityService.init({
 			return false
 		end
 		local attackerId = CombatService.playerFighterId(userId)
-		local matches = SpatialService.overlapInFront(attackerId, 2, 4.5, function(fighterId: string): boolean
-			return fighterId == target.id
-		end, 1)
-		return matches[1] == target.id
+		local match = SpatialService.acquireTarget(
+			attackerId,
+			CADENCE_REACH_STUDS,
+			BASIC_LIGHT_HALF_ANGLE_DEGREES,
+			function(fighterId: string): boolean
+				return fighterId == target.id
+			end
+		)
+		return match == target.id
 	end,
 })
 
@@ -989,22 +1029,56 @@ RemoteGateway.onClientIntent(Remotes.Names.BasicAttackIntent, function(player: P
 	local kind = payload.kind
 	local now = os.clock()
 
-	-- Hitbox de verdade (§5.1/§5.2): esfera à frente para a cadeia leve,
-	-- cápsula mais longa para o pesado. Máx. 1 alvo por golpe.
+	-- Aquisição em cone (§5.1, corrigido em 13/08 15h). A esfera à frente
+	-- media centro-a-centro e alcançava ~6 studs: no Studio, o jogador
+	-- "colado" no Estilhaço estava a 11 studs e nenhum golpe conectava.
+	-- Agora: o alvo válido mais próximo dentro do alcance e da abertura.
+	-- Máx. 1 alvo por golpe, como a spec exige.
 	local isHeavy = kind == "heavy"
 	local step = math.clamp(attacker.lightStep + 1, 1, 4)
-	local radius = if isHeavy then 2.5 else ({ 4, 4, 4.5, 5 })[step]
-	local forward = if isHeavy then 3.5 else 2
-	local hits = SpatialService.overlapInFront(attackerId, forward, radius, function(fighterId: string): boolean
+	local reach = if isHeavy then BASIC_HEAVY_REACH_STUDS else BASIC_LIGHT_REACH_STUDS[step]
+	local halfAngle = if isHeavy then BASIC_HEAVY_HALF_ANGLE_DEGREES else BASIC_LIGHT_HALF_ANGLE_DEGREES
+	-- Diagnóstico de Studio: quando o golpe não conecta, o Output diz por quê
+	-- (fora do alcance? fora do cone? bloqueado pela fronteira?). Sem isto, a
+	-- única evidência era "não acertou nada" (docs/18 §8).
+	local blockedByFrontier = 0
+	local targetId = SpatialService.acquireTarget(attackerId, reach, halfAngle, function(fighterId: string): boolean
 		local other = CombatService.getFighter(fighterId)
 		if not other or other.health <= 0 then
 			return false
 		end
 		-- Dano não atravessa a fronteira (§8.2).
-		return canPlayerDamageFighter(player.UserId, fighterId)
-	end, 1)
-
-	local targetId = hits[1]
+		local allowed = canPlayerDamageFighter(player.UserId, fighterId)
+		if not allowed then
+			blockedByFrontier += 1
+		end
+		return allowed
+	end)
+	if combatDebugEnabled and not targetId then
+		local nearest = SpatialService.acquireTarget(attackerId, reach * 3, 180, function(fighterId: string): boolean
+			local other = CombatService.getFighter(fighterId)
+			return other ~= nil and other.health > 0 and fighterId ~= attackerId
+		end)
+		print(
+			("[Combat] %s errou: alcance %.1f, cone %d° — %s%s"):format(
+				kind or "light",
+				reach,
+				halfAngle,
+				if nearest
+					then ("mais próximo: %s a %.1f studs"):format(
+						nearest,
+						SpatialService.distanceBetween(attackerId, nearest) or -1
+					)
+					else "nenhum fighter vivo por perto",
+				if blockedByFrontier > 0
+					then (" | %d recusado(s) pela fronteira: você está em %s"):format(
+						blockedByFrontier,
+						ZoneService.getPlayerZone(player.UserId)
+					)
+					else ""
+			)
+		)
+	end
 	local target = if targetId then CombatService.getFighter(targetId) else nil
 	local facing = if targetId then SpatialService.facingOf(targetId, attackerId) else "front"
 
@@ -1427,7 +1501,9 @@ RunService.Heartbeat:Connect(function()
 				-- empurrar o jogador de volta fisicamente é trabalho de Studio.
 				local geometric = CatalogService.zoneAtPosition(position)
 				if geometric and geometric ~= ZoneService.getPlayerZone(userId) then
-					local entered = ZoneService.tryEnterZone(userId, geometric, now, {})
+					-- Reconcilia em vez de só tentar entrar: quem já está na
+					-- planície é da planície (docs/18 §8).
+					local entered = ZoneService.reconcile(userId, geometric, now)
 					-- `hold_required` não é invasão: é o jogador parado no vão do
 					-- portão esperando confirmar a travessia. Puxá-lo de volta a
 					-- cada Heartbeat criava uma parede invisível — do lado de
