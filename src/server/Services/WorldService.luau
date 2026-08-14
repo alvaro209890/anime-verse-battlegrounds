@@ -1429,7 +1429,10 @@ function WorldService.init(deps: WorldDeps): ()
 
 	root.Parent = Workspace
 	WorldService.root = root
-	WorldService.settleRigBodies()
+	-- Em thread própria: `settleRigBodies` espera um passo de física, e o
+	-- bootstrap não pode ceder o thread no meio — um jogador que entrasse
+	-- nesse frame ainda não teria `PlayerAdded` conectado.
+	task.spawn(WorldService.settleRigBodies)
 end
 
 -- Assenta os corpos de rig no chão.
