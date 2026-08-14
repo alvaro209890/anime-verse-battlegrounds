@@ -49,21 +49,42 @@ resto da pose permanece legível.
 ### 2.5 Hit-stop visual
 
 `PlayerCombatAnimator.confirmHit(animator, outcome)` congela a pose por
-40 ms (hit), 60 ms (death) ou 20 ms (guard). O congelamento só acontece no
-desfecho **confirmado** pelo servidor, nunca na intenção local — o mesmo
-contrato do áudio de impacto (`16-COMBAT-AUDIO.md` §3.1).
+70 ms (hit), 110 ms (death), 35 ms (guard) ou 90 ms (counter). O congelamento só
+acontece no desfecho **confirmado** pelo servidor, nunca na intenção local — o
+mesmo contrato do áudio de impacto (`16-COMBAT-AUDIO.md` §3.1).
+
+> Recalibrado em 14/08. Os valores anteriores (40/60/20 ms) são 2,4 quadros a
+> 60 fps no acerto: curto demais para o olho separar "bateu" de "passou perto".
+> Continua curto de propósito — hit-stop longo faz a cadeia leve travar.
 
 ### 2.6 Câmera de impacto (`CombatCameraController`)
 
-Novo módulo de apresentação local:
+Módulo de apresentação local:
 
-- **shake** com curva quadrática de trauma (impactos pequenos quase não mexem);
+- **shake** com curva `trauma^1,4` (mantém a ordem entre desfechos sem zerar o
+  degrau de baixo);
 - **FOV punch** curto que decai com o tempo;
-- perfis por desfecho (`hit`/ `death`/ `guard`) e reforço para técnicas
+- perfis por desfecho (`hit`/`death`/`guard`/`counter`) e reforço para técnicas
   pesadas (`comet_shoulder`, `broken_cadence`, `eclipse_beat`).
 
-Baselines de `docs/14` §6 respeitadas: shake limitado a 2° e 0,3 stud, sempre
-local. Nunca altera a mira autoritativa nem a câmera de outro jogador.
+> A curva era **quadrática** e o resultado era invisível: com trauma 0,35, o
+> acerto comum — o golpe que o jogador mais dá — rendia 0,24° e 0,037 stud por
+> 0,13 s. "Impacto pequeno quase não mexe" é a intenção certa, mas o acerto
+> comum era o caso pequeno da própria curva. Tabela dos valores em vigor em
+> `docs/14` §6; o piso do que precisa ser sentido está travado por teste.
+
+Baselines de `docs/14` §6 respeitadas: shake limitado a 3,2° e 0,45 stud,
+sempre local. Nunca altera a mira autoritativa nem a câmera de outro jogador.
+
+### 2.6.1 Luz de impacto
+
+Até 14/08 o kit não acendia nenhuma luz: a camada de VFX materializava
+`ParticleEmitter`, `Trail` e `Part`, e zero `PointLight`. Partícula com
+`LightEmission` **brilha mas não ilumina** — nada do combate projetava luz no
+chão nem no oponente. Cada camada agora declara `glowStuds` derivado do próprio
+raio (`AbilityVfx.GlowByKind`), e o `PointLight` segue a mesma envoltória das
+partículas. Sem sombra dinâmica, de propósito: o custo aparece antes da leitura
+num combate com vários lutadores.
 
 ### 2.7 Pacote VFX do Ombro Cometa (estilo battlegrounds)
 

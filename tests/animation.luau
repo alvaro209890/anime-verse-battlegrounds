@@ -511,7 +511,10 @@ test("câmera: trauma decai, clampa e técnica pesada sacode mais", function()
 	local d = CombatCameraController.decay(0.5, 2.0, 0.1)
 	assertTrue(math.abs(d - 0.3) < 1e-9, "decaimento linear")
 	assertEq(CombatCameraController.decay(0.1, 2.0, 0.1), 0, "decaimento não fica negativo")
-	assertEq(CombatCameraController.shakeAmplitude(0.5), 0.25, "curva quadrática")
+	-- A curva era quadrática e engolia o degrau de baixo (ver o teste seguinte).
+	assertTrue(CombatCameraController.shakeAmplitude(0.5) > 0.25, "curva não achata mais o acerto comum")
+	assertEq(CombatCameraController.shakeAmplitude(0), 0, "sem trauma não treme")
+	assertEq(CombatCameraController.shakeAmplitude(1), 1, "trauma saturado é amplitude cheia")
 	assertEq(CombatCameraController.shakeAmplitude(2), 1, "clampa acima de 1")
 	local heavy = CombatCameraController.profileFor("hit", "comet_shoulder")
 	local light = CombatCameraController.profileFor("hit", "basic_light")
@@ -520,6 +523,51 @@ test("câmera: trauma decai, clampa e técnica pesada sacode mais", function()
 		assertTrue(heavy.trauma > light.trauma, "técnica pesada sacode mais")
 	end
 	assertEq(CombatCameraController.profileFor("desconhecido", nil), nil, "desfecho desconhecido não treme")
+end)
+
+test("câmera: o acerto comum treme o bastante para ser visto", function()
+	-- Regressão de 14/08 (noite): os perfis existiam, o código rodava, e o
+	-- resultado era invisível. Com trauma 0,35 na curva quadrática o ACERTO
+	-- COMUM — o golpe que o jogador mais dá — rendia 0,24° e 0,037 stud por
+	-- 0,13 s. Este teste trava o PISO do que precisa ser sentido, e a ordem
+	-- entre os desfechos, que é o que dá leitura sem depender de cor ou som.
+	local function grausDe(outcome: string): number
+		local perfil = CombatCameraController.profileFor(outcome, nil)
+		assertTrue(perfil ~= nil, "perfil existe: " .. outcome)
+		local trauma = (perfil :: any).trauma
+		return CombatCameraController.shakeAmplitude(trauma) * CombatCameraController.MaxShakeDegrees
+	end
+
+	assertTrue(grausDe("hit") >= 1.0, ("acerto comum treme só %.2f°"):format(grausDe("hit")))
+	assertTrue(grausDe("guard") < grausDe("hit"), "guarda sacode menos que acerto")
+	assertTrue(grausDe("hit") < grausDe("counter"), "contra sacode mais que acerto")
+	assertTrue(grausDe("counter") < grausDe("death"), "morte é o maior impacto")
+	assertTrue(grausDe("death") <= CombatCameraController.MaxShakeDegrees, "nada passa do teto declarado")
+
+	-- O punch de FOV é o outro meio-caminho do impacto e não depende da curva.
+	local acerto = CombatCameraController.profileFor("hit", nil)
+	assertTrue(acerto ~= nil and (acerto :: any).fov >= 2, "acerto precisa de punch de FOV perceptível")
+end)
+
+test("vfx: toda camada acende luz proporcional ao próprio raio", function()
+	-- Reclamação de 14/08: "não está tendo luzes". Era literal — a camada de
+	-- VFX criava ParticleEmitter, Trail e Part e NENHUM PointLight. Partícula
+	-- com LightEmission brilha, mas não ilumina o chão nem o oponente.
+	for _, technique in AbilityVfx.all() do
+		for _, camada in technique.layers do
+			local rotulo = technique.abilityId .. "/" .. camada.id
+			assertTrue(camada.glowStuds > 0, rotulo .. " não acende luz nenhuma")
+			local fator = AbilityVfx.GlowByKind[camada.kind]
+			assertTrue(fator ~= nil, "forma sem fator de luz: " .. camada.kind)
+			assertTrue(
+				math.abs(camada.glowStuds - camada.radiusStuds * (fator :: number)) < 1e-9,
+				rotulo .. ": a luz precisa seguir o raio da forma"
+			)
+		end
+	end
+	-- Instante do golpe estoura mais que a espera: é o disparo que deve marcar.
+	assertTrue(AbilityVfx.GlowByKind.burst > AbilityVfx.GlowByKind.charge, "estouro acende mais que carga")
+	assertTrue(AbilityVfx.GlowByKind.ring > AbilityVfx.GlowByKind.trail, "anel acende mais que rastro")
 end)
 
 test("câmera: addImpact clampa trauma e fov no teto e decai no tick", function()

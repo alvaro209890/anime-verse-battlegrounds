@@ -1,10 +1,16 @@
 # 12 — Testes e evidências
 
-> **Snapshot:** 2026-08-13. `tests/run.luau` declara **215** testes F0 alinhados a `docs/13-F0-SLICE.md`; `tests/animation.luau` soma **40** testes de apresentação/game-feel. Nesta rodada (15h): `ZoneService.shouldRestorePosition` (portão deixou de ser parede invisível), chaves de HUD do portão, catálogo `CombatAnimations` (clipes livres do Roblox cabendo na duração da ação) e catálogo de áudio com asset tocável em todas as deixas.
+> **Snapshot:** 2026-08-14. `tests/run.luau` declara **224** testes F0 alinhados a `docs/13-F0-SLICE.md`; `tests/animation.luau` soma **49** testes de apresentação/game-feel. Nesta rodada (14/08): overlay procedural que nascia morto por corrida no anexo do rig, corpo que deixou de girar no golpe (mira declarada na intenção), tremida de câmera e hit-stop recalibrados, e luz de verdade na camada de VFX.
 
 ## 1. Estado da execução
 
-Em 2026-08-13, no Windows 11 (`C:\GIS\anime-verse-battlegrounds`), a verificação atual registrou Selene limpo, 215/215 testes em `tests/run.luau` e 40/40 em `tests/animation.luau`. O Play das 14:26 (`docs/18-ANALISE-VIDEO.md` §7) comprovou HUD, MENU, técnicas desbloqueadas e custo de UMBRAL sendo cobrado — e expôs o portão intransponível (prompt de travessia só no toque + recusa devolvendo a posição a cada Heartbeat). Esta rodada destrava a travessia, dá clipes de animação reais ao ataque e tira o combate do mudo.
+Em 2026-08-14, no Windows 10 (`C:\GIS\anime-verse-battlegrounds`), a verificação registrou Selene e StyLua limpos, 224/224 em `tests/run.luau` e 49/49 em `tests/animation.luau`.
+
+**Esta é a primeira rodada com confirmação em Play pelo jogador**, não só numérica. Ele validou, no place aberto e em sincronia comprovada com o repo (`avb-debug sync` = 56/56), que a animação de golpe passou a mover o corpo e que o personagem parou de girar sozinho ao atacar. As três rodadas anteriores foram dadas como concluídas com evidência apenas numérica e **estavam erradas na tela** — ver `docs/14` §4.7.
+
+Segue sem comprovação em Play: a camada de impacto (tremida, hit-stop, luz e som de acerto). Motivo registrado em `docs/14` §4.8: o jogador estava a 41,2 studs do único alvo do mundo e o alcance do golpe é 9, então nenhum acerto jamais aconteceu na sessão. Os valores novos são derivados de conta e travados por teste, não observados.
+
+O histórico abaixo é de 2026-08-13 e fica como registro da rodada anterior. O Play das 14:26 (`docs/18-ANALISE-VIDEO.md` §7) comprovou HUD, MENU, técnicas desbloqueadas e custo de UMBRAL sendo cobrado — e expôs o portão intransponível (prompt de travessia só no toque + recusa devolvendo a posição a cada Heartbeat).
 
 O Play registrado às 09:26 abriu o artefato anterior, de 128744 bytes e data 08:20. Esse arquivo antigo chegou a `[Bootstrap] servidor pronto (F0)` sem erro Luau do jogo, mas antecede as mudanças atuais e não serve como evidência deste snapshot. O novo arquivo canônico não foi reaberto nem executado por nós; boot/spawn atual, apresentação, interação, física, HUD, save e fluxo jogável continuam sem comprovação no Studio.
 
@@ -37,7 +43,7 @@ O gate de tronco tem nome feio de propósito. Em 2026-08-14 o place canônico es
 
 Em checkout Windows com `core.autocrlf=true`, os arquivos de trabalho podem estar em CRLF enquanto `stylua.toml` exige `Unix`; nesse caso, o check direto acusa somente final de linha. Para reproduzir o CI, use uma cópia com bytes LF canônicos do Git (`git -c core.autocrlf=false archive ...`). `--line-endings Windows` só é equivalente quando todo o checkout está uniformemente em CRLF; ele não resolve uma árvore mista. Não reformatar código só para mascarar essa conversão do checkout.
 
-## 2. Cobertura existente: exatamente 215 testes
+## 2. Cobertura existente: exatamente 224 testes
 
 | Área | Cobertura |
 |---|---|
@@ -69,7 +75,7 @@ A divisão é deliberada: matemática e decisão ficam em módulos puros (`Geome
 ## 3. Arquitetura do harness
 
 - **`tests/harness.luau`** simula o mínimo que o Lune não fornece: `_G.game`, `_G.Instance`, `_G.task` e resolução de `require(script.Parent.X)` no filesystem.
-- **`tests/run.luau`** contém os 215 casos e usa módulos reais de `src/`, com um miniframework de asserts.
+- **`tests/run.luau`** contém os 224 casos e usa módulos reais de `src/`, com um miniframework de asserts.
 - **Services testáveis por injeção** recebem dependências em `init()`: `CatalogService`, `AbilityService`, `ResourceService`, `PlayerSessionService`, `ZoneService`, `ProgressionService`, `QuestService`, `SpatialService`, `EnemyService` e `SaveService` (adaptador de store mockado). O bootstrap Roblox monta o grafo real.
 - **`src/shared/TaskCompat.luau`** usa `task` nativo no Roblox e o polyfill somente no harness.
 
@@ -79,7 +85,7 @@ Os módulos de dados declaram tipos inline porque o Lune não resolve `script.Pa
 
 | Camada | O que demonstra | O que não demonstra |
 |---|---|---|
-| lint + 215 testes Lune | sintaxe, estilo e comportamento unitário coberto no ambiente simulado | física, replicação, UI renderizada, dispositivo ou serviços Roblox reais |
+| lint + 224 testes Lune | sintaxe, estilo e comportamento unitário coberto no ambiente simulado | física, replicação, UI renderizada, dispositivo ou serviços Roblox reais |
 | Wally + build Rojo | dependências resolvidas e árvore de projeto montável | que o place abre sem erro ou que um fluxo é jogável |
 | Studio | bootstrap, UI/input, câmera, física e replicação no cenário testado | DataStore/teleport/rede pública com fidelidade total |
 | publicado privado | serviços reais, múltiplos servidores, reconnect, teleport e condições reais de rede | cobertura de dispositivo que não foi executada |
@@ -154,6 +160,6 @@ rg -n "\\x{FFFD}" README.md docs
 - `task.wait` real em teste cria loop infinito se o polyfill síncrono for usado no `spawn`; o harness injeta `spawn = noop` para o loop de regen. `ZoneService` usa relógio injetado (`fakeNow`), nunca `task.wait`, para as janelas de 5 s e 15 s.
 - Busy-wait curto com `os.clock` substitui `task.wait` nos testes de expiração de cooldown.
 - Selene permite `global_usage` e `empty_loop` no `selene.toml` porque o harness usa `_G` e busy-waits deliberadamente.
-- Contar casos pelo resumo pode mascarar erro: a fonte é a quantidade real de chamadas `test(...)` em `tests/run.luau`; nesta versão são 215.
+- Contar casos pelo resumo pode mascarar erro: a fonte é a quantidade real de chamadas `test(...)` em `tests/run.luau`; nesta versão são 224.
 - Lua patterns não têm alternação (`a|b` é literal): validar IDs de sinal por pertencimento a uma tabela, não com regex no teste.
 - Quirk do Lune/MLua: closure auto-referente (`local x = { fn = function() ... x ... end }`) vê `x` como nil dentro da função. Declarar a variável antes (`local x; x = { ... }`) ou o mock do SaveService quebra com "attempt to index nil".

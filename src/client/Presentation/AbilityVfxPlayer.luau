@@ -64,6 +64,12 @@ end
 -- pipeline de arte.
 local PARTICLE_TEXTURE = "rbxasset://textures/particles/sparkles_main.dds"
 
+-- Brilho no pico da envoltória. O ALCANCE de cada luz vem do dado
+-- (`glowStuds`, proporcional ao raio da forma); o brilho é comum a todas para o
+-- kit inteiro ter a mesma "temperatura" e nenhuma técnica estourar a tela
+-- sozinha. Mundo F0 é greybox dessaturado: 2,2 acende o chão sem lavar a cor.
+AbilityVfxPlayer.LightBrightness = 2.2
+
 local function findPart(character: Model, role: string): BasePart?
 	local candidates = JOINT_PARTS[role]
 	if not candidates then
@@ -334,6 +340,38 @@ end
 
 AbilityVfxPlayer.ringRadiusFactor = ringRadiusFactor
 
+-- Luz da camada, criada sob demanda e presa no mesmo lugar da forma.
+--
+-- Partícula com LightEmission BRILHA mas não ILUMINA: até 14/08 nada do kit
+-- projetava luz no chão nem no oponente, que foi a reclamação "não tem luzes".
+-- A luz mora junto da forma (no Attachment, ou na própria Part do anel) para
+-- herdar posição sem precisar de um segundo caminho de anexo.
+local function lightFor(node: any, entry: any): any?
+	if not entry.glowStuds or entry.glowStuds <= 0 then
+		return nil
+	end
+	local holder = if node:IsA("BasePart") then node else node.Parent
+	if not holder then
+		return nil
+	end
+	local name = ("AvbVfxLight_%s"):format(entry.id)
+	local existing = holder:FindFirstChild(name)
+	if existing then
+		return existing
+	end
+	local light = Instance.new("PointLight")
+	light.Name = name
+	light.Color = color3(entry.rgb)
+	-- Sem sombra de propósito: sombra dinâmica por golpe é cara e, num combate
+	-- de vários lutadores, o custo aparece antes da leitura.
+	light.Shadows = false
+	light.Range = entry.glowStuds
+	light.Brightness = 0
+	light.Enabled = true
+	light.Parent = holder
+	return light
+end
+
 local function applyNode(vfx: Player, planned: PlannedNode): ()
 	local entry = planned.layer
 	local node = nodeFor(vfx, entry)
@@ -341,6 +379,12 @@ local function applyNode(vfx: Player, planned: PlannedNode): ()
 		return
 	end
 	local intensity = planned.intensity
+	-- A luz segue a MESMA envoltória das partículas (ataque/sustentação/queda),
+	-- então acende e apaga junto com a forma em vez de piscar por conta própria.
+	local light = lightFor(node, entry)
+	if light then
+		light.Brightness = AbilityVfxPlayer.LightBrightness * intensity
+	end
 	if entry.kind == "charge" or entry.kind == "shell" then
 		node.Enabled = true
 		node.Rate = entry.rate * intensity
@@ -375,6 +419,11 @@ local function silence(vfx: Player, lit: { [string]: boolean }): ()
 				node.Enabled = false
 			elseif node:IsA("BasePart") then
 				node.Transparency = 1
+			end
+			local holder = if node:IsA("BasePart") then node else node.Parent
+			local light = if holder then holder:FindFirstChild(("AvbVfxLight_%s"):format(id)) else nil
+			if light then
+				light.Brightness = 0
 			end
 		end
 	end

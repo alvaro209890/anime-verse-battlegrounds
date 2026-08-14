@@ -23,13 +23,18 @@ local CombatCameraController = {}
 
 -- Perfis por desfecho. trauma alimenta o shake (curva quadrática) e fov o
 -- "punch" de campo de visão; ambos decaem com o tempo.
+-- Recalibrado em 14/08 (noite). Os valores antigos existiam no papel e não
+-- chegavam ao olho: com trauma 0,35 e curva quadrática, o ACERTO COMUM — que é
+-- o que o jogador mais vê — rendia amplitude 0,12, ou seja 0,24° e 0,037 stud
+-- por 0,13 s. A curva quadrática foi desenhada para "impacto pequeno quase não
+-- mexe", só que na prática o acerto comum era o caso pequeno dela.
 local PROFILES: { [string]: ImpactProfile } = {
-	hit = { trauma = 0.35, fov = 1.5 },
-	death = { trauma = 0.7, fov = 3.5 },
-	guard = { trauma = 0.16, fov = 0.6 },
+	hit = { trauma = 0.5, fov = 2.6 },
+	death = { trauma = 0.85, fov = 5.0 },
+	guard = { trauma = 0.28, fov = 1.2 },
 	-- Contra do Pulso: entre o acerto comum e a morte. É a recompensa por ter
 	-- lido o golpe do oponente e precisa ser sentida, não só vista.
-	counter = { trauma = 0.5, fov = 2.6 },
+	counter = { trauma = 0.7, fov = 4.0 },
 }
 
 -- Técnicas de maior compromisso merecem um impacto mais pesado no acerto.
@@ -39,12 +44,17 @@ local HEAVY_ABILITIES: { [string]: boolean } = {
 	eclipse_beat = true,
 }
 
--- Baselines de docs/14 §6: shake local de até 2° e 0,3 stud, sempre limitado.
-local MAX_SHAKE_DEGREES = 2.0
-local MAX_SHAKE_STUDS = 0.3
-local MAX_FOV_PUNCH = 6.0
-local TRAUMA_DECAY = 2.6
-local FOV_DECAY = 6.0
+-- Baselines de docs/14 §6. Tetos continuam existindo para o shake nunca virar
+-- enjoo: o máximo absoluto só é alcançado com trauma saturado em 1.
+local MAX_SHAKE_DEGREES = 3.2
+local MAX_SHAKE_STUDS = 0.45
+local MAX_FOV_PUNCH = 8.0
+local TRAUMA_DECAY = 2.2
+local FOV_DECAY = 5.0
+-- Expoente da curva de trauma. Era 2 (quadrática) e engolia o acerto comum;
+-- 1,4 mantém a progressão — guarda < acerto < contra < morte — sem zerar o
+-- degrau de baixo. Ver a tabela medida em docs/14 §6.
+local TRAUMA_EXPONENT = 1.4
 
 CombatCameraController.Profiles = PROFILES
 CombatCameraController.HeavyAbilities = HEAVY_ABILITIES
@@ -56,11 +66,12 @@ function CombatCameraController.decay(value: number, rate: number, dt: number): 
 	return math.max(0, value - rate * dt)
 end
 
--- Curva de trauma: impactos pequenos quase não mexem; os grandes disparam,
--- mas o quadrado + clamp evita que o shake saia dos limites declarados.
+-- Curva de trauma: mantém a ordem entre os desfechos e o clamp garante que o
+-- shake nunca passe dos limites declarados. O expoente é o que decide se o
+-- degrau de baixo (acerto comum) existe ou é engolido — ver TRAUMA_EXPONENT.
 function CombatCameraController.shakeAmplitude(trauma: number): number
 	local t = math.clamp(trauma, 0, 1)
-	return t * t
+	return t ^ TRAUMA_EXPONENT
 end
 
 function CombatCameraController.profileFor(outcome: string, abilityId: string?): ImpactProfile?

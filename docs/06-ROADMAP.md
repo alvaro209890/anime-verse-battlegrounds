@@ -153,11 +153,29 @@ Curva inicial de aceite: primeiro combate em até 60 segundos; objetivo de progr
 
 Os percentuais definitivos devem ser calibrados com amostra e analytics; os valores acima são gates de protótipo, não metas públicas de produto.
 
-### Próximo recorte executivo — atualizado em 2026-08-13
+### Próximo recorte executivo — atualizado em 2026-08-14
 
-1. **Reabrir o snapshot atual:** gerar e abrir no Studio o place do commit `108be31`, confirmar que o Output identifica essa revisão e que o conteúdo aberto não é um `.rbxl` anterior. Registrar boot ou erro antes de ajustar aparência.
+O item 1 desta lista era "reabrir o snapshot do commit `108be31` e confirmar que
+o place aberto não é um `.rbxl` anterior". Ele estava certo e foi ignorado na
+prática por três rodadas seguidas: o Studio ficou dias abrindo um place paralelo
+enquanto correções eram declaradas prontas. Agora existe ferramenta para isso
+(`lune run scripts/avb-debug.luau sync`, exit 2 = fora de sync) e um caminho que
+não depende de reabrir nada (`scripts/serve.ps1` + Rojo Connect). **A checagem
+de sincronia deixou de ser um passo de roteiro e virou pré-condição de qualquer
+afirmação sobre runtime** — ver `docs/12` §1 e `docs/19` §5.
+
+1. **Impacto em Play, com acerto de verdade:** a camada de impacto (tremida,
+   hit-stop, luz, som e número de dano) nunca rodou uma vez sequer, porque o
+   jogador estava a 41 studs do único alvo e o alcance é 9 (`docs/14` §4.8). Os
+   valores novos são conta e teste, não observação. Encostar no boneco, acertar
+   leve/pesado/técnica e registrar o que aparece.
 2. **W1, solo com interação e pisos:** percorrer as duas saídas sem cair, falar com o Instrutor pelo `ProximityPrompt`, observar o tracker, voltar ao Marco e completar o hold de 1,5 s. Incluir dummy, cratera, telegraph branco + símbolo, resposta procedural de leve/pesado/guarda/dash, morte/retorno e clipping, primeiro sem `F0Debug` e depois com ele.
-3. **A1, golpe-modelo:** somente após P1 e W1 sem bloqueio estrutural, produzir o blocking original do Ombro Cometa e medir markers, silhueta, foot sliding e sincronismo. Os outros 44 clipes aguardam essa decisão.
+3. **A1, golpe-modelo:** o catálogo de clipes está **vazio por decisão** desde
+   14/08 (`docs/14` §4.6), não por pendência: o kit é punho e chute e o único
+   clipe livre disponível era de espada. A apresentação de combate é 100%
+   procedural e `CombatAnimations` continua existindo como a costura — declarar
+   um clipe lá religa a camada. Produzir o blocking original do Ombro Cometa
+   segue valendo, e é o que reabre o Gate A1.
 4. **R1, runtime adversarial:** dois clientes, latência simulada, replay/spam, hold adulterado e network ownership hostil antes de ampliar conteúdo F1.
 
 W2 permanece obrigatório depois desse recorte: PC integrado e Android, quatro Errantes, um Ancorado e métricas separadas de script, física, render e animação. Toque, gamepad e mobile reais não podem ser marcados como validados a partir do prompt nativo ou dos testes headless.

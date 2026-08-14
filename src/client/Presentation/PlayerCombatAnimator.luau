@@ -161,13 +161,16 @@ PlayerCombatAnimator.AuthoritativeBeats = table.freeze({
 
 -- Hit-stop por desfecho (docs/14 §6): milissegundos de congelamento visual no
 -- impacto confirmado. Guarda só um clique; morte segura um pouco mais.
+-- Recalibrado em 14/08 junto com o shake: 40 ms são 2,4 quadros a 60 fps, curto
+-- demais para o olho separar "bateu" de "passou perto". Continua curto de
+-- propósito — hit-stop longo demais faz a cadeia leve parecer travada.
 PlayerCombatAnimator.HitStopMs = table.freeze({
-	hit = 40,
-	death = 60,
-	guard = 20,
+	hit = 70,
+	death = 110,
+	guard = 35,
 	-- O contra do Retorno de Pulso é o momento mais raro do kit: segura um pouco
 	-- mais que um acerto comum para que a leitura "eu aparei" seja inequívoca.
-	counter = 55,
+	counter = 90,
 })
 
 function PlayerCombatAnimator.hitStopActive(now: number, hitStopUntil: number?): boolean

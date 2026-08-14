@@ -34,6 +34,13 @@ export type VfxLayer = {
 	rgb: Rgb,
 	-- Partículas por segundo no pico (0 para camadas de disparo único).
 	rate: number,
+	-- Alcance da luz que a camada acende, em studs (0 = não acende).
+	--
+	-- Existe desde 14/08: o jogador reclamou que o combate "não tem luzes", e
+	-- era literal — a camada de VFX criava ParticleEmitter, Trail e Part, e
+	-- nenhum PointLight. Partícula com LightEmission brilha, mas não ILUMINA o
+	-- mundo em volta, então nada do kit projetava luz no chão nem no oponente.
+	glowStuds: number,
 	requiresConfirmation: boolean,
 }
 
@@ -60,6 +67,22 @@ local UMBRAL_EDGE: Rgb = { 88, 60, 138 }
 local RETURN_CORE: Rgb = { 236, 224, 196 }
 local RETURN_EDGE: Rgb = { 168, 116, 52 }
 
+-- Quanto a luz de cada forma se afasta, como múltiplo do raio da própria forma.
+--
+-- A regra é "a luz acompanha o raio", e não um número solto por camada: assim o
+-- efeito que já é grande ilumina longe e o que é discreto ilumina perto, sem
+-- ninguém precisar manter duas grandezas em sincronia na mão. Disparo (burst,
+-- ring, arc) acende mais que sustentação (charge, trail, shell) — é o instante
+-- do golpe que deve estourar, não a espera.
+local GLOW_BY_KIND: { [string]: number } = {
+	burst = 1.6,
+	ring = 1.4,
+	arc = 1.2,
+	shell = 1.0,
+	charge = 0.9,
+	trail = 0.8,
+}
+
 local function layer(values: {
 	id: string,
 	kind: "charge" | "trail" | "arc" | "shell" | "ring" | "burst",
@@ -71,6 +94,7 @@ local function layer(values: {
 	radiusStuds: number,
 	rgb: Rgb,
 	rate: number?,
+	glowStuds: number?,
 	requiresConfirmation: boolean?,
 }): VfxLayer
 	return {
@@ -84,6 +108,7 @@ local function layer(values: {
 		radiusStuds = values.radiusStuds,
 		rgb = values.rgb,
 		rate = values.rate or 0,
+		glowStuds = values.glowStuds or values.radiusStuds * (GLOW_BY_KIND[values.kind] or 0),
 		requiresConfirmation = values.requiresConfirmation == true,
 	}
 end
@@ -373,6 +398,7 @@ local AbilityVfx = {}
 
 AbilityVfx.UmbralCoreRgb = UMBRAL_CORE
 AbilityVfx.UmbralEdgeRgb = UMBRAL_EDGE
+AbilityVfx.GlowByKind = GLOW_BY_KIND
 
 function AbilityVfx.get(recipeId: string): TechniqueVfx?
 	return Techniques[recipeId]
@@ -475,6 +501,12 @@ function AbilityVfx.validate(): (boolean, string?)
 			end
 			if entry.attackSeconds < 0 or entry.releaseSeconds < 0 then
 				return false, ("camada %s tem envelope negativo"):format(entry.id)
+			end
+			-- Toda camada acende: efeito de combate que só existe em partícula
+			-- brilha mas não ilumina, e foi assim que o kit inteiro ficou sem
+			-- luz nenhuma até 14/08.
+			if entry.glowStuds <= 0 then
+				return false, ("camada %s não acende luz"):format(entry.id)
 			end
 			if entry.attackSeconds + entry.releaseSeconds > entry.durationSeconds + 1e-9 then
 				return false, ("camada %s tem envelope maior que a duração"):format(entry.id)

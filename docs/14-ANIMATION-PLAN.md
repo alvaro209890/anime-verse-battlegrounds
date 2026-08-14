@@ -245,10 +245,47 @@ Um clip só muda de “blocking” para “aprovado” quando:
 
 Baselines de feeling para playtest, não regras finais:
 
-- hit-stop apenas visual de 33–50 ms em golpe forte confirmado;
-- shake local de até 0,3 stud e 2° no preset completo, sempre desativável;
 - blends curtos de 60–120 ms em ações responsivas e mais longos somente onde a recuperação exige peso;
 - nenhum shake move a câmera de outro jogador ou altera a mira autoritativa.
+
+**Valores em vigor (recalibrados em 14/08 à noite).** Os anteriores — hit-stop
+de 33–50 ms e shake de até 2° / 0,3 stud — estavam implementados e eram
+invisíveis. O motivo não era o teto e sim a curva: `amplitude = trauma²`
+achatava justamente o degrau de baixo, e o degrau de baixo é o **acerto comum**,
+o golpe que o jogador mais dá. A curva passou a `trauma^1,4`, que preserva a
+ordem entre os desfechos sem zerar o mais frequente.
+
+| Desfecho | trauma | antes (t², teto 2°) | agora (t^1,4, teto 3,2°) | punch de FOV | hit-stop |
+|---|---:|---:|---:|---:|---:|
+| guarda | 0,28 | 0,05° | 0,53° | +1,2 | 35 ms |
+| acerto | 0,50 | **0,24°** | **1,21°** | +2,6 | 70 ms |
+| contra | 0,70 | 0,50° | 1,94° | +4,0 | 90 ms |
+| morte | 0,85 | 0,98° | 2,55° | +5,0 | 110 ms |
+
+O teto continua existindo para o shake nunca virar enjoo: o máximo absoluto
+(3,2° / 0,45 stud) só é alcançado com trauma saturado em 1, o que nenhum perfil
+sozinho atinge. O hit-stop segue curto de propósito — congelar muito faz a
+cadeia leve parecer travada.
+
+**Luz.** Até 14/08 o kit não tinha nenhuma: a camada de VFX criava
+`ParticleEmitter`, `Trail` e `Part`, e zero `PointLight`. Partícula com
+`LightEmission` **brilha mas não ilumina** — nada do combate projetava luz no
+chão nem no oponente. Agora cada camada declara `glowStuds`, derivado do próprio
+raio da forma (`AbilityVfx.GlowByKind`), e o `PointLight` segue a mesma
+envoltória das partículas, acendendo e apagando junto com a forma:
+
+| Forma | multiplicador do raio | papel |
+|---|---:|---|
+| `burst` | 1,6 | o instante do golpe estoura |
+| `ring` | 1,4 | expansão no chão |
+| `arc` | 1,2 | corte |
+| `shell` | 1,0 | envolve o corpo |
+| `charge` | 0,9 | telegrafa a antecipação |
+| `trail` | 0,8 | alonga sem competir |
+
+A regra é "a luz acompanha o raio" e não um número solto por camada, para não
+existirem duas grandezas que alguém precise manter em sincronia na mão.
+`AbilityVfx.validate()` recusa camada com `glowStuds` zerado.
 
 ## 7. Pipeline de produção
 
@@ -509,3 +546,33 @@ justamente o caso que quebrou.
 > era alguém aplicá-la. Verificação de apresentação tem que sair da parte
 > materializada (posição de parte, `Transform` de junta, `Trail.Enabled`)
 > durante uma ação de verdade, nunca do dado que alimenta a pose.
+
+### 4.8 Correção de 14/08 (noite) — impacto sem luz, sem tremida e sem acerto
+
+Reclamação: "não está tendo luzes, efeitos, tremidas". Três causas distintas,
+duas delas no código e uma que não era código nenhum.
+
+**(1) O jogador nunca tinha acertado nada.** Medido na sessão: o personagem
+estava a **41,2 studs** do único alvo vivo do mundo, e o alcance do golpe leve é
+**9**. Toda a camada de impacto — tremida de câmera, hit-stop, som de acerto e
+número de dano — só dispara em desfecho confirmado pelo servidor
+(`CombatEvent`, ver §5 e a tabela de `PresentationImpact`). Ela é correta e
+nunca tinha rodado uma única vez. O console dizia isso o tempo todo, uma linha
+por golpe: `[Combat] light errou`.
+
+Isso não é defeito de apresentação, é o mundo F0 ter um alvo só e ele estar
+longe. Fica registrado porque explica metade da reclamação e porque a próxima
+pessoa que for investigar "o impacto não aparece" precisa checar **primeiro** se
+houve impacto.
+
+**(2) A tremida estava calibrada para ser invisível.** Ver §6: o problema não
+era o teto, era a curva quadrática engolir o acerto comum. Recalibrado lá.
+
+**(3) Luz não existia.** Ver §6: `PointLight` nenhum no kit inteiro, e partícula
+com `LightEmission` brilha sem iluminar.
+
+> Lição de método, quarta desta série: antes de mexer na apresentação de um
+> evento, confirme que o evento **acontece**. Duas das três reclamações eram
+> código; a terceira era o jogador nunca ter chegado perto o bastante para o
+> código rodar. Custa uma medição de distância e evita reescrever um sistema
+> que estava certo.
