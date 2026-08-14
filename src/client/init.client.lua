@@ -87,6 +87,11 @@ local ability = AbilityController.new({
 	guid = function()
 		return HttpService:GenerateGUID(false)
 	end,
+	-- Quem conhece câmera e alvo travado é o CharacterController; a técnica só
+	-- carrega a mira dele até o payload.
+	aim = function()
+		return CharacterController.aimVector(character)
+	end,
 	onActivated = function(slot: number, _abilityId: string, phase: string)
 		-- A reentrada da Cadência não é "a técnica de novo": o servidor resolve
 		-- um eco 350 ms depois, com dano próprio. Repetir a pose de ativação

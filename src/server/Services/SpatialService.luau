@@ -49,6 +49,32 @@ function SpatialService.getTransform(fighterId: string): Transform?
 	return SpatialService.transforms[fighterId]
 end
 
+-- Mira declarada pelo cliente ({x, z}) virando look normalizado, ou nil quando
+-- o vetor não presta. Segunda barreira além do schema, como no dash: vetor
+-- neutro, NaN ou grande demais não vira direção de golpe — o cone cai de volta
+-- no look replicado do corpo.
+--
+-- Existe desde 14/08, quando o corpo do jogador parou de girar no golpe: até
+-- então a direção saía da rotação que o próprio cliente escrevia na sua
+-- HumanoidRootPart, o que estalava o personagem de costas para a câmera a cada
+-- ação. Mesma autoridade, agora num campo validado em vez de efeito colateral.
+function SpatialService.aimLook(aim: any): Vec3?
+	if type(aim) ~= "table" then
+		return nil
+	end
+	local x = aim.x
+	local z = aim.z
+	if type(x) ~= "number" or type(z) ~= "number" or x ~= x or z ~= z then
+		return nil
+	end
+	local magnitudeSquared = x * x + z * z
+	if magnitudeSquared < 0.01 or magnitudeSquared > 1.01 then
+		return nil
+	end
+	local scale = 1 / math.sqrt(magnitudeSquared)
+	return { x = x * scale, y = 0, z = z * scale }
+end
+
 function SpatialService.getPosition(fighterId: string): Vec3?
 	local t = SpatialService.transforms[fighterId]
 	return if t then t.position else nil

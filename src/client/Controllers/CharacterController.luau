@@ -12,16 +12,11 @@ export type Controller = {
 	lockTarget: any?,
 	connection: any?,
 	characterAddedConnection: any?,
-	-- Relógio e janela do travamento de direção do golpe.
 	now: () -> number,
-	autoRotateUntil: number?,
 }
 
 local SOFT_LOCK_DEGREES = 8
 local SOFT_LOCK_DISTANCE = 25
--- Quanto tempo o corpo fica travado na direção do golpe. Cobre a ação mais
--- longa da cadeia (0,48 s) com folga para o servidor ler o look replicado.
-local FACE_LOCK_SECONDS = 0.6
 
 local CharacterController = {}
 
@@ -46,7 +41,6 @@ function CharacterController.new(deps: {
 		connection = nil,
 		characterAddedConnection = nil,
 		now = deps.now or os.clock,
-		autoRotateUntil = nil,
 	}
 	deps.inputSubscribe(deps.input, function(action: string, _payload: { [string]: any })
 		CharacterController.onAction(controller, action)
@@ -139,42 +133,24 @@ local function aimDirection(controller: Controller): Vector3?
 	return flat.Unit
 end
 
-function CharacterController.faceAim(controller: Controller): boolean
-	local players = controller.players
-	local player = if players then players.LocalPlayer else nil
-	local character = if player then player.Character else nil
-	local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
+-- Mira DECLARADA, no formato do contrato de rede.
+--
+-- Até 14/08 o cliente girava o próprio corpo antes de mandar a intenção
+-- (`root.CFrame = lookAt(...)`) e o servidor lia essa rotação replicada. Isso
+-- fazia o personagem estalar para a direção da câmera a cada golpe e a cada
+-- técnica — de costas para ela — mesmo parado, que foi a reclamação do jogador.
+--
+-- Declarar a mira não move autoridade nenhuma: quem escrevia aquela rotação já
+-- era este mesmo cliente. A diferença é que agora a direção viaja num campo
+-- validado (mesma regra do dash) em vez de sair de um efeito colateral no
+-- estado físico, e o corpo fica onde o jogador deixou. Alcance, abertura, alvo
+-- e dano continuam 100% no servidor.
+function CharacterController.aimVector(controller: Controller): { x: number, z: number }?
 	local direction = aimDirection(controller)
-	if not root or not root:IsA("BasePart") or not direction then
-		return false
+	if not direction then
+		return nil
 	end
-	-- `AutoRotate` gira o personagem para a direção de movimento a cada frame e
-	-- desfazia esta rotação no mesmo frame — medido no Studio: o corpo voltava
-	-- antes de o servidor ler o look. Trava durante a ação e volta sozinho.
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if humanoid then
-		humanoid.AutoRotate = false
-		controller.autoRotateUntil = controller.now() + FACE_LOCK_SECONDS
-	end
-	-- Só a rotação muda: a posição é idêntica, então o PlayerMotionGuard do
-	-- servidor não vê deslocamento nenhum.
-	root.CFrame = CFrame.lookAt(root.Position, root.Position + direction)
-	return true
-end
-
--- Devolve o giro automático quando a janela do golpe passa.
-local function releaseFaceLock(controller: Controller): ()
-	if controller.autoRotateUntil == nil or controller.now() < controller.autoRotateUntil then
-		return
-	end
-	controller.autoRotateUntil = nil
-	local players = controller.players
-	local player = if players then players.LocalPlayer else nil
-	local character = if player then player.Character else nil
-	local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
-	if humanoid then
-		humanoid.AutoRotate = true
-	end
+	return { x = direction.X, z = direction.Z }
 end
 
 local function reconcileCamera(controller: Controller, character: Model): ()
@@ -239,11 +215,11 @@ function CharacterController.onAction(controller: Controller, action: string): (
 		if controller.state.platform ~= "KeyboardMouse" then
 			aimAt(controller, findAimTarget(controller, SOFT_LOCK_DISTANCE, SOFT_LOCK_DEGREES))
 		end
-		-- O corpo vira antes da intenção sair: o servidor lê o look da HRP.
-		CharacterController.faceAim(controller)
+		-- O corpo NÃO gira: a direção do golpe vai declarada no payload.
 		controller.send("BasicAttackIntent", "BasicAttackIntent", {
 			kind = if action == "BasicHeavy" then "heavy" else "light",
 			phase = "press",
+			aim = CharacterController.aimVector(controller),
 		})
 	elseif action == "GuardDown" or action == "GuardUp" then
 		controller.send("GuardIntent", "GuardIntent", {
@@ -251,11 +227,6 @@ function CharacterController.onAction(controller: Controller, action: string): (
 		})
 	elseif action == "Dash" then
 		controller.send("DashIntent", "DashIntent", { direction = dashDirection(controller) })
-	elseif string.match(action, "^Ability%d$") then
-		-- Só orienta o corpo: quem envia a intenção da técnica é o
-		-- AbilityController. Este controller assina o input primeiro, então a
-		-- rotação acontece antes da intenção sair.
-		CharacterController.faceAim(controller)
 	elseif action == "ToggleLock" then
 		-- Segunda ativação sempre solta. A primeira só trava se houver alvo
 		-- de combate à frente; senão permanece livre (não "prende no vazio").
@@ -280,7 +251,6 @@ function CharacterController.start(controller: Controller): ()
 				controller.lockTarget = nil
 			end
 			aimAt(controller, controller.lockTarget)
-			releaseFaceLock(controller)
 		end)
 	end
 end

@@ -20,6 +20,10 @@ export type Controller = {
 	executions: { [string]: string },
 	cadenceReentry: CadenceReentry?,
 	onActivated: ((number, string, string) -> ())?,
+	-- Mira declarada da técnica. Vem do CharacterController porque é ele quem
+	-- conhece câmera e alvo travado; sem isto a técnica sairia na direção do
+	-- corpo, que desde 14/08 não gira mais no golpe.
+	aim: (() -> { x: number, z: number }?)?,
 }
 
 local AbilityController = {}
@@ -55,6 +59,7 @@ function AbilityController.new(deps: {
 	send: (string, string, { [string]: any }) -> (),
 	guid: () -> string,
 	onActivated: ((number, string, string) -> ())?,
+	aim: (() -> { x: number, z: number }?)?,
 }): Controller
 	local controller: Controller = {
 		state = deps.state,
@@ -67,6 +72,7 @@ function AbilityController.new(deps: {
 		executions = {},
 		cadenceReentry = nil,
 		onActivated = deps.onActivated,
+		aim = deps.aim,
 	}
 	deps.inputSubscribe(deps.input, function(action: string, _payload: { [string]: any })
 		local slot = string.match(action, "^Ability(%d)$")
@@ -102,6 +108,7 @@ local function tryCadenceReentry(controller: Controller, ability: any, slot: num
 		inputMode = ability.inputMode,
 		executionId = reentry.executionId,
 		phase = "reentry",
+		aim = if controller.aim then controller.aim() else nil,
 	})
 	if controller.onActivated then
 		controller.onActivated(slot, BROKEN_CADENCE_ID, "reentry")
@@ -151,6 +158,7 @@ function AbilityController.activateSlot(controller: Controller, slot: number): (
 		inputMode = ability.inputMode,
 		executionId = executionId,
 		phase = "press",
+		aim = if controller.aim then controller.aim() else nil,
 	})
 	if controller.onActivated then
 		controller.onActivated(slot, abilityId, "press")

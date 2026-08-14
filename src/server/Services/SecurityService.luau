@@ -81,8 +81,32 @@ local function validId(value: any): boolean
 	return type(value) == "string" and #value >= 1 and #value <= 64 and string.match(value, "^[%w_:%-]+$") ~= nil
 end
 
+-- Vetor plano no chão: finito, componentes em [-1,1] e magnitude entre 0,1 e 1
+-- (com folga de arredondamento). O dash sempre usou esta regra como direção;
+-- desde 14/08 o golpe e a técnica a usam como MIRA — o corpo do jogador não
+-- gira mais no ataque, então a direção chega declarada em vez de ser lida da
+-- rotação replicada. Não é autoridade nova: aquela rotação era escrita pelo
+-- próprio cliente antes de mandar a intenção.
+local function validAimVector(value: any): boolean
+	if type(value) ~= "table" or not hasOnlyKeys(value, { x = true, z = true }) then
+		return false
+	end
+	local x = value.x
+	local z = value.z
+	if type(x) ~= "number" or type(z) ~= "number" or not isFinite(x) or not isFinite(z) then
+		return false
+	end
+	local magnitudeSquared = x * x + z * z
+	return math.abs(x) <= 1 and math.abs(z) <= 1 and magnitudeSquared >= 0.01 and magnitudeSquared <= 1.01
+end
+
 local function validateAbility(payload: { [string]: any }): boolean
-	if not hasOnlyKeys(payload, { abilityId = true, inputMode = true, executionId = true, phase = true }) then
+	if
+		not hasOnlyKeys(payload, { abilityId = true, inputMode = true, executionId = true, phase = true, aim = true })
+	then
+		return false
+	end
+	if payload.aim ~= nil and not validAimVector(payload.aim) then
 		return false
 	end
 	local phase = payload.phase
@@ -93,8 +117,13 @@ local function validateAbility(payload: { [string]: any }): boolean
 end
 
 local function validateBasic(payload: { [string]: any }): boolean
-	return hasOnlyKeys(payload, { kind = true, phase = true })
-		and (payload.kind == "light" or payload.kind == "heavy")
+	if not hasOnlyKeys(payload, { kind = true, phase = true, aim = true }) then
+		return false
+	end
+	if payload.aim ~= nil and not validAimVector(payload.aim) then
+		return false
+	end
+	return (payload.kind == "light" or payload.kind == "heavy")
 		and (payload.phase == "press" or payload.phase == "release")
 end
 

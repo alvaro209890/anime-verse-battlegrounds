@@ -581,6 +581,38 @@ test("cliente: CharacterController envia somente intenção sem alvo ou dano", f
 	assertEq(sent[3].payload.direction.z, -1, "direção unitária fallback")
 end)
 
+test("cliente: nada no golpe gira o corpo do personagem", function()
+	-- Reclamação do jogador em 14/08: "quando eu bater ou soltar poder o
+	-- personagem vira sozinho e fica de costas para a câmera". A causa era o
+	-- `faceAim`, que escrevia `root.CFrame = lookAt(pos, direção da câmera)`
+	-- antes de cada intenção, só para o servidor ler o look replicado. A direção
+	-- passou a viajar declarada no payload, e o caminho que mexia no corpo
+	-- deixou de existir — é isso que este teste tranca.
+	assertEq(CharacterController.faceAim, nil, "não existe mais caminho que gire o corpo no golpe")
+	assertTrue(type(CharacterController.aimVector) == "function", "a mira virou valor declarado")
+
+	-- Sem câmera nem personagem (deps de Instance ausentes no harness), a mira é
+	-- desconhecida: o payload sai sem o campo e o servidor cai de volta no look
+	-- replicado. O golpe nunca deixa de ser enviado por causa disso.
+	local state = ClientState.new(clockNow)
+	ClientState.applySnapshot(state, { ready = true })
+	local input = InputController.new(state, clockNow)
+	local sent: { any } = {}
+	local controller = CharacterController.new({
+		state = state,
+		input = input,
+		inputSubscribe = InputController.subscribe,
+		send = function(remoteName: string, action: string, payload: { [string]: any })
+			table.insert(sent, { remoteName = remoteName, action = action, payload = payload })
+		end,
+	})
+	assertEq(CharacterController.aimVector(controller), nil, "sem câmera não há mira para declarar")
+	InputController.dispatch(input, "BasicHeavy", {})
+	assertEq(#sent, 1, "o golpe sai mesmo sem mira conhecida")
+	assertEq(sent[1].payload.kind, "heavy", "tipo preservado")
+	assertEq(sent[1].payload.aim, nil, "mira ausente não vira vetor inventado")
+end)
+
 test("cliente: ToggleLock solta um alvo já travado sem enviar remote", function()
 	local state = ClientState.new(clockNow)
 	ClientState.applySnapshot(state, { ready = true })
@@ -1319,6 +1351,54 @@ test("segurança: limita combate a 8/s sem consumir interações", function()
 	currentNow += 1
 	local reset = RemoteEnvelope.create("BasicAttackIntent", { kind = "light", phase = "press" }, "atk-10", 11)
 	assertTrue(SecurityService.inspect(53, "BasicAttackIntent", reset) ~= nil, "janela reinicia")
+end)
+
+test("segurança: mira declarada entra no contrato de golpe e técnica", function()
+	SecurityService.init({ decode = RemoteEnvelope.decode })
+	local function inspecionar(contrato: string, payload: { [string]: any }, seq: number)
+		return SecurityService.inspect(77, contrato, RemoteEnvelope.create(contrato, payload, "mira-" .. seq, seq))
+	end
+
+	-- A mira é OPCIONAL: cliente sem câmera conhecida manda o golpe sem o campo
+	-- e o servidor cai de volta no look replicado.
+	assertTrue(inspecionar("BasicAttackIntent", { kind = "light", phase = "press" }, 1) ~= nil, "golpe sem mira")
+	assertTrue(
+		inspecionar("BasicAttackIntent", { kind = "light", phase = "press", aim = { x = 0, z = -1 } }, 2) ~= nil,
+		"golpe com mira unitária"
+	)
+	assertEq(
+		inspecionar("BasicAttackIntent", { kind = "light", phase = "press", aim = { x = 0, z = 0 } }, 3),
+		nil,
+		"mira neutra recusada no schema"
+	)
+	assertEq(
+		inspecionar("BasicAttackIntent", { kind = "light", phase = "press", aim = { x = 9, z = 0 } }, 4),
+		nil,
+		"mira grande demais recusada"
+	)
+	assertEq(
+		inspecionar("BasicAttackIntent", { kind = "light", phase = "press", aim = { x = 0, y = 1, z = -1 } }, 5),
+		nil,
+		"mira com campo a mais recusada"
+	)
+
+	local tecnica = {
+		abilityId = "comet_shoulder",
+		inputMode = "Press",
+		executionId = "exec-1",
+		phase = "press",
+		aim = { x = 1, z = 0 },
+	}
+	assertTrue(inspecionar("AbilityIntent", tecnica, 6) ~= nil, "técnica com mira")
+	assertEq(
+		inspecionar(
+			"AbilityIntent",
+			{ abilityId = "comet_shoulder", inputMode = "Press", executionId = "exec-2", aim = "frente" },
+			7
+		),
+		nil,
+		"mira que não é vetor recusada"
+	)
 end)
 
 test("segurança: rejeita vetor impossível, NaN e payload ambíguo", function()
@@ -3868,6 +3948,52 @@ test("espaço: cone de aquisição pega o mais próximo dentro do alcance e da a
 	-- Virando o corpo, quem estava atrás entra no cone e quem estava à frente sai.
 	SpatialService.setTransform("player:cone", vec(0, 0, 0), vec(0, 0, 1))
 	assertEq(SpatialService.acquireTarget("player:cone", 11, 65), "atras", "de costas para o alvo antigo")
+end)
+
+test("espaço: a mira declarada decide o cone, não a rotação do corpo", function()
+	-- O outro lado do conserto de 14/08: o corpo do jogador parou de girar no
+	-- golpe, então quem aponta o cone é o vetor que chegou na intenção. Aqui o
+	-- corpo olha para -Z e a mira aponta para +Z — leva o golpe quem está atrás
+	-- do corpo, porque é para lá que o jogador está mirando.
+	SpatialService.init({ geometry = Geometry })
+	SpatialService.setTransform("player:mira", vec(0, 0, 0), vec(0, 0, -1))
+	SpatialService.setTransform("na_frente_do_corpo", vec(0, 0, -6), vec(0, 0, 1))
+	SpatialService.setTransform("na_direcao_da_mira", vec(0, 0, 6), vec(0, 0, -1))
+
+	assertEq(
+		SpatialService.acquireTarget("player:mira", 9, 65),
+		"na_frente_do_corpo",
+		"sem mira declarada vale o look do corpo"
+	)
+
+	local look = SpatialService.aimLook({ x = 0, z = 1 })
+	assertTrue(look ~= nil, "mira válida vira look")
+	SpatialService.setTransform("player:mira", vec(0, 0, 0), look)
+	assertEq(
+		SpatialService.acquireTarget("player:mira", 9, 65),
+		"na_direcao_da_mira",
+		"o golpe segue a mira, não o corpo"
+	)
+end)
+
+test("espaço: mira inválida é recusada e o cone volta para o corpo", function()
+	-- Segunda barreira além do schema, como no dash: vetor neutro, NaN, grande
+	-- demais ou fora de formato não vira direção de golpe. Recusar devolvendo
+	-- nil é o que faz o chamador manter o look replicado em vez de mirar em
+	-- lugar nenhum.
+	assertEq(SpatialService.aimLook(nil), nil, "sem campo")
+	assertEq(SpatialService.aimLook("frente"), nil, "não é tabela")
+	assertEq(SpatialService.aimLook({ x = 0, z = 0 }), nil, "vetor neutro")
+	assertEq(SpatialService.aimLook({ x = 0.05, z = 0.05 }), nil, "curto demais para ter direção")
+	assertEq(SpatialService.aimLook({ x = 5, z = 0 }), nil, "grande demais")
+	assertEq(SpatialService.aimLook({ x = 0 / 0, z = 1 }), nil, "NaN")
+	assertEq(SpatialService.aimLook({ x = "1", z = 0 }), nil, "componente que não é número")
+
+	local look = SpatialService.aimLook({ x = 0.6, z = 0.8 })
+	assertTrue(look ~= nil, "vetor unitário aceito")
+	assertEq((look :: any).y, 0, "mira é sempre plana")
+	local magnitude = math.sqrt((look :: any).x ^ 2 + (look :: any).z ^ 2)
+	assertTrue(math.abs(magnitude - 1) < 1e-6, "look sai normalizado")
 
 	-- Alvo praticamente em cima do atacante não pode ser recusado por ângulo.
 	SpatialService.init({ geometry = Geometry })

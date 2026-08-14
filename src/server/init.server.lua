@@ -978,11 +978,36 @@ EnemyService.spawnInitial()
 EnemyService.spawnElite()
 print("[Bootstrap] Estilhaços no mundo")
 
+-- Mira declarada pelo cliente (golpe e técnica).
+--
+-- Até 14/08 o cliente girava a própria HumanoidRootPart antes de mandar a
+-- intenção e o heartbeat copiava esse look para o SpatialService — era assim
+-- que o cone e o lunge sabiam para onde apontar. O efeito colateral era o corpo
+-- estalar para a direção da câmera a cada ação, de costas para ela, mesmo com o
+-- jogador parado. Agora a direção chega declarada e o corpo fica onde está.
+--
+-- A autoridade não mudou de lado: aquela rotação já era escrita pelo cliente.
+-- O schema valida o vetor (SecurityService) e aqui há a segunda barreira, como
+-- no dash. Alcance, abertura, alvo, dano e posição continuam do servidor.
+local function applyDeclaredAim(fighterId: string, aim: any): boolean
+	local look = SpatialService.aimLook(aim)
+	if not look then
+		return false
+	end
+	local transform = SpatialService.getTransform(fighterId)
+	if not transform then
+		return false
+	end
+	SpatialService.setTransform(fighterId, transform.position, look)
+	return true
+end
+
 -- 7. Intenção de habilidade (cliente → servidor)
 RemoteGateway.onClientIntent(Remotes.Names.AbilityIntent, function(player: Player, payload: { any })
 	if not requireReady(player) then
 		return
 	end
+	applyDeclaredAim(CombatService.playerFighterId(player.UserId), payload.aim)
 	local abilityId = payload.abilityId
 	if type(abilityId) ~= "string" then
 		return
@@ -1026,6 +1051,9 @@ RemoteGateway.onClientIntent(Remotes.Names.BasicAttackIntent, function(player: P
 	if not attacker then
 		return
 	end
+	-- Antes de adquirir alvo: o cone sai da mira declarada, não da rotação do
+	-- corpo, que desde 14/08 não acompanha mais a câmera no golpe.
+	applyDeclaredAim(attackerId, payload.aim)
 	local kind = payload.kind
 	local now = os.clock()
 
