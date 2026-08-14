@@ -1353,6 +1353,44 @@ test("segurança: limita combate a 8/s sem consumir interações", function()
 	assertTrue(SecurityService.inspect(53, "BasicAttackIntent", reset) ~= nil, "janela reinicia")
 end)
 
+test("segurança: orçamento de combate é isolado por jogador", function()
+	local currentNow = 30
+	SecurityService.init({
+		decode = RemoteEnvelope.decode,
+		now = function()
+			return currentNow
+		end,
+	})
+	for sequence = 1, 8 do
+		local envelope = RemoteEnvelope.create(
+			"BasicAttackIntent",
+			{ kind = "light", phase = "press" },
+			("a-%d"):format(sequence),
+			sequence
+		)
+		assertTrue(SecurityService.inspect(601, "BasicAttackIntent", envelope) ~= nil, "jogador A dentro do orçamento")
+	end
+	local rejected = RemoteEnvelope.create("BasicAttackIntent", { kind = "light", phase = "press" }, "a-9", 9)
+	local rejectedPayload, rejectedReason = SecurityService.inspect(601, "BasicAttackIntent", rejected)
+	assertEq(rejectedPayload, nil, "jogador A excede o orçamento")
+	assertEq(rejectedReason, "rate_limited", "motivo do jogador A")
+	local playerB = RemoteEnvelope.create("BasicAttackIntent", { kind = "light", phase = "press" }, "b-1", 1)
+	assertTrue(SecurityService.inspect(602, "BasicAttackIntent", playerB) ~= nil, "jogador B possui orçamento independente")
+	currentNow += 1
+end)
+
+test("segurança: sequência fora de ordem não atravessa jogadores", function()
+	SecurityService.init({ decode = RemoteEnvelope.decode })
+	local delayed = validAbilityEnvelope(2, "latency-a-2")
+	assertTrue(SecurityService.inspect(603, "AbilityIntent", delayed) ~= nil, "pacote adiantado aceito")
+	local late = validAbilityEnvelope(1, "latency-a-1")
+	local latePayload, lateReason = SecurityService.inspect(603, "AbilityIntent", late)
+	assertEq(latePayload, nil, "pacote atrasado recusado")
+	assertEq(lateReason, "replay_sequence", "motivo do pacote atrasado")
+	local otherPlayer = validAbilityEnvelope(1, "latency-b-1")
+	assertTrue(SecurityService.inspect(604, "AbilityIntent", otherPlayer) ~= nil, "outro jogador não herda a sequência")
+end)
+
 test("segurança: mira declarada entra no contrato de golpe e técnica", function()
 	SecurityService.init({ decode = RemoteEnvelope.decode })
 	local function inspecionar(contrato: string, payload: { [string]: any }, seq: number)

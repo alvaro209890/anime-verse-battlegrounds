@@ -2,7 +2,7 @@
 
 ## 1. Escopo e decisões arquiteturais
 
-Este documento descreve a arquitetura-alvo e distingue o que já existe do que ainda precisa ser entregue. O repositório contém um **esqueleto executável da F0**: bootstrap de servidor/cliente, catálogos, mundo greybox, modelos/animação procedural de NPCs, apresentação local do jogador, interação contextual, domínio, save/ProfileStore, controllers de Input/HUD, registry v2, `SecurityService` e `TelemetryService`. A CI versionada executa StyLua, Selene, 224 testes de domínio, 55 testes de animação/apresentação, instalação Wally e build Rojo no snapshot canônico `d7c44e8`. Isso comprova estrutura e lógica automatizada; **não comprova** roteiro runtime no Studio, DataStore real, teleporte, servidor publicado, mobile ou gamepad.
+Este documento descreve a arquitetura-alvo e distingue o que já existe do que ainda precisa ser entregue. O repositório contém um **esqueleto executável da F0**: bootstrap de servidor/cliente, catálogos, mundo greybox, modelos/animação procedural de NPCs, apresentação local do jogador, interação contextual, domínio, save/ProfileStore, controllers de Input/HUD, registry v2, `SecurityService` e `TelemetryService`. A CI versionada executa StyLua, Selene, 226 testes de domínio, 55 testes de animação/apresentação, instalação Wally e build Rojo no snapshot canônico `d7c44e8`. Isso comprova estrutura e lógica automatizada; **não comprova** roteiro runtime no Studio, DataStore real, teleporte, servidor publicado, mobile ou gamepad.
 
 Decisões principais:
 

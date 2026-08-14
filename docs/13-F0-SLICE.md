@@ -24,7 +24,7 @@ P1 (revisão jurídica) continua obrigatório antes de concept art, áudio final
 
 ## 2. Divergências do código atual
 
-Itens 1–13 estão fechados em código/headless. O snapshot canônico atual é o commit `d7c44e8`, que inclui a integração de VFX, skins de monstros, expansão visual do cenário e teto/terreno. As suítes atuais executam **224 testes de domínio** e **55 testes de animação/apresentação**. Esses resultados são validação automatizada; não equivalem a Play no Studio. O que **não** está comprovado é execução real em Play: o build atual não foi executado, e não há roteiro, Output ou captura dessa revisão. Ainda falta:
+Itens 1–13 estão fechados em código/headless. O snapshot de implementação anterior era o commit `d7c44e8`, que inclui a integração de VFX, skins de monstros, expansão visual do cenário e teto/terreno. Após a cobertura adversarial adicional, as suítes atuais executam **226 testes de domínio** e **55 testes de animação/apresentação**. Esses resultados são validação automatizada; não equivalem a Play no Studio. O que **não** está comprovado é execução real em Play: o build atual não foi executado, e não há roteiro, Output ou captura dessa revisão. Ainda falta:
 
 | Onde | Estado atual | Alvo desta spec |
 |---|---|---|
@@ -44,14 +44,14 @@ Itens 1–13 estão fechados em código/headless. O snapshot canônico atual é 
 | `QuestService` | oferta → aceite (NPC ou 90 s) → progresso por kill → +40 XP e `unlock_comet_shoulder` no 3º | **itens 9/10 feitos**: cadeia sequencial (anterior precisa completar) e kind `flow_echo` via `creditFlowEcho` |
 | `ZoneService` | zona atual, `canPvp`, transição 5 s, lockout 15 s, `ZoneEvent` + `ZoneCrossingIntent`; hostil na segura não marca PvP | 5 sinais visíveis/audíveis, volumes e collision groups no Studio |
 | `PlayerSessionService` | snapshot Ready lê zona, unlocks, objetivo e XP não consolidado | feito no domínio |
-| `TelemetryService` / `SecurityService` | sete eventos allowlisted; envelope/payload fechado; replay, sequência e rate limit por classe | feito em código/headless; sink F0 é log estruturado, adversarial runtime pendente |
+| `TelemetryService` / `SecurityService` | sete eventos allowlisted; envelope/payload fechado; replay, sequência e rate limit por classe | feito em código/headless; pré-cobertura de dois jogadores adicionada; fuzz, spam e adversarial runtime ainda pendentes |
 | `InteractionService` / `Interactions` | Instrutor e Marco allowlisted; alvo, âncora, posição, distância e hold do Marco medido por 1,5 s no relógio do servidor; pending limpo no leave | feito em código/headless; prompt e fluxo real pendentes no Studio/dispositivos |
 | `src/client/init.client.lua` | sete controllers na ordem §12.3; espera `SessionSnapshot.ready`; sem intenção no boot; envelope v2 e HUD localizado; `InteractionController` usa `ProximityPrompt`; `ActorAnimator` e `PlayerCombatAnimator` alteram somente apresentação | feito em código/headless; Studio e dispositivos pendentes |
 | `SaveService` | stub em memória; persiste `wallet` | **item 11 feito**: ProfileRoot v1 sem wallet, ProfileStore via `Shared.vendor` (lock, autosave 60–120 s, release); DataStore real e respawn no Studio pendentes |
 | `StudioDebug` | exige `RunService:IsStudio()` + atributo `F0Debug = true`; concede as 3 técnicas como flags de sessão fora do save; sem remote de cheat | feito em código/headless; uso real no Studio pendente |
 | Mapa/HUD | greybox enriquecido, buracos norte/oeste cobertos a partir dos volumes, HUD mínimo, prompts localizados e telegraph acessível implementados por código | execução, layout, colisão, animação e feeling no Studio/dispositivos pendentes |
 
-Testes Lune no snapshot canônico `d7c44e8`: 224 casos em `tests/run.luau` e 55 casos em `tests/animation.luau` (`docs/12-TESTING.md` e `docs/23-DOCUMENTATION-SNAPSHOT.md`).
+Testes Lune no snapshot de implementação atual: 226 casos em `tests/run.luau` e 55 casos em `tests/animation.luau` (`docs/12-TESTING.md` e `docs/23-DOCUMENTATION-SNAPSHOT.md`). Os dois casos adicionais cobrem isolamento de orçamento entre jogadores e sequência fora de ordem sob uma simulação headless de latência; eles não substituem o R1 no Studio.
 
 **Comprovado neste recorte:** técnicas locked no spawn; Estilhaço Errante completo no domínio; XP e objetivo 1; geometria do greybox; hitbox e lunge; uma receita de piso por volume canônico; resposta procedural pura de leve, pesado, guarda e dash; catálogo fechado de interação; gate `ready`; alvo exclusivo; proximidade e hold de 1,5 s revalidados pelo servidor, sem recompensa declarada pelo cliente.
 
