@@ -302,7 +302,7 @@ Para W1 passar, a evidência precisa mostrar, no mínimo:
 - percurso completo pelas duas saídas sem queda entre pisos;
 - prompt do Instrutor e hold de 1,5 s do Marco de Retorno funcionando com validação server-side.
 
-Até essa execução existir, W1 permanece **pendente**, mesmo com 224 testes de domínio e 54 testes de animação/apresentação verdes.
+Até essa execução existir, W1 permanece **pendente**, mesmo com 224 testes de domínio e 55 testes de animação/apresentação verdes.
 
 ### Gate A0 — direção e originalidade
 

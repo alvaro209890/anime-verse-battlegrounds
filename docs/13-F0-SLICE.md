@@ -24,7 +24,7 @@ P1 (revisão jurídica) continua obrigatório antes de concept art, áudio final
 
 ## 2. Divergências do código atual
 
-Itens 1–13 estão fechados em código/headless. O snapshot canônico atual é o commit `d7c44e8`, que inclui a integração de VFX, skins de monstros, expansão visual do cenário e teto/terreno. As suítes atuais executam **224 testes de domínio** e **54 testes de animação/apresentação**. Esses resultados são validação automatizada; não equivalem a Play no Studio. O que **não** está comprovado é execução real em Play: o build atual não foi executado, e não há roteiro, Output ou captura dessa revisão. Ainda falta:
+Itens 1–13 estão fechados em código/headless. O snapshot canônico atual é o commit `d7c44e8`, que inclui a integração de VFX, skins de monstros, expansão visual do cenário e teto/terreno. As suítes atuais executam **224 testes de domínio** e **55 testes de animação/apresentação**. Esses resultados são validação automatizada; não equivalem a Play no Studio. O que **não** está comprovado é execução real em Play: o build atual não foi executado, e não há roteiro, Output ou captura dessa revisão. Ainda falta:
 
 | Onde | Estado atual | Alvo desta spec |
 |---|---|---|
@@ -51,7 +51,7 @@ Itens 1–13 estão fechados em código/headless. O snapshot canônico atual é 
 | `StudioDebug` | exige `RunService:IsStudio()` + atributo `F0Debug = true`; concede as 3 técnicas como flags de sessão fora do save; sem remote de cheat | feito em código/headless; uso real no Studio pendente |
 | Mapa/HUD | greybox enriquecido, buracos norte/oeste cobertos a partir dos volumes, HUD mínimo, prompts localizados e telegraph acessível implementados por código | execução, layout, colisão, animação e feeling no Studio/dispositivos pendentes |
 
-Testes Lune no snapshot canônico `d7c44e8`: 224 casos em `tests/run.luau` e 54 casos em `tests/animation.luau` (`docs/12-TESTING.md` e `docs/23-DOCUMENTATION-SNAPSHOT.md`).
+Testes Lune no snapshot canônico `d7c44e8`: 224 casos em `tests/run.luau` e 55 casos em `tests/animation.luau` (`docs/12-TESTING.md` e `docs/23-DOCUMENTATION-SNAPSHOT.md`).
 
 **Comprovado neste recorte:** técnicas locked no spawn; Estilhaço Errante completo no domínio; XP e objetivo 1; geometria do greybox; hitbox e lunge; uma receita de piso por volume canônico; resposta procedural pura de leve, pesado, guarda e dash; catálogo fechado de interação; gate `ready`; alvo exclusivo; proximidade e hold de 1,5 s revalidados pelo servidor, sem recompensa declarada pelo cliente.
 

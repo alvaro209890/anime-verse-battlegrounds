@@ -7,11 +7,12 @@ Este arquivo é a referência única para o estado técnico atual do repositóri
 | Campo | Estado canônico |
 |---|---|
 | Branch publicado | `main` |
-| Commit atual | `d7c44e811d3f168526f1ea63d0de9d93e7c7c7bb` |
+| Commit-base do código | `d7c44e811d3f168526f1ea63d0de9d93e7c7c7bb` |
+| Estado deste documento | consolidação posterior de documentação e testes; o hash final é informado no release commit |
 | Data do commit | 2026-08-14 |
-| Última alteração | `feat(scene): expand walls spawn roof and terrain` |
+| Última alteração de código-base | `feat(scene): expand walls spawn roof and terrain` |
 | Testes de domínio | 224 passaram, 0 falharam |
-| Testes de animação/apresentação | 54 passaram, 0 falharam |
+| Testes de animação/apresentação | 55 passaram, 0 falharam |
 | Selene | 0 erros, 0 warnings, 0 parse errors |
 | StyLua | check aprovado |
 | Rojo | build aprovado; artefato local de 292.019 bytes |
@@ -32,4 +33,16 @@ A ordem oficial continua sendo **sincronização do Studio → W1 de leitura do 
 
 ## Regra de leitura dos documentos
 
-Quando um documento mencionar commits como `108be31`, `d0f6f8d`, contagens como 166, 169, 238 ou 49 testes, ou artefatos antigos de 160.553/128.744 bytes, essas referências são históricas e não representam o snapshot atual. Para o estado atual, usar sempre este arquivo e registrar o commit `d7c44e8`, 224 testes de domínio, 54 testes de animação/apresentação e a ausência de validação de runtime.
+Quando um documento mencionar commits como `108be31`, `d0f6f8d`, contagens como 166, 169, 238 ou 49 testes, ou artefatos antigos de 160.553/128.744 bytes, essas referências são históricas e não representam o snapshot atual. Para o estado de código-base, usar `d7c44e8`; para esta consolidação, usar o commit final informado no GitHub, 224 testes de domínio, 55 testes de animação/apresentação e a ausência de validação de runtime.
+
+## Consolidação automatizada adicional
+
+Após o snapshot `d7c44e8`, foram adicionadas validações puras em `SceneryPresentation.validateLayout(Zones)`. Elas verificam paletas RGB, limites de densidade de rochas e grama, transparência e altura do teto, fontes CC0 auditáveis, âncoras obrigatórias em suas zonas, distância mínima entre shards e distância mínima dos shards aos portões. Essas regras não tocam Instances e podem ser executadas no harness Lune.
+
+Também foi adicionada uma regressão A1 para o blocking procedural do **Ombro Cometa**. O teste fixa o instante autoritativo de impacto em 0,40 s, verifica recolhimento corporal, inclinação do ombro, rotação do tronco, braço fechado para diferenciar a técnica de um soco e retorno visual ao neutro. O teste não declara que existe um clipe final nem substitui o gate A1 no Roblox Studio.
+
+A receita de build existente em `scripts/build-studio.ps1` continua sendo a fonte de geração do artefato: instala Wally, respeita lock vivo do Studio, remove apenas lock órfão, gera o `.rbxl` esperado, verifica tamanho/data e imprime SHA-256. O bridge permanece limitado a sincronização e inspeção; não foi alegado que ele executa Play, tira screenshots ou mede dispositivos reais.
+
+Nesta rodada, a suíte de animação passou com **55 casos**, a suíte de domínio permaneceu com **224 casos**, Selene e StyLua passaram, o build Rojo passou e `git diff --check` ficou limpo. O total automatizado atual é **279 casos**. Isso continua sendo evidência de contratos, apresentação pura e árvore de build; não é evidência de boot, colisão, replicação, latência, Android, gamepad, DataStore real ou qualidade visual final.
+
+A conclusão recomendada permanece: preparar e abrir o artefato atual no Studio, executar W1, registrar evidência de runtime, depois A1/R1/W2. Nenhuma dessas validações externas deve ser marcada como concluída apenas por estes testes.

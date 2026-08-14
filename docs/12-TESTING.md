@@ -1,10 +1,10 @@
 # 12 — Testes e evidências
 
-> **Snapshot canônico:** 2026-08-14, commit `d7c44e8`. `tests/run.luau` executa **224 testes de domínio** e `tests/animation.luau` executa **54 testes de animação/apresentação**. O total das duas suítes é **278 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada (14/08): overlay procedural que nascia morto por corrida no anexo do rig, corpo que deixou de girar no golpe (mira declarada na intenção), tremida de câmera e hit-stop recalibrados, e luz de verdade na camada de VFX.
+> **Snapshot canônico:** 2026-08-14, commit `d7c44e8`. `tests/run.luau` executa **224 testes de domínio** e `tests/animation.luau` executa **55 testes de animação/apresentação**. O total das duas suítes é **279 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada (14/08): overlay procedural que nascia morto por corrida no anexo do rig, corpo que deixou de girar no golpe (mira declarada na intenção), tremida de câmera e hit-stop recalibrados, e luz de verdade na camada de VFX.
 
 ## 1. Estado da execução
 
-No snapshot canônico `d7c44e8`, a verificação automatizada registrou Selene e StyLua limpos, 224/224 em `tests/run.luau` e 54/54 em `tests/animation.luau`. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
+No snapshot canônico `d7c44e8`, a verificação automatizada registrou Selene e StyLua limpos, 224/224 em `tests/run.luau` e 55/55 em `tests/animation.luau`. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
 
 **Registro histórico, não evidência do snapshot atual:** uma rodada anterior teve confirmação em Play pelo jogador, com `avb-debug sync` = 56/56, de que a animação de golpe movia o corpo e o personagem não girava sozinho. Essa evidência pertence ao estado anterior documentado em `docs/14` e não deve ser usada para declarar o commit `d7c44e8` validado em runtime. Neste snapshot, o Play atual continua pendente.
 
