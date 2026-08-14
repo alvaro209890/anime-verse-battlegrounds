@@ -45,7 +45,9 @@ function ActorAnimator.sample(
 	if kind == "telegraph" then
 		local duration = math.max(0.1, durationSeconds or 0.4)
 		local anticipation = math.sin(clamp01(elapsed / duration) * math.pi / 2)
-		local patternWeight = if visualPattern == "slam" then 1.3 else (if visualPattern == "combo" then 0.72 else 1)
+		local patternWeight = if visualPattern == "slam"
+			then 1.3
+			else (if visualPattern == "combo" then 0.72 else (if visualPattern == "pounce" then 1.2 else 1))
 		lean = -recipe.telegraphLeanDegrees * patternWeight * anticipation
 		limbs = if visualPattern == "combo"
 			then recipe.strideDegrees * 0.45 * math.sin(clamp01(elapsed / duration) * math.pi * 2)
@@ -59,11 +61,15 @@ function ActorAnimator.sample(
 		local strike = if visualPattern == "combo"
 			then math.abs(math.sin(progress * math.pi * 2))
 			else math.sin(progress * math.pi)
-		local patternWeight = if visualPattern == "slam" then 1.25 else (if visualPattern == "combo" then 0.78 else 1)
+		local patternWeight = if visualPattern == "slam"
+			then 1.25
+			else (if visualPattern == "combo" then 0.78 else (if visualPattern == "pounce" then 1.35 else 1))
 		lean = recipe.attackLeanDegrees * patternWeight * strike
 		limbs = recipe.attackLeanDegrees * 0.65 * patternWeight * strike
 		if visualPattern == "slam" then
 			bob -= recipe.idleBobStuds * 1.1 * strike
+		elseif visualPattern == "pounce" then
+			bob += recipe.idleBobStuds * 1.4 * strike
 		end
 	elseif kind == "died" then
 		local fall = 1 - (1 - clamp01(elapsed / 0.55)) ^ 3

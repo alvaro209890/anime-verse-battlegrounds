@@ -12,6 +12,9 @@ export type ActorRecipe = {
 	bodyRgb: Rgb,
 	accentRgb: Rgb,
 	coreRgb: Rgb,
+	skinNameKey: string,
+	auraRgb: Rgb,
+	auraScale: number,
 	idleBobStuds: number,
 	idleCyclesPerSecond: number,
 	strideDegrees: number,
@@ -102,6 +105,9 @@ local Actors: { [string]: ActorRecipe } = {
 		bodyRgb = { 52, 50, 46 },
 		accentRgb = { 150, 120, 90 },
 		coreRgb = { 226, 214, 183 },
+		skinNameKey = "skin.training_sack",
+		auraRgb = { 226, 78, 78 },
+		auraScale = 0.8,
 		idleBobStuds = 0.03,
 		idleCyclesPerSecond = 0.55,
 		strideDegrees = 0,
@@ -118,6 +124,9 @@ local Actors: { [string]: ActorRecipe } = {
 		bodyRgb = { 38, 40, 48 },
 		accentRgb = { 118, 84, 158 },
 		coreRgb = { 206, 196, 224 },
+		skinNameKey = "skin.threshold_warden",
+		auraRgb = { 138, 96, 196 },
+		auraScale = 1.0,
 		idleBobStuds = 0.04,
 		idleCyclesPerSecond = 0.35,
 		strideDegrees = 7,
@@ -133,6 +142,9 @@ local Actors: { [string]: ActorRecipe } = {
 		bodyRgb = { 64, 70, 78 },
 		accentRgb = { 172, 176, 166 },
 		coreRgb = { 242, 240, 226 },
+		skinNameKey = "skin.cyan_rift_shard",
+		auraRgb = { 104, 220, 238 },
+		auraScale = 0.9,
 		idleBobStuds = 0.32,
 		idleCyclesPerSecond = 0.8,
 		strideDegrees = 18,
@@ -149,6 +161,9 @@ local Actors: { [string]: ActorRecipe } = {
 		bodyRgb = { 44, 48, 56 },
 		accentRgb = { 168, 120, 200 },
 		coreRgb = { 246, 240, 230 },
+		skinNameKey = "skin.void_crown_boss",
+		auraRgb = { 255, 118, 92 },
+		auraScale = 1.35,
 		idleBobStuds = 0.18,
 		idleCyclesPerSecond = 0.45,
 		strideDegrees = 8,
@@ -505,8 +520,16 @@ function Presentation.validate(): (boolean, string?)
 		then
 			return false, "invalid_pose_range:" .. npcId
 		end
-		if not validRgb(recipe.bodyRgb) or not validRgb(recipe.accentRgb) or not validRgb(recipe.coreRgb) then
-			return false, "invalid_rgb:" .. npcId
+		if
+			not validRgb(recipe.bodyRgb)
+			or not validRgb(recipe.accentRgb)
+			or not validRgb(recipe.coreRgb)
+			or not validRgb(recipe.auraRgb)
+			or type(recipe.skinNameKey) ~= "string"
+			or recipe.skinNameKey == ""
+			or recipe.auraScale <= 0
+		then
+			return false, "invalid_skin:" .. npcId
 		end
 	end
 	if

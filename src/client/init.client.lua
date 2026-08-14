@@ -36,10 +36,13 @@ local PlayerCombatAnimator = require(Presentation.PlayerCombatAnimator)
 local CombatCameraController = require(Presentation.CombatCameraController)
 local CombatAudioPlayer = require(Presentation.CombatAudioPlayer)
 local AbilityVfxPlayer = require(Presentation.AbilityVfxPlayer)
+local EnemyVfxPlayer = require(Presentation.EnemyVfxPlayer)
 local CharacterAnimationPlayer = require(Presentation.CharacterAnimationPlayer)
 local CombatAudio = require(Shared.Data.CombatAudio)
 local CombatAnimations = require(Shared.Data.CombatAnimations)
 local AbilityVfx = require(Shared.Data.AbilityVfx)
+local EnemyAbilities = require(Shared.Data.EnemyAbilities)
+local EnemyVfxAssets = require(Shared.Data.EnemyVfxAssets)
 
 local player = Players.LocalPlayer
 local state = ClientState.new(os.clock)
@@ -65,6 +68,13 @@ local playerCombatAnimator: any = nil
 -- Declarado antes do AbilityController porque o callback de ativação o captura;
 -- a construção fica junto das demais camadas de apresentação, abaixo.
 local abilityVfx: any = nil
+local enemyVfx = EnemyVfxPlayer.new({
+	workspace = Workspace,
+	runService = RunService,
+	recipes = EnemyAbilities,
+	assets = EnemyVfxAssets,
+	now = os.clock,
+})
 -- Clipes de animação reais (assets livres do Roblox). Mesmo motivo do
 -- abilityVfx: o callback de ativação captura a referência.
 local characterAnimation: any = nil
@@ -241,6 +251,7 @@ end)
 
 remote(Remotes.Names.EnemyEvent).OnClientEvent:Connect(function(payload: { [string]: any })
 	ActorAnimator.onEnemyEvent(actorAnimator, payload)
+	EnemyVfxPlayer.onEnemyEvent(enemyVfx, payload)
 end)
 
 -- UI é o último controller; os listeners de remotes já estão conectados antes
@@ -297,6 +308,7 @@ ActorAnimator.start(actorAnimator)
 PlayerCombatAnimator.start(playerCombatAnimator)
 CharacterAnimationPlayer.start(characterAnimation)
 AbilityVfxPlayer.start(abilityVfx)
+EnemyVfxPlayer.start(enemyVfx)
 -- O rastro do golpe e as camadas de VFX se apagam sozinhos quando a ação acaba.
 RunService.RenderStepped:Connect(function()
 	CharacterAnimationPlayer.step(characterAnimation)

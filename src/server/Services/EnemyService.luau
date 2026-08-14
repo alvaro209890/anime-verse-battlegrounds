@@ -58,6 +58,8 @@ local EnemyService = {
 	eliteTimeInRadius = {} :: { [string]: { [number]: number } },
 	-- fighterId → true quando a morte do elite já foi resolvida (leeching)
 	eliteDeathResolved = {} :: { [string]: boolean },
+	-- Alternância visual do inimigo comum; não altera hitbox nem dano.
+	shardCycleCount = {} :: { [string]: number },
 }
 
 function EnemyService.init(deps: EnemyDeps): ()
@@ -66,6 +68,7 @@ function EnemyService.init(deps: EnemyDeps): ()
 	table.clear(EnemyService.eliteDamage)
 	table.clear(EnemyService.eliteTimeInRadius)
 	table.clear(EnemyService.eliteDeathResolved)
+	table.clear(EnemyService.shardCycleCount)
 end
 
 function EnemyService.fighterId(npcId: string, anchorId: string, index: number): string
@@ -146,6 +149,7 @@ function EnemyService.spawnInitial(): number
 					z = anchor.position.z,
 				}, { x = 0, y = 0, z = 1 })
 				registerEnemy(fighterId, SHARD_NPC_ID, anchor)
+				EnemyService.shardCycleCount[fighterId] = 0
 				spawned += 1
 				emit(
 					fighterId,
@@ -183,6 +187,7 @@ function EnemyService.spawnElite(): boolean
 	EnemyService.eliteDamage[fighterId] = {}
 	EnemyService.eliteTimeInRadius[fighterId] = {}
 	EnemyService.eliteDeathResolved[fighterId] = false
+	EnemyService.shardCycleCount[fighterId] = 0
 	emit(fighterId, { kind = "spawn", anchorId = ELITE_ANCHOR_ID, durationSeconds = 0.6, visualPattern = "arrival" })
 	return true
 end
@@ -320,16 +325,19 @@ function EnemyService.tick(now: number, deltaSeconds: number): number
 							def.recoverySeconds or 0.6
 						)
 						if result.ok and result.phase == "telegraph" then
+							local pounce = (EnemyService.shardCycleCount[record.fighterId] or 0) % 2 == 1
 							emit(record.fighterId, {
 								kind = "telegraph",
 								targetId = target.fighterId,
 								durationSeconds = def.telegraphMs / 1000,
-								visualPattern = "strike",
+								visualPattern = if pounce then "pounce" else "rend",
+								abilityId = if pounce then "shard_pounce" else "shard_rend",
 							})
 						elseif result.ok and result.phase == "attack" then
 							if result.iframe ~= true and result.damage > 0 then
 								hits += 1
 							end
+							local pounce = (EnemyService.shardCycleCount[record.fighterId] or 0) % 2 == 1
 							emit(record.fighterId, {
 								kind = "attack",
 								targetId = target.fighterId,
@@ -338,8 +346,12 @@ function EnemyService.tick(now: number, deltaSeconds: number): number
 								iframe = result.iframe == true,
 								pulseCounter = result.pulseCounter == true,
 								durationSeconds = 0.35,
-								visualPattern = "strike",
+								visualPattern = if pounce then "pounce" else "rend",
+								abilityId = if pounce then "shard_pounce" else "shard_rend",
 							})
+							EnemyService.shardCycleCount[record.fighterId] = (
+								EnemyService.shardCycleCount[record.fighterId] or 0
+							) + 1
 						end
 					end
 				else
@@ -405,6 +417,7 @@ function EnemyService.tickElite(now: number, deltaSeconds: number): number
 			EnemyService.eliteDamage[fighterId] = {}
 			EnemyService.eliteTimeInRadius[fighterId] = {}
 			EnemyService.eliteDeathResolved[fighterId] = false
+			EnemyService.shardCycleCount[fighterId] = 0
 			emit(fighterId, {
 				kind = "respawn",
 				anchorId = record.anchorId,
@@ -453,6 +466,7 @@ function EnemyService.tickElite(now: number, deltaSeconds: number): number
 					targetId = target.fighterId,
 					durationSeconds = durationSeconds,
 					visualPattern = visualPattern,
+					abilityId = if visualPattern == "slam" then "anchored_slam" else "anchored_combo",
 				})
 			elseif result.ok and result.phase == "attack" then
 				if result.iframe ~= true and result.damage > 0 then
@@ -467,6 +481,7 @@ function EnemyService.tickElite(now: number, deltaSeconds: number): number
 					pulseCounter = result.pulseCounter == true,
 					durationSeconds = 0.4,
 					visualPattern = if fighter.elitePattern == "slam" then "slam" else "combo",
+					abilityId = if fighter.elitePattern == "slam" then "anchored_slam" else "anchored_combo",
 				})
 			end
 		end

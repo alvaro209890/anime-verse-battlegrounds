@@ -796,6 +796,7 @@ local function createActorModel(
 	model:SetAttribute("PresentationActor", true)
 	model:SetAttribute("ActorId", actorId)
 	model:SetAttribute("NpcId", npcId)
+	model:SetAttribute("SkinId", recipe.skinNameKey or npcId)
 	model:SetAttribute("PoseKind", "spawn")
 	model:SetAttribute("Moving", false)
 
@@ -815,6 +816,8 @@ local function createActorModel(
 	local bodyColor = toColor(recipe.bodyRgb)
 	local accentColor = toColor(recipe.accentRgb)
 	local coreColor = toColor(recipe.coreRgb)
+	local auraColor = toColor(recipe.auraRgb or recipe.coreRgb)
+	local auraScale = recipe.auraScale or 1
 	-- Topo do corpo em relação à Root: com o rig R15 a cabeça termina bem mais
 	-- baixo que a torre de Parts antiga, e o "!" de telegraph precisa saber
 	-- disso para não ficar boiando três studs acima de ninguém.
@@ -931,8 +934,13 @@ local function createActorModel(
 		-- ── Toques de skin dos estilhaços ──────────────────────────────────
 		-- Halo de energia: anel Neon fino girando com o pivot visual (o
 		-- ActorAnimator já roda o VisualRoot, então o anel "orbita" sozinho).
-		local halo =
-			makeVisualPart("Part", "Halo", Vector3.new(0.14, 3.6 * scale, 3.6 * scale), coreColor, Enum.Material.Neon)
+		local halo = makeVisualPart(
+			"Part",
+			"Halo",
+			Vector3.new(0.14, 3.6 * scale * auraScale, 3.6 * scale * auraScale),
+			auraColor,
+			Enum.Material.Neon
+		)
 		halo.Shape = Enum.PartType.Cylinder
 		attach(visualRoot, halo, CFrame.new(0, 0.2 * scale, 0) * CFrame.Angles(0, 0, math.rad(90)), "Joint_Halo")
 		-- Cristais menores flanqueando o corpo: mais volume sem mudar a hitbox.

@@ -36,6 +36,8 @@ local AbilityVfx = require("../src/shared/Data/AbilityVfx")
 local CombatHudController = require("../src/client/Controllers/CombatHudController")
 local CombatAnimations = require("../src/shared/Data/CombatAnimations")
 local ActorAnimator = require("../src/client/Presentation/ActorAnimator")
+local EnemyAbilities = require("../src/shared/Data/EnemyAbilities")
+local EnemyVfxAssets = require("../src/shared/Data/EnemyVfxAssets")
 local fs = require("@lune/fs")
 
 local CHAIN = PlayerCombatAnimator.LightChainLength
@@ -688,6 +690,35 @@ test("vfx: nenhum raio do cometa ultrapassa o alcance da habilidade", function()
 			("camada %s raio %.1f <= alcance %.1f"):format(entry.id, entry.radiusStuds, technique.rangeStuds)
 		)
 	end
+end)
+
+test("npc: catálogo de habilidades e assets gratuitos é válido", function()
+	local ok, reason = EnemyAbilities.validate()
+	assertTrue(ok, reason or "habilidades de NPC válidas")
+	local assetsOk, assetsReason = EnemyVfxAssets.validate()
+	assertTrue(assetsOk, assetsReason or "assets de NPC válidos")
+	assertEq(EnemyAbilities.forEvent("enemy_wandering_shard", "pounce").id, "shard_pounce", "Pounce resolve")
+	assertEq(EnemyAbilities.forEvent("enemy_anchored_shard", "slam").id, "anchored_slam", "Slam resolve")
+	for _, asset in EnemyVfxAssets.all() do
+		assertTrue(fs.isFile(asset.sourceFile), "asset Kenney existe: " .. asset.sourceFile)
+	end
+end)
+
+test("npc: Pounce e Slam têm poses mais fortes que o baseline", function()
+	local recipe = {
+		shape = "shard",
+		idleBobStuds = 0.2,
+		idleCyclesPerSecond = 0.5,
+		strideDegrees = 12,
+		telegraphLeanDegrees = 20,
+		attackLeanDegrees = 40,
+		deathTiltDegrees = 80,
+	}
+	local pounce = ActorAnimator.sample(recipe, "attack", 0.17, 1, false, "pounce", 0.35)
+	local rend = ActorAnimator.sample(recipe, "attack", 0.17, 1, false, "rend", 0.35)
+	local slam = ActorAnimator.sample(recipe, "attack", 0.20, 1, false, "slam", 0.40)
+	assertTrue(math.abs(pounce.leanDegrees) > math.abs(rend.leanDegrees), "Pounce inclina mais")
+	assertTrue(math.abs(slam.leanDegrees) > math.abs(rend.leanDegrees), "Slam inclina mais")
 end)
 
 test("vfx: cada camada usa asset preparado conhecido e atlas existente", function()

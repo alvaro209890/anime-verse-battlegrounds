@@ -948,6 +948,7 @@ EnemyService.init({
 					pulseCounter = event.pulseCounter,
 					durationSeconds = event.durationSeconds,
 					visualPattern = event.visualPattern,
+					abilityId = event.abilityId,
 				})
 			end
 		end
