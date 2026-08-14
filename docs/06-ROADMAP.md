@@ -4,14 +4,14 @@
 
 Este roadmap transforma a visão do jogo em uma sequência de entregas verificáveis e passa a ser a referência de escopo para uma equipe de 1–3 pessoas. A implementação **já começou**: os itens 1–13 do backlog de `docs/13-F0-SLICE.md` estão fechados em código/headless — catálogos, serviços de domínio, ProfileStore, camada cliente F0 e segurança/telemetria mínima. No commit `108be31`, a fundação adicional ganhou pisos coerentes com todos os volumes de zona, interação contextual jogável, telegraph acessível e resposta procedural do personagem local. Em 13/08 (`d0f6f8d`) o combate ganhou skins procedurais anime, animações mais dramáticas, balanceamento de dano, números de dano flutuantes e barras de vida dos inimigos. O snapshot canônico `d7c44e8` declara **224 testes de domínio** e **55 testes de animação/apresentação**; Selene, StyLua e build Rojo passaram. Lint, build e testes continuam gates distintos de runtime Roblox.
 
-Esse estado **não** equivale a F0 concluída. O build atual não foi executado em Play: não há evidência registrada de boot/spawn, pisos e prompts reais, Parts/Motor6D, HUD/câmera, telegraph sob latência, DataStore real, servidor publicado, toque, mobile ou gamepad. Também faltam dois clientes simultâneos. O próximo marco do programa é reabrir no Studio o snapshot gerado do commit atual e então executar o Gate W1 (`docs/15-WORLD-PRESENTATION.md`), sem promover o código headless a runtime antes dessa sessão.
+Esse estado **não** equivale a F0 concluída. O build atual não foi executado em Play: não há evidência registrada de boot/spawn, pisos e prompts reais, Parts/Motor6D, HUD/câmera, telegraph sob latência, DataStore real, servidor publicado, toque, mobile ou gamepad. Também faltam dois clientes simultâneos. O próximo marco do programa é reabrir no Studio o snapshot gerado do commit atual e então executar o Gate W1 (`docs/15-WORLD-PRESENTATION.md`), sem promover o código headless a runtime antes dessa sessão. O atlas visual da expansão de domínio está em `docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md`; ele orienta F0 → F1/F2, mas não altera o estado de implementação nem substitui validação em runtime.
 
 O projeto é um **RPG / Action RPG** persistente; “Battlegrounds” permanece como nome de marketing, não como arquitetura de arena exclusiva. A ordem abaixo prioriza combate em rede, persistência e progressão antes de multiplicar conteúdo ou construir sistemas sociais caros.
 
 > **Direção de cenário (VISION-DEC-013, 13/08):** mundo **aberto com várias
 > cidades** (distrito neon, vila escondida, porto, academia) conectadas sem
 > tela de carregamento. A malha de expansão está em `02-WORLD.md` §3.4; o F0
-> segue no Bastião do Limiar e o primeiro alvo pós-F0 é o Distrito Lumen.
+> segue no Bastião do Limiar e o primeiro alvo pós-F0 é o Distrito Lumen. A composição, as células e a ordem de produção visual estão registradas em `docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md`; a primeira entrega deve ser uma célula urbana densa, não uma cidade inteira.
 
 Estado dos termos usados neste documento:
 

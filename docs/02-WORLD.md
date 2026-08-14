@@ -69,6 +69,8 @@ O lançamento não promete todas essas regiões. A lista é uma malha de expans�
 > serviços e cadeias próprias, conectadas por estradas e zonas livres **sem
 > tela de carregamento** (streaming por célula). O F0 continua no Bastião do
 > Limiar; esta seção é a malha de expansão do cenário.
+>
+> O atlas visual e a ordem de produção por células estão em `docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md`. A primeira prova do Distrito Lumen deve conter uma rua principal, duas rotas laterais, uma praça, dois serviços e um marco vertical; a imagem conceitual não é evidência de implementação.
 
 Arquétipos e nomes provisórios (nomes públicos originais obrigatórios — Gate P1):
 
