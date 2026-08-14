@@ -832,6 +832,71 @@ test("juntas: nome do rig vira papel da pose nos dois formatos", function()
 	assertEq(PlayerCombatAnimator.jointRole("Handle"), nil, "nome desconhecido não vira junta")
 end)
 
+test("juntas: rig que só aparece depois do personagem ainda entra na pose", function()
+	-- O defeito real, medido no personagem do jogador em 2026-08-14: no instante
+	-- do CharacterAdded o modelo tem 0 AnimationConstraint, 0 Motor6D e nem
+	-- RightHand — as 15 juntas só existem meio segundo depois. Com uma varredura
+	-- única no anexo, o animador capturava zero junta e nunca mais procurava: o
+	-- combate ficava sem NENHUMA animação. Aqui o `joints` começa vazio de
+	-- propósito, como no anexo que chegou cedo, e as juntas são oferecidas depois.
+	local R15 = {
+		"Root",
+		"Waist",
+		"Neck",
+		"LeftShoulder",
+		"RightShoulder",
+		"LeftElbow",
+		"RightElbow",
+		"LeftWrist",
+		"RightWrist",
+		"LeftHip",
+		"RightHip",
+		"LeftKnee",
+		"RightKnee",
+		"LeftAnkle",
+		"RightAnkle",
+	}
+
+	local joints: { [string]: any } = {}
+	assertEq(next(joints), nil, "anexo cedo começa sem junta nenhuma")
+
+	for _, nome in R15 do
+		local papel = PlayerCombatAnimator.jointSlotFor(joints, "AnimationConstraint", nome)
+		assertTrue(papel ~= nil, "junta que chega depois precisa achar papel: " .. nome)
+		joints[papel :: string] = { nome = nome }
+	end
+
+	local total = 0
+	for _ in joints do
+		total += 1
+	end
+	assertEq(total, #R15, "as 15 juntas do R15 entram mesmo chegando atrasadas")
+	assertTrue(joints.root ~= nil, "raiz é quem carrega o passo à frente")
+	assertTrue(joints.leftAnkle ~= nil and joints.rightAnkle ~= nil, "tornozelos tiram o pé colado")
+end)
+
+test("juntas: papel já ocupado não é roubado por junta que chega depois", function()
+	-- Primeira vista vence, senão um acessório com nome de junta trocaria o rig
+	-- no meio do jogo. Vale igual na varredura inicial e na adoção tardia.
+	local joints: { [string]: any } = {}
+	local primeiro = PlayerCombatAnimator.jointSlotFor(joints, "Motor6D", "RightShoulder")
+	assertEq(primeiro, "rightShoulder", "primeira junta ocupa o papel")
+	joints.rightShoulder = { nome = "original" }
+
+	assertEq(
+		PlayerCombatAnimator.jointSlotFor(joints, "AnimationConstraint", "RightShoulder"),
+		nil,
+		"papel ocupado recusa a segunda"
+	)
+	assertEq(PlayerCombatAnimator.jointSlotFor(joints, "Weld", "LeftShoulder"), nil, "classe errada é recusada")
+	assertEq(PlayerCombatAnimator.jointSlotFor(joints, "AnimationConstraint", "Handle"), nil, "nome sem papel")
+	assertEq(
+		PlayerCombatAnimator.jointSlotFor(joints, "AnimationConstraint", "LeftShoulder"),
+		"leftShoulder",
+		"papel livre continua aceitando"
+	)
+end)
+
 for _, entry in tests do
 	local ok, err = pcall(entry.fn)
 	if ok then

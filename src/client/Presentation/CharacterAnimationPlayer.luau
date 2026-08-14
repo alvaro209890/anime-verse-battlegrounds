@@ -169,6 +169,14 @@ end
 -- (a apresentação de combate é procedural), e o rastro é do jogo, não do clipe.
 -- Amarrar um no outro apagaria o rastro junto.
 local function flashTrail(player: any, action: string, comboStep: number?): ()
+	-- O rastro pode ainda não existir: quando o personagem chega, a RightHand não
+	-- foi montada (medido em 2026-08-14 — ausente no CharacterAdded, presente
+	-- 0,5 s depois), então buildTrail devolvia nil e, como o anexo não repete no
+	-- mesmo personagem, o rastro ficava nulo para sempre. Tentar de novo aqui é
+	-- barato: só acontece em golpe, e nessa altura a mão já existe.
+	if not player.trail and player.character then
+		player.trail = buildTrail(player.character)
+	end
 	if not player.trail then
 		return
 	end

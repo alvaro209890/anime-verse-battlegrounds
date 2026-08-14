@@ -454,3 +454,58 @@ Regras travadas por teste (`tests/animation.luau`):
 > publicado por `lightChainImpact`. Antes usava `duração × 0,45`, que com
 > quatro quadros cai em cima do "dirige" nos degraus 3 e 4 — mediria o quadro
 > errado e deixaria a regressão passar.
+
+### 4.7 Correção de 14/08 (noite) — o overlay nascia morto
+
+Tudo de §4.5 e §4.6 estava certo no código e **nada disso aparecia no jogo**.
+Com o place correto aberto e o `sync` acusando 56/56 arquivos batendo, o
+jogador atacava e o corpo não se mexia.
+
+O que a medição no personagem real mostrou, atacando de verdade (cliques
+sintéticos, 421 quadros, 4 ataques confirmados no servidor):
+
+| Medida | Valor |
+|---|---|
+| Maiores ângulos de junta | todos de perna — a caminhada do Animate padrão |
+| `Root.Transform.Z` (o passo à frente) | **0,0000 em todos os quadros** |
+| Quadros com o rastro do golpe ligado | **0** |
+| Ombro no impacto | abaixo de 8°, onde a pose pede 92° |
+
+A pose nunca chegava na junta. A causa é uma corrida no anexo, medida
+direto no `CharacterAdded`:
+
+| No instante em que o personagem chega | 0,5 s depois |
+|---|---|
+| 0 `AnimationConstraint` | 15 |
+| 0 `Motor6D` | 0 |
+| sem `RightHand` | com `RightHand` |
+
+**O rig R15 não existe quando o personagem existe.** `attachCharacter` varria
+os descendentes exatamente nesse instante, capturava zero junta, e — como o
+anexo sai cedo quando o personagem é o mesmo — nunca mais procurava. O overlay
+inteiro ficava morto pelo resto da sessão.
+
+Isso reescreve o diagnóstico das rodadas anteriores: o "só levantava o braço"
+de §4.6 era o clipe de espada sozinho na tela, porque o procedural **nunca**
+tinha entrado. Tirar o clipe (decisão correta por outro motivo) removeu a única
+camada que ainda animava, e o sintoma virou "ataque sem animação nenhuma".
+
+Três lugares tinham o mesmo padrão de anexo-uma-vez-só:
+
+| Arquivo | Sintoma | Conserto |
+|---|---|---|
+| `PlayerCombatAnimator` | pose nunca aplicada | adota junta que chega depois, via `DescendantAdded` |
+| `CharacterAnimationPlayer` | rastro do golpe nunca acende (`buildTrail` sem `RightHand` devolve nil e o nil ficava permanente) | tenta montar o rastro de novo no golpe |
+| `ActorAnimator` | cache de juntas do bot congelado vazio | não guarda cache vazio; a próxima chamada procura de novo |
+
+A regra de adoção virou `PlayerCombatAnimator.jointSlotFor(joints, className,
+jointName)`, pura e testada: classe válida, nome com papel, papel ainda livre
+(primeira vista vence). O teste começa com `joints` **vazio de propósito** —
+como no anexo que chegou cedo — e oferece as 15 juntas depois, travando
+justamente o caso que quebrou.
+
+> Lição de método, terceira desta série: medir a função pura não é medir o
+> jogo. `sample()` devolvia a pose certa em todas as rodadas — o que faltava
+> era alguém aplicá-la. Verificação de apresentação tem que sair da parte
+> materializada (posição de parte, `Transform` de junta, `Trail.Enabled`)
+> durante uma ação de verdade, nunca do dado que alimenta a pose.

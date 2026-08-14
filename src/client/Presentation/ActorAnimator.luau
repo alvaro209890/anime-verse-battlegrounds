@@ -133,12 +133,19 @@ local function setTransform(animator: Animator, model: Model, jointName: string,
 	local cache = animator.jointCache[model]
 	if not cache then
 		cache = {}
+		local achouJunta = false
 		for _, descendant in model:GetDescendants() do
 			if ActorAnimator.isPoseJointClass(descendant.ClassName) then
 				cache[descendant.Name] = descendant
+				achouJunta = true
 			end
 		end
-		animator.jointCache[model] = cache
+		-- Rig ainda em montagem devolve zero junta. Guardar esse vazio congelaria
+		-- o ator sem pose para sempre — o mesmo defeito que matou o overlay do
+		-- jogador. Sem guardar, a próxima chamada procura de novo.
+		if achouJunta then
+			animator.jointCache[model] = cache
+		end
 	end
 	local joint = cache[jointName]
 	if joint then

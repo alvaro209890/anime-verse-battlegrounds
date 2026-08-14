@@ -106,6 +106,7 @@ export type Animator = {
 	joints: { [string]: JointState },
 	preSimulationConnection: any?,
 	characterAddedConnection: any?,
+	descendantConnection: any?,
 }
 
 local PlayerCombatAnimator = {}
@@ -1336,6 +1337,24 @@ function PlayerCombatAnimator.jointRole(jointName: string): string?
 	return JOINT_ROLE_BY_NAME[normalizedName(jointName)]
 end
 
+-- Papel que uma junta recém-vista deve ocupar, ou nil se ela não serve (classe
+-- errada, nome sem papel, ou papel já preenchido — primeira vista vence).
+--
+-- É a mesma regra na varredura inicial e na adoção tardia. Existe como função
+-- pura porque a adoção tardia é o conserto de um bug que só aparece em runtime:
+-- sem ela, um personagem que chega antes do rig ficava sem pose para sempre.
+-- O teste Lune trava a regra sem precisar de DataModel.
+function PlayerCombatAnimator.jointSlotFor(joints: { [string]: any }, className: string, jointName: string): string?
+	if not PlayerCombatAnimator.isPoseJointClass(className) then
+		return nil
+	end
+	local role = PlayerCombatAnimator.jointRole(jointName)
+	if not role or joints[role] then
+		return nil
+	end
+	return role
+end
+
 local function jointTransform(joint: PoseJoint): CFrame
 	return (joint :: any).Transform
 end
@@ -1355,11 +1374,28 @@ local function restoreJoints(animator: Animator): ()
 	table.clear(animator.joints)
 end
 
+local function adoptJoint(animator: Animator, descendant: Instance): ()
+	local role = PlayerCombatAnimator.jointSlotFor(animator.joints, descendant.ClassName, descendant.Name)
+	if not role then
+		return
+	end
+	local joint = descendant :: PoseJoint
+	animator.joints[role] = {
+		joint = joint,
+		baseTransform = jointTransform(joint),
+		lastApplied = nil,
+	}
+end
+
 local function attachCharacter(animator: Animator, character: Model?): ()
 	if animator.character == character then
 		return
 	end
 	restoreJoints(animator)
+	if animator.descendantConnection then
+		animator.descendantConnection:Disconnect()
+		animator.descendantConnection = nil
+	end
 	animator.character = character
 	if not character then
 		return
@@ -1369,18 +1405,20 @@ local function attachCharacter(animator: Animator, character: Model?): ()
 	-- AnimationConstraint, o clássico só Motor6D; aceitar as duas é o que faz o
 	-- overlay existir nos dois mundos, sem ramo por versão de avatar.
 	for _, descendant in character:GetDescendants() do
-		if not PlayerCombatAnimator.isPoseJointClass(descendant.ClassName) then
-			continue
-		end
-		local role = PlayerCombatAnimator.jointRole(descendant.Name)
-		if role and not animator.joints[role] then
-			animator.joints[role] = {
-				joint = descendant,
-				baseTransform = jointTransform(descendant),
-				lastApplied = nil,
-			}
-		end
+		adoptJoint(animator, descendant)
 	end
+
+	-- O rig NÃO está montado quando o personagem chega. Medido no Studio em
+	-- 2026-08-14, no personagem real: no instante do CharacterAdded o modelo tem
+	-- 0 AnimationConstraint, 0 Motor6D e nem RightHand; meio segundo depois as 15
+	-- juntas estão lá. Varrer uma única vez capturava zero junta, e como o anexo
+	-- sai cedo quando o personagem é o mesmo, o overlay inteiro nascia morto — o
+	-- combate ficava literalmente sem animação, que foi o defeito relatado.
+	-- Adotar o que chega depois cobre a corrida sem polling e sem prender o
+	-- bootstrap esperando o rig.
+	animator.descendantConnection = character.DescendantAdded:Connect(function(descendant: Instance)
+		adoptJoint(animator, descendant)
+	end)
 end
 
 local function overlay(
@@ -1472,6 +1510,7 @@ function PlayerCombatAnimator.new(deps: {
 		joints = {},
 		preSimulationConnection = nil,
 		characterAddedConnection = nil,
+		descendantConnection = nil,
 	}
 end
 
@@ -1644,6 +1683,10 @@ function PlayerCombatAnimator.stop(animator: Animator): ()
 	if animator.characterAddedConnection then
 		animator.characterAddedConnection:Disconnect()
 		animator.characterAddedConnection = nil
+	end
+	if animator.descendantConnection then
+		animator.descendantConnection:Disconnect()
+		animator.descendantConnection = nil
 	end
 	restoreJoints(animator)
 	animator.character = nil
