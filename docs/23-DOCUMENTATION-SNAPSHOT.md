@@ -7,8 +7,8 @@ Este arquivo é a referência única para o estado técnico atual do repositóri
 | Campo | Estado canônico |
 |---|---|
 | Branch publicado | `main` |
-| Commit-base do código | `PENDING_RELEASE` (melhoria de apresentação de defesa, dash e impacto de chão) |
-| Estado deste documento | snapshot de validação headless da apresentação de combate, aguardando publicação |
+| Commit-base do código | `f2e7bb5` (`feat: enrich guard dash and ground impact presentation`) |
+| Estado deste documento | snapshot publicado após validação headless da apresentação de combate |
 | Data do commit | 2026-08-14 |
 | Última alteração de código-base | receitas locais de defesa/dash, fases de pose do dash e integração de input |
 | Testes de domínio | 227 passaram, 0 falharam |
