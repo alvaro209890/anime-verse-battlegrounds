@@ -1391,6 +1391,33 @@ test("segurança: sequência fora de ordem não atravessa jogadores", function()
 	assertTrue(SecurityService.inspect(604, "AbilityIntent", otherPlayer) ~= nil, "outro jogador não herda a sequência")
 end)
 
+test("segurança: clearPlayer limpa orçamento da sessão anterior", function()
+	local currentNow = 40
+	SecurityService.init({
+		decode = RemoteEnvelope.decode,
+		now = function()
+			return currentNow
+		end,
+	})
+	for sequence = 1, 8 do
+		local envelope = RemoteEnvelope.create(
+			"BasicAttackIntent",
+			{ kind = "light", phase = "press" },
+			("session-a-%d"):format(sequence),
+			sequence
+		)
+		assertTrue(SecurityService.inspect(605, "BasicAttackIntent", envelope) ~= nil, "sessão antiga dentro do orçamento")
+	end
+	local ninth = RemoteEnvelope.create("BasicAttackIntent", { kind = "light", phase = "press" }, "session-a-9", 9)
+	local rejectedPayload, rejectedReason = SecurityService.inspect(605, "BasicAttackIntent", ninth)
+	assertEq(rejectedPayload, nil, "sessão antiga excede o orçamento")
+	assertEq(rejectedReason, "rate_limited", "motivo da sessão antiga")
+	SecurityService.clearPlayer(605)
+	local rejoin = RemoteEnvelope.create("BasicAttackIntent", { kind = "light", phase = "press" }, "session-b-1", 1)
+	assertTrue(SecurityService.inspect(605, "BasicAttackIntent", rejoin) ~= nil, "rejoin recebe orçamento novo")
+	currentNow += 1
+end)
+
 test("segurança: mira declarada entra no contrato de golpe e técnica", function()
 	SecurityService.init({ decode = RemoteEnvelope.decode })
 	local function inspecionar(contrato: string, payload: { [string]: any }, seq: number)
