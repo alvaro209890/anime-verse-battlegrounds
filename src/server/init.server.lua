@@ -47,6 +47,7 @@ local Quests = require(ReplicatedStorage.Shared.Data.Quests)
 local RemoteEnvelope = require(ReplicatedStorage.Shared.RemoteEnvelope)
 local WorldPresentation = require(ReplicatedStorage.Shared.Data.WorldPresentation)
 local SpawnDecorations = require(ReplicatedStorage.Shared.Data.SpawnDecorations)
+local SceneryPresentation = require(ReplicatedStorage.Shared.Data.SceneryPresentation)
 local Zones = require(ReplicatedStorage.Shared.Data.Zones)
 
 -- 1. Catálogo — validação em fail-fast
@@ -69,6 +70,10 @@ local interactionsOk, interactionsReason = Interactions.validate()
 if not interactionsOk then
 	error("catálogo de interações inválido: " .. (interactionsReason or "unknown"))
 end
+local sceneryOk, sceneryReason = SceneryPresentation.validate()
+if not sceneryOk then
+	error("catálogo de cenário inválido: " .. (sceneryReason or "unknown"))
+end
 
 ProgressionService.init()
 
@@ -78,6 +83,7 @@ WorldService.init({
 	zones = Zones,
 	greybox = Zones.greybox,
 	presentation = WorldPresentation,
+	scenery = SceneryPresentation,
 	spawnDecorations = SpawnDecorations,
 })
 print("[Bootstrap] greybox construído")

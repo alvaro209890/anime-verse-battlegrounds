@@ -38,6 +38,7 @@ local CombatAnimations = require("../src/shared/Data/CombatAnimations")
 local ActorAnimator = require("../src/client/Presentation/ActorAnimator")
 local EnemyAbilities = require("../src/shared/Data/EnemyAbilities")
 local EnemyVfxAssets = require("../src/shared/Data/EnemyVfxAssets")
+local SceneryPresentation = require("../src/shared/Data/SceneryPresentation")
 local fs = require("@lune/fs")
 
 local CHAIN = PlayerCombatAnimator.LightChainLength
@@ -690,6 +691,17 @@ test("vfx: nenhum raio do cometa ultrapassa o alcance da habilidade", function()
 			("camada %s raio %.1f <= alcance %.1f"):format(entry.id, entry.radiusStuds, technique.rangeStuds)
 		)
 	end
+end)
+
+test("cenário: catálogo visual, terreno e teto têm parâmetros válidos", function()
+	local ok, reason = SceneryPresentation.validate()
+	assertTrue(ok, reason or "catálogo de cenário válido")
+	local style = SceneryPresentation.style()
+	assertTrue(style.wallCapHeight > 0, "tampa de parede positiva")
+	assertTrue(style.roofTransparency > 0 and style.roofTransparency < 1, "teto translúcido")
+	assertTrue(style.rockCount >= 20, "terreno tem rochas")
+	assertTrue(style.grassCount >= 20, "terreno tem grama")
+	assertEq(SceneryPresentation.assetSources()[1].license, "CC0", "fonte de cenário CC0")
 end)
 
 test("npc: catálogo de habilidades e assets gratuitos é válido", function()

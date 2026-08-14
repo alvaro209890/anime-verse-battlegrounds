@@ -30,6 +30,7 @@ export type WorldDeps = {
 	zones: any,
 	greybox: any,
 	presentation: any,
+	scenery: any,
 	spawnDecorations: any,
 }
 
@@ -1027,7 +1028,7 @@ end
 
 -- Chão do Bastião e da Planície, com material distinto (§8.1: pedra clara na
 -- vila, areia/pedra na planície) — aqui só cor, porque arte é pós-P1.
-local function buildFloors(root: Folder, greybox: any, style: any, zones: any): ()
+local function buildFloors(root: Folder, greybox: any, style: any, zones: any, scenery: any): ()
 	local folder = Instance.new("Folder")
 	folder.Name = "Floors"
 	folder.Parent = root
@@ -1036,7 +1037,12 @@ local function buildFloors(root: Folder, greybox: any, style: any, zones: any): 
 	-- Assim as transições norte/oeste e o braço livre oeste não podem divergir
 	-- do domínio e voltar a abrir buracos físicos entre zonas.
 	local groupByKind = { safe = "Safe", transition = "Transition", free = "Free" }
-	local colorByKind = { safe = COLORS.bastion, transition = COLORS.transition, free = COLORS.plain }
+	local sceneryStyle = scenery.style()
+	local colorByKind = {
+		safe = COLORS.bastion,
+		transition = COLORS.transition,
+		free = toColor(sceneryStyle.terrainColor),
+	}
 	for _, zone in zones.all() do
 		for index, box in zone.volumes do
 			local floorName = if zone.id == "zone_bastion_safe" and index == 1
@@ -1117,6 +1123,55 @@ local function buildFloors(root: Folder, greybox: any, style: any, zones: any): 
 	)
 	wildPath.Parent = folder
 
+	-- Base de terreno contínua para a expansão do mundo: é visualmente mais
+	-- rica que um único bloco, mas continua no mesmo Y=0 autoritativo.
+	local terrain = makePart(
+		"PlainTerrain_Base",
+		Vector3.new(greybox.plainSize.x, 0.18, greybox.plainSize.z),
+		Vector3.new(0, 0.09, -100),
+		toColor(sceneryStyle.terrainColor),
+		"Free",
+		false
+	)
+	terrain.Material = Enum.Material.Ground
+	terrain.Transparency = 0
+	terrain.Parent = folder
+	for index = 1, sceneryStyle.rockCount do
+		local column = (index - 1) % 11
+		local row = math.floor((index - 1) / 11)
+		local x = -68 + column * 13 + (row % 2) * 5
+		local z = -52 - row * 38 - (column % 3) * 4
+		local rock = makePart(
+			("TerrainRock_%02d"):format(index),
+			Vector3.new(1.8 + (index % 3) * 0.7, 1.2 + (index % 4) * 0.35, 1.6 + (index % 2) * 0.8),
+			Vector3.new(x, 0.7 + (index % 3) * 0.12, z),
+			if index % 2 == 0 then toColor(sceneryStyle.terrainAccent) else COLORS.crater,
+			"Free",
+			false
+		)
+		rock.Material = Enum.Material.Slate
+		rock.Transparency = 0
+		rock.CFrame = CFrame.new(rock.Position) * CFrame.Angles(0, math.rad(index * 17), math.rad((index % 3) * 7))
+		rock.Parent = folder
+	end
+	for index = 1, sceneryStyle.grassCount do
+		local x = -74 + (index * 19) % 148
+		local z = -48 - (index * 29) % 104
+		local tuft = makePart(
+			("TerrainGrass_%02d"):format(index),
+			Vector3.new(0.22 + (index % 2) * 0.12, 0.7 + (index % 3) * 0.18, 0.22),
+			Vector3.new(x, 0.35, z),
+			Color3.fromRGB(82, 111, 76),
+			"Free",
+			false
+		)
+		tuft.Material = Enum.Material.Grass
+		tuft.Transparency = 0
+		tuft.CFrame = CFrame.new(tuft.Position)
+			* CFrame.Angles(0, math.rad(index * 23), math.rad(-12 + (index % 3) * 12))
+		tuft.Parent = folder
+	end
+
 	-- Cratera baixa com aro segmentado: reconhecível, atravessável e sem o
 	-- bloco maciço que prendia o personagem no centro do encontro.
 	local basin = makePart(
@@ -1149,7 +1204,7 @@ end
 -- Muros do Bastião com as aberturas dos dois portões. O muro em L do Portão
 -- Oeste quebra a linha de visão (§8.1) e o pilar central é a silhueta visível
 -- da planície (§8.1).
-local function buildWalls(root: Folder, greybox: any): ()
+local function buildWalls(root: Folder, greybox: any, scenery: any): ()
 	local folder = Instance.new("Folder")
 	folder.Name = "Walls"
 	folder.Parent = root
@@ -1157,12 +1212,38 @@ local function buildWalls(root: Folder, greybox: any): ()
 	local halfX = greybox.bastionSize.x / 2
 	local halfZ = greybox.bastionSize.z / 2
 	local height = greybox.bastionWallHeight
+	local sceneryStyle = scenery.style()
+	local wallColor = toColor(sceneryStyle.wallColor)
+	local wallCapColor = toColor(sceneryStyle.wallCap)
+	local wallAccentColor = toColor(sceneryStyle.wallAccent)
 	local gateNorthHalf = greybox.gateNorthWidth / 2
 	local gateWestHalf = greybox.gateWestWidth / 2
 
 	local function wall(name: string, size: Vector3, position: Vector3): ()
-		local part = makePart(name, size, position, COLORS.wall, "GateBlock", true)
+		local part = makePart(name, size, position, wallColor, "GateBlock", true)
+		part.Material = Enum.Material.Slate
 		part.Parent = folder
+		local cap = makePart(
+			name .. "_Cap",
+			Vector3.new(size.X + 0.5, sceneryStyle.wallCapHeight, size.Z + 0.5),
+			Vector3.new(position.X, height + sceneryStyle.wallCapHeight / 2, position.Z),
+			wallCapColor,
+			"Safe",
+			false
+		)
+		cap.Material = Enum.Material.Slate
+		cap.Transparency = 0
+		cap.Parent = folder
+		local accentSize = if size.X > size.Z
+			then Vector3.new(0.35, height - 1, 0.18)
+			else Vector3.new(0.18, height - 1, 0.35)
+		local accentPosition = if size.X > size.Z
+			then Vector3.new(position.X, height / 2, position.Z - size.Z / 2 - 0.11)
+			else Vector3.new(position.X - size.X / 2 - 0.11, height / 2, position.Z)
+		local accent = makePart(name .. "_Accent", accentSize, accentPosition, wallAccentColor, "Safe", false)
+		accent.Material = Enum.Material.Neon
+		accent.Transparency = 0.08
+		accent.Parent = folder
 	end
 
 	-- Norte: dois trechos deixando o vão do portão no meio.
@@ -1206,6 +1287,58 @@ local function buildWalls(root: Folder, greybox: any): ()
 		local pillar = makePart(("Pillar%d"):format(index), Vector3.new(4, 20, 4), position, COLORS.wall, "Safe", true)
 		pillar.Parent = folder
 	end
+end
+
+local function buildSpawnRoof(root: Folder, scenery: any): ()
+	local folder = Instance.new("Folder")
+	folder.Name = "SpawnRoof"
+	folder.Parent = root
+	local sceneryStyle = scenery.style()
+	local roofColor = toColor(sceneryStyle.roofColor)
+	local roof = makePart("SpawnRoofPanel", Vector3.new(58, 0.8, 44), Vector3.new(0, 22, 6), roofColor, "Safe", false)
+	roof.Material = Enum.Material.Glass
+	roof.Transparency = sceneryStyle.roofTransparency
+	roof.CastShadow = true
+	roof.Parent = folder
+	local function beam(
+		name: string,
+		size: Vector3,
+		position: Vector3,
+		material: Enum.Material,
+		color: Color3,
+		transparency: number
+	)
+		local part = makePart(name, size, position, color, "Safe", false)
+		part.Material = material
+		part.Transparency = transparency
+		part.Parent = folder
+	end
+	for index, x in { -24, -8, 8, 24 } do
+		beam(
+			("SpawnRoof_Rib_%02d"):format(index),
+			Vector3.new(0.45, 0.5, 44),
+			Vector3.new(x, 21.55, 6),
+			Enum.Material.Slate,
+			toColor(sceneryStyle.wallCap),
+			0.05
+		)
+	end
+	beam(
+		"SpawnRoof_NorthGlow",
+		Vector3.new(58, 0.18, 0.28),
+		Vector3.new(0, 21.15, -16),
+		Enum.Material.Neon,
+		toColor(sceneryStyle.wallAccent),
+		0.05
+	)
+	beam(
+		"SpawnRoof_SouthGlow",
+		Vector3.new(58, 0.18, 0.28),
+		Vector3.new(0, 21.15, 28),
+		Enum.Material.Neon,
+		toColor(sceneryStyle.wallAccent),
+		0.05
+	)
 end
 
 local function buildLandmarks(root: Folder, greybox: any, style: any): ()
@@ -1440,8 +1573,9 @@ function WorldService.init(deps: WorldDeps): ()
 	root.Name = "GreyboxF0"
 	local style = deps.presentation.style()
 
-	buildFloors(root, greybox, style, deps.zones)
-	buildWalls(root, greybox)
+	buildFloors(root, greybox, style, deps.zones, deps.scenery)
+	buildWalls(root, greybox, deps.scenery)
+	buildSpawnRoof(root, deps.scenery)
 	buildLandmarks(root, greybox, style)
 	buildSpawnDecorations(root, deps.spawnDecorations)
 	buildZoneVolumes(root, deps.zones)
