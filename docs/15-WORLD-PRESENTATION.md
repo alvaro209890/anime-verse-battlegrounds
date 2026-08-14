@@ -1,6 +1,6 @@
 # 15 — Fundação de mundo e apresentação F0
 
-> **Estado em 2026-08-13 (`108be31`):** implementado em código e validado por lint, 166 testes Lune e build Rojo. O artefato local reconstruído possui 160553 bytes e SHA-256 `8C6D136AE9B6186F5DF6E51F6E6306C085C13BBEF0868097FB8FE6A86831D32F`; isso prova somente a saída do build, não boot ou runtime. Nenhuma imagem, malha ou animação final foi produzida e **não houve Play atual no Studio**.
+> **Estado canônico em 2026-08-14 (`d7c44e8`):** implementado em código e validado por lint, 224 testes de domínio, 54 testes de animação/apresentação e build Rojo. O artefato atual possui 292.019 bytes; isso prova somente a saída do build, não boot ou runtime. A expansão de cenário, os VFX e as skins estão implementados, mas **não houve Play atual no Studio neste snapshot**.
 
 ## 1. Objetivo e limite
 
@@ -319,8 +319,8 @@ Comprovado automaticamente:
 - interação valida catálogo, alvo único, alcance, hold, abandono e limpeza de sessão;
 - o gate exige Studio + atributo e libera somente três técnicas;
 - unlock de sessão aparece para habilidade/HUD e fica fora do snapshot durável;
-- 166 testes Lune, Selene e build Rojo passam;
-- `anime-verse-battlegrounds.rbxl`: 160553 bytes, SHA-256 `8C6D136AE9B6186F5DF6E51F6E6306C085C13BBEF0868097FB8FE6A86831D32F`.
+- 224 testes de domínio e 54 testes de animação/apresentação passam; Selene e StyLua estão limpos;
+- o build Rojo atual foi concluído com 292.019 bytes no snapshot `d7c44e8`.
 
 O último item é evidência de **build reproduzido**. Não demonstra que o arquivo abriu, iniciou servidor/cliente, renderizou Parts ou respondeu a input.
 
@@ -342,7 +342,7 @@ Ainda não comprovado:
 
 ### W1 — leitura do greybox
 
-**Entrada:** commit `108be31`; conferir antes do teste o RBXL de 160553 bytes e o SHA-256 registrado em §8. A conferência identifica o artefato, mas não aprova o gate.
+**Entrada:** commit `d7c44e8`; conferir antes do teste o artefato Rojo correspondente ao snapshot atual. A conferência identifica o artefato, mas não aprova o gate.
 
 **Execução obrigatória:**
 

@@ -1,18 +1,18 @@
 # 12 — Testes e evidências
 
-> **Snapshot:** 2026-08-14. `tests/run.luau` declara **224** testes F0 alinhados a `docs/13-F0-SLICE.md`; `tests/animation.luau` soma **49** testes de apresentação/game-feel. Nesta rodada (14/08): overlay procedural que nascia morto por corrida no anexo do rig, corpo que deixou de girar no golpe (mira declarada na intenção), tremida de câmera e hit-stop recalibrados, e luz de verdade na camada de VFX.
+> **Snapshot canônico:** 2026-08-14, commit `d7c44e8`. `tests/run.luau` executa **224 testes de domínio** e `tests/animation.luau` executa **54 testes de animação/apresentação**. O total das duas suítes é **278 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada (14/08): overlay procedural que nascia morto por corrida no anexo do rig, corpo que deixou de girar no golpe (mira declarada na intenção), tremida de câmera e hit-stop recalibrados, e luz de verdade na camada de VFX.
 
 ## 1. Estado da execução
 
-Em 2026-08-14, no Windows 10 (`C:\GIS\anime-verse-battlegrounds`), a verificação registrou Selene e StyLua limpos, 224/224 em `tests/run.luau` e 49/49 em `tests/animation.luau`.
+No snapshot canônico `d7c44e8`, a verificação automatizada registrou Selene e StyLua limpos, 224/224 em `tests/run.luau` e 54/54 em `tests/animation.luau`. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
 
-**Esta é a primeira rodada com confirmação em Play pelo jogador**, não só numérica. Ele validou, no place aberto e em sincronia comprovada com o repo (`avb-debug sync` = 56/56), que a animação de golpe passou a mover o corpo e que o personagem parou de girar sozinho ao atacar. As três rodadas anteriores foram dadas como concluídas com evidência apenas numérica e **estavam erradas na tela** — ver `docs/14` §4.7.
+**Registro histórico, não evidência do snapshot atual:** uma rodada anterior teve confirmação em Play pelo jogador, com `avb-debug sync` = 56/56, de que a animação de golpe movia o corpo e o personagem não girava sozinho. Essa evidência pertence ao estado anterior documentado em `docs/14` e não deve ser usada para declarar o commit `d7c44e8` validado em runtime. Neste snapshot, o Play atual continua pendente.
 
 Segue sem comprovação em Play: a camada de impacto (tremida, hit-stop, luz e som de acerto). Motivo registrado em `docs/14` §4.8: o jogador estava a 41,2 studs do único alvo do mundo e o alcance do golpe é 9, então nenhum acerto jamais aconteceu na sessão. Os valores novos são derivados de conta e travados por teste, não observados.
 
 O histórico abaixo é de 2026-08-13 e fica como registro da rodada anterior. O Play das 14:26 (`docs/18-ANALISE-VIDEO.md` §7) comprovou HUD, MENU, técnicas desbloqueadas e custo de UMBRAL sendo cobrado — e expôs o portão intransponível (prompt de travessia só no toque + recusa devolvendo a posição a cada Heartbeat).
 
-O Play registrado às 09:26 abriu o artefato anterior, de 128744 bytes e data 08:20. Esse arquivo antigo chegou a `[Bootstrap] servidor pronto (F0)` sem erro Luau do jogo, mas antecede as mudanças atuais e não serve como evidência deste snapshot. O novo arquivo canônico não foi reaberto nem executado por nós; boot/spawn atual, apresentação, interação, física, HUD, save e fluxo jogável continuam sem comprovação no Studio.
+O Play registrado às 09:26 abriu um artefato anterior e chegou a `[Bootstrap] servidor pronto (F0)` sem erro Luau do jogo. Esse arquivo antecede as mudanças atuais e não serve como evidência deste snapshot. O artefato canônico do commit `d7c44e8` ainda não foi reaberto nem executado por nós; boot/spawn atual, apresentação, interação, física, HUD, save e fluxo jogável continuam sem comprovação no Studio.
 
 O checkout está com finais de linha mistos por `core.autocrlf`: o check direto do StyLua 2.5.2 e o check forçado com `--line-endings Windows` retornam diff apenas de EOL em conjuntos opostos. O código alterado foi formatado pelo StyLua, e a validação canônica LF deve ser usada para reproduzir o CI sem converter o repositório inteiro.
 
@@ -115,7 +115,7 @@ A spec de execução da fatia (`docs/13-F0-SLICE.md` §19–§21) lista os teste
 - experiência publicada privada: DataStore com session lock, reconnect, shutdown, múltiplos servidores e, quando existir, teleport para Arena Place;
 - teste adversarial: payload malformado, alvo/alcance falsos, replay, spam, velocidade e network ownership.
 
-O Play antigo das 09:26 não fecha nenhuma linha desta matriz: ele usou o `.rbxl` de 128744 bytes/08:20. Para registrar Studio solo, é obrigatório reabrir o snapshot canônico de 160553 bytes/09:48:52, conferir sua saída e executar o roteiro. Isso ainda não foi feito por nós.
+O Play antigo das 09:26 não fecha nenhuma linha desta matriz: ele usou um `.rbxl` anterior. Para registrar Studio solo no estado atual, é obrigatório gerar e abrir o artefato correspondente ao commit `d7c44e8`, conferir a sincronia com `avb-debug sync` e executar o roteiro. Isso ainda não foi feito neste snapshot.
 
 Até essas execuções existirem, a formulação correta é **“esqueleto F0 com testes unitários e build de árvore”**, não “runtime validado”. Para o item 6 especificamente: **comprovado** são as regras de zona/PvP/transição/lockout/sinais como dados + testes Lune; **não comprovado** são geometria no Studio, os 5 sinais visíveis/audíveis, o hold de 0,6 s no toque, iluminação, collision groups reais e playtest cego da fronteira.
 

@@ -24,7 +24,7 @@ P1 (revisão jurídica) continua obrigatório antes de concept art, áudio final
 
 ## 2. Divergências do código atual
 
-Itens 1–13 estão fechados em código/headless, e o commit `108be31` acrescenta a correção de runtime preparatória I1: pisos para todos os volumes, interação contextual, telegraph acessível e resposta procedural do jogador. Em 13/08 (`d0f6f8d`) o combate ganhou skins procedurais anime, animações mais dramáticas, balanceamento de dano e HUD de combate (números de dano + barras de inimigos). O snapshot agora possui **238 testes** (205 regressão + 33 apresentação/HUD). O que **não** está comprovado é execução real em Play: o build atual não foi executado, e não há roteiro, Output ou captura dessa revisão. Ainda falta:
+Itens 1–13 estão fechados em código/headless. O snapshot canônico atual é o commit `d7c44e8`, que inclui a integração de VFX, skins de monstros, expansão visual do cenário e teto/terreno. As suítes atuais executam **224 testes de domínio** e **54 testes de animação/apresentação**. Esses resultados são validação automatizada; não equivalem a Play no Studio. O que **não** está comprovado é execução real em Play: o build atual não foi executado, e não há roteiro, Output ou captura dessa revisão. Ainda falta:
 
 | Onde | Estado atual | Alvo desta spec |
 |---|---|---|
@@ -51,7 +51,7 @@ Itens 1–13 estão fechados em código/headless, e o commit `108be31` acrescent
 | `StudioDebug` | exige `RunService:IsStudio()` + atributo `F0Debug = true`; concede as 3 técnicas como flags de sessão fora do save; sem remote de cheat | feito em código/headless; uso real no Studio pendente |
 | Mapa/HUD | greybox enriquecido, buracos norte/oeste cobertos a partir dos volumes, HUD mínimo, prompts localizados e telegraph acessível implementados por código | execução, layout, colisão, animação e feeling no Studio/dispositivos pendentes |
 
-Testes Lune: 166 casos em `tests/run.luau` no commit `108be31` (`docs/12-TESTING.md`).
+Testes Lune no snapshot canônico `d7c44e8`: 224 casos em `tests/run.luau` e 54 casos em `tests/animation.luau` (`docs/12-TESTING.md` e `docs/23-DOCUMENTATION-SNAPSHOT.md`).
 
 **Comprovado neste recorte:** técnicas locked no spawn; Estilhaço Errante completo no domínio; XP e objetivo 1; geometria do greybox; hitbox e lunge; uma receita de piso por volume canônico; resposta procedural pura de leve, pesado, guarda e dash; catálogo fechado de interação; gate `ready`; alvo exclusivo; proximidade e hold de 1,5 s revalidados pelo servidor, sem recompensa declarada pelo cliente.
 
@@ -627,7 +627,7 @@ Ordem de implementação; cada item fecha com teste automatizado **ou** evidênc
 11. ~~Consolidação + morte + ProfileStore~~ (completo 2026-08-12 — consolidação no Marco de Retorno move todo o não consolidado com recibo `operationId` idempotente e anel de 32 recibos; morte aplica perda por zona: segura 0, livre PvE 10%, PvP 15%, cap 200; `SaveService` com ProfileRoot v1, session lock, autosave 60–120 s com jitter e os 5 cenários de §11.2 cobertos por teste; `lib/ProfileStore.luau` entra no build via `ReplicatedStorage.Shared.vendor`. **Pendente**: DataStore real no place privado e respawn com proteção 8 s no Studio)
 12. ~~HUD/input mobile e gamepad~~ (implementado em código/headless 2026-08-13 — controllers na ordem §12.3, gate `SessionSnapshot.ready`, envelope v2, 8 intenções/s, teclado/mouse/toque/gamepad, soft lock 8°/25 studs apenas no ataque básico, HUD localizado e resposta procedural local. O recorte I1 adicionou `ProximityPrompt` contextual para PC/toque/gamepad. **Pendente**: qualquer playtest do build atual, toque/mobile e gamepad reais)
 13. ~~Telemetria + rejeição adversarial de remotes~~ (implementado em código/headless 2026-08-13 — `TelemetryService` aceita somente os sete eventos da §15 e remove campos arbitrários; `SecurityService` fecha schema de envelope/payload, bloqueia replay de `requestId`/sequência, NaN/vetor impossível/campo extra e aplica 8 intenções de combate/s com orçamento separado para interação. Rejeição é amostrada por contrato/motivo para não inundar logs. **Pendente**: fuzz/spam em Studio com dois clientes e sink operacional fora do log do servidor)
-**Recorte preparatório I1 concluído em código/headless (snapshot final desta rodada, 169 testes):** `anchor_instructor`; prompts localizados para Instrutor/Marco; `InteractionIntent` fechado com `begin/complete/cancel`; alvo, distância e hold de 1,5 s autoritativos; pisos das duas transições e do braço oeste; telegraph acessível; resposta procedural do jogador. Nenhuma dessas Instances foi observada em Play.
+**Recorte preparatório I1 concluído em código/headless; os números abaixo são históricos:** `anchor_instructor`; prompts localizados para Instrutor/Marco; `InteractionIntent` fechado com `begin/complete/cancel`; alvo, distância e hold de 1,5 s autoritativos; pisos das duas transições e do braço oeste; telegraph acessível; resposta procedural do jogador. Nenhuma dessas Instances foi observada em Play.
 
 14. Playtest interno 20 min: primeiro reabrir o snapshot atual, então executar W1 solo com os dois pisos/portões e as duas interações; depois A1 e R1. Android, gamepad, DataStore real e múltiplos clientes só mudam de pendente quando forem realmente executados.
 
