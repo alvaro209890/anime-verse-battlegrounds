@@ -164,8 +164,22 @@ end
 
 -- Toca o clipe da ação. Devolve true quando um clipe real entrou (o chamador
 -- não muda de comportamento por isso — serve para teste manual e telemetria).
+-- Rastro do golpe: acende pela duração da ação e morre com ela. Vive FORA do
+-- caminho do clipe de propósito — desde 14/08 o catálogo de clipes está vazio
+-- (a apresentação de combate é procedural), e o rastro é do jogo, não do clipe.
+-- Amarrar um no outro apagaria o rastro junto.
+local function flashTrail(player: any, action: string, comboStep: number?): ()
+	if not player.trail then
+		return
+	end
+	local budget = player.catalog.actionSeconds(action, comboStep) or 0.3
+	player.trail.Enabled = true
+	player.trailUntil = player.now() + budget + TRAIL_HOLD_SECONDS
+end
+
 function CharacterAnimationPlayer.play(player: any, action: string, comboStep: number?): boolean
 	attach(player, player.player.Character)
+	flashTrail(player, action, comboStep)
 	local clip = player.catalog.forAction(action, comboStep)
 	if not clip then
 		return false
@@ -200,11 +214,6 @@ function CharacterAnimationPlayer.play(player: any, action: string, comboStep: n
 	-- que a janela (docs/14 §4.4) — quem corta é este prazo, com fade.
 	player.currentUntil = player.now() + budget
 	player.currentFadeOut = clip.fadeOutSeconds
-
-	if player.trail then
-		player.trail.Enabled = true
-		player.trailUntil = player.now() + budget + TRAIL_HOLD_SECONDS
-	end
 	return true
 end
 

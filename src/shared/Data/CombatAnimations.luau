@@ -47,11 +47,6 @@ export type Clip = {
 	source: string,
 }
 
-local SLASH = "rbxassetid://522635514"
-local SLASH_SECONDS = 0.5
--- Instante em que o corte começa de fato no clipe (quadro medido em 0,20 s).
-local SLASH_STRIKE_AT = 0.2
-
 local CombatAnimations = {}
 
 -- Duração de cada ação no cliente (espelha PlayerCombatAnimator.Durations e a
@@ -90,66 +85,35 @@ local function clip(values: {
 	}
 end
 
--- Cadeia leve. Os dois primeiros degraus são socos curtos: entram direto no
--- corte (0,20 s) e ficam com o trecho golpe+recuperação, a 1,25× e 1,00×. O
--- degrau 3 é CHUTE e não tem clipe — quem carrega é a pose procedural. O
--- degrau 4 é o finalizador giratório, o único com janela para o clipe inteiro
--- (0,48 s de ação para 0,50 s de clipe): entra em 1,04× e mostra tudo,
--- antecipação incluída.
--- Chaveada pelo degrau, não posicional: o degrau 3 é um buraco de propósito, e
--- uma lista com nil no meio deixa `#` indefinido em Lua.
-local LIGHT_CHAIN: { [number]: Clip } = {
-	[1] = clip({
-		action = "BasicLight1",
-		assetId = SLASH,
-		speed = 1.25,
-		startTimeSeconds = SLASH_STRIKE_AT,
-		nominalSeconds = SLASH_SECONDS,
-	}),
-	[2] = clip({
-		action = "BasicLight2",
-		assetId = SLASH,
-		speed = 1.0,
-		startTimeSeconds = SLASH_STRIKE_AT,
-		nominalSeconds = SLASH_SECONDS,
-	}),
-	[4] = clip({
-		action = "BasicLight4",
-		assetId = SLASH,
-		speed = 1.04,
-		nominalSeconds = SLASH_SECONDS,
-		fadeInSeconds = 0.04,
-	}),
-}
+-- Exposto porque o catálogo está vazio hoje: é a costura para o Gate A1. Quem
+-- for declarar um clipe de verdade usa este construtor e herda os padrões de
+-- fade e peso, em vez de reinventar a tabela.
+CombatAnimations.clip = clip
 
--- Guarda, dash, chute, Ombro Cometa e Retorno de Pulso ficam de fora de
--- propósito (ver cabeçalho): não existe clipe grátis do Roblox que leia como
--- aparo, esquiva, chute, ombrada ou postura defensiva, e um corte de espada no
--- lugar mentiria sobre a ação.
-local ACTION_CLIPS: { [string]: Clip } = {
-	BasicHeavy = clip({
-		action = "BasicHeavy",
-		assetId = SLASH,
-		speed = 0.96,
-		nominalSeconds = SLASH_SECONDS,
-		weight = 1,
-	}),
-	Ability2 = clip({ action = "Ability2", assetId = SLASH, speed = 0.74, nominalSeconds = SLASH_SECONDS }),
-	Ability2Echo = clip({
-		action = "Ability2Echo",
-		assetId = SLASH,
-		speed = 0.58,
-		startTimeSeconds = SLASH_STRIKE_AT,
-		nominalSeconds = SLASH_SECONDS,
-	}),
-	Ability3Counter = clip({
-		action = "Ability3Counter",
-		assetId = SLASH,
-		speed = 0.68,
-		startTimeSeconds = SLASH_STRIKE_AT,
-		nominalSeconds = SLASH_SECONDS,
-	}),
-}
+-- ⚠️ CATÁLOGO VAZIO, E ISSO É DECISÃO — não é pendência.
+--
+-- Medido no Studio em 2026-08-14 (tarde): o corte de espada balança o braço
+-- **DIREITO**. O jab procedural — degrau 1, o golpe que o jogador mais vê,
+-- porque todo ataque solto é o degrau 1 — soca com o **ESQUERDO**. As duas
+-- camadas discordavam sobre qual braço está atacando, e como o clipe é uma
+-- animação autoral tocando em prioridade Action, o que dominava a tela era ele:
+-- um braço subindo. Era exatamente a reclamação "quando eu mando um ataque o
+-- personagem tá só levantando o braço".
+--
+-- Somar as duas camadas também dobrava o ângulo quando concordavam (pesado), o
+-- que hiperestende o ombro.
+--
+-- Some-se a isso que o kit do jogo é PUNHO E CHUTE (Punho do Eclipse) e o único
+-- clipe livre disponível é de espada, e a conta fecha: a apresentação de
+-- combate é 100% procedural. O overlay do `PlayerCombatAnimator` foi medido
+-- chegando à pose final (1,83 studs de deslocamento da mão), tem quatro
+-- silhuetas distintas na cadeia e quadros cravados nos instantes autoritativos
+-- do servidor. Ele não precisa de muleta — precisava era parar de brigar.
+--
+-- Este módulo continua existindo como a costura para os clipes de verdade do
+-- Gate A1. Declarar um clipe aqui volta a ligar a camada.
+local LIGHT_CHAIN: { [number]: Clip } = {}
+local ACTION_CLIPS: { [string]: Clip } = {}
 
 -- Clipe da ação. `comboStep` só importa para a cadeia leve; fora dela o degrau
 -- é ignorado. Sem clipe declarado devolve nil — quem chama cai no procedural.
@@ -172,8 +136,18 @@ function CombatAnimations.all(): { Clip }
 	return out
 end
 
+-- Derivado do catálogo, não fixo: uma lista à parte vira mentira no dia em que
+-- alguém tira um clipe e esquece de tirar o id.
 function CombatAnimations.assetIds(): { string }
-	return { SLASH }
+	local seen: { [string]: boolean } = {}
+	local out: { string } = {}
+	for _, entry in CombatAnimations.all() do
+		if not seen[entry.assetId] then
+			seen[entry.assetId] = true
+			table.insert(out, entry.assetId)
+		end
+	end
+	return out
 end
 
 -- Duração declarada da ação (para validação e para quem precisa do orçamento).

@@ -262,7 +262,9 @@ Os eventos transitórios carregam `durationSeconds` e `visualPattern`, expiram e
 | guarda down/up | 160/180 ms | pose acompanha a intenção; guarda efetiva continua server-side |
 | dash | 320 ms | inclinação visual; não move root nem concede i-frame |
 
-O overlay é reaplicado em `PreSimulation`, acompanha respawn e restaura joints ao parar. Ele **não é clip final**.
+O overlay é reaplicado em `PreSimulation`, acompanha respawn e restaura joints ao parar. Ele **não é clip final** — mas desde 14/08 (tarde) ele é a **única** camada de animação do combate: o catálogo de clipes está vazio de propósito (`docs/14` §4.6).
+
+Cada degrau da cadeia leve é uma trilha de quatro quadros (neutro → recolhe → **dirige** → impacto), não mais um par recolhe/bate. O quadro "dirige" é onde o quadril já virou e a extremidade ainda está a caminho; sem ele o rig cobre o arco inteiro num segmento só e o olho só registra a extremidade. A pose ganhou ainda **passo à frente** (`rootForwardStuds`, medido movendo o corpo inteiro: 0,220 pedido → 0,220 em todas as partes, e visual — a `HumanoidRootPart` física não sai do lugar) e **tornozelos**. Percurso do corpo no jab: de 1,30 para 4,36 studs.
 
 > **Correção de 14/08 — o overlay não estava aplicando nada.** O animador
 > procurava só `Motor6D`; o avatar R15 atual monta o rig com

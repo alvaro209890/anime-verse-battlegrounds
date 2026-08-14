@@ -40,10 +40,12 @@ local fs = require("@lune/fs")
 
 local CHAIN = PlayerCombatAnimator.LightChainLength
 
--- Amostra o pico de impacto de um degrau: fim da pausa menos uma folga curta.
+-- Amostra o quadro de IMPACTO do degrau. Antes isto usava `duração × 0,45`,
+-- que com a trilha de quatro quadros (14/08) cai em cima do quadro do meio nos
+-- degraus 3 e 4 — mediria o "dirige", não o golpe. O instante autoritativo é
+-- publicado pelo próprio animador.
 local function strikeOf(step: number)
-	local duration = PlayerCombatAnimator.lightChainDuration(step)
-	return PlayerCombatAnimator.sample("BasicLight", duration * 0.45, false, step)
+	return PlayerCombatAnimator.sample("BasicLight", PlayerCombatAnimator.lightChainImpact(step), false, step)
 end
 
 test("cadeia: quatro degraus existem e ficam progressivamente mais longos", function()
@@ -93,6 +95,66 @@ test("cadeia: socos estendem o cotovelo e chutes levantam a perna", function()
 	assertTrue(spin.leftHipPitchDegrees < -50, "finalizador chuta com a outra perna")
 end)
 
+test("cadeia: o golpe move o CORPO, não só o braço", function()
+	-- Esta é a regressão de 14/08 à tarde: "quando eu mando um ataque o
+	-- personagem tá só levantando o braço". Todo degrau — inclusive o jab, que
+	-- é o que o jogador mais vê porque ataque solto é sempre o degrau 1 —
+	-- precisa girar quadril e tronco e mexer as pernas no quadro de impacto.
+	for step = 1, CHAIN do
+		local hit = strikeOf(step)
+		assertTrue(
+			math.abs(hit.rootYawDegrees) >= 18,
+			("degrau %d gira o quadril só %.1f° — lê como braço solto"):format(step, hit.rootYawDegrees)
+		)
+		assertTrue(
+			math.abs(hit.waistYawDegrees) >= 20,
+			("degrau %d torce o tronco só %.1f°"):format(step, hit.waistYawDegrees)
+		)
+		assertTrue(hit.rootHeightStuds <= -0.03, ("degrau %d não baixa o centro de massa"):format(step))
+		-- Pernas participam: joelhos e tornozelos saem do neutro.
+		assertTrue(
+			hit.leftKneePitchDegrees ~= 0 and hit.rightKneePitchDegrees ~= 0,
+			("degrau %d com joelhos parados"):format(step)
+		)
+		assertTrue(
+			hit.leftAnklePitchDegrees ~= 0 or hit.rightAnklePitchDegrees ~= 0,
+			("degrau %d com os dois pés colados no chão"):format(step)
+		)
+		-- Entrar no golpe: medido no Studio, o deslocamento do quadril move o
+		-- corpo INTEIRO (0,220 pedido → 0,220 em todas as partes). Sem ele o
+		-- rig gira no lugar e o soco vira braço mexendo.
+		assertTrue(
+			hit.rootForwardStuds >= 0.2,
+			("degrau %d não entra no golpe (%.3f stud)"):format(step, hit.rootForwardStuds)
+		)
+	end
+
+	-- E o peso vai para trás antes de ir para a frente: sem isso o passo não
+	-- tem antecipação e o golpe começa já chegando.
+	for step = 1, CHAIN do
+		local windup =
+			PlayerCombatAnimator.sample("BasicLight", PlayerCombatAnimator.lightChainImpact(step) * 0.3, false, step)
+		assertTrue(windup.rootForwardStuds < 0, ("degrau %d não recua o peso na antecipação"):format(step))
+	end
+end)
+
+test("cadeia: cada degrau tem quadro do meio distinto do impacto", function()
+	-- O quadro "dirige" é o que dá corpo ao golpe: o quadril já virou e a
+	-- extremidade ainda está a caminho. Com dois quadros só (recolhe → bate) o
+	-- rig chega inteiro de uma vez e sobra a extremidade para o olho.
+	for step = 1, CHAIN do
+		local impact = PlayerCombatAnimator.lightChainImpact(step)
+		local drive = PlayerCombatAnimator.sample("BasicLight", impact * 0.75, false, step)
+		local hit = PlayerCombatAnimator.sample("BasicLight", impact, false, step)
+		assertTrue(
+			math.abs(hit.rootYawDegrees - drive.rootYawDegrees) > 5,
+			("degrau %d: meio e impacto viraram a mesma pose"):format(step)
+		)
+		-- O núcleo no meio do caminho já está adiantado em relação ao início.
+		assertTrue(drive.rootYawDegrees ~= 0, ("degrau %d sem quadro do meio"):format(step))
+	end
+end)
+
 test("cadeia: amplitude cresce até o finalizador", function()
 	local jab = strikeOf(1)
 	local spin = strikeOf(4)
@@ -127,8 +189,8 @@ test("cadeia: núcleo se adianta à extremidade durante a antecipação", functi
 	-- Em pleno windup o tronco já saiu mais do neutro (em fração do próprio
 	-- alvo) do que o braço — é o "peso atrasado" de docs/14 §3.
 	local mid = PlayerCombatAnimator.sample("BasicLight", 0.035, false, 2)
-	local windupCoreTarget = -18 -- CROSS_WINDUP.rootYawDegrees
-	local windupLimbTarget = -104 -- CROSS_WINDUP.rightElbowPitchDegrees
+	local windupCoreTarget = -24 -- CROSS_COIL.rootYawDegrees
+	local windupLimbTarget = -108 -- CROSS_COIL.rightElbowPitchDegrees
 	local coreProgress = mid.rootYawDegrees / windupCoreTarget
 	local limbProgress = mid.rightElbowPitchDegrees / windupLimbTarget
 	assertTrue(coreProgress > limbProgress, "quadril/tronco lidera o cotovelo")
@@ -634,43 +696,30 @@ test("clipes: catálogo válido e todo asset é rbxassetid do conjunto declarado
 	end
 end)
 
-test("clipes: nenhum golpe vira borrão — velocidade legível e janela dentro do clipe", function()
-	local seen: { [string]: boolean } = {}
+test("clipes: nenhum clipe entra no combate — a apresentação é procedural", function()
+	-- Decisão de 14/08 (docs/14 §4.6): o corte de espada balança o braço DIREITO
+	-- e o jab procedural soca com o ESQUERDO. As duas camadas discordavam sobre
+	-- qual braço ataca, e o clipe ganhava a tela — era o "personagem só
+	-- levantando o braço". Este teste impede a volta silenciosa.
 	for step = 1, CHAIN do
-		local clip = CombatAnimations.forAction("BasicLight", step)
-		if clip then
-			local budget = PlayerCombatAnimator.lightChainDuration(step)
-			-- A janela tocada dura exatamente a ação; o que se checa é que esse
-			-- trecho EXISTE no clipe. Pedir além do fim congela o último quadro.
-			assertTrue(
-				clip.startTimeSeconds + budget * clip.speed <= clip.nominalSeconds + 0.01,
-				("degrau %d pede trecho além do fim do clipe (%.3fs)"):format(step, clip.nominalSeconds)
-			)
-			assertTrue(
-				clip.speed >= CombatAnimations.MinSpeed and clip.speed <= CombatAnimations.MaxSpeed,
-				("degrau %d com velocidade ilegível (%.2f×)"):format(step, clip.speed)
-			)
-			seen[clip.action] = true
-		end
+		assertEq(CombatAnimations.forAction("BasicLight", step), nil, ("degrau %d sem clipe"):format(step))
 	end
-	-- Três degraus com clipe: o 3 é CHUTE e fica sem, porque o único clipe
-	-- livre disponível é um corte de espada e um braço de espada num chute
-	-- informa errado (docs/14 §5.1).
-	local count = 0
-	for _ in seen do
-		count += 1
+	for _, action in { "BasicHeavy", "Ability1", "Ability2", "Ability2Echo", "Ability3", "Ability3Counter" } do
+		assertEq(CombatAnimations.forAction(action), nil, action .. " sem clipe")
 	end
-	assertEq(count, 3, "um clipe distinto por degrau que tem clipe")
-	assertEq(CombatAnimations.forAction("BasicLight", 3), nil, "degrau 3 (chute) é procedural puro")
+	assertEq(#CombatAnimations.all(), 0, "catálogo vazio")
+	assertEq(#CombatAnimations.assetIds(), 0, "nenhum asset declarado sobrando")
 
-	-- Degrau fora da faixa clampa em vez de estourar índice (o servidor pode
-	-- mandar um step estranho e o cliente não pode quebrar por isso).
-	assertEq(CombatAnimations.forAction("BasicLight", 0), CombatAnimations.forAction("BasicLight", 1), "step 0 clampa")
-	assertEq(
-		CombatAnimations.forAction("BasicLight", 99),
-		CombatAnimations.forAction("BasicLight", 4),
-		"step alto clampa"
-	)
+	-- A costura continua de pé para o Gate A1: declarar um clipe volta a ligar a
+	-- camada, e o validador continua recusando o que não é legível.
+	local exemplo = CombatAnimations.clip({
+		action = "Exemplo",
+		assetId = "rbxassetid://1",
+		speed = 1,
+		nominalSeconds = 0.5,
+	})
+	assertTrue(CombatAnimations.validateClip(exemplo, 0.5), "clipe bem formado continua passando")
+	assertEq(exemplo.startTimeSeconds, 0, "padrão do janelamento é o início do clipe")
 end)
 
 test("clipes: só o corte medido entra — o lunge de 2 quadros ficou fora", function()

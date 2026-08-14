@@ -31,6 +31,12 @@ export type CombatAction =
 
 export type PoseSample = {
 	rootHeightStuds: number,
+	-- Passo à frente do quadril, em studs, no eixo da frente do personagem.
+	-- É o que transforma "soco" em "entrar no soco": sem deslocamento o rig
+	-- gira no lugar e o golpe lê como braço mexendo. VISUAL — a raiz física
+	-- (HumanoidRootPart) não sai do lugar, então alcance, hitbox e posição
+	-- autoritativa não mudam em nada.
+	rootForwardStuds: number,
 	rootPitchDegrees: number,
 	rootYawDegrees: number,
 	rootRollDegrees: number,
@@ -60,6 +66,11 @@ export type PoseSample = {
 	-- momento do contato (R15 tem junta de punho; R6 não — o overlay é ignorado).
 	leftWristPitchDegrees: number,
 	rightWristPitchDegrees: number,
+	-- Tornozelo é o que faz o golpe ter CHÃO. Sem ele o pé de trás fica colado
+	-- enquanto o quadril gira, e o soco lê como "braço mexendo" em cima de um
+	-- boneco parado — que foi a reclamação de 14/08 à tarde.
+	leftAnklePitchDegrees: number,
+	rightAnklePitchDegrees: number,
 }
 
 -- Motor6D (rig clássico) ou AnimationConstraint (rig atual do avatar R15). O
@@ -174,6 +185,7 @@ end
 -- ou blend() — o modo clássico de um braço "congelar" no meio de um golpe.
 local POSE_KEYS: { string } = {
 	"rootHeightStuds",
+	"rootForwardStuds",
 	"rootPitchDegrees",
 	"rootYawDegrees",
 	"rootRollDegrees",
@@ -198,6 +210,8 @@ local POSE_KEYS: { string } = {
 	"rightKneePitchDegrees",
 	"leftWristPitchDegrees",
 	"rightWristPitchDegrees",
+	"leftAnklePitchDegrees",
+	"rightAnklePitchDegrees",
 }
 
 -- Núcleo (quadril/tronco/pescoço) inicia o movimento; a extremidade fecha
@@ -205,6 +219,7 @@ local POSE_KEYS: { string } = {
 -- "peso atrasado" de docs/14 §3 sem exigir keyframe.
 local CORE_KEYS: { [string]: boolean } = {
 	rootHeightStuds = true,
+	rootForwardStuds = true,
 	rootPitchDegrees = true,
 	rootYawDegrees = true,
 	rootRollDegrees = true,
@@ -243,6 +258,7 @@ local GUARD = table.freeze(pose({
 	rightHipPitchDegrees = 4,
 }))
 local HEAVY_WINDUP = table.freeze(pose({
+	rootForwardStuds = -0.24,
 	rootHeightStuds = -0.08,
 	rootPitchDegrees = -9,
 	rootYawDegrees = -27,
@@ -265,6 +281,7 @@ local HEAVY_WINDUP = table.freeze(pose({
 	rightKneePitchDegrees = -12,
 }))
 local HEAVY_STRIKE = table.freeze(pose({
+	rootForwardStuds = 0.48,
 	rootHeightStuds = -0.12,
 	rootPitchDegrees = 16,
 	rootYawDegrees = 31,
@@ -586,162 +603,290 @@ local PULSE_COUNTER_STRIKE = table.freeze(pose({
 -- ── Cadeia leve: quatro golpes de silhueta distinta ─────────────────────────
 -- docs/14 §3: "ataques leves compartilham gramática, mas não a mesma silhueta".
 -- Braço de apoio nunca cai — mantém guarda enquanto o outro lado trabalha.
+--
+-- ⚠️ CADA DEGRAU TEM QUATRO QUADROS, não dois. A versão de dois quadros
+-- (recolhe → bate) foi a que gerou "quando eu mando um ataque o personagem tá
+-- só levantando o braço" em 14/08: com um quadro forte só, o corpo chegava
+-- inteiro de uma vez e o que sobrava para o olho era a extremidade. Agora cada
+-- golpe é RECOLHE → DIRIGE → IMPACTO → SUSTENTA: o quadro do meio é onde o
+-- quadril já virou e o braço ainda não chegou, e é ele que faz o golpe ter
+-- corpo. Quem interpola é `techniquePose`, o mesmo motor das três técnicas.
+--
+-- A outra metade da correção foi tirar o clipe de espada da cadeia: ele
+-- balançava o braço DIREITO enquanto o jab soca com o ESQUERDO
+-- (`CombatAnimations`, §4.6 de docs/14).
 
 -- 1. Jab de mão de frente: rápido, pouco compromisso, recuperação imediata.
-local JAB_WINDUP = table.freeze(pose({
-	rootHeightStuds = -0.02,
-	rootPitchDegrees = -2,
-	rootYawDegrees = -8,
-	waistYawDegrees = -9,
-	neckYawDegrees = 4,
-	leftShoulderPitchDegrees = -34,
+-- É o golpe que o jogador mais vê — todo ataque solto é o degrau 1 —, então
+-- ele PRECISA ler como corpo inteiro mesmo sendo o menor da cadeia.
+local JAB_COIL = table.freeze(pose({
+	rootForwardStuds = -0.14,
+	rootHeightStuds = -0.05,
+	rootPitchDegrees = -4,
+	rootYawDegrees = -14,
+	rootRollDegrees = -3,
+	waistYawDegrees = -14,
+	neckYawDegrees = 7,
+	leftShoulderPitchDegrees = -30,
+	leftShoulderYawDegrees = -10,
+	leftElbowPitchDegrees = -100,
+	rightShoulderPitchDegrees = -44,
+	rightShoulderYawDegrees = 18,
+	rightElbowPitchDegrees = -96,
+	leftHipPitchDegrees = -6,
+	rightHipPitchDegrees = 6,
+	leftKneePitchDegrees = -14,
+	rightKneePitchDegrees = -8,
+	leftAnklePitchDegrees = 6,
+	rightAnklePitchDegrees = -4,
+}))
+local JAB_DRIVE = table.freeze(pose({
+	rootForwardStuds = 0.16,
+	rootHeightStuds = -0.06,
+	rootPitchDegrees = 1,
+	rootYawDegrees = 4,
+	waistYawDegrees = 6,
+	neckYawDegrees = 0,
+	leftShoulderPitchDegrees = -62,
 	leftShoulderYawDegrees = -8,
-	leftElbowPitchDegrees = -92,
-	rightShoulderPitchDegrees = -46,
-	rightShoulderYawDegrees = 16,
-	rightElbowPitchDegrees = -98,
+	leftElbowPitchDegrees = -46,
+	rightShoulderPitchDegrees = -48,
+	rightShoulderYawDegrees = 19,
+	rightElbowPitchDegrees = -100,
+	leftHipPitchDegrees = 2,
+	rightHipPitchDegrees = -2,
+	leftKneePitchDegrees = -10,
+	rightKneePitchDegrees = -12,
+	rightAnklePitchDegrees = -12,
 }))
 local JAB_STRIKE = table.freeze(pose({
-	rootHeightStuds = -0.03,
-	rootPitchDegrees = 5,
-	rootYawDegrees = 11,
-	rootRollDegrees = 2,
-	waistYawDegrees = 15,
-	neckYawDegrees = -6,
-	leftShoulderPitchDegrees = -86,
-	leftShoulderYawDegrees = -6,
-	leftElbowPitchDegrees = -6,
-	leftWristPitchDegrees = -22,
-	rightShoulderPitchDegrees = -50,
-	rightShoulderYawDegrees = 18,
-	rightElbowPitchDegrees = -102,
-	leftHipPitchDegrees = 4,
-	rightHipPitchDegrees = -4,
-	leftKneePitchDegrees = -6,
-	rightKneePitchDegrees = -6,
+	rootForwardStuds = 0.32,
+	rootHeightStuds = -0.04,
+	rootPitchDegrees = 6,
+	rootYawDegrees = 20,
+	rootRollDegrees = 3,
+	waistPitchDegrees = 3,
+	waistYawDegrees = 26,
+	neckYawDegrees = -9,
+	leftShoulderPitchDegrees = -92,
+	leftShoulderYawDegrees = -4,
+	leftElbowPitchDegrees = -4,
+	leftWristPitchDegrees = -24,
+	rightShoulderPitchDegrees = -52,
+	rightShoulderYawDegrees = 20,
+	rightElbowPitchDegrees = -104,
+	leftHipPitchDegrees = 8,
+	rightHipPitchDegrees = -8,
+	leftKneePitchDegrees = -8,
+	rightKneePitchDegrees = -16,
+	leftAnklePitchDegrees = -6,
+	rightAnklePitchDegrees = -18,
 }))
 
 -- 2. Direto de mão de trás: o quadril entrega o golpe, não o braço.
-local CROSS_WINDUP = table.freeze(pose({
-	rootHeightStuds = -0.05,
-	rootPitchDegrees = -4,
-	rootYawDegrees = -18,
-	rootRollDegrees = -4,
-	waistYawDegrees = -22,
-	neckYawDegrees = 10,
-	leftShoulderPitchDegrees = -52,
+local CROSS_COIL = table.freeze(pose({
+	rootForwardStuds = -0.2,
+	rootHeightStuds = -0.07,
+	rootPitchDegrees = -5,
+	rootYawDegrees = -24,
+	rootRollDegrees = -5,
+	waistYawDegrees = -28,
+	neckYawDegrees = 12,
+	leftShoulderPitchDegrees = -50,
 	leftShoulderYawDegrees = -14,
-	leftElbowPitchDegrees = -88,
-	rightShoulderPitchDegrees = 14,
-	rightShoulderYawDegrees = 22,
-	rightElbowPitchDegrees = -104,
-	leftHipPitchDegrees = -6,
-	rightHipPitchDegrees = 6,
+	leftElbowPitchDegrees = -86,
+	rightShoulderPitchDegrees = 18,
+	rightShoulderYawDegrees = 24,
+	rightElbowPitchDegrees = -108,
+	leftHipPitchDegrees = -8,
+	rightHipPitchDegrees = 8,
+	leftKneePitchDegrees = -12,
+	rightKneePitchDegrees = -22,
+	leftAnklePitchDegrees = 8,
+	rightAnklePitchDegrees = 14,
+}))
+local CROSS_DRIVE = table.freeze(pose({
+	rootForwardStuds = 0.2,
+	rootHeightStuds = -0.08,
+	rootPitchDegrees = 2,
+	rootYawDegrees = 2,
+	waistYawDegrees = 6,
+	neckYawDegrees = 2,
+	leftShoulderPitchDegrees = -44,
+	leftShoulderYawDegrees = -16,
+	leftElbowPitchDegrees = -82,
+	rightShoulderPitchDegrees = -40,
+	rightShoulderYawDegrees = 6,
+	rightElbowPitchDegrees = -60,
+	leftHipPitchDegrees = 0,
+	rightHipPitchDegrees = 0,
+	leftKneePitchDegrees = -12,
+	rightKneePitchDegrees = -14,
+	rightAnklePitchDegrees = -6,
 }))
 local CROSS_STRIKE = table.freeze(pose({
-	rootHeightStuds = -0.04,
-	rootPitchDegrees = 9,
-	rootYawDegrees = 28,
-	rootRollDegrees = 5,
-	waistPitchDegrees = 5,
-	waistYawDegrees = 34,
-	neckYawDegrees = -13,
-	leftShoulderPitchDegrees = -38,
-	leftShoulderYawDegrees = -16,
-	leftElbowPitchDegrees = -80,
-	rightShoulderPitchDegrees = -92,
-	rightShoulderYawDegrees = -10,
-	rightShoulderRollDegrees = -8,
-	rightElbowPitchDegrees = -5,
-	rightWristPitchDegrees = -22,
-	leftHipPitchDegrees = 8,
-	rightHipPitchDegrees = -8,
-	leftKneePitchDegrees = -10,
-	rightKneePitchDegrees = -4,
+	rootForwardStuds = 0.42,
+	rootHeightStuds = -0.05,
+	rootPitchDegrees = 10,
+	rootYawDegrees = 36,
+	rootRollDegrees = 6,
+	waistPitchDegrees = 6,
+	waistYawDegrees = 42,
+	neckYawDegrees = -16,
+	leftShoulderPitchDegrees = -34,
+	leftShoulderYawDegrees = -18,
+	leftElbowPitchDegrees = -78,
+	rightShoulderPitchDegrees = -100,
+	rightShoulderYawDegrees = -12,
+	rightShoulderRollDegrees = -10,
+	rightElbowPitchDegrees = -4,
+	rightWristPitchDegrees = -24,
+	leftHipPitchDegrees = 10,
+	rightHipPitchDegrees = -12,
+	leftKneePitchDegrees = -12,
+	rightKneePitchDegrees = -6,
+	leftAnklePitchDegrees = -8,
+	rightAnklePitchDegrees = -26,
 }))
 
 -- 3. Chute circular: perna encaixa dobrada e estende; tronco contrabalança
 -- para o lado oposto, senão o rig parece flutuar.
-local KICK_WINDUP = table.freeze(pose({
-	rootHeightStuds = -0.10,
+local KICK_CHAMBER = table.freeze(pose({
+	rootForwardStuds = -0.22,
+	rootHeightStuds = -0.12,
 	rootPitchDegrees = -6,
-	rootYawDegrees = -22,
-	rootRollDegrees = -7,
-	waistYawDegrees = -16,
-	waistRollDegrees = -6,
-	neckYawDegrees = 12,
-	leftShoulderPitchDegrees = 26,
-	leftShoulderYawDegrees = -20,
-	leftElbowPitchDegrees = -70,
-	rightShoulderPitchDegrees = -28,
-	rightShoulderYawDegrees = 14,
-	rightElbowPitchDegrees = -84,
-	rightHipPitchDegrees = -38,
-	rightHipYawDegrees = 12,
-	rightKneePitchDegrees = -104,
-	leftKneePitchDegrees = -16,
+	rootYawDegrees = -24,
+	rootRollDegrees = -8,
+	waistYawDegrees = -18,
+	waistRollDegrees = -7,
+	neckYawDegrees = 13,
+	leftShoulderPitchDegrees = 28,
+	leftShoulderYawDegrees = -22,
+	leftElbowPitchDegrees = -68,
+	rightShoulderPitchDegrees = -30,
+	rightShoulderYawDegrees = 16,
+	rightElbowPitchDegrees = -86,
+	rightHipPitchDegrees = -46,
+	rightHipYawDegrees = 14,
+	rightKneePitchDegrees = -112,
+	leftKneePitchDegrees = -18,
+	leftAnklePitchDegrees = 10,
+	rightAnklePitchDegrees = 18,
+}))
+local KICK_EXTEND = table.freeze(pose({
+	rootForwardStuds = 0.12,
+	rootHeightStuds = -0.10,
+	rootPitchDegrees = -1,
+	rootYawDegrees = 12,
+	rootRollDegrees = 4,
+	waistYawDegrees = 10,
+	waistRollDegrees = 3,
+	neckYawDegrees = -6,
+	leftShoulderPitchDegrees = 38,
+	leftShoulderYawDegrees = -30,
+	leftElbowPitchDegrees = -46,
+	rightShoulderPitchDegrees = -26,
+	rightShoulderYawDegrees = 22,
+	rightElbowPitchDegrees = -70,
+	rightHipPitchDegrees = -70,
+	rightHipYawDegrees = 24,
+	rightKneePitchDegrees = -52,
+	leftKneePitchDegrees = -14,
+	leftAnklePitchDegrees = 4,
+	rightAnklePitchDegrees = -8,
 }))
 local KICK_STRIKE = table.freeze(pose({
-	rootHeightStuds = -0.06,
+	rootForwardStuds = 0.26,
+	rootHeightStuds = -0.07,
 	rootPitchDegrees = 4,
-	rootYawDegrees = 32,
-	rootRollDegrees = 14,
-	waistYawDegrees = 27,
-	waistRollDegrees = 12,
-	neckYawDegrees = -16,
-	leftShoulderPitchDegrees = 44,
-	leftShoulderYawDegrees = -34,
-	leftShoulderRollDegrees = -22,
-	leftElbowPitchDegrees = -30,
-	rightShoulderPitchDegrees = -20,
-	rightShoulderYawDegrees = 26,
-	rightElbowPitchDegrees = -60,
-	rightHipPitchDegrees = -76,
-	rightHipYawDegrees = 30,
-	rightKneePitchDegrees = -20,
-	leftHipPitchDegrees = 10,
-	leftKneePitchDegrees = -10,
+	rootYawDegrees = 36,
+	rootRollDegrees = 16,
+	waistYawDegrees = 30,
+	waistRollDegrees = 13,
+	neckYawDegrees = -18,
+	leftShoulderPitchDegrees = 48,
+	leftShoulderYawDegrees = -36,
+	leftShoulderRollDegrees = -24,
+	leftElbowPitchDegrees = -28,
+	rightShoulderPitchDegrees = -22,
+	rightShoulderYawDegrees = 28,
+	rightElbowPitchDegrees = -58,
+	rightHipPitchDegrees = -84,
+	rightHipYawDegrees = 32,
+	rightKneePitchDegrees = -14,
+	rightAnklePitchDegrees = -22,
+	leftHipPitchDegrees = 12,
+	leftKneePitchDegrees = -12,
+	leftAnklePitchDegrees = 12,
 }))
 
 -- 4. Finalizador giratório: maior amplitude, maior recuperação — é o golpe
 -- que o oponente pune se errar.
-local SPIN_WINDUP = table.freeze(pose({
+local SPIN_LOAD = table.freeze(pose({
+	rootForwardStuds = -0.26,
+	rootHeightStuds = -0.16,
+	rootPitchDegrees = -9,
+	rootYawDegrees = -50,
+	rootRollDegrees = -9,
+	waistYawDegrees = -34,
+	waistRollDegrees = -9,
+	neckYawDegrees = 22,
+	leftShoulderPitchDegrees = -56,
+	leftShoulderYawDegrees = -26,
+	leftElbowPitchDegrees = -112,
+	rightShoulderPitchDegrees = -52,
+	rightShoulderYawDegrees = 26,
+	rightElbowPitchDegrees = -110,
+	leftHipPitchDegrees = -22,
+	leftKneePitchDegrees = -46,
+	rightKneePitchDegrees = -26,
+	leftAnklePitchDegrees = 14,
+	rightAnklePitchDegrees = 10,
+}))
+local SPIN_SWEEP = table.freeze(pose({
+	rootForwardStuds = 0.14,
 	rootHeightStuds = -0.14,
-	rootPitchDegrees = -8,
-	rootYawDegrees = -44,
-	rootRollDegrees = -8,
-	waistYawDegrees = -30,
-	waistRollDegrees = -8,
-	neckYawDegrees = 20,
-	leftShoulderPitchDegrees = -58,
-	leftShoulderYawDegrees = -24,
-	leftElbowPitchDegrees = -110,
-	rightShoulderPitchDegrees = -54,
-	rightShoulderYawDegrees = 24,
-	rightElbowPitchDegrees = -108,
-	leftHipPitchDegrees = -18,
-	leftKneePitchDegrees = -40,
-	rightKneePitchDegrees = -22,
+	rootPitchDegrees = 2,
+	rootYawDegrees = 10,
+	rootRollDegrees = -6,
+	waistYawDegrees = 6,
+	waistRollDegrees = -5,
+	neckYawDegrees = 4,
+	leftShoulderPitchDegrees = -44,
+	leftShoulderYawDegrees = -34,
+	leftElbowPitchDegrees = -80,
+	rightShoulderPitchDegrees = -10,
+	rightShoulderYawDegrees = 30,
+	rightElbowPitchDegrees = -76,
+	leftHipPitchDegrees = -60,
+	leftHipYawDegrees = -10,
+	leftKneePitchDegrees = -30,
+	rightKneePitchDegrees = -30,
+	leftAnklePitchDegrees = 6,
+	rightAnklePitchDegrees = 14,
 }))
 local SPIN_STRIKE = table.freeze(pose({
-	rootHeightStuds = -0.10,
-	rootPitchDegrees = 12,
-	rootYawDegrees = 74,
-	rootRollDegrees = -12,
-	waistYawDegrees = 44,
-	waistRollDegrees = -10,
-	neckYawDegrees = -22,
-	leftShoulderPitchDegrees = -30,
-	leftShoulderYawDegrees = -40,
-	leftElbowPitchDegrees = -50,
-	rightShoulderPitchDegrees = 34,
-	rightShoulderYawDegrees = 30,
-	rightElbowPitchDegrees = -44,
-	leftHipPitchDegrees = -84,
-	leftHipYawDegrees = -18,
-	leftKneePitchDegrees = -14,
-	rightHipPitchDegrees = 12,
-	rightKneePitchDegrees = -26,
+	rootForwardStuds = 0.38,
+	rootHeightStuds = -0.11,
+	rootPitchDegrees = 13,
+	rootYawDegrees = 84,
+	rootRollDegrees = -13,
+	waistYawDegrees = 48,
+	waistRollDegrees = -11,
+	neckYawDegrees = -24,
+	leftShoulderPitchDegrees = -28,
+	leftShoulderYawDegrees = -44,
+	leftElbowPitchDegrees = -46,
+	rightShoulderPitchDegrees = 38,
+	rightShoulderYawDegrees = 32,
+	rightElbowPitchDegrees = -40,
+	leftHipPitchDegrees = -92,
+	leftHipYawDegrees = -20,
+	leftKneePitchDegrees = -12,
+	leftAnklePitchDegrees = -18,
+	rightHipPitchDegrees = 14,
+	rightKneePitchDegrees = -28,
+	rightAnklePitchDegrees = 10,
 }))
 
 local function clamp01(value: number): number
@@ -952,11 +1097,24 @@ local LIGHT_CHAIN: { { number } } = {
 	{ 0.110, 0.215, 0.275, 0.380 },
 	{ 0.135, 0.265, 0.335, 0.480 },
 }
+-- Quadro do meio de cada degrau: o instante em que o quadril já virou e a
+-- extremidade ainda está a caminho. É ele que dá corpo ao golpe — sem esse
+-- quadro o rig chega inteiro de uma vez e sobra só a extremidade para o olho.
+-- Fica entre a antecipação e o impacto, mais perto do impacto.
+local DRIVE_FRACTION = 0.6
+
+local function driveAt(timing: { number }): number
+	return timing[1] + (timing[2] - timing[1]) * DRIVE_FRACTION
+end
+
+-- Trilha de quatro quadros por degrau: NEUTRO → recolhe → dirige → impacto,
+-- e a recuperação elástica assume no fim da pausa. Mesmo motor das técnicas
+-- (`techniquePose`), então o "peso atrasado" e o follow-through valem aqui.
 local LIGHT_CHAIN_POSES: { { PoseSample } } = {
-	{ JAB_WINDUP, JAB_STRIKE },
-	{ CROSS_WINDUP, CROSS_STRIKE },
-	{ KICK_WINDUP, KICK_STRIKE },
-	{ SPIN_WINDUP, SPIN_STRIKE },
+	{ JAB_COIL, JAB_DRIVE, JAB_STRIKE },
+	{ CROSS_COIL, CROSS_DRIVE, CROSS_STRIKE },
+	{ KICK_CHAMBER, KICK_EXTEND, KICK_STRIKE },
+	{ SPIN_LOAD, SPIN_SWEEP, SPIN_STRIKE },
 }
 
 -- A janela de encadeamento espelha LIGHT_WINDOW do CombatService. Divergir aqui
@@ -965,16 +1123,40 @@ local LIGHT_CHAIN_WINDOW_SECONDS = 0.65
 PlayerCombatAnimator.LightChainWindowSeconds = LIGHT_CHAIN_WINDOW_SECONDS
 PlayerCombatAnimator.LightChainLength = #LIGHT_CHAIN
 
+local function chainTiming(step: number): { number }
+	return LIGHT_CHAIN[math.clamp(math.floor(step), 1, #LIGHT_CHAIN)]
+end
+
 function PlayerCombatAnimator.lightChainDuration(step: number): number
-	local timing = LIGHT_CHAIN[math.clamp(math.floor(step), 1, #LIGHT_CHAIN)]
-	return timing[4]
+	return chainTiming(step)[4]
+end
+
+-- Instante do impacto do degrau. Público porque é o quadro que interessa
+-- inspecionar: é onde a silhueta do golpe existe.
+function PlayerCombatAnimator.lightChainImpact(step: number): number
+	return chainTiming(step)[2]
+end
+
+-- Trilhas montadas uma vez no load: `chainPose` roda todo quadro e não pode
+-- alocar uma tabela de quadros por chamada.
+local LIGHT_CHAIN_KEYS: { { PoseKey } } = {}
+for index, timing in LIGHT_CHAIN do
+	local poses = LIGHT_CHAIN_POSES[index]
+	LIGHT_CHAIN_KEYS[index] = {
+		{ at = 0, pose = NEUTRAL },
+		{ at = timing[1], pose = poses[1], ease = easeInCubic },
+		{ at = driveAt(timing), pose = poses[2], ease = easeOutCubic },
+		{ at = timing[2], pose = poses[3], ease = easeOutCubic },
+		-- Pausa de impacto: a pose fica cravada até o fim da janela. É o que dá
+		-- peso; sem ela o golpe atravessa o alvo e não "bate".
+		{ at = timing[3], pose = poses[3] },
+	}
 end
 
 local function chainPose(step: number, elapsed: number): PoseSample
+	local timing = chainTiming(step)
 	local index = math.clamp(math.floor(step), 1, #LIGHT_CHAIN)
-	local timing = LIGHT_CHAIN[index]
-	local poses = LIGHT_CHAIN_POSES[index]
-	return strikeSequence(elapsed, timing[1], timing[2], timing[3], timing[4], poses[1], poses[2])
+	return techniquePose(LIGHT_CHAIN_KEYS[index], elapsed, timing[3], timing[4])
 end
 
 local BEATS = PlayerCombatAnimator.AuthoritativeBeats
@@ -1123,6 +1305,8 @@ local JOINT_CANDIDATES: { [string]: { string } } = {
 	rightKnee = { "rightknee" },
 	leftWrist = { "leftwrist" },
 	rightWrist = { "rightwrist" },
+	leftAnkle = { "leftankle" },
+	rightAnkle = { "rightankle" },
 }
 
 -- Nome da junta → papel da pose, já normalizado ("Left Shoulder" do R6 e
@@ -1199,8 +1383,15 @@ local function attachCharacter(animator: Animator, character: Model?): ()
 	end
 end
 
-local function overlay(pitchDegrees: number, yawDegrees: number, rollDegrees: number, heightStuds: number?): CFrame
-	return CFrame.new(0, heightStuds or 0, 0)
+local function overlay(
+	pitchDegrees: number,
+	yawDegrees: number,
+	rollDegrees: number,
+	heightStuds: number?,
+	forwardStuds: number?
+): CFrame
+	-- Frente do personagem é −Z, então o passo entra com sinal invertido.
+	return CFrame.new(0, heightStuds or 0, -(forwardStuds or 0))
 		* CFrame.Angles(math.rad(pitchDegrees), math.rad(yawDegrees), math.rad(rollDegrees))
 end
 
@@ -1226,7 +1417,13 @@ local function applySample(animator: Animator, sample: PoseSample): ()
 	applyJoint(
 		animator,
 		"root",
-		overlay(sample.rootPitchDegrees, sample.rootYawDegrees, sample.rootRollDegrees, sample.rootHeightStuds)
+		overlay(
+			sample.rootPitchDegrees,
+			sample.rootYawDegrees,
+			sample.rootRollDegrees,
+			sample.rootHeightStuds,
+			sample.rootForwardStuds
+		)
 	)
 	applyJoint(animator, "waist", overlay(sample.waistPitchDegrees, sample.waistYawDegrees, sample.waistRollDegrees))
 	applyJoint(animator, "neck", overlay(sample.neckPitchDegrees, sample.neckYawDegrees, 0))
@@ -1248,6 +1445,8 @@ local function applySample(animator: Animator, sample: PoseSample): ()
 	applyJoint(animator, "rightKnee", overlay(sample.rightKneePitchDegrees, 0, 0))
 	applyJoint(animator, "leftWrist", overlay(sample.leftWristPitchDegrees, 0, 0))
 	applyJoint(animator, "rightWrist", overlay(sample.rightWristPitchDegrees, 0, 0))
+	applyJoint(animator, "leftAnkle", overlay(sample.leftAnklePitchDegrees, 0, 0))
+	applyJoint(animator, "rightAnkle", overlay(sample.rightAnklePitchDegrees, 0, 0))
 end
 
 function PlayerCombatAnimator.new(deps: {

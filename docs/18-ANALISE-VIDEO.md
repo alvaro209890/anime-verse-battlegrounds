@@ -317,3 +317,61 @@ Sola cravada no alvo depois do assentamento (0,000 no instrutor, 0,500 no topo
 do pad do boneco), nenhuma peça solta longe do corpo, 33 e 34 peças, e workspace
 sem sobra. Continua sendo validação **numérica**: o `screen_capture` do plugin
 não voltou a responder nesta sessão.
+
+## 11. Sessão 14/08 (fim) — "o personagem só levanta o braço"
+
+O overlay já chegava à tela (§9), mas o golpe continuava ilegível. Duas causas,
+as duas medidas no Studio via MCP no personagem real.
+
+### 11.1 As camadas discordavam sobre qual braço ataca
+
+O clipe de espada balança o braço **direito**. O jab procedural — degrau 1 —
+soca com o **esquerdo**. E todo ataque solto é o degrau 1: só encadeando é que
+se chega ao 2, 3 e 4. Ou seja, o golpe que o jogador mais vê era exatamente
+aquele em que as duas camadas puxavam para lados opostos, e o clipe, sendo
+animação autoral em prioridade Action, ganhava a tela. Sobrava um braço subindo.
+
+Onde as duas concordavam (pesado), o problema invertia: os ângulos somavam e
+hiperestendiam o ombro.
+
+O catálogo de clipes ficou **vazio, por decisão**: o kit do jogo é punho e
+chute e o único clipe livre disponível é de espada. A costura para o Gate A1
+continua de pé. O rastro do golpe saiu do caminho do clipe para não sumir junto.
+
+### 11.2 A pose tinha dois quadros
+
+Cada degrau era `recolhe → bate`. Com um quadro forte só, o rig cobre o arco
+inteiro num segmento e o olho registra a extremidade. Agora são quatro quadros
+(neutro → recolhe → **dirige** → impacto), com o "dirige" no ponto em que o
+quadril já virou e a mão ainda está a caminho.
+
+Entraram também o **passo à frente** (o corpo entra no golpe em vez de girar no
+lugar — visual, a raiz física não sai do lugar) e os **tornozelos** (sem eles o
+pé de trás fica colado e o soco lê como braço mexendo num boneco parado).
+
+### 11.3 Medido no personagem real
+
+Percurso do corpo — soma do deslocamento de tronco, cabeça, quadril, pernas e
+pés entre os quadros do jab:
+
+| | Quadros | Percurso do corpo |
+|---|---:|---:|
+| Antes | 2 | 1,30 studs |
+| Depois | 4 | **4,36 studs** |
+
+Também foi verificado, isoladamente, que `AnimationConstraint` aceita
+translação (1,0 stud pedido → 1,005 medido) e que o passo move o corpo inteiro
+(0,220 → 0,220 em todas as partes).
+
+### 11.4 Lição de método
+
+A primeira métrica que usei — distância de cada parte até a pose neutra — deu
+"+2%" e quase me fez descartar o passo. Ela é ruim: um deslocamento para a
+frente pode aproximar peças do neutro e pontuar baixo mesmo movendo o corpo
+todo. A métrica certa é o **percurso entre quadros consecutivos** do golpe.
+
+### 11.5 O que continua não comprovado
+
+Playtest humano. A captura de tela do plugin do Studio segue sem responder, e
+os rigs de auditoria da sessão anterior foram removidos (§10.1) — nesta sessão
+nada foi criado no workspace.

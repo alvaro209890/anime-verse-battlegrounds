@@ -368,3 +368,89 @@ Ainda pendente:
 > scaffolding descartável, sem keyframe/asset, e **não reduz** a contagem de
 > clipes do gate A1 — mas é o que deve aparecer no Studio já no próximo
 > playtest (tecla 1 contra o dummy).
+
+### 4.6 Correção de 14/08 (tarde) — "o personagem só levanta o braço"
+
+Terceira rodada. O overlay já chegava à tela (§4.5), mas o golpe continuava
+ilegível. Duas medições no Studio explicaram por quê, e as duas foram cegas
+para quem só lia o código.
+
+**(1) As duas camadas discordavam sobre qual braço ataca.**
+
+O clipe `522635514` ("Corte de Espada") balança o braço **DIREITO**. O jab
+procedural — degrau 1 — soca com o **ESQUERDO**:
+
+| Camada | Braço que age no degrau 1 |
+|---|---|
+| Clipe de espada (prioridade Action) | direito |
+| `JAB_STRIKE` procedural | esquerdo (`leftShoulderPitch = −92`) |
+
+E **todo ataque solto é o degrau 1** — só encadeando é que se chega ao 2, 3, 4.
+Ou seja: o golpe que o jogador mais vê era exatamente aquele em que as camadas
+brigavam, e o clipe, sendo animação autoral em prioridade Action, ganhava a
+tela. O que sobrava para o olho era um braço subindo.
+
+Quando as duas concordavam (pesado, ambas no direito), o problema virava o
+oposto: os ângulos **somavam** e hiperestendiam o ombro.
+
+**Decisão: a apresentação de combate é 100% procedural.** O catálogo de clipes
+está vazio, e isso é decisão, não pendência — o kit do jogo é punho e chute
+(Punho do Eclipse) e o único clipe livre disponível é de espada. `Combat-
+Animations` continua existindo como a costura do Gate A1: declarar um clipe lá
+volta a ligar a camada. O rastro do golpe (`Trail`) foi movido para fora do
+caminho do clipe, senão sumiria junto.
+
+**(2) A pose tinha dois quadros, e o corpo chegava inteiro de uma vez.**
+
+Cada degrau era `recolhe → bate`. Com um único quadro forte, o rig cobre todo
+o arco num segmento só e o que o olho registra é a extremidade. Agora cada
+degrau é uma trilha de quatro quadros, no mesmo motor das técnicas
+(`techniquePose`):
+
+| Quadro | Papel | Instante |
+|---|---|---|
+| neutro | de onde sai | 0 |
+| **recolhe** | peso vai para trás, extremidade carrega | fim da antecipação |
+| **dirige** | o quadril já virou, a extremidade ainda está a caminho | 60% do caminho até o impacto |
+| **impacto** | silhueta do golpe | instante autoritativo |
+| (sustenta) | pausa de impacto, depois recuperação elástica | fim da pausa |
+
+Duas coisas novas entraram na pose para o corpo aparecer:
+
+- **`rootForwardStuds`** — o passo. Entrar no golpe em vez de girar no lugar.
+  Medido no Studio: 0,220 pedido → **0,220 em todas as partes do corpo**, então
+  o deslocamento move o personagem inteiro. É **visual**: a
+  `HumanoidRootPart` física não sai do lugar, então alcance, hitbox e posição
+  autoritativa não mudam. No impacto vale de 0,26 (chute) a 0,48 stud (pesado),
+  e é **negativo** na antecipação — o peso recua antes de ir.
+- **tornozelos** (`leftAnklePitchDegrees` / `rightAnklePitchDegrees`) — sem
+  eles o pé de trás fica colado enquanto o quadril gira, e o golpe lê como
+  braço mexendo em cima de um boneco parado.
+
+**Resultado medido no personagem real do Studio.** Percurso do corpo (soma do
+deslocamento de tronco, cabeça, quadril, pernas e pés entre os quadros do
+golpe), jab antigo × jab novo:
+
+| | Quadros | Percurso do corpo |
+|---|---:|---:|
+| Antes (2 quadros, sem passo, com clipe) | 2 | 1,30 studs |
+| Depois (4 quadros, passo, tornozelos) | 4 | **4,36 studs** |
+
+**+235%.**
+
+Regras travadas por teste (`tests/animation.luau`):
+
+- todo degrau gira o quadril ≥ 18° e o tronco ≥ 20° **no impacto** — inclusive
+  o jab, que é o mais visto;
+- todo degrau baixa o centro de massa, mexe os dois joelhos e ao menos um
+  tornozelo;
+- todo degrau entra no golpe (`rootForwardStuds ≥ 0,2`) e **recua o peso** na
+  antecipação (negativo);
+- o quadro do meio é distinto do impacto (senão a trilha voltou a ter dois);
+- nenhuma ação de combate tem clipe declarado, e o construtor de clipe continua
+  válido para o Gate A1.
+
+> O helper de teste `strikeOf` passou a amostrar o **instante de impacto**
+> publicado por `lightChainImpact`. Antes usava `duração × 0,45`, que com
+> quatro quadros cai em cima do "dirige" nos degraus 3 e 4 — mediria o quadro
+> errado e deixaria a regressão passar.
