@@ -801,7 +801,10 @@ test("apresentação: dash tem preparação, passada e recuperação distintas",
 	local neutral = PlayerCombatAnimator.sample("Dash", PlayerCombatAnimator.Durations.Dash, false)
 	assertTrue(prep.rootForwardStuds < 0, "dash comprime antes de sair")
 	assertTrue(drive.rootForwardStuds > prep.rootForwardStuds, "dash entra no passo")
-	assertTrue(math.abs(drive.rightKneePitchDegrees) > math.abs(prep.rightKneePitchDegrees), "dash levanta a perna de impulso")
+	assertTrue(
+		math.abs(drive.rightKneePitchDegrees) > math.abs(prep.rightKneePitchDegrees),
+		"dash levanta a perna de impulso"
+	)
 	assertTrue(recover.rootForwardStuds > 0, "dash tem recuperação com peso à frente")
 	assertEq(neutral.rootForwardStuds, 0, "dash volta ao neutro")
 end)
@@ -812,7 +815,10 @@ test("apresentação: defesa fecha braços, joelhos e pulsos", function()
 	assertTrue(guard.rightShoulderPitchDegrees < -35, "braço direito fecha")
 	assertTrue(guard.leftElbowPitchDegrees < 0 and guard.rightElbowPitchDegrees < 0, "cotovelos sustentam a guarda")
 	assertTrue(guard.leftKneePitchDegrees < 0 and guard.rightKneePitchDegrees < 0, "joelhos absorvem a postura")
-	assertTrue(guard.leftWristPitchDegrees ~= 0 or guard.rightWristPitchDegrees ~= 0, "punhos dão acabamento à defesa")
+	assertTrue(
+		guard.leftWristPitchDegrees ~= 0 or guard.rightWristPitchDegrees ~= 0,
+		"punhos dão acabamento à defesa"
+	)
 end)
 
 test("vfx: bootstrap conecta defesa e dash ao player local", function()
