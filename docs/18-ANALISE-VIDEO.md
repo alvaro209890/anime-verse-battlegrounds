@@ -275,3 +275,45 @@ Studio parou de responder no meio desta sessão, então a validação visual foi
 **numérica** (posição da sola, folga de cada peça em relação ao host,
 idempotência do assentamento) e não por imagem. As mudanças são cobertas por
 262 testes headless (219 run + 43 animation).
+
+## 10. Sessão 14/08 (tarde) — "4 personagens" e "ainda tá muito quadrado"
+
+Dois retornos depois da rodada anterior. O primeiro era erro de processo meu; o
+segundo era erro de direção de arte, e tinha razão.
+
+### 10.1 Os 4 personagens não vinham do jogo
+
+`Workspace.AuditInstructor` e `Workspace.AuditDummy` eram **rigs de teste que eu
+deixei na sessão de Play** ao auditar a geometria pelo MCP, plantados a poucos
+studs dos bots reais. `GreyboxF0.Actors` sempre teve exatamente os dois bots.
+Removidos, e a auditoria de agora destrói o que cria e confere o workspace no
+fim (`__modelosRestantes`).
+
+Lição de processo: sonda criada em Play tem de ser destruída na mesma execução.
+O que fica no workspace o jogador vê como conteúdo do jogo.
+
+### 10.2 "Muito quadrado" tinha duas causas
+
+Vale registrar que a sessão de Play em que isso foi visto ainda rodava o build
+**anterior** (todos os atores em `[greybox]`), então parte do que estava na tela
+era o corpo antigo. Mesmo assim a crítica valia para a skin nova, por dois
+motivos independentes:
+
+1. **A roupa era 100% `Block`.** Caixa sobre caixa não vira personagem por
+   melhor que esteja posicionada. Agora volume grande é `Ball` — com tamanho
+   não uniforme o Roblox renderiza elipsoide, que é o que dá capuz, ombreira,
+   saia e saco —, faixa é `Cylinder` e ponta é `WedgePart`. Teto de 25% de
+   blocos travado por teste (`rig_too_boxy`).
+2. **O corpo era o R15 cúbico.** `BodyTypeScale = 0` é o boneco clássico. As
+   receitas agora declaram escalas e usam `bodyType = 1` (proporção Rthro):
+   medido, o corpo vai de 5,19 studs com tronco 2,00×1,60 para 6,28 studs com
+   tronco 1,78×1,91.
+
+Detalhe das escalas, das medidas e das regras em `docs/15` §4.2.
+
+### 10.3 Conferido no Studio
+
+Sola cravada no alvo depois do assentamento (0,000 no instrutor, 0,500 no topo
+do pad do boneco), nenhuma peça solta longe do corpo, 33 e 34 peças, e workspace
+sem sobra. Continua sendo validação **numérica**: o `screen_capture` do plugin
+não voltou a responder nesta sessão.

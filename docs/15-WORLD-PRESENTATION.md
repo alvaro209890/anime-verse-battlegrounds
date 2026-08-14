@@ -111,10 +111,51 @@ Estrutura resultante (`Actors/<Ator>`):
 - `Humanoid` sem nome flutuante, sem barra de vida e com
   `EvaluateStateMachine = false` — senão ele tenta andar, cair e morrer sozinho.
 
-Medidas do rig padrão colhidas no Studio em 14/08 (escalas em 1) e usadas nas
-receitas: `Head` 1,159×1,182×1,161 · `UpperTorso` 1,943×1,698×1,004 ·
-`LowerTorso` 1,991×0,401×1,004 · `UpperArm` 1,001×1,242×1,002 ·
-`LowerArm` 1,001×1,118×1,002 · `LowerLeg` 0,993×1,301×0,973.
+### 4.2 Segunda rodada (14/08 tarde) — "ainda tá muito quadrado"
+
+A primeira versão do rig trocou o corpo mas manteve a roupa em caixas, e o
+retorno foi direto: continuava quadrado. Estava certo, e por **duas** razões
+independentes:
+
+**(a) A proporção do corpo.** O R15 padrão (`BodyTypeScale = 0`) é o boneco
+cúbico clássico. As receitas agora declaram escalas, e `bodyTypeScale = 1`
+puxa a proporção para o Rthro — tronco alongado, membro afilado:
+
+| Escala | Valor | Efeito |
+|---|---:|---|
+| `bodyType` | 1,00 | sai do corpo cúbico, entra a proporção Rthro |
+| `proportion` | 0,50 | meio-termo: alonga sem virar palito |
+| `head` | 1,14 | cabeça um pouco maior — leitura de anime |
+| `width` | 0,92 | ombro menos largo |
+| `height` | 0,95 | compensa o alongamento do Rthro |
+
+Comparação medida no Studio: clássico 5,19 studs de altura com tronco
+2,00×1,60; com estas escalas, 6,28 studs com tronco 1,78×1,91.
+
+**(b) A roupa.** Toda peça grande virou primitiva curva. A regra, travada por
+teste (`rig_too_boxy`): no máximo **25% das peças** podem ser `Block`.
+
+| Primitiva | Serve para | Onde |
+|---|---|---|
+| `Ball` (tamanho não uniforme = **elipsoide**) | volume orgânico | capuz, cabelo, ombreira, peito do casaco, saia, saco de estopa, remendos, olhos |
+| `Cylinder` | anel e faixa | gola, cinto, punho, barra, corda, alvo, poste, base |
+| `WedgePart` | ponta | mecha de franja, palha, aba do casaco |
+
+O instrutor tem 33 peças (só as 5 mechas de franja e as 2 abas são cunha; o
+resto é elipsoide ou anel); o boneco, 34.
+
+> **⚠️ As medidas do rig valem para ESTAS escalas.** Mexeu em qualquer uma das
+> cinco, mede tudo de novo — todo `offsetStuds` da roupa sai do lugar. As
+> constantes do rosto (`FACE_PLANE_Z`, `EYE_BAND_TOP`) são derivadas de
+> `RIG_HEAD_SIZE` justamente para não ficarem apontando para um plano que não
+> existe mais.
+
+Medidas do rig **nestas escalas**, colhidas no Studio em 14/08 e usadas nas
+receitas: `Head` 1,253×1,292×1,255 @ +2,029 · `UpperTorso` 1,783×1,910×1,077
+@ +0,445 · `LowerTorso` 1,857×0,440×1,077 @ −0,730 · `UpperArm`
+0,981×1,416×1,069 @ ±1,382 · `LowerArm` 0,981×1,274×1,069 · `LowerLeg`
+0,920×1,591×0,966 @ −2,590. Altura total 6,282; topo da cabeça +2,675; **sola
+3,607 abaixo da HumanoidRootPart**.
 
 **Assentamento (`WorldService.settleRigBodies`).** O R15 sai da criação com as
 pernas recolhidas e só estende no primeiro passo de física: medindo a sola
@@ -140,9 +181,12 @@ NPC — o instrutor é quem entrega o objetivo 1.
 - rosto só por textura **embutida do cliente** (`rbxasset://textures/face.png`)
   — asset de catálogo pode sumir por moderação e deixar o NPC sem cara;
 - **nenhuma peça de cabelo/capuz tapa os olhos**: se a peça avança na frente do
-  plano do rosto (z < −0,581), ela tem de ficar inteira acima da faixa dos
-  olhos (y ≥ 0,28). É a regra que impede a franja de escorregar num ajuste
-  fino e devolver o vulto encapuzado sem cara.
+  plano do rosto (z < −0,628), ela tem de ficar inteira acima da faixa dos
+  olhos (y ≥ 0,31). É a regra que impede a franja de escorregar num ajuste
+  fino e devolver o vulto encapuzado sem cara;
+- **nada de caixa**: no máximo 25% das peças em `Block`, mínimo de 6
+  elipsoides e 4 anéis por bot, e `bodyType ≥ 0,5` — as três condições que,
+  juntas, impedem a volta do "muito quadrado".
 
 Cada modelo usa uma raiz invisível ancorada e peças sem colisão ligadas por `Motor6D`. A altura da raiz é derivada da receita para manter os pés sobre o piso; cabeça e braços seguem o torso, evitando separação visual ao inclinar. A posição/olhar da raiz vêm do `SpatialService` no servidor e só são replicados quando posição ou direção mudam. O cliente altera apenas `Motor6D.Transform`; portanto a pose nunca muda alcance, alvo, dano ou posição válida.
 

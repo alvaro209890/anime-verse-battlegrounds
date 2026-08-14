@@ -203,6 +203,43 @@ test("skin: os dois bots do spawn têm receita de rig R15 válida", function()
 	end
 end)
 
+test("skin: nenhum bot volta a ser feito de caixas", function()
+	-- A reclamação depois da primeira versão foi "ainda tá muito quadrado", e
+	-- ela tinha duas causas: gear 100% `Block` e o corpo na proporção cúbica
+	-- clássica. Este teste é o que impede as duas de voltarem.
+	for _, rig in WorldPresentation.allRigs() do
+		local blocks, blobs, bands = 0, 0, 0
+		for _, piece in rig.gear do
+			if piece.shape == "Ball" then
+				blobs += 1
+			elseif piece.shape == "Cylinder" then
+				bands += 1
+			elseif piece.class == "Part" then
+				blocks += 1
+			end
+		end
+		assertTrue(
+			blocks <= #rig.gear * 0.25,
+			("%s: %d de %d peças são bloco — volume grande tem de ser elipsoide"):format(
+				rig.npcId,
+				blocks,
+				#rig.gear
+			)
+		)
+		assertTrue(blobs >= 6, rig.npcId .. " sem volumes redondos suficientes")
+		assertTrue(bands >= 4, rig.npcId .. " sem anéis (gola/cinto/punho) suficientes")
+
+		-- `bodyType = 0` é o boneco cúbico do R15 clássico.
+		assertTrue(rig.scales.bodyType >= 0.5, rig.npcId .. " com corpo na proporção cúbica")
+		assertTrue(WorldPresentation.validateScales(rig.scales), rig.npcId .. " com escalas fora da faixa")
+	end
+
+	local ruim = { bodyType = 0, proportion = 0.5, head = 1.14, width = 0.92, height = 0.95 }
+	assertTrue(not WorldPresentation.validateScales(ruim), "corpo cúbico clássico é recusado")
+	local absurdo = { bodyType = 1, proportion = 0.5, head = 9, width = 0.92, height = 0.95 }
+	assertTrue(not WorldPresentation.validateScales(absurdo), "escala fora da faixa é recusada")
+end)
+
 test("skin: gear inválido é recusado antes de virar Instance", function()
 	local function piece(overrides: { [string]: any }): any
 		local base = {

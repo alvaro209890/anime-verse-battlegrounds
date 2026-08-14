@@ -38,14 +38,26 @@ export type WorldStyle = {
 -- Tamanho, encaixe e paleta são decisão e ficam aqui, validados por
 -- `Presentation.validate()`. Materializar é o que sobra para o servidor.
 --
+-- ⚠️ NADA DE CAIXA. Primeira versão desta skin (14/08 manhã) era gear todo em
+-- `Block`, e a reclamação seguinte foi "ainda tá muito quadrado" — com razão:
+-- caixa sobre caixa não vira personagem por mais bem posicionada que esteja. A
+-- regra agora é: volume grande é `Ball` (com tamanho não uniforme o Roblox
+-- renderiza elipsoide, que é o que dá ombro, capuz, saia e saco), anel/faixa é
+-- `Cylinder`, e ponta é `WedgePart`. `Block` só sobra para detalhe reto.
+-- `Presentation.validateRigs` recusa uma receita com excesso de blocos.
+--
 -- Referencial: `offsetStuds` e `sizeStuds` estão em STUDS, no espaço da parte
--- hospedeira, com a FRENTE em −Z (é onde fica o rosto do R15). Medidas do rig
--- padrão colhidas no Studio em 2026-08-14 (todas as escalas em 1):
---   Head 1,159×1,182×1,161 · UpperTorso 1,943×1,698×1,004
---   LowerTorso 1,991×0,401×1,004 · UpperArm 1,001×1,242×1,002
---   LowerArm 1,001×1,118×1,002 · LowerLeg 0,993×1,301×0,973
--- A sola fica 3,192 studs abaixo da HumanoidRootPart — é isso que faz o pé
--- encostar no chão em vez de o boneco flutuar.
+-- hospedeira, com a FRENTE em −Z (é onde fica o rosto do R15).
+--
+-- ⚠️ As medidas abaixo valem para AS ESCALAS DECLARADAS EM `RIG_SCALES`. O
+-- corpo não é mais o R15 padrão: `bodyTypeScale = 1` puxa a proporção para o
+-- Rthro (tronco alongado, membro afilado) em vez do boneco cúbico clássico, e é
+-- metade da resposta ao "muito quadrado". Mexeu em escala, mede tudo de novo.
+-- Colhido no Studio em 2026-08-14:
+--   Head 1,253×1,292×1,255 @ +2,029 · UpperTorso 1,783×1,910×1,077 @ +0,445
+--   LowerTorso 1,857×0,440×1,077 @ −0,730 · UpperArm 0,981×1,416×1,069 @ ±1,382
+--   LowerArm 0,981×1,274×1,069 · LowerLeg 0,920×1,591×0,966 @ −2,590
+--   altura total 6,282 · topo da cabeça +2,675 · sola 3,607 abaixo da HRP
 export type RigGear = {
 	name: string,
 	class: "Part" | "WedgePart",
@@ -56,6 +68,14 @@ export type RigGear = {
 	rotationDegrees: { number },
 	rgb: Rgb,
 	material: string,
+}
+
+export type RigScales = {
+	bodyType: number,
+	proportion: number,
+	head: number,
+	width: number,
+	height: number,
 }
 
 export type RigRecipe = {
@@ -69,6 +89,7 @@ export type RigRecipe = {
 	-- depende de download, não pode ser moderada e existe em qualquer lugar.
 	-- `nil` = sem decal (o boneco de treino usa olhos de botão em Parts).
 	faceTexture: string?,
+	scales: RigScales,
 	gear: { RigGear },
 }
 
@@ -147,22 +168,35 @@ local BURLAP_DARK: Rgb = { 148, 120, 80 }
 local ROPE: Rgb = { 122, 96, 58 }
 local STITCH: Rgb = { 44, 36, 30 }
 local WOOD: Rgb = { 104, 74, 42 }
+local TARGET_PALE: Rgb = { 226, 214, 183 }
+local TARGET_RED: Rgb = { 226, 78, 78 }
+local TARGET_CORE: Rgb = { 244, 238, 220 }
 
-local function gear(
+-- Escalas da HumanoidDescription dos dois bots. Ver o aviso do cabeçalho: as
+-- medidas do rig neste arquivo só valem para estes cinco números.
+local RIG_SCALES: RigScales = {
+	bodyType = 1,
+	proportion = 0.5,
+	head = 1.14,
+	width = 0.92,
+	height = 0.95,
+}
+
+local function makeGear(
+	shape: string,
+	class: "Part" | "WedgePart",
 	name: string,
 	host: string,
 	sizeStuds: { number },
 	offsetStuds: { number },
 	rotationDegrees: { number },
 	rgb: Rgb,
-	material: string,
-	class: ("Part" | "WedgePart")?,
-	shape: string?
+	material: string
 ): RigGear
 	return {
 		name = name,
-		class = class or "Part",
-		shape = (shape or "Block") :: any,
+		class = class,
+		shape = shape :: any,
 		host = host,
 		sizeStuds = sizeStuds,
 		offsetStuds = offsetStuds,
@@ -172,154 +206,151 @@ local function gear(
 	}
 end
 
--- Instrutor do Limiar: casaco escuro de gola alta, capuz aberto para o rosto
--- aparecer, mecha de cabelo em cunhas e energia umbral só nas bordas (rim do
--- capuz, gola, emblema, cinto, punhos). O neon é assinatura, não uniforme: se
--- pintar tudo, some a silhueta.
+-- Volume orgânico. Com tamanho não uniforme o Roblox renderiza um ELIPSOIDE —
+-- é daqui que saem ombro, capuz, saia e saco de estopa sem cara de caixa.
+local function blob(
+	name: string,
+	host: string,
+	sizeStuds: { number },
+	offsetStuds: { number },
+	rotationDegrees: { number },
+	rgb: Rgb,
+	material: string
+): RigGear
+	return makeGear("Ball", "Part", name, host, sizeStuds, offsetStuds, rotationDegrees, rgb, material)
+end
+
+-- Anel/faixa. O eixo do Cylinder é X: `rotation z = 90` deixa o eixo em pé
+-- (anel em volta do pescoço, do braço ou da cintura) e `rotation y = 90` vira
+-- a face para a frente (disco do alvo no peito).
+local function band(
+	name: string,
+	host: string,
+	sizeStuds: { number },
+	offsetStuds: { number },
+	rotationDegrees: { number },
+	rgb: Rgb,
+	material: string
+): RigGear
+	return makeGear("Cylinder", "Part", name, host, sizeStuds, offsetStuds, rotationDegrees, rgb, material)
+end
+
+-- Ponta: mecha de cabelo, palha, aba de casaco.
+local function spike(
+	name: string,
+	host: string,
+	sizeStuds: { number },
+	offsetStuds: { number },
+	rotationDegrees: { number },
+	rgb: Rgb,
+	material: string
+): RigGear
+	return makeGear("Block", "WedgePart", name, host, sizeStuds, offsetStuds, rotationDegrees, rgb, material)
+end
+
+-- Instrutor do Limiar. Silhueta em volumes redondos: capuz e cabelo são
+-- elipsoides concêntricos em volta da cabeça, ombreira é meia-esfera, e gola,
+-- cinto, punho e barra são anéis. A energia umbral fica só nas BORDAS (testa do
+-- capuz, gola, emblema, fivela, barra, punhos): neon em tudo apaga a silhueta.
+--
+-- ⚠️ O rosto ocupa a face −Z da cabeça (plano em z = −0,628) e os olhos sobem
+-- até y ≈ +0,31. Peça que avança na frente desse plano TEM de ficar acima dos
+-- olhos, senão o instrutor volta a ser um vulto encapuzado sem cara.
+-- `Presentation.gearClearsFace` trava isso.
 local INSTRUCTOR_GEAR: { RigGear } = {
-	-- ⚠️ A cabeça do R15 tem 1,182 de altura e o rosto ocupa a face −Z. Na
-	-- textura clássica os olhos ficam por volta de y +0,05 a +0,28 no
-	-- referencial da cabeça: TODA peça de cabelo/capuz precisa passar acima
-	-- disso, e o cabelo precisa ficar atrás do plano do rosto (z > −0,581) ou
-	-- ele tapa a cara do instrutor e volta o boneco sem expressão.
-	gear("HairCap", "Head", { 1.22, 0.50, 1.10 }, { 0, 0.50, 0.08 }, { 0, 0, 0 }, HAIR, "Fabric"),
-	gear("Bang", "Head", { 0.30, 0.36, 0.26 }, { -0.30, 0.52, -0.48 }, { -20, -16, 0 }, HAIR, "Fabric", "WedgePart"),
-	gear("Bang", "Head", { 0.30, 0.36, 0.26 }, { 0.30, 0.52, -0.48 }, { -20, 16, 0 }, HAIR, "Fabric", "WedgePart"),
-	gear("Bang", "Head", { 0.26, 0.32, 0.24 }, { 0, 0.54, -0.50 }, { -30, 0, 0 }, HAIR, "Fabric", "WedgePart"),
-	gear("HoodBack", "Head", { 1.30, 1.05, 0.50 }, { 0, 0.14, 0.52 }, { 0, 0, 0 }, COAT, "Leather"),
-	gear("HoodTop", "Head", { 1.26, 0.32, 1.05 }, { 0, 0.70, 0.12 }, { 0, 0, 0 }, COAT, "Leather"),
-	gear("HoodSide", "Head", { 0.24, 1.00, 0.92 }, { -0.63, 0.10, 0.10 }, { 0, 0, 0 }, COAT, "Leather"),
-	gear("HoodSide", "Head", { 0.24, 1.00, 0.92 }, { 0.63, 0.10, 0.10 }, { 0, 0, 0 }, COAT, "Leather"),
-	gear("HoodRim", "Head", { 1.28, 0.09, 0.95 }, { 0, 0.60, -0.16 }, { 0, 0, 0 }, UMBRAL, "Neon"),
+	blob("HairBack", "Head", { 1.36, 1.30, 1.34 }, { 0, 0.26, 0.12 }, { 0, 0, 0 }, HAIR, "Fabric"),
+	blob("HairTop", "Head", { 1.24, 0.86, 1.24 }, { 0, 0.62, 0.02 }, { 0, 0, 0 }, HAIR, "Fabric"),
+	-- Franja em cinco mechas de alturas e ângulos diferentes: uma mecha só, ou
+	-- cinco iguais, lê como capacete.
+	spike("Fringe", "Head", { 0.30, 0.42, 0.26 }, { -0.44, 0.58, -0.48 }, { -26, -22, -8 }, HAIR, "Fabric"),
+	spike("Fringe", "Head", { 0.26, 0.38, 0.24 }, { -0.22, 0.60, -0.52 }, { -22, -10, 6 }, HAIR, "Fabric"),
+	spike("Fringe", "Head", { 0.30, 0.44, 0.26 }, { 0.02, 0.58, -0.53 }, { -30, 4, -4 }, HAIR, "Fabric"),
+	spike("Fringe", "Head", { 0.26, 0.38, 0.24 }, { 0.24, 0.60, -0.52 }, { -22, 12, 8 }, HAIR, "Fabric"),
+	spike("Fringe", "Head", { 0.30, 0.42, 0.26 }, { 0.44, 0.58, -0.48 }, { -26, 24, 6 }, HAIR, "Fabric"),
+	blob("HoodShell", "Head", { 1.78, 1.62, 1.72 }, { 0, 0.18, 0.42 }, { 0, 0, 0 }, COAT, "Leather"),
+	blob("HoodCheek", "Head", { 0.44, 1.30, 1.30 }, { -0.72, 0.06, 0.16 }, { 0, 0, 0 }, COAT, "Leather"),
+	blob("HoodCheek", "Head", { 0.44, 1.30, 1.30 }, { 0.72, 0.06, 0.16 }, { 0, 0, 0 }, COAT, "Leather"),
+	blob("HoodBrow", "Head", { 1.80, 0.20, 1.70 }, { 0, 0.72, 0.30 }, { 0, 0, 0 }, UMBRAL, "Neon"),
 
-	gear("Collar", "UpperTorso", { 1.16, 0.34, 0.96 }, { 0, 0.72, 0 }, { 0, 0, 0 }, COAT, "Fabric"),
-	gear("CollarTrim", "UpperTorso", { 1.22, 0.08, 1.02 }, { 0, 0.90, 0 }, { 0, 0, 0 }, UMBRAL, "Neon"),
-	gear("Sash", "UpperTorso", { 0.20, 1.30, 1.06 }, { -0.22, 0.02, 0 }, { 0, 0, -14 }, COAT_DARK, "Fabric"),
-	gear("Emblem", "UpperTorso", { 0.26, 0.34, 0.10 }, { 0, 0.16, -0.52 }, { 0, 0, 0 }, UMBRAL, "Neon"),
-	gear("EmblemCore", "UpperTorso", { 0.12, 0.14, 0.12 }, { 0, 0.16, -0.56 }, { 0, 0, 0 }, UMBRAL_CORE, "Neon"),
-	gear("Belt", "UpperTorso", { 1.42, 0.24, 1.06 }, { 0, -0.72, 0 }, { 0, 0, 0 }, COAT_DARK, "Leather"),
-	gear("Buckle", "UpperTorso", { 0.30, 0.34, 0.14 }, { 0, -0.72, -0.54 }, { 0, 0, 0 }, UMBRAL, "Neon"),
-	-- Saia do casaco: nasce no tórax e desce por cima das coxas. Presa ao
-	-- tronco de propósito — casaco não acompanha a perna.
-	gear("CoatFront", "UpperTorso", { 1.56, 1.05, 1.10 }, { 0, -1.42, 0.02 }, { 0, 0, 0 }, COAT, "Fabric"),
-	gear("Hem", "UpperTorso", { 1.62, 0.09, 1.16 }, { 0, -1.95, 0.02 }, { 0, 0, 0 }, UMBRAL, "Neon"),
-	gear("CoatTail", "UpperTorso", { 0.76, 1.95, 0.34 }, { -0.34, -1.85, 0.46 }, { 8, 0, -4 }, COAT, "Fabric"),
-	gear("CoatTail", "UpperTorso", { 0.76, 1.95, 0.34 }, { 0.34, -1.85, 0.46 }, { 8, 0, 4 }, COAT, "Fabric"),
+	-- Casaco: um elipsoide sobre o tronco arredonda o peito antes de qualquer
+	-- detalhe. Sem ele, cinto e emblema ficam colados numa caixa.
+	blob("CoatChest", "UpperTorso", { 1.92, 2.00, 1.20 }, { 0, 0, 0.02 }, { 0, 0, 0 }, COAT, "Fabric"),
+	band("Collar", "UpperTorso", { 0.46, 1.24, 1.24 }, { 0, 0.86, 0.02 }, { 0, 0, 90 }, COAT, "Fabric"),
+	band("CollarGlow", "UpperTorso", { 0.10, 1.30, 1.30 }, { 0, 1.06, 0.02 }, { 0, 0, 90 }, UMBRAL, "Neon"),
+	blob("Sash", "UpperTorso", { 0.34, 1.70, 1.22 }, { -0.30, 0, -0.02 }, { 0, 0, -18 }, COAT_DARK, "Fabric"),
+	blob("Emblem", "UpperTorso", { 0.36, 0.44, 0.20 }, { 0, 0.20, -0.62 }, { 0, 0, 0 }, UMBRAL, "Neon"),
+	blob("EmblemCore", "UpperTorso", { 0.16, 0.18, 0.14 }, { 0, 0.20, -0.66 }, { 0, 0, 0 }, UMBRAL_CORE, "Neon"),
+	band("Belt", "UpperTorso", { 0.34, 1.55, 1.20 }, { 0, -0.86, 0.02 }, { 0, 0, 90 }, COAT_DARK, "Leather"),
+	blob("Buckle", "UpperTorso", { 0.36, 0.40, 0.22 }, { 0, -0.86, -0.60 }, { 0, 0, 0 }, UMBRAL, "Neon"),
+	-- Saia do casaco: nasce no tórax e desce por cima das coxas. Presa ao tronco
+	-- de propósito — casaco não acompanha a perna.
+	blob("CoatSkirt", "UpperTorso", { 1.80, 1.50, 1.34 }, { 0, -1.62, 0.04 }, { 0, 0, 0 }, COAT, "Fabric"),
+	band("Hem", "UpperTorso", { 0.12, 1.86, 1.40 }, { 0, -2.26, 0.04 }, { 0, 0, 90 }, UMBRAL, "Neon"),
+	spike("CoatTail", "UpperTorso", { 0.74, 2.00, 0.42 }, { -0.34, -2.20, 0.48 }, { 10, 0, -5 }, COAT, "Fabric"),
+	spike("CoatTail", "UpperTorso", { 0.74, 2.00, 0.42 }, { 0.34, -2.20, 0.48 }, { 10, 0, 5 }, COAT, "Fabric"),
 
-	gear("Pauldron", "LeftUpperArm", { 1.22, 0.44, 1.24 }, { 0, 0.44, 0 }, { 0, 0, 8 }, COAT, "Fabric"),
-	gear("Pauldron", "RightUpperArm", { 1.22, 0.44, 1.24 }, { 0, 0.44, 0 }, { 0, 0, -8 }, COAT, "Fabric"),
-	gear("PauldronTrim", "LeftUpperArm", { 1.26, 0.08, 1.28 }, { 0, 0.24, 0 }, { 0, 0, 8 }, UMBRAL, "Neon"),
-	gear("PauldronTrim", "RightUpperArm", { 1.26, 0.08, 1.28 }, { 0, 0.24, 0 }, { 0, 0, -8 }, UMBRAL, "Neon"),
-	gear("Cuff", "LeftLowerArm", { 1.10, 0.18, 1.10 }, { 0, -0.42, 0 }, { 0, 0, 0 }, UMBRAL, "Neon"),
-	gear("Cuff", "RightLowerArm", { 1.10, 0.18, 1.10 }, { 0, -0.42, 0 }, { 0, 0, 0 }, UMBRAL, "Neon"),
+	blob("Pauldron", "LeftUpperArm", { 1.32, 1.00, 1.36 }, { 0, 0.44, 0 }, { 0, 0, 8 }, COAT, "Fabric"),
+	blob("Pauldron", "RightUpperArm", { 1.32, 1.00, 1.36 }, { 0, 0.44, 0 }, { 0, 0, -8 }, COAT, "Fabric"),
+	band("PauldronGlow", "LeftUpperArm", { 0.10, 1.34, 1.38 }, { 0, 0.14, 0 }, { 0, 0, 90 }, UMBRAL, "Neon"),
+	band("PauldronGlow", "RightUpperArm", { 0.10, 1.34, 1.38 }, { 0, 0.14, 0 }, { 0, 0, 90 }, UMBRAL, "Neon"),
+	band("Cuff", "LeftLowerArm", { 0.26, 1.10, 1.18 }, { 0, -0.50, 0 }, { 0, 0, 90 }, UMBRAL, "Neon"),
+	band("Cuff", "RightLowerArm", { 0.26, 1.10, 1.18 }, { 0, -0.50, 0 }, { 0, 0, 90 }, UMBRAL, "Neon"),
+	blob("Glove", "LeftHand", { 1.04, 0.48, 1.26 }, { 0, -0.02, 0 }, { 0, 0, 0 }, COAT_DARK, "Leather"),
+	blob("Glove", "RightHand", { 1.04, 0.48, 1.26 }, { 0, -0.02, 0 }, { 0, 0, 0 }, COAT_DARK, "Leather"),
+
+	blob("Boot", "LeftLowerLeg", { 1.06, 1.10, 1.20 }, { 0, -0.44, -0.02 }, { 0, 0, 0 }, COAT_DARK, "Leather"),
+	blob("Boot", "RightLowerLeg", { 1.06, 1.10, 1.20 }, { 0, -0.44, -0.02 }, { 0, 0, 0 }, COAT_DARK, "Leather"),
 }
 
 -- Boneco de treino: saco de estopa amarrado, palha saindo pelas costuras,
--- olhos de botão, alvo no peito e poste de madeira atrás. Nada de neon além
--- do anel vermelho do alvo — quem brilha aqui é onde se deve bater.
+-- olhos de botão, alvo no peito e poste de madeira atrás. Cabeça e tronco viram
+-- sacos por elipsoides — boneco de pancada não tem ombro reto. Nada de neon
+-- além do anel vermelho do alvo: quem brilha aqui é onde se deve bater.
 local DUMMY_GEAR: { RigGear } = {
-	gear("SackTop", "Head", { 1.24, 0.30, 1.24 }, { 0, 0.60, 0 }, { 0, 0, 0 }, BURLAP_DARK, "Fabric"),
-	gear("TieBand", "Head", { 1.28, 0.14, 1.28 }, { 0, 0.46, 0 }, { 0, 0, 0 }, ROPE, "Fabric"),
-	gear("Straw", "Head", { 0.28, 0.62, 0.24 }, { -0.36, 0.86, -0.10 }, { 0, -12, -24 }, ROPE, "Grass", "WedgePart"),
-	gear("Straw", "Head", { 0.28, 0.62, 0.24 }, { 0.36, 0.86, -0.10 }, { 0, 12, 24 }, ROPE, "Grass", "WedgePart"),
-	gear("Straw", "Head", { 0.26, 0.54, 0.22 }, { 0, 0.92, 0.06 }, { -8, 0, 0 }, ROPE, "Grass", "WedgePart"),
-	gear(
-		"EyeL",
-		"Head",
-		{ 0.26, 0.26, 0.14 },
-		{ -0.26, 0.10, -0.56 },
-		{ 0, 0, 0 },
-		STITCH,
-		"SmoothPlastic",
-		"Part",
-		"Ball"
-	),
-	gear(
-		"EyeR",
-		"Head",
-		{ 0.26, 0.26, 0.14 },
-		{ 0.26, 0.10, -0.56 },
-		{ 0, 0, 0 },
-		STITCH,
-		"SmoothPlastic",
-		"Part",
-		"Ball"
-	),
-	gear("Mouth", "Head", { 0.42, 0.08, 0.08 }, { 0, -0.26, -0.58 }, { 0, 0, 0 }, STITCH, "Fabric"),
-	gear("CheekStitch", "Head", { 0.30, 0.06, 0.06 }, { -0.30, -0.10, -0.56 }, { 0, 0, 40 }, STITCH, "Fabric"),
+	blob("SackCrown", "Head", { 1.40, 0.90, 1.40 }, { 0, 0.50, 0.02 }, { 0, 0, 0 }, BURLAP_DARK, "Fabric"),
+	band("TieBand", "Head", { 0.24, 1.34, 1.34 }, { 0, 0.30, 0.02 }, { 0, 0, 90 }, ROPE, "Fabric"),
+	spike("Straw", "Head", { 0.28, 0.66, 0.24 }, { -0.40, 0.92, -0.10 }, { 0, -14, -26 }, ROPE, "Grass"),
+	spike("Straw", "Head", { 0.26, 0.58, 0.22 }, { -0.14, 0.98, 0.08 }, { -10, -4, -12 }, ROPE, "Grass"),
+	spike("Straw", "Head", { 0.26, 0.58, 0.22 }, { 0.16, 0.98, 0.06 }, { -8, 6, 14 }, ROPE, "Grass"),
+	spike("Straw", "Head", { 0.28, 0.66, 0.24 }, { 0.40, 0.92, -0.10 }, { 0, 14, 26 }, ROPE, "Grass"),
+	blob("EyeL", "Head", { 0.28, 0.28, 0.16 }, { -0.28, 0.10, -0.60 }, { 0, 0, 0 }, STITCH, "SmoothPlastic"),
+	blob("EyeR", "Head", { 0.28, 0.28, 0.16 }, { 0.28, 0.10, -0.60 }, { 0, 0, 0 }, STITCH, "SmoothPlastic"),
+	blob("Glint", "Head", { 0.10, 0.10, 0.08 }, { -0.32, 0.16, -0.66 }, { 0, 0, 0 }, UMBRAL_CORE, "SmoothPlastic"),
+	blob("Glint", "Head", { 0.10, 0.10, 0.08 }, { 0.24, 0.16, -0.66 }, { 0, 0, 0 }, UMBRAL_CORE, "SmoothPlastic"),
+	band("Mouth", "Head", { 0.46, 0.10, 0.10 }, { 0, -0.28, -0.62 }, { 0, 0, 0 }, STITCH, "Fabric"),
+	band("CheekStitch", "Head", { 0.30, 0.07, 0.07 }, { -0.34, -0.10, -0.58 }, { 0, 0, 40 }, STITCH, "Fabric"),
+	band("CheekStitch", "Head", { 0.30, 0.07, 0.07 }, { 0.34, -0.10, -0.58 }, { 0, 0, -40 }, STITCH, "Fabric"),
 
-	-- Alvo: eixo do Cylinder é X, então o yaw de 90° é o que vira a face para
-	-- a frente. Sem ele o disco fica de perfil e some.
-	gear(
-		"Target",
-		"UpperTorso",
-		{ 0.16, 1.20, 1.20 },
-		{ 0, 0.18, -0.54 },
-		{ 0, 90, 0 },
-		{ 226, 214, 183 },
-		"SmoothPlastic",
-		"Part",
-		"Cylinder"
-	),
-	gear(
-		"TargetRing",
-		"UpperTorso",
-		{ 0.14, 0.84, 0.84 },
-		{ 0, 0.18, -0.60 },
-		{ 0, 90, 0 },
-		{ 226, 78, 78 },
-		"Neon",
-		"Part",
-		"Cylinder"
-	),
-	gear(
-		"TargetCore",
-		"UpperTorso",
-		{ 0.14, 0.42, 0.42 },
-		{ 0, 0.18, -0.64 },
-		{ 0, 90, 0 },
-		{ 244, 238, 220 },
-		"Neon",
-		"Part",
-		"Cylinder"
-	),
-	gear("Stitch", "UpperTorso", { 0.10, 1.05, 0.10 }, { -0.34, 0.10, -0.52 }, { 0, 0, 16 }, STITCH, "Fabric"),
-	gear("Stitch", "UpperTorso", { 0.10, 0.95, 0.10 }, { 0.34, 0.00, -0.52 }, { 0, 0, -14 }, STITCH, "Fabric"),
-	gear("ChestStrap", "UpperTorso", { 1.50, 0.22, 1.08 }, { 0, 0.42, 0 }, { 0, 0, 0 }, ROPE, "Fabric"),
-	gear("Belt", "UpperTorso", { 1.44, 0.28, 1.08 }, { 0, -0.70, 0 }, { 0, 0, 0 }, ROPE, "Leather"),
-	gear("Buckle", "UpperTorso", { 0.30, 0.32, 0.14 }, { 0, -0.70, -0.54 }, { 0, 0, 0 }, WOOD, "Wood"),
+	blob("SackBody", "UpperTorso", { 2.00, 2.05, 1.22 }, { 0, -0.04, 0.02 }, { 0, 0, 0 }, BURLAP, "Fabric"),
+	-- Alvo: o eixo do Cylinder é X, então o yaw de 90° é o que vira a face para a
+	-- frente. Sem ele o disco fica de perfil e some.
+	band("Target", "UpperTorso", { 0.16, 1.24, 1.24 }, { 0, 0.22, -0.62 }, { 0, 90, 0 }, TARGET_PALE, "SmoothPlastic"),
+	band("TargetRing", "UpperTorso", { 0.14, 0.86, 0.86 }, { 0, 0.22, -0.68 }, { 0, 90, 0 }, TARGET_RED, "Neon"),
+	band("TargetCore", "UpperTorso", { 0.14, 0.42, 0.42 }, { 0, 0.22, -0.72 }, { 0, 90, 0 }, TARGET_CORE, "Neon"),
+	band("ChestRope", "UpperTorso", { 0.22, 1.46, 1.24 }, { 0, 0.62, 0.02 }, { 0, 0, 90 }, ROPE, "Fabric"),
+	band("Belt", "UpperTorso", { 0.28, 1.50, 1.24 }, { 0, -0.84, 0.02 }, { 0, 0, 90 }, ROPE, "Leather"),
+	blob("Buckle", "UpperTorso", { 0.32, 0.34, 0.20 }, { 0, -0.84, -0.60 }, { 0, 0, 0 }, WOOD, "Wood"),
+	blob("Patch", "UpperTorso", { 0.60, 0.52, 0.24 }, { -0.42, -0.30, -0.56 }, { 0, 0, 20 }, BURLAP_DARK, "Fabric"),
+	blob("Patch", "UpperTorso", { 0.52, 0.46, 0.22 }, { 0.44, 0.62, -0.54 }, { 0, 0, -16 }, BURLAP_DARK, "Fabric"),
+	band("Stitch", "UpperTorso", { 1.05, 0.09, 0.09 }, { -0.36, 0.02, -0.58 }, { 0, 0, 74 }, STITCH, "Fabric"),
+	band("Stitch", "UpperTorso", { 0.95, 0.09, 0.09 }, { 0.38, -0.34, -0.56 }, { 0, 0, -68 }, STITCH, "Fabric"),
 
-	gear("ShoulderPatch", "LeftUpperArm", { 1.10, 0.40, 1.12 }, { 0, 0.42, 0 }, { 0, 0, 0 }, BURLAP_DARK, "Fabric"),
-	gear("ShoulderPatch", "RightUpperArm", { 1.10, 0.40, 1.12 }, { 0, 0.42, 0 }, { 0, 0, 0 }, BURLAP_DARK, "Fabric"),
-	gear("Wrap", "LeftLowerArm", { 1.08, 0.60, 1.08 }, { 0, -0.24, 0 }, { 0, 0, 0 }, ROPE, "Fabric"),
-	gear("Wrap", "RightLowerArm", { 1.08, 0.60, 1.08 }, { 0, -0.24, 0 }, { 0, 0, 0 }, ROPE, "Fabric"),
-	gear("LegWrap", "LeftLowerLeg", { 1.06, 0.50, 1.06 }, { 0, -0.30, 0 }, { 0, 0, 0 }, ROPE, "Fabric"),
-	gear("LegWrap", "RightLowerLeg", { 1.06, 0.50, 1.06 }, { 0, -0.30, 0 }, { 0, 0, 0 }, ROPE, "Fabric"),
+	blob("ShoulderPatch", "LeftUpperArm", { 1.12, 0.70, 1.16 }, { 0, 0.44, 0 }, { 0, 0, 0 }, BURLAP_DARK, "Fabric"),
+	blob("ShoulderPatch", "RightUpperArm", { 1.12, 0.70, 1.16 }, { 0, 0.44, 0 }, { 0, 0, 0 }, BURLAP_DARK, "Fabric"),
+	band("Wrap", "LeftLowerArm", { 0.66, 1.06, 1.14 }, { 0, -0.30, 0 }, { 0, 0, 90 }, ROPE, "Fabric"),
+	band("Wrap", "RightLowerArm", { 0.66, 1.06, 1.14 }, { 0, -0.30, 0 }, { 0, 0, 90 }, ROPE, "Fabric"),
+	blob("HandKnot", "LeftHand", { 0.96, 0.42, 1.20 }, { 0, 0, 0 }, { 0, 0, 0 }, ROPE, "Fabric"),
+	blob("HandKnot", "RightHand", { 0.96, 0.42, 1.20 }, { 0, 0, 0 }, { 0, 0, 0 }, ROPE, "Fabric"),
+	band("LegWrap", "LeftLowerLeg", { 0.60, 1.02, 1.06 }, { 0, -0.34, 0 }, { 0, 0, 90 }, ROPE, "Fabric"),
+	band("LegWrap", "RightLowerLeg", { 0.60, 1.02, 1.06 }, { 0, -0.34, 0 }, { 0, 0, 90 }, ROPE, "Fabric"),
 
-	-- Poste e base: presos ao LowerTorso, que fica 2,392 studs acima da sola.
+	-- Poste e base: presos ao LowerTorso, que fica 2,877 studs acima da sola.
 	-- Por isso os offsets em Y são negativos e grandes — é o chão visto de lá.
-	gear(
-		"Post",
-		"LowerTorso",
-		{ 3.40, 0.42, 0.42 },
-		{ 0, -0.69, 0.75 },
-		{ 0, 0, 90 },
-		WOOD,
-		"Wood",
-		"Part",
-		"Cylinder"
-	),
-	gear(
-		"Base",
-		"LowerTorso",
-		{ 0.22, 3.00, 3.00 },
-		{ 0, -2.28, 0.20 },
-		{ 0, 0, 90 },
-		WOOD,
-		"WoodPlanks",
-		"Part",
-		"Cylinder"
-	),
+	-- O poste sobe do chão até acima do ombro (é o que segura um boneco de
+	-- pancada); fica em z = 0,78, atrás da superfície do tronco, para não
+	-- atravessar o corpo.
+	band("Post", "LowerTorso", { 5.20, 0.44, 0.44 }, { 0, -0.28, 0.78 }, { 0, 0, 90 }, WOOD, "Wood"),
+	band("Base", "LowerTorso", { 0.24, 3.10, 3.10 }, { 0, -2.76, 0.22 }, { 0, 0, 90 }, WOOD, "WoodPlanks"),
 }
 
 local Rigs: { [string]: RigRecipe } = {
@@ -331,6 +362,7 @@ local Rigs: { [string]: RigRecipe } = {
 		bodyMaterial = "Fabric",
 		legMaterial = "Leather",
 		faceTexture = "rbxasset://textures/face.png",
+		scales = RIG_SCALES,
 		gear = INSTRUCTOR_GEAR,
 	},
 	npc_training_dummy = {
@@ -342,6 +374,7 @@ local Rigs: { [string]: RigRecipe } = {
 		legMaterial = "Fabric",
 		-- Sem decal: saco de estopa tem botão costurado, não rosto de avatar.
 		faceTexture = nil,
+		scales = RIG_SCALES,
 		gear = DUMMY_GEAR,
 	},
 }
@@ -519,6 +552,22 @@ function Presentation.validateRigs(): (boolean, string?)
 		if #rig.gear < 8 then
 			return false, "rig_gear_too_sparse:" .. npcId
 		end
+		local scalesOk, scalesReason = Presentation.validateScales(rig.scales)
+		if not scalesOk then
+			return false, ("%s/%s"):format(npcId, scalesReason or "?")
+		end
+		-- Regra anti-caixa (ver cabeçalho): a reclamação "ainda tá muito
+		-- quadrado" veio de uma receita 100% `Block`. Volume grande tem de ser
+		-- elipsoide, faixa tem de ser cilindro; bloco só sobra para detalhe.
+		local blocks = 0
+		for _, gearPiece in rig.gear do
+			if gearPiece.shape == "Block" and gearPiece.class == "Part" then
+				blocks += 1
+			end
+		end
+		if blocks > #rig.gear * 0.25 then
+			return false, ("rig_too_boxy:%s (%d de %d peças são bloco)"):format(npcId, blocks, #rig.gear)
+		end
 		for _, piece in rig.gear do
 			local ok, reason = Presentation.validateGear(piece)
 			if not ok then
@@ -535,10 +584,14 @@ function Presentation.validateRigs(): (boolean, string?)
 	return true, nil
 end
 
--- Plano do rosto da cabeça R15 (metade da profundidade de 1,161) e topo da
--- faixa dos olhos na textura clássica, ambos no referencial da cabeça.
-local FACE_PLANE_Z = -0.581
-local EYE_BAND_TOP = 0.28
+-- Cabeça do rig nas escalas de `RIG_SCALES`, medida no Studio. Derivar as duas
+-- constantes daqui em vez de fixá-las evita que uma mudança de escala deixe a
+-- regra do rosto conferindo um plano que não existe mais.
+local RIG_HEAD_SIZE: { number } = { 1.253, 1.292, 1.255 }
+local FACE_PLANE_Z = -RIG_HEAD_SIZE[3] / 2
+-- Na textura clássica os olhos terminam a ~23,7% da altura da cabeça acima do
+-- centro (medido na face.png sobre a cabeça padrão).
+local EYE_BAND_TOP = RIG_HEAD_SIZE[2] * 0.237
 
 -- Cabelo e capuz não podem tapar os olhos. A regra é geométrica: se a peça
 -- avança na frente do plano do rosto, ela TEM de ficar inteira acima da faixa
@@ -548,6 +601,31 @@ local EYE_BAND_TOP = 0.28
 -- Sem isto, a franja escorrega alguns centésimos para baixo numa edição de
 -- ajuste fino e o instrutor volta a ser um vulto encapuzado sem cara — que é
 -- metade da razão de o boneco antigo parecer feio.
+-- Escalas da HumanoidDescription. Fora destas faixas o rig deixa de bater com
+-- as medidas deste arquivo e todo o encaixe da roupa sai do lugar.
+function Presentation.validateScales(scales: RigScales): (boolean, string?)
+	local fields = {
+		{ "bodyType", scales.bodyType },
+		{ "proportion", scales.proportion },
+		{ "head", scales.head },
+		{ "width", scales.width },
+		{ "height", scales.height },
+	}
+	for _, field in fields do
+		local value = field[2]
+		if type(value) ~= "number" or value ~= value or value < 0 or value > 2 then
+			return false, ("escala %s inválida (%s)"):format(field[1], tostring(value))
+		end
+	end
+	-- `bodyType = 0` é o boneco cúbico clássico. Foi o que gerou a reclamação
+	-- de "muito quadrado": metade do problema era a proporção do corpo, não a
+	-- roupa. Puxar para o Rthro é o que dá tronco alongado e membro afilado.
+	if scales.bodyType < 0.5 then
+		return false, ("bodyType %.2f volta ao corpo cúbico clássico"):format(scales.bodyType)
+	end
+	return true, nil
+end
+
 function Presentation.gearClearsFace(piece: RigGear): (boolean, string?)
 	if piece.host ~= "Head" then
 		return true, nil

@@ -670,13 +670,16 @@ local function dressRig(rig: Model, rigRecipe: any): ()
 end
 
 -- Distância entre a HumanoidRootPart e a sola. NÃO é `Humanoid.HipHeight`:
--- medido no Studio, o pé fica 3,192 studs abaixo da HRP enquanto o HipHeight
--- vale 2,192. Usar o HipHeight enterraria o boneco um stud no chão. Derivar do
--- rig real mantém isso certo se o Roblox mudar as proporções padrão.
+-- medido no Studio, com as escalas da receita o pé fica 3,607 studs abaixo da
+-- HRP enquanto o HipHeight vale ~2,2. Usar o HipHeight enterraria o boneco mais
+-- de um stud no chão. Derivar do rig real mantém isso certo quando a proporção
+-- muda; o número fixo é só o último recurso.
+local RIG_SOLE_DROP_FALLBACK = 3.607
+
 local function rigSoleDrop(rig: Model): number
 	local hrp = rig:FindFirstChild("HumanoidRootPart")
 	if not hrp or not hrp:IsA("BasePart") then
-		return 3.192
+		return RIG_SOLE_DROP_FALLBACK
 	end
 	local lowest: number? = nil
 	for _, footName in { "LeftFoot", "RightFoot" } do
@@ -687,7 +690,7 @@ local function rigSoleDrop(rig: Model): number
 		end
 	end
 	if not lowest then
-		return 3.192
+		return RIG_SOLE_DROP_FALLBACK
 	end
 	return hrp.Position.Y - lowest
 end
@@ -697,7 +700,18 @@ end
 -- cabeça), ou nil se o rig não pôde ser criado — aí o chamador usa o greybox.
 local function buildRigBody(model: Model, root: BasePart, rigRecipe: any, rootHeight: number): number?
 	local ok, rig = pcall(function()
-		return Players:CreateHumanoidModelFromDescription(Instance.new("HumanoidDescription"), Enum.HumanoidRigType.R15)
+		local description = Instance.new("HumanoidDescription")
+		-- Proporção vem da receita. `BodyTypeScale = 1` puxa o corpo para o
+		-- Rthro (tronco alongado, membro afilado) em vez do boneco cúbico
+		-- clássico — é metade da resposta ao "muito quadrado" do playtest; a
+		-- outra metade é a roupa em elipsoides e anéis.
+		local scales = rigRecipe.scales
+		description.BodyTypeScale = scales.bodyType
+		description.ProportionScale = scales.proportion
+		description.HeadScale = scales.head
+		description.WidthScale = scales.width
+		description.HeightScale = scales.height
+		return Players:CreateHumanoidModelFromDescription(description, Enum.HumanoidRigType.R15)
 	end)
 	if not ok or typeof(rig) ~= "Instance" or not rig:IsA("Model") then
 		warn(("[WorldService] rig R15 indisponível (%s) — corpo greybox assume"):format(tostring(rig)))
