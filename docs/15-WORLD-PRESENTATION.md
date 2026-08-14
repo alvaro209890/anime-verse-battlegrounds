@@ -1,6 +1,6 @@
 # 15 — Fundação de mundo e apresentação F0
 
-> **Estado canônico em 2026-08-14 (`d7c44e8`):** implementado em código e validado por lint, 226 testes de domínio, 55 testes de animação/apresentação e build Rojo. O artefato atual possui 293.560 bytes; isso prova somente a saída do build, não boot ou runtime. A expansão de cenário, os VFX e as skins estão implementados, mas **não houve Play atual no Studio neste snapshot**.
+> **Estado canônico em 2026-08-14 (`d35b0e9`):** implementado em código e validado por lint, 226 testes de domínio, 55 testes de animação/apresentação e build Rojo. O artefato atual possui 293.560 bytes; isso prova somente a saída do build, não boot ou runtime. A expansão de cenário, os VFX e as skins estão implementados, mas **não houve Play atual no Studio neste snapshot**.
 
 ## 1. Objetivo e limite
 

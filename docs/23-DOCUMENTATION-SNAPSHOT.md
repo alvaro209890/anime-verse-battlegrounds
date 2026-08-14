@@ -7,10 +7,10 @@ Este arquivo é a referência única para o estado técnico atual do repositóri
 | Campo | Estado canônico |
 |---|---|
 | Branch publicado | `main` |
-| Commit-base do código | `d7c44e8` + cobertura adversarial headless desta rodada; hash final será registrado no release commit |
-| Estado deste documento | consolidação posterior de documentação, testes e pré-cobertura R1; o hash final é informado no release commit |
+| Commit-base do código | `d35b0e9` (`test: add headless two-player adversarial coverage`) |
+| Estado deste documento | snapshot publicado após a pré-cobertura R1 headless |
 | Data do commit | 2026-08-14 |
-| Última alteração de código-base | `feat(scene): expand walls spawn roof and terrain` |
+| Última alteração de código-base | `test: add headless two-player adversarial coverage` |
 | Testes de domínio | 226 passaram, 0 falharam |
 | Testes de animação/apresentação | 55 passaram, 0 falharam |
 | Selene | 0 erros, 0 warnings, 0 parse errors nesta rodada |
