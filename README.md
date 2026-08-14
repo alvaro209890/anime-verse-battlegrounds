@@ -47,9 +47,20 @@ reabra esse `.rbxl` antes de clicar em **Play**.
 Esse `.rbxl` é um artefato local ignorado pelo Git: atualizar ou baixar a branch
 `main` não reconstrói o arquivo. Rode o script novamente depois de cada atualização.
 
-Snapshot canônico gerado em 2026-08-13 09:48:52 -03: `160553` bytes, SHA256
-`8C6D136AE9B6186F5DF6E51F6E6306C085C13BBEF0868097FB8FE6A86831D32F`. Esses
+Snapshot canônico gerado em 2026-08-14 13:53:05 -03: `275301` bytes, SHA256
+`B90E9417A1CB59D3B372CFCEB2DD831FB5C58274971F716071AE379A1072C697`. Esses
 dados comprovam a geração do arquivo, não a execução dele no Studio.
+
+**`anime-verse-battlegrounds.rbxl` é o único place que se abre.** Qualquer outro
+`.rbxl` na raiz é descartável e não recebe as mudanças do repositório — abrir um
+deles é jogar código velho achando que é o atual. O gate de tronco escreve em
+`.rojo-tree-check.rbxl` justamente para não parecer um place de trabalho.
+
+Enquanto o Studio está com o place aberto, ele mantém ao lado um
+`anime-verse-battlegrounds.rbxl.lock`. Fechamento no tapa, crash ou reboot deixam
+esse lock para trás; nesse caso o `build-studio.ps1` confirma pelo PID que a
+sessão morreu, remove o lock e segue. Lock de Studio vivo continua abortando o
+build, para nunca sobrescrever um place em uso.
 
 **Build não é Play:** o build apenas copia o estado atual de `src/` para um arquivo
 `.rbxl`; ele não inicia o jogo nem atualiza um place que já está aberto. O **Play**
@@ -67,7 +78,7 @@ Outros gates locais:
 lune run tests/run.luau
 selene src tests
 stylua --check --line-endings Windows src tests
-rojo build -o build.rbxl
+rojo build -o .rojo-tree-check.rbxl
 ```
 
 O CI (`.github/workflows/ci.yml`) roda lint + format + testes + build em todo push

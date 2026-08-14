@@ -10,8 +10,49 @@ $packagesPath = Join-Path $repoRoot "Packages"
 $artifactPath = Join-Path $repoRoot "anime-verse-battlegrounds.rbxl"
 $artifactLockPath = "$artifactPath.lock"
 
+function Test-PlaceLockOrphan {
+	param([Parameter(Mandatory = $true)][string] $LockPath)
+
+	# O lock do Studio guarda, em linhas: PID, nome do processo, host e guid.
+	# Studio fechado no tapa, crash ou reboot deixa o arquivo para tras. Antes esse
+	# lock morto derrubava o build, e a saida obvia era gerar o place com outro
+	# nome — foi exatamente assim que nasceu um artefato paralelo e o Studio passou
+	# a abrir um place velho sem ninguem perceber. Lock de sessao viva continua
+	# intocavel; so o comprovadamente orfao e removido.
+	try {
+		$linhas = @(Get-Content -LiteralPath $LockPath -ErrorAction Stop)
+	} catch {
+		# Nao deu para ler: assume vivo, que e a hipotese conservadora.
+		return $false
+	}
+
+	if ($linhas.Count -lt 2) {
+		return $false
+	}
+
+	$lockPid = 0
+	if (-not [int]::TryParse($linhas[0].Trim(), [ref] $lockPid)) {
+		return $false
+	}
+
+	try {
+		$processo = Get-Process -Id $lockPid -ErrorAction Stop
+	} catch {
+		return $true
+	}
+
+	# PID vivo mas de outro programa significa numero reciclado: o Studio daquele
+	# lock morreu do mesmo jeito.
+	return $processo.ProcessName -ne $linhas[1].Trim()
+}
+
 if (Test-Path -LiteralPath $artifactLockPath) {
-	throw "Build abortado: o lock '$artifactLockPath' existe. Feche o place no Roblox Studio e tente novamente. O script preservou o lock e nao sobrescreveu o RBXL."
+	if (Test-PlaceLockOrphan -LockPath $artifactLockPath) {
+		Remove-Item -LiteralPath $artifactLockPath -Force
+		Write-Output "[Studio build] Lock orfao removido: a sessao do Studio que o criou nao existe mais."
+	} else {
+		throw "Build abortado: o lock '$artifactLockPath' pertence a uma sessao viva do Roblox Studio. Feche o place e tente novamente. O script preservou o lock e nao sobrescreveu o RBXL."
+	}
 }
 
 function Resolve-ProjectTool {

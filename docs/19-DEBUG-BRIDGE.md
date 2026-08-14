@@ -115,6 +115,15 @@ Saída lista `mismatched` (arquivo por arquivo, hash do repo × hash do Studio) 
 `missingInStudio`. Exit code 2 = fora de sync → rodar `scripts/build-studio.ps1`
 e reabrir o place.
 
+Essa é a primeira pergunta, não a última. Em 2026-08-14 três commits de animação
+foram dados como quebrados quando o problema era o Studio estar com um place
+paralelo, anterior aos três: o `PlayerCombatAnimator` carregado tinha 1455 linhas
+contra 1559 no disco, sem `lightChainImpact` nem `rootForwardStuds`, e o catálogo
+de clipes ainda trazia 7 entradas onde o repositório já tinha zero. Diagnóstico
+sem essa checagem gasta a sessão inteira consertando o que já estava certo. Um
+sintoma barato, sem ponte: no Client, `require` do módulo e teste de um símbolo
+que só existe depois do commit em questão.
+
 **"O playtest quebrou"**:
 
 ```bash

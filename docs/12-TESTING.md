@@ -25,11 +25,15 @@ selene src tests
 lune run tests/run.luau
 wally install
 if (-not (Test-Path -LiteralPath .\Packages)) { New-Item -ItemType Directory .\Packages }
-rojo build -o build.rbxl
+rojo build -o .rojo-tree-check.rbxl
 .\scripts\build-studio.ps1
 ```
 
-O CI executa StyLua, Selene, os testes Lune, a instalação Wally e o build Rojo em todo pull request e em pushes para `main` (`.github/workflows/ci.yml`). Cada resultado precisa registrar commit, ambiente e saída; “verde no CI” não significa “testado no runtime Roblox”. `build.rbxl` valida a árvore; `scripts/build-studio.ps1` produz o snapshot canônico `anime-verse-battlegrounds.rbxl` e verifica tamanho/data/hash. Nenhum dos dois comandos equivale a abrir o arquivo e usar Play.
+O CI executa StyLua, Selene, os testes Lune, a instalação Wally e o build Rojo em todo pull request e em pushes para `main` (`.github/workflows/ci.yml`). Cada resultado precisa registrar commit, ambiente e saída; “verde no CI” não significa “testado no runtime Roblox”. `.rojo-tree-check.rbxl` valida a árvore e é descartável; `scripts/build-studio.ps1` produz o snapshot canônico `anime-verse-battlegrounds.rbxl` e verifica tamanho/data/hash. Nenhum dos dois comandos equivale a abrir o arquivo e usar Play.
+
+O gate de tronco tem nome feio de propósito. Em 2026-08-14 o place canônico estava com um lock órfão, o build saiu para um `build.rbxl` na raiz, e esse arquivo virou o place que o jogador abria no Studio — três commits de correção de animação ficaram invisíveis porque o Play rodava um snapshot anterior a todos eles. Dois `.rbxl` abríveis lado a lado é o bug; o gate de tronco agora escreve num nome que ninguém confunde com place de trabalho, e `build-studio.ps1` limpa lock de sessão morta em vez de empurrar o build para outro arquivo.
+
+**Antes de dizer que uma correção de runtime não funcionou, confirme qual código o Studio está rodando** (`lune run scripts/avb-debug.luau sync`, receita em [docs/19](19-DEBUG-BRIDGE.md#5-receitas)). Sem isso não dá para separar “o conserto está errado” de “o conserto não chegou até aí”, e as duas hipóteses levam a trabalhos opostos.
 
 Em checkout Windows com `core.autocrlf=true`, os arquivos de trabalho podem estar em CRLF enquanto `stylua.toml` exige `Unix`; nesse caso, o check direto acusa somente final de linha. Para reproduzir o CI, use uma cópia com bytes LF canônicos do Git (`git -c core.autocrlf=false archive ...`). `--line-endings Windows` só é equivalente quando todo o checkout está uniformemente em CRLF; ele não resolve uma árvore mista. Não reformatar código só para mascarar essa conversão do checkout.
 

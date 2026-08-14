@@ -95,7 +95,7 @@ Restrições absolutas:
    completa do selene (não só a última linha):
    `lune run tests/run.luau` · `lune run tests/animation.luau` ·
    `selene src tests` · `stylua --check src tests` ·
-   `mkdir Packages -Force; rojo build -o build.rbxl`
+   `mkdir Packages -Force; rojo build -o .rojo-tree-check.rbxl`
 2. Atualize os docs afetados no MESMO commit (12-TESTING, 13-F0-SLICE,
    14-ANIMATION-PLAN, 15-WORLD-PRESENTATION, 17-COMBAT-FEEL e
    18-ANALISE-VIDEO).
