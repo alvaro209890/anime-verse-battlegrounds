@@ -39,6 +39,7 @@ local AbilityVfxPlayer = require(Presentation.AbilityVfxPlayer)
 local CharacterAnimationPlayer = require(Presentation.CharacterAnimationPlayer)
 local CombatAudio = require(Shared.Data.CombatAudio)
 local CombatAnimations = require(Shared.Data.CombatAnimations)
+local AbilityVfx = require(Shared.Data.AbilityVfx)
 
 local player = Players.LocalPlayer
 local state = ClientState.new(os.clock)
@@ -147,6 +148,13 @@ characterAnimation = CharacterAnimationPlayer.new({
 	catalog = CombatAnimations,
 	now = os.clock,
 })
+abilityVfx = AbilityVfxPlayer.new({
+	player = player,
+	runService = RunService,
+	workspace = Workspace,
+	recipes = AbilityVfx,
+	now = os.clock,
+})
 InputController.subscribe(input, function(action: string, _payload: { [string]: any })
 	if string.match(action, "^Ability%d$") == nil then
 		PlayerCombatAnimator.play(playerCombatAnimator, action)
@@ -202,9 +210,21 @@ remote(Remotes.Names.CombatEvent).OnClientEvent:Connect(function(payload: { [str
 	if impactCue then
 		CombatAudioPlayer.play(combatAudio, impactCue)
 	end
-	-- Hit-stop e câmera também reagem ao desfecho, nunca à intenção local.
+	-- O contra do Pulso nasce somente deste evento autoritativo: primeiro inicia a
+	-- pose/receita própria, depois confirma as camadas de contato.
+	if payload.abilityId == "pulse_return" and payload.outcome == "counter" then
+		PlayerCombatAnimator.play(playerCombatAnimator, "Ability3Counter")
+		CharacterAnimationPlayer.play(characterAnimation, "Ability3Counter")
+		if abilityVfx then
+			AbilityVfxPlayer.play(abilityVfx, "Ability3Counter")
+		end
+	end
+	-- Hit-stop, câmera e VFX de contato reagem ao desfecho, nunca à intenção local.
 	PlayerCombatAnimator.confirmHit(playerCombatAnimator, payload.outcome)
 	CombatCameraController.addImpact(combatCamera, payload.outcome, payload.abilityId)
+	if abilityVfx then
+		AbilityVfxPlayer.confirm(abilityVfx, payload.abilityId, payload.outcome)
+	end
 	-- Número de dano flutuante (dano > 0, desfecho confirmado).
 	CombatHudController.onCombatEvent(combatHud, payload)
 	-- Sincronização da cadeia leve com o degrau autoritativo (docs/14 §4.3):
@@ -276,7 +296,8 @@ InputController.start(input, UserInputService, { mouseOnButton = mouseOnButton }
 ActorAnimator.start(actorAnimator)
 PlayerCombatAnimator.start(playerCombatAnimator)
 CharacterAnimationPlayer.start(characterAnimation)
--- O rastro do golpe se apaga sozinho quando a ação acaba.
+AbilityVfxPlayer.start(abilityVfx)
+-- O rastro do golpe e as camadas de VFX se apagam sozinhos quando a ação acaba.
 RunService.RenderStepped:Connect(function()
 	CharacterAnimationPlayer.step(characterAnimation)
 end)

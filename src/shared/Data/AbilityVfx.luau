@@ -26,6 +26,9 @@ export type VfxLayer = {
 	kind: "charge" | "trail" | "arc" | "shell" | "ring" | "burst",
 	-- Papel no rig (resolvido para Attachment pelo player; ausente = ignorado).
 	joint: string,
+	-- Chave do asset preparado. O ID Roblox é opcional até a publicação; sem ID,
+	-- o player usa o fallback procedural já existente.
+	assetKey: string?,
 	startSeconds: number,
 	durationSeconds: number,
 	attackSeconds: number,
@@ -83,10 +86,75 @@ local GLOW_BY_KIND: { [string]: number } = {
 	trail = 0.8,
 }
 
+-- Catálogo de importação. `assetId` fica vazio de propósito até a imagem ser
+-- publicada na conta/grupo da experiência; o arquivo local nunca é aceito como
+-- textura jogável pelo Roblox. O layout descreve a versão preparada que deve ser
+-- importada, permitindo configurar o flipbook sem hardcode por golpe.
+export type AssetSpec = {
+	key: string,
+	sourceFile: string,
+	preparedFile: string,
+	assetId: string?,
+	-- `Custom` cobre spritesheets irregulares que exigem recorte fora do
+	-- FlipbookLayout nativo do Roblox.
+	layout: "Grid2x2" | "Grid4x4" | "Grid8x8" | "Custom" | "None",
+	mode: "Loop" | "OneShot" | "PingPong",
+	framerate: number,
+}
+
+local ASSETS: { [string]: AssetSpec } = {
+	energy_ball = {
+		key = "energy_ball",
+		sourceFile = "AVB-free-vfx-assets/assets/vfx/free_sources/energy_ball_ccby30.png",
+		preparedFile = "AVB-free-vfx-assets/assets/vfx/prepared/energy_ball_4x4.png",
+		assetId = nil,
+		layout = "Grid4x4",
+		mode = "PingPong",
+		framerate = 18,
+	},
+	power_ring = {
+		key = "power_ring",
+		sourceFile = "AVB-free-vfx-assets/assets/vfx/free_sources/power_ring_cc0.png",
+		preparedFile = "AVB-free-vfx-assets/assets/vfx/prepared/power_ring_2x2.png",
+		assetId = nil,
+		layout = "Grid2x2",
+		mode = "OneShot",
+		framerate = 16,
+	},
+	lightning_shock = {
+		key = "lightning_shock",
+		sourceFile = "AVB-free-vfx-assets/assets/vfx/free_sources/lightning_shock_ccby30.png",
+		preparedFile = "AVB-free-vfx-assets/assets/vfx/prepared/lightning_shock_8x8.png",
+		assetId = nil,
+		layout = "Grid8x8",
+		mode = "OneShot",
+		framerate = 20,
+	},
+	explosion_0003 = {
+		key = "explosion_0003",
+		sourceFile = "AVB-free-vfx-assets/assets/vfx/free_sources/explosion_0003_cc0.png",
+		preparedFile = "AVB-free-vfx-assets/assets/vfx/prepared/explosion_0003_cc0_1024px_8x8.png",
+		assetId = nil,
+		layout = "Grid8x8",
+		mode = "OneShot",
+		framerate = 24,
+	},
+	explosion_0005 = {
+		key = "explosion_0005",
+		sourceFile = "AVB-free-vfx-assets/assets/vfx/free_sources/explosion_0005_cc0.png",
+		preparedFile = "AVB-free-vfx-assets/assets/vfx/prepared/explosion_0005_cc0_1024px_8x8.png",
+		assetId = nil,
+		layout = "Grid8x8",
+		mode = "OneShot",
+		framerate = 24,
+	},
+}
+
 local function layer(values: {
 	id: string,
 	kind: "charge" | "trail" | "arc" | "shell" | "ring" | "burst",
 	joint: string,
+	assetKey: string?,
 	startSeconds: number,
 	durationSeconds: number,
 	attackSeconds: number?,
@@ -101,6 +169,7 @@ local function layer(values: {
 		id = values.id,
 		kind = values.kind,
 		joint = values.joint,
+		assetKey = values.assetKey,
 		startSeconds = values.startSeconds,
 		durationSeconds = values.durationSeconds,
 		attackSeconds = values.attackSeconds or 0.04,
@@ -131,6 +200,7 @@ local Techniques: { [string]: TechniqueVfx } = {
 				id = "comet_charge",
 				kind = "charge",
 				joint = "rightUpperArm",
+				assetKey = "energy_ball",
 				startSeconds = 0.0,
 				durationSeconds = 0.18,
 				attackSeconds = 0.08,
@@ -146,6 +216,7 @@ local Techniques: { [string]: TechniqueVfx } = {
 				id = "comet_aura",
 				kind = "charge",
 				joint = "torso",
+				assetKey = "energy_ball",
 				startSeconds = 0.0,
 				durationSeconds = 0.20,
 				attackSeconds = 0.10,
@@ -161,6 +232,7 @@ local Techniques: { [string]: TechniqueVfx } = {
 				id = "comet_trail",
 				kind = "trail",
 				joint = "torso",
+				assetKey = "energy_ball",
 				startSeconds = 0.18,
 				durationSeconds = 0.34,
 				attackSeconds = 0.03,
@@ -175,6 +247,7 @@ local Techniques: { [string]: TechniqueVfx } = {
 				id = "comet_flash",
 				kind = "burst",
 				joint = "rightUpperArm",
+				assetKey = "explosion_0003",
 				startSeconds = 0.40,
 				durationSeconds = 0.20,
 				attackSeconds = 0.02,
@@ -189,6 +262,7 @@ local Techniques: { [string]: TechniqueVfx } = {
 				id = "comet_burst",
 				kind = "burst",
 				joint = "rightUpperArm",
+				assetKey = "explosion_0003",
 				startSeconds = 0.0,
 				durationSeconds = 0.22,
 				attackSeconds = 0.02,
@@ -204,6 +278,7 @@ local Techniques: { [string]: TechniqueVfx } = {
 				id = "comet_ring",
 				kind = "ring",
 				joint = "root",
+				assetKey = "power_ring",
 				startSeconds = 0.40,
 				durationSeconds = 0.30,
 				attackSeconds = 0.05,
@@ -232,6 +307,7 @@ local Techniques: { [string]: TechniqueVfx } = {
 				id = "cadence_arc_first",
 				kind = "arc",
 				joint = "rightLowerArm",
+				assetKey = "lightning_shock",
 				startSeconds = 0.08,
 				durationSeconds = 0.12,
 				attackSeconds = 0.03,
@@ -246,6 +322,7 @@ local Techniques: { [string]: TechniqueVfx } = {
 				id = "cadence_arc_second",
 				kind = "arc",
 				joint = "leftLowerArm",
+				assetKey = "lightning_shock",
 				startSeconds = 0.25,
 				durationSeconds = 0.14,
 				attackSeconds = 0.03,
@@ -258,6 +335,7 @@ local Techniques: { [string]: TechniqueVfx } = {
 				id = "cadence_burst",
 				kind = "burst",
 				joint = "torso",
+				assetKey = "explosion_0005",
 				startSeconds = 0.0,
 				durationSeconds = 0.18,
 				attackSeconds = 0.02,
@@ -284,6 +362,7 @@ local Techniques: { [string]: TechniqueVfx } = {
 				id = "echo_arc",
 				kind = "arc",
 				joint = "leftLowerArm",
+				assetKey = "lightning_shock",
 				startSeconds = 0.20,
 				durationSeconds = 0.18,
 				attackSeconds = 0.04,
@@ -296,6 +375,7 @@ local Techniques: { [string]: TechniqueVfx } = {
 				id = "echo_burst",
 				kind = "burst",
 				joint = "torso",
+				assetKey = "explosion_0005",
 				startSeconds = 0.0,
 				durationSeconds = 0.16,
 				attackSeconds = 0.02,
@@ -325,6 +405,7 @@ local Techniques: { [string]: TechniqueVfx } = {
 				id = "pulse_shell",
 				kind = "shell",
 				joint = "torso",
+				assetKey = "energy_ball",
 				startSeconds = 0.0,
 				durationSeconds = 0.25,
 				attackSeconds = 0.06,
@@ -338,6 +419,7 @@ local Techniques: { [string]: TechniqueVfx } = {
 				id = "pulse_release",
 				kind = "ring",
 				joint = "root",
+				assetKey = "power_ring",
 				startSeconds = 0.25,
 				durationSeconds = 0.20,
 				attackSeconds = 0.04,
@@ -363,6 +445,7 @@ local Techniques: { [string]: TechniqueVfx } = {
 				id = "counter_ring",
 				kind = "ring",
 				joint = "root",
+				assetKey = "power_ring",
 				startSeconds = 0.0,
 				durationSeconds = 0.24,
 				attackSeconds = 0.03,
@@ -376,6 +459,7 @@ local Techniques: { [string]: TechniqueVfx } = {
 				id = "counter_burst",
 				kind = "burst",
 				joint = "rightHand",
+				assetKey = "explosion_0005",
 				startSeconds = 0.16,
 				durationSeconds = 0.20,
 				attackSeconds = 0.02,
@@ -406,6 +490,21 @@ end
 
 function AbilityVfx.forAction(action: string): TechniqueVfx?
 	return ByAction[action]
+end
+
+function AbilityVfx.assetFor(assetKey: string?): AssetSpec?
+	if type(assetKey) ~= "string" then
+		return nil
+	end
+	return ASSETS[assetKey]
+end
+
+function AbilityVfx.allAssets(): { AssetSpec }
+	local out: { AssetSpec } = {}
+	for _, asset in ASSETS do
+		table.insert(out, asset)
+	end
+	return out
 end
 
 function AbilityVfx.all(): { TechniqueVfx }
@@ -505,10 +604,13 @@ function AbilityVfx.validate(): (boolean, string?)
 			-- Toda camada acende: efeito de combate que só existe em partícula
 			-- brilha mas não ilumina, e foi assim que o kit inteiro ficou sem
 			-- luz nenhuma até 14/08.
-			if entry.glowStuds <= 0 then
-				return false, ("camada %s não acende luz"):format(entry.id)
-			end
-			if entry.attackSeconds + entry.releaseSeconds > entry.durationSeconds + 1e-9 then
+				if entry.glowStuds <= 0 then
+					return false, ("camada %s não acende luz"):format(entry.id)
+				end
+				if entry.assetKey ~= nil and ASSETS[entry.assetKey] == nil then
+					return false, ("camada %s aponta para asset desconhecido %s"):format(entry.id, entry.assetKey)
+				end
+				if entry.attackSeconds + entry.releaseSeconds > entry.durationSeconds + 1e-9 then
 				return false, ("camada %s tem envelope maior que a duração"):format(entry.id)
 			end
 			-- A regra que impede o efeito de mentir sobre alcance.

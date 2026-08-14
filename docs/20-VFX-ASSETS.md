@@ -74,3 +74,25 @@ O repositório foi atualizado e revisado. Os arquivos de fonte, as cópias prepa
 [6]: https://opengameart.org/content/explosion-spritesheet-low-res "Explosion spritesheet low res — OpenGameArt"
 [7]: https://pipoya.itch.io/pipoya-free-vfx-time-magic "PIPOYA FREE VFX Time Magic — página oficial"
 [8]: https://github.com/alvaro209890/anime-verse-battlegrounds/blob/73d8b96487b5af603a7460b09bd53ca2c324507e/src/client/Presentation/AbilityVfxPlayer.luau#L62-L186 "Player atual de VFX e tipos de camada"
+
+## Integração com os golpes existentes — 14/08/2026
+
+A integração inicial foi adicionada ao catálogo `src/shared/Data/AbilityVfx.luau` sem inventar IDs Roblox. Cada camada agora declara `assetKey`, que aponta para um asset preparado e pode ser resolvido pelo `AbilityVfxPlayer` quando `assetId` receber um valor publicado válido.
+
+| Golpe | Camadas e assets | Fallback enquanto o ID está vazio |
+|---|---|---|
+| `comet_shoulder` | Energy Ball na carga/aura; Explosion 0003 no contato; Power Rings no anel | Partículas, Trail e cilindro Neon procedurais |
+| `broken_cadence` | Lightning Shock nos dois arcos; Explosion 0005 no burst | Trail procedural e partículas embutidas |
+| `broken_cadence_echo` | Lightning Shock no eco; Explosion 0005 no burst | Trail procedural e partículas embutidas |
+| `pulse_return` | Energy Ball na casca; Power Rings na dispersão | Partículas da casca e cilindro Neon |
+| `pulse_return_counter` | Power Rings no contra; Explosion 0005 no burst | Cilindro Neon e partículas procedurais |
+
+Como os arquivos originais são spritesheets irregulares, `prepare_vfx_atlases.py` gera cópias uniformes para importação: `energy_ball_4x4.png`, `power_ring_2x2.png`, `lightning_shock_8x8.png` e as duas explosões `8x8`. O player usa `ParticleEmitter` com `FlipbookLayout`, `FlipbookMode` e `FlipbookFramerate` quando um ID válido estiver presente. Para anéis, o caminho publicado usa `SurfaceGui` sobre o anel no chão e mantém o escalonamento do raio sob controle do catálogo.
+
+O bootstrap do cliente agora instancia e inicia `AbilityVfxPlayer`, e o listener de `CombatEvent` chama `AbilityVfxPlayer.confirm` somente após o resultado autoritativo. Portanto, miss não libera burst, flash, onda ou contra. Sem IDs publicados, o mesmo fluxo continua jogável usando as formas procedurais originais.
+
+> Os atlas preparados são arquivos locais de importação. Eles não são automaticamente texturas jogáveis no Roblox. Depois de importar/publicar cada atlas, preencher somente valores no formato `rbxassetid://<número>` em `ASSETS` e executar o playtest com hit, miss, guard, counter, respawn e entrada tardia.
+
+## Validação desta alteração
+
+A suíte headless ganhou verificações para a existência dos cinco atlas preparados, para o mapeamento de todas as camadas e para a presença de instanciação, inicialização e confirmação do `AbilityVfxPlayer` no bootstrap. O CI continua sendo necessário para executar Lune, Selene, StyLua, Wally e Rojo; esta suíte não substitui a inspeção no Roblox Studio.
