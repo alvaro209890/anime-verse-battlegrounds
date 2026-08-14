@@ -3,9 +3,11 @@
 --
 --   agente -> scripts/avb-debug.luau -> [este servidor] -> plugin AvbDebug
 --
--- Escuta só em 127.0.0.1. Não fala com a internet, não guarda credencial.
+-- Escuta só em 127.0.0.1. Não fala com a internet. Eval DESLIGADO por padrão
+-- (ligue com --allow-eval); todas as rotas exigem o header X-Avb-Token gerado
+-- no boot (o CLI lê de .avb-debug/bridge.json; o plugin emparelha no hello).
 -- Rodar:  lune run scripts/debug-bridge.luau           (porta padrão 34873)
---         lune run scripts/debug-bridge.luau --port 40000 --no-eval
+--         lune run scripts/debug-bridge.luau --port 40000 --allow-eval
 
 local fs = require("@lune/fs")
 local net = require("@lune/net")
@@ -22,7 +24,10 @@ local STUDIO_TIMEOUT_SECONDS = 12
 
 local options = {
 	port = DEFAULT_PORT,
-	allowEval = true,
+	-- Alerta 14/08: eval DESLIGADO por padrão — só liga com a flag explícita
+	-- --allow-eval. Antes o default era true: qualquer processo local podia
+	-- POST /command com eval e executar Luau arbitrário no contexto do plugin.
+	allowEval = false,
 	quiet = false,
 }
 
@@ -34,6 +39,8 @@ do
 		if arg == "--port" then
 			index += 1
 			options.port = tonumber(args[index]) or DEFAULT_PORT
+		elseif arg == "--allow-eval" then
+			options.allowEval = true
 		elseif arg == "--no-eval" then
 			options.allowEval = false
 		elseif arg == "--quiet" then
@@ -53,6 +60,28 @@ local state = {
 	studioLastSeen = 0,
 	startedAt = os.time(),
 }
+
+-- ── autenticação local ──────────────────────────────────────────────────────
+-- Token gerado a cada boot do bridge (alerta 14/08): toda rota exige o header
+-- `X-Avb-Token`, exceto o handshake de pairing (`POST /studio/hello`), que só
+-- emparelha quando nenhum Studio está conectado e devolve o token na resposta
+-- (o plugin não lê arquivos). O CLI lê o token de .avb-debug/bridge.json.
+-- Não é criptográfico (processo do mesmo usuário pode ler o arquivo); serve
+-- para travar acesso casual/de outros usuários a 127.0.0.1.
+math.randomseed(os.time())
+local function fnv1a(input: string): number
+	local hash = 2166136261
+	for index = 1, #input do
+		hash = bit32.bxor(hash, string.byte(input, index))
+		hash = bit32.band(hash * 16777619, 0xFFFFFFFF)
+	end
+	return hash
+end
+local TOKEN = string.format(
+	"%08x%08x",
+	fnv1a(tostring(os.time()) .. ":" .. string.format("%.9f", os.clock()) .. ":" .. tostring(math.random())),
+	fnv1a(string.format("%.9f", os.clock()) .. ":" .. tostring(math.random()) .. ":" .. tostring(math.random()))
+)
 
 local function now(): number
 	return os.clock()
@@ -115,6 +144,7 @@ local function writeState()
 		serde.encode("json", {
 			port = options.port,
 			startedAt = state.startedAt,
+			token = TOKEN,
 			studio = state.studio,
 			studioConnected = studioConnected(),
 			allowEval = options.allowEval,
@@ -168,12 +198,24 @@ routes["GET /health"] = function()
 	})
 end
 
-routes["POST /studio/hello"] = function(body)
+routes["POST /studio/hello"] = function(body, _query, headers)
+	-- Handshake de pairing (alerta 14/08): com token válido é sempre aceito
+	-- (reload do plugin). Sem token, só emparelha quando não há Studio
+	-- conectado — e a resposta entrega o token para o plugin usar nas demais
+	-- rotas. Um processo qualquer não rouba o token de uma sessão ativa.
+	local tokenOk = headers ~= nil and headers["x-avb-token"] == TOKEN
+	local paired = state.studio ~= nil and studioConnected()
+	if not tokenOk and paired then
+		return json({
+			ok = false,
+			error = "não autorizado: Studio já emparelhado (token ausente/incorreto)",
+		}, 401)
+	end
 	state.studio = body
 	state.studioLastSeen = now()
 	say(string.format("Studio conectado (sessão %s, place %s)", tostring(body.sessionId), tostring(body.placeName)))
 	writeState()
-	return json({ ok = true, allowEval = options.allowEval })
+	return json({ ok = true, allowEval = options.allowEval, token = TOKEN })
 end
 
 routes["GET /studio/poll"] = function()
@@ -256,6 +298,12 @@ routes["POST /logs/clear"] = function()
 	return json({ ok = true })
 end
 
+-- Única rota sem token: o handshake de pairing do plugin. Todas as demais
+-- (health, command, logs, poll/result) exigem o header X-Avb-Token.
+local AUTH_EXEMPT: { [string]: boolean } = {
+	["POST /studio/hello"] = true,
+}
+
 local function handle(request)
 	local path = request.path
 	local key = request.method .. " " .. path
@@ -274,7 +322,19 @@ local function handle(request)
 			end)(),
 		}, 404)
 	end
-	local ok, response = pcall(route, decodeBody(request.body), request.query or {})
+	-- Alerta 14/08: token obrigatório em todas as rotas (exceto o hello de
+	-- pairing). Antes, qualquer processo local podia POST /command e executar
+	-- eval arbitrário no contexto do plugin.
+	if not AUTH_EXEMPT[key] then
+		local headers = request.headers or {}
+		if headers["x-avb-token"] ~= TOKEN then
+			return json({
+				ok = false,
+				error = "não autorizado: header X-Avb-Token ausente ou incorreto",
+			}, 401)
+		end
+	end
+	local ok, response = pcall(route, decodeBody(request.body), request.query or {}, request.headers or {})
 	if not ok then
 		return json({ ok = false, error = tostring(response) }, 500)
 	end

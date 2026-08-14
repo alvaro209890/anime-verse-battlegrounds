@@ -38,6 +38,8 @@ local CombatAnimations = require("../src/shared/Data/CombatAnimations")
 local ActorAnimator = require("../src/client/Presentation/ActorAnimator")
 local EnemyAbilities = require("../src/shared/Data/EnemyAbilities")
 local EnemyVfxAssets = require("../src/shared/Data/EnemyVfxAssets")
+local EnemyVfxPlayer = require("../src/client/Presentation/EnemyVfxPlayer")
+local Npcs = require("../src/shared/Data/Npcs")
 local SceneryPresentation = require("../src/shared/Data/SceneryPresentation")
 local Zones = require("../src/shared/Data/Zones")
 local fs = require("@lune/fs")
@@ -1043,6 +1045,28 @@ test("juntas: papel já ocupado não é roubado por junta que chega depois", fun
 		"leftShoulder",
 		"papel livre continua aceitando"
 	)
+end)
+
+test("vfx inimigo: luz de ataque nunca excede a hitbox real do NPC (docs/17)", function()
+	-- Honestidade visual: o Range da PointLight deriva de NpcDef.attackRange
+	-- (função pura rangeFor) — antes era fixo (12/8 telegraph, 16/10 ataque)
+	-- e "mentia" sobre o alcance real do golpe (errante 4, ancorado 8).
+	local checked = 0
+	for _, npcDef in Npcs.all() do
+		if type(npcDef.attackRange) == "number" and npcDef.attackRange > 0 then
+			local range = EnemyVfxPlayer.rangeFor(npcDef)
+			assertTrue(
+				range <= npcDef.attackRange,
+				("%s: luz %.1f excede hitbox %.1f"):format(tostring(npcDef.id), range, npcDef.attackRange)
+			)
+			assertTrue(range >= 0, "alcance nunca é negativo")
+			checked += 1
+		end
+	end
+	assertTrue(checked > 0, "pelo menos um NPC com attackRange foi verificado")
+	-- Fallback sem def: âncora (8) é o teto honesto; nunca 16/10 antigos.
+	assertEq(EnemyVfxPlayer.rangeFor(nil), 8, "fallback sem def usa o teto do ancorado")
+	assertEq(EnemyVfxPlayer.rangeFor({ attackRange = 4 }), 4, "errante usa 4")
 end)
 
 for _, entry in tests do

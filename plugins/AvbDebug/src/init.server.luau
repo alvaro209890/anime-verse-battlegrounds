@@ -27,6 +27,39 @@ local state = {
 	commandsHandled = 0,
 }
 
+-- Token local do bridge (alerta 14/08): emparelha no hello e persiste nas
+-- settings do plugin para sobreviver a reloads. Sem token o bridge responde
+-- 401 em tudo, menos no hello de pairing.
+local savedToken = plugin:GetSetting("AvbBridgeToken")
+if type(savedToken) == "string" and savedToken ~= "" then
+	Bridge.setToken(savedToken)
+end
+
+-- Hello com retry: emparelha (ganha o token) ou re-emparelha quando o token
+-- salvo ficou velho (bridge reiniciou). Retorna true quando pareado.
+local function tryHello(): boolean
+	local ok, response = Bridge.hello({
+		sessionId = SESSION_ID,
+		version = Config.version,
+		placeName = workspace.Name,
+		isEdit = RunService:IsEdit(),
+		isRunning = RunService:IsRunning(),
+	})
+	if ok and type(response) == "table" and type(response.token) == "string" then
+		Bridge.setToken(response.token)
+		plugin:SetSetting("AvbBridgeToken", response.token)
+		return true
+	end
+	if ok == false and type(response) == "table" and response.statusCode == 401 then
+		-- Bridge já tem outro Studio (ou trocou o token por restart): limpa o
+		-- salvo e tenta de novo — o bridge re-emparelha quando o Studio
+		-- anterior expira (~12 s sem poll).
+		Bridge.setToken(nil)
+		plugin:SetSetting("AvbBridgeToken", nil)
+	end
+	return false
+end
+
 local panel
 
 local function log(message: string)
@@ -158,6 +191,9 @@ task.spawn(function()
 					local envelope = execute(command)
 					Bridge.result(envelope)
 				end
+			elseif not ok and type(payload) == "table" and payload.statusCode == 401 then
+				-- Token trocado (bridge reiniciou): re-emparelha e segue.
+				tryHello()
 			end
 			refreshStatus()
 			task.wait(if Bridge.online then Config.pollIntervalSeconds else Config.offlineIntervalSeconds)
@@ -200,13 +236,14 @@ plugin.Unloading:Connect(function()
 end)
 
 task.spawn(function()
-	Bridge.hello({
-		sessionId = SESSION_ID,
-		version = Config.version,
-		placeName = workspace.Name,
-		isEdit = RunService:IsEdit(),
-		isRunning = RunService:IsRunning(),
-	})
+	-- Hello com retry (alerta 14/08): o pairing agora é obrigatório para
+	-- receber o token — se o bridge ainda não subiu, tenta até conseguir.
+	while state.running and state.bridgeEnabled do
+		if tryHello() then
+			break
+		end
+		task.wait(Config.offlineIntervalSeconds)
+	end
 	refreshStatus()
 end)
 

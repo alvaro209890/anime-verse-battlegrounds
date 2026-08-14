@@ -11,6 +11,13 @@ local Bridge = {}
 
 Bridge.online = false
 Bridge.lastError = nil :: string?
+-- Token local do bridge (alerta 14/08): ganho no handshake de hello (pairing)
+-- e persistido nas settings do plugin; toda rota exige o header X-Avb-Token.
+Bridge.token = nil :: string?
+
+function Bridge.setToken(token: string?)
+	Bridge.token = token
+end
 
 local function request(method: string, path: string, body: any?): (boolean, any)
 	local options = {
@@ -18,6 +25,9 @@ local function request(method: string, path: string, body: any?): (boolean, any)
 		Method = method,
 		Headers = { ["Content-Type"] = "application/json" },
 	}
+	if Bridge.token then
+		options.Headers["X-Avb-Token"] = Bridge.token
+	end
 	if body ~= nil then
 		local encodeOk, encoded = pcall(function()
 			return HttpService:JSONEncode(body)
@@ -39,7 +49,9 @@ local function request(method: string, path: string, body: any?): (boolean, any)
 	if not response.Success then
 		Bridge.online = false
 		Bridge.lastError = string.format("HTTP %d: %s", response.StatusCode, tostring(response.Body))
-		return false, Bridge.lastError
+		-- Devolve o statusCode estruturado para o init distinguir 401 (token
+		-- trocado por restart do bridge) de falha de conexão.
+		return false, { statusCode = response.StatusCode, error = Bridge.lastError }
 	end
 
 	Bridge.online = true

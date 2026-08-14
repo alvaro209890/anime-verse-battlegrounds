@@ -113,6 +113,12 @@ local CADENCE_REACH_STUDS = BASIC_RANGE_STUDS + BODY_ALLOWANCE_STUDS
 -- Abertura horizontal (meio-ângulo). O pesado é mais preciso que a cadeia.
 local BASIC_LIGHT_HALF_ANGLE_DEGREES = 65
 local BASIC_HEAVY_HALF_ANGLE_DEGREES = 50
+-- Intervalo mínimo do servidor entre golpes básicos (alerta 14/08): alinhado
+-- ao LIGHT_WINDOW do CombatService (0,65 s). A cadeia leve continua dentro da
+-- janela; uma NOVA cadeia (ou um pesado) só sai depois da pausa. Sem isto, um
+-- macro de cliente no teto do rate limit (8 intents/s) executava todo intent
+-- e atingia ~64-96 DPS.
+local BASIC_MIN_INTERVAL = 0.65
 
 -- Log de combate só no Studio com F0Debug (mesmo gate das técnicas de teste).
 local combatDebugEnabled = StudioDebug.isEnabled(
@@ -1063,6 +1069,22 @@ RemoteGateway.onClientIntent(Remotes.Names.BasicAttackIntent, function(player: P
 	applyDeclaredAim(attackerId, payload.aim)
 	local kind = payload.kind
 	local now = os.clock()
+
+	-- Gate de cadência (alerta 14/08): o SecurityService valida `phase` mas o
+	-- handler executava TODO intent. Só "press" executa; "release" é no-op. E
+	-- o servidor impõe o intervalo mínimo entre golpes básicos: a cadeia leve
+	-- em andamento (lightStep 1..3 dentro da janela) segue sem esperar, mas
+	-- uma nova cadeia/pesado exige BASIC_MIN_INTERVAL desde o último golpe.
+	if payload.phase ~= "press" then
+		return
+	end
+	local chainAlive = attacker.lightStep > 0
+		and attacker.lightStep < 4
+		and (now - attacker.lastLightAt) <= BASIC_MIN_INTERVAL
+	if not chainAlive and (now - attacker.lastBasicAt) < BASIC_MIN_INTERVAL then
+		return
+	end
+	attacker.lastBasicAt = now
 
 	-- Aquisição em cone (§5.1, corrigido em 13/08 15h). A esfera à frente
 	-- media centro-a-centro e alcançava ~6 studs: no Studio, o jogador

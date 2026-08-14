@@ -43,6 +43,7 @@ local CombatAnimations = require(Shared.Data.CombatAnimations)
 local AbilityVfx = require(Shared.Data.AbilityVfx)
 local EnemyAbilities = require(Shared.Data.EnemyAbilities)
 local EnemyVfxAssets = require(Shared.Data.EnemyVfxAssets)
+local Npcs = require(Shared.Data.Npcs)
 
 local player = Players.LocalPlayer
 local state = ClientState.new(os.clock)
@@ -73,6 +74,7 @@ local enemyVfx = EnemyVfxPlayer.new({
 	runService = RunService,
 	recipes = EnemyAbilities,
 	assets = EnemyVfxAssets,
+	npcs = Npcs,
 	now = os.clock,
 })
 -- Clipes de animação reais (assets livres do Roblox). Mesmo motivo do

@@ -127,11 +127,42 @@ local parsed = parseArgs()
 local port = parsed.flags.port or DEFAULT_PORT
 local baseUrl = string.format("http://127.0.0.1:%d", port)
 
+-- Token local (alerta 14/08): o bridge gera um token por boot e escreve em
+-- .avb-debug/bridge.json; toda rota exige o header X-Avb-Token.
+local STATE_FILE = ".avb-debug/bridge.json"
+
+local function readBridgeToken(): string?
+	local ok, raw = pcall(fs.readFile, STATE_FILE)
+	if not ok then
+		return nil
+	end
+	local decodeOk, decoded = pcall(serde.decode, "json", raw)
+	if not decodeOk or type(decoded) ~= "table" then
+		return nil
+	end
+	if type(decoded.token) ~= "string" or decoded.token == "" then
+		return nil
+	end
+	return decoded.token
+end
+
+local bridgeToken = readBridgeToken()
+if bridgeToken == nil then
+	fail(
+		"bridge sem token: suba o bridge (lune run scripts/debug-bridge.luau) para gerar "
+			.. STATE_FILE
+			.. " com o X-Avb-Token"
+	)
+end
+
 local function call(method: string, path: string, body: any?): (boolean, any)
 	local request = {
 		url = baseUrl .. path,
 		method = method,
-		headers = { ["Content-Type"] = "application/json" },
+		headers = {
+			["Content-Type"] = "application/json",
+			["X-Avb-Token"] = bridgeToken,
+		},
 	}
 	if body ~= nil then
 		request.body = serde.encode("json", body)

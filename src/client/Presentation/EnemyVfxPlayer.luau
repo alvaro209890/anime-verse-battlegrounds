@@ -15,6 +15,7 @@ export type Player = {
 	runService: any,
 	recipes: any,
 	assets: any,
+	npcs: any?,
 	now: () -> number,
 	events: { [string]: EnemyEvent },
 	folders: { [string]: Folder },
@@ -126,19 +127,35 @@ local function ensureNodes(
 	return emitter :: ParticleEmitter, light :: PointLight
 end
 
-function EnemyVfxPlayer.new(
-	deps: { workspace: any, runService: any, recipes: any, assets: any, now: (() -> number)? }
-): Player
+function EnemyVfxPlayer.new(deps: {
+	workspace: any,
+	runService: any,
+	recipes: any,
+	assets: any,
+	npcs: any?,
+	now: (() -> number)?,
+}): Player
 	return {
 		workspace = deps.workspace,
 		runService = deps.runService,
 		recipes = deps.recipes,
 		assets = deps.assets,
+		npcs = deps.npcs,
 		now = deps.now or os.clock,
 		events = {},
 		folders = {},
 		connection = nil,
 	}
+end
+
+-- Alcance honesto da luz de ataque (docs/17 — honestidade visual): nunca
+-- maior que a hitbox real do NPC (NpcDef.attackRange: errante 4, ancorado 8).
+-- Função pura para ser travada por teste.
+function EnemyVfxPlayer.rangeFor(npcDef: any): number
+	if npcDef and type(npcDef.attackRange) == "number" then
+		return math.max(0, npcDef.attackRange)
+	end
+	return 8
 end
 
 function EnemyVfxPlayer.onEnemyEvent(player: Player, payload: { [string]: any }): ()
@@ -165,16 +182,22 @@ function EnemyVfxPlayer.step(player: Player): ()
 		if model and ability then
 			local emitter, light = ensureNodes(player, fighterId, model, ability)
 			if emitter and light then
+				-- Honestidade visual (docs/17): a luz nunca excede a hitbox real
+				-- do NPC (NpcDef.attackRange — errante 4, ancorado 8). Antes o
+				-- Range era fixo (12/8 telegraph, 16/10 ataque) e "mentia" sobre
+				-- o alcance do golpe.
+				local npcDef = if player.npcs then player.npcs.get(tostring(model:GetAttribute("NpcId") or "")) else nil
+				local honestRange = EnemyVfxPlayer.rangeFor(npcDef)
 				local progress = math.clamp((now - event.startedAt) / event.durationSeconds, 0, 1)
 				if event.kind == "telegraph" then
 					emitter.Enabled = true
 					emitter.Rate = 10
 					light.Brightness = 1.1 + math.sin(progress * math.pi) * 1.4
-					light.Range = if event.visualPattern == "slam" then 12 else 8
+					light.Range = honestRange
 				elseif event.kind == "attack" then
 					emitter.Enabled = false
 					light.Brightness = 2.8 * (1 - progress)
-					light.Range = if event.visualPattern == "slam" then 16 else 10
+					light.Range = honestRange
 					if not event.fired then
 						event.fired = true
 						emitter:Emit(if event.visualPattern == "slam" then 26 else 14)

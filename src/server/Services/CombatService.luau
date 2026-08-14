@@ -27,6 +27,10 @@ export type FighterState = {
 	cannotGuardUntil: number,
 	lightStep: number,
 	lastLightAt: number,
+	-- Último golpe básico executado (leve OU pesado) no servidor. Gate de
+	-- cadência anti-macro: o handler impõe o intervalo mínimo entre golpes;
+	-- sem isto um cliente no teto do rate limit atingia ~64-96 DPS.
+	lastBasicAt: number,
 	heavyMissUntil: number,
 	dashCooldownUntil: number,
 	iframeUntil: number,
@@ -111,6 +115,7 @@ function CombatService.createFighter(
 		cannotGuardUntil = 0,
 		lightStep = 0,
 		lastLightAt = 0,
+		lastBasicAt = 0,
 		heavyMissUntil = 0,
 		dashCooldownUntil = 0,
 		iframeUntil = 0,
@@ -635,7 +640,7 @@ function CombatService.tryEliteCycle(
 			if first.killed or first.pulseCounter or first.parried or first.iframe then
 				result = first
 			else
-				result = applyHit(
+				local second = applyHit(
 					target,
 					now + 0.1,
 					params.comboDamage,
@@ -644,8 +649,14 @@ function CombatService.tryEliteCycle(
 					"front",
 					true
 				)
-				result.damage += first.damage
-				result.broken = result.broken or first.broken
+				result = second
+				-- Alerta 14/08: o dano do 1º golpe só entra no total quando o 2º
+				-- realmente acertou. Parry/i-frame devolvem ok=true com damage 0 e
+				-- o flag correspondente — somar nesse caso atribuía dano fantasma.
+				if second.damage > 0 and not second.iframe then
+					result.damage += first.damage
+					result.broken = result.broken or first.broken
+				end
 			end
 		end
 		elite.aiPhase = "recovery"

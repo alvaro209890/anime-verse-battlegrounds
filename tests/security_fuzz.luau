@@ -24,12 +24,19 @@ end
 
 local function expectRejected(name: string, userId: number, contract: string, envelope: any, expectedReason: string)
 	local payload, reason = SecurityService.inspect(userId, contract, envelope)
-	check(name, payload == nil and reason == expectedReason, ("esperado %s, obtido %s"):format(expectedReason, tostring(reason)))
+	check(
+		name,
+		payload == nil and reason == expectedReason,
+		("esperado %s, obtido %s"):format(expectedReason, tostring(reason))
+	)
 end
 
-SecurityService.init({ decode = RemoteEnvelope.decode, now = function()
-	return 100
-end })
+SecurityService.init({
+	decode = RemoteEnvelope.decode,
+	now = function()
+		return 100
+	end,
+})
 
 expectRejected("não-tabela", 700, "AbilityIntent", "hostile", "envelope_schema")
 expectRejected("versão antiga", 701, "AbilityIntent", {
@@ -40,10 +47,28 @@ expectRejected("versão antiga", 701, "AbilityIntent", {
 	payload = {},
 }, "protocol_version")
 expectRejected("request vazio", 702, "AbilityIntent", RemoteEnvelope.create("AbilityIntent", {}, "", 1), "request_id")
-expectRejected("sequência zero", 703, "AbilityIntent", RemoteEnvelope.create("AbilityIntent", {}, "zero", 0), "client_sequence")
-expectRejected("sequência fracionária", 704, "AbilityIntent", RemoteEnvelope.create("AbilityIntent", {}, "fraction", 1.5), "client_sequence")
+expectRejected(
+	"sequência zero",
+	703,
+	"AbilityIntent",
+	RemoteEnvelope.create("AbilityIntent", {}, "zero", 0),
+	"client_sequence"
+)
+expectRejected(
+	"sequência fracionária",
+	704,
+	"AbilityIntent",
+	RemoteEnvelope.create("AbilityIntent", {}, "fraction", 1.5),
+	"client_sequence"
+)
 expectRejected("ação vazia", 705, "AbilityIntent", RemoteEnvelope.create("", {}, "action", 1), "action")
-expectRejected("ação divergente", 706, "AbilityIntent", RemoteEnvelope.create("BasicAttackIntent", {}, "mismatch", 1), "action_mismatch")
+expectRejected(
+	"ação divergente",
+	706,
+	"AbilityIntent",
+	RemoteEnvelope.create("BasicAttackIntent", {}, "mismatch", 1),
+	"action_mismatch"
+)
 expectRejected("payload não-tabela", 707, "AbilityIntent", {
 	protocolVersion = 2,
 	requestId = "payload",
@@ -70,33 +95,63 @@ local extraPayload = RemoteEnvelope.create("AbilityIntent", {
 }, "extra-payload", 1)
 expectRejected("campo extra no payload", 709, "AbilityIntent", extraPayload, "payload_schema")
 
-expectRejected("ability desconhecida", 710, "AbilityIntent", RemoteEnvelope.create("AbilityIntent", {
-	abilityId = "../../admin",
-	inputMode = "Press",
-	executionId = "unknown",
-	phase = "press",
-}, "bad-ability", 1), "payload_schema")
-expectRejected("input mode inválido", 711, "AbilityIntent", RemoteEnvelope.create("AbilityIntent", {
-	abilityId = "comet_shoulder",
-	inputMode = "Execute",
-	executionId = "bad-mode",
-	phase = "press",
-}, "bad-mode", 1), "payload_schema")
-expectRejected("mira impossível", 712, "AbilityIntent", RemoteEnvelope.create("AbilityIntent", {
-	abilityId = "comet_shoulder",
-	inputMode = "Press",
-	executionId = "bad-aim",
-	phase = "press",
-	aim = { x = 9, z = 0 },
-}, "bad-aim", 1), "payload_schema")
-expectRejected("dash neutro", 713, "DashIntent", RemoteEnvelope.create("DashIntent", {
-	direction = { x = 0, z = 0 },
-}, "neutral-dash", 1), "payload_schema")
-expectRejected("interação ambígua", 714, "InteractionIntent", RemoteEnvelope.create("InteractionIntent", {
-	npcId = "npc_threshold_instructor",
-	anchorId = "anchor_return",
-	phase = "complete",
-}, "ambiguous-interaction", 1), "payload_schema")
+expectRejected(
+	"ability desconhecida",
+	710,
+	"AbilityIntent",
+	RemoteEnvelope.create("AbilityIntent", {
+		abilityId = "../../admin",
+		inputMode = "Press",
+		executionId = "unknown",
+		phase = "press",
+	}, "bad-ability", 1),
+	"payload_schema"
+)
+expectRejected(
+	"input mode inválido",
+	711,
+	"AbilityIntent",
+	RemoteEnvelope.create("AbilityIntent", {
+		abilityId = "comet_shoulder",
+		inputMode = "Execute",
+		executionId = "bad-mode",
+		phase = "press",
+	}, "bad-mode", 1),
+	"payload_schema"
+)
+expectRejected(
+	"mira impossível",
+	712,
+	"AbilityIntent",
+	RemoteEnvelope.create("AbilityIntent", {
+		abilityId = "comet_shoulder",
+		inputMode = "Press",
+		executionId = "bad-aim",
+		phase = "press",
+		aim = { x = 9, z = 0 },
+	}, "bad-aim", 1),
+	"payload_schema"
+)
+expectRejected(
+	"dash neutro",
+	713,
+	"DashIntent",
+	RemoteEnvelope.create("DashIntent", {
+		direction = { x = 0, z = 0 },
+	}, "neutral-dash", 1),
+	"payload_schema"
+)
+expectRejected(
+	"interação ambígua",
+	714,
+	"InteractionIntent",
+	RemoteEnvelope.create("InteractionIntent", {
+		npcId = "npc_threshold_instructor",
+		anchorId = "anchor_return",
+		phase = "complete",
+	}, "ambiguous-interaction", 1),
+	"payload_schema"
+)
 
 local valid = RemoteEnvelope.create("AbilityIntent", {
 	abilityId = "comet_shoulder",
@@ -111,7 +166,12 @@ local replaySequence = RemoteEnvelope.create("AbilityIntent", valid.payload, "ne
 expectRejected("sequência atrasada", 715, "AbilityIntent", replaySequence, "replay_sequence")
 
 for sequence = 1, 8 do
-	local attack = RemoteEnvelope.create("BasicAttackIntent", { kind = "light", phase = "press" }, ("burst-%d"):format(sequence), sequence)
+	local attack = RemoteEnvelope.create(
+		"BasicAttackIntent",
+		{ kind = "light", phase = "press" },
+		("burst-%d"):format(sequence),
+		sequence
+	)
 	check(("burst permitido %d"):format(sequence), SecurityService.inspect(716, "BasicAttackIntent", attack) ~= nil)
 end
 local burstRejected = RemoteEnvelope.create("BasicAttackIntent", { kind = "light", phase = "press" }, "burst-9", 9)

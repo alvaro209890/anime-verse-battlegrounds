@@ -249,6 +249,21 @@ function ActorAnimator.step(animator: Animator): ()
 	if not actors then
 		return
 	end
+	-- Limpeza de cache (alerta 14/08): jointCache e seenPoseSerial são
+	-- chaveados por Model e vazavam quando o NPC morria/respawnava (45 s/180 s)
+	-- — a árvore destruída ficava presa por referência forte e a memória
+	-- crescia em sessão longa. Remove entradas de modelos que não estão mais
+	-- vivos no folder de atores (mesmo padrão do modelCache do HUD).
+	for model in animator.jointCache do
+		if not model.Parent or model.Parent ~= actors then
+			animator.jointCache[model] = nil
+		end
+	end
+	for model in animator.seenPoseSerial do
+		if not model.Parent or model.Parent ~= actors then
+			animator.seenPoseSerial[model] = nil
+		end
+	end
 	local now = animator.now()
 	for _, child in actors:GetChildren() do
 		if child:IsA("Model") and child:GetAttribute("PresentationActor") == true then
