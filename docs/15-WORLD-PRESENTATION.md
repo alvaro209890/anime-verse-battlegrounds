@@ -1,6 +1,6 @@
 # 15 — Fundação de mundo e apresentação F0
 
-> **Estado canônico em 2026-08-14 (`d35b0e9`):** implementado em código e validado por lint, 227 testes de domínio, 55 testes de animação/apresentação e build Rojo. O artefato atual possui 293.560 bytes; isso prova somente a saída do build, não boot ou runtime. A expansão de cenário, os VFX e as skins estão implementados, mas **não houve Play atual no Studio neste snapshot**.
+> **Estado canônico em 2026-08-14 (rodada de apresentação de combate):** implementado em código e validado por lint, 227 testes de domínio, 59 testes de animação/apresentação, 29 casos de fuzz e build Rojo. O artefato de verificação possui 294.793 bytes; isso prova somente a saída do build, não boot ou runtime. A expansão de cenário, os VFX e as skins estão implementados, mas **não houve Play atual no Studio neste snapshot**.
 
 ## 1. Objetivo e limite
 
@@ -13,11 +13,11 @@ O recorte entrega:
 - marcos físicos redundantes com o HUD de zona;
 - modelos low-poly funcionais para dummy, instrutor, Estilhaço Errante e Ancorado;
 - animação procedural de NPC para idle, locomoção, telegraph, ataque, morte, respawn e late join;
-- apresentação procedural local do jogador para leve, pesado, guarda e dash;
+- apresentação procedural local do jogador para leve, pesado, guarda e dash em fases, com receitas VFX locais para defesa, corrida e impacto temporário de chão;
 - telegraph com contorno branco e símbolo que não depende somente de cor;
 - prompts nativos de interação para Instrutor e Marco de Retorno, com distância/hold revalidados no servidor;
 - um gate de unlock para testar as três técnicas no Studio sem remote de cheat;
-- dados de apresentação separados das Instances para permitir testes headless.
+- dados de apresentação separados das Instances para permitir testes headless, documentados em `docs/25-COMBAT-PRESENTATION-PLAN.md`.
 
 Não entrega:
 
@@ -319,8 +319,8 @@ Comprovado automaticamente:
 - interação valida catálogo, alvo único, alcance, hold, abandono e limpeza de sessão;
 - o gate exige Studio + atributo e libera somente três técnicas;
 - unlock de sessão aparece para habilidade/HUD e fica fora do snapshot durável;
-- 227 testes de domínio e 55 testes de animação/apresentação passam; Selene passou e StyLua não foi executado nesta rodada por indisponibilidade do binário;
-- o build Rojo atual foi concluído com 293.560 bytes no check reproduzido desta rodada.
+- 227 testes de domínio, 59 testes de animação/apresentação e 29 casos de fuzz passam; Selene passou e StyLua não foi executado nesta rodada por indisponibilidade do binário;
+- o build Rojo atual foi concluído com 294.793 bytes no check reproduzido desta rodada.
 
 O último item é evidência de **build reproduzido**. Não demonstra que o arquivo abriu, iniciou servidor/cliente, renderizou Parts ou respondeu a input.
 

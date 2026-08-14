@@ -258,6 +258,14 @@ local GUARD = table.freeze(pose({
 	rightShoulderPitchDegrees = -48,
 	rightShoulderYawDegrees = 20,
 	rightShoulderRollDegrees = 14,
+	leftElbowPitchDegrees = -78,
+	rightElbowPitchDegrees = -82,
+	leftWristPitchDegrees = -14,
+	rightWristPitchDegrees = -14,
+	leftKneePitchDegrees = -12,
+	rightKneePitchDegrees = -12,
+	leftAnklePitchDegrees = 5,
+	rightAnklePitchDegrees = -5,
 	leftHipPitchDegrees = -4,
 	rightHipPitchDegrees = 4,
 }))
@@ -308,20 +316,70 @@ local HEAVY_STRIKE = table.freeze(pose({
 	leftKneePitchDegrees = -14,
 	rightKneePitchDegrees = -8,
 }))
-local DASH = table.freeze(pose({
-	rootHeightStuds = -0.12,
-	rootPitchDegrees = 18,
-	waistPitchDegrees = 11,
-	neckPitchDegrees = -9,
-	leftShoulderPitchDegrees = 31,
-	leftShoulderYawDegrees = -7,
+local DASH_PREP = table.freeze(pose({
+	rootHeightStuds = -0.08,
+	rootForwardStuds = -0.18,
+	rootPitchDegrees = -8,
+	rootYawDegrees = -8,
+	waistPitchDegrees = -6,
+	waistYawDegrees = -10,
+	neckPitchDegrees = 5,
+	neckYawDegrees = 8,
+	leftShoulderPitchDegrees = -24,
+	leftShoulderYawDegrees = -12,
 	leftShoulderRollDegrees = -8,
-	rightShoulderPitchDegrees = 35,
-	rightShoulderYawDegrees = 7,
-	rightShoulderRollDegrees = 8,
-	leftHipPitchDegrees = -12,
-	rightHipPitchDegrees = -12,
+	rightShoulderPitchDegrees = -18,
+	rightShoulderYawDegrees = 18,
+	rightShoulderRollDegrees = 10,
+	leftElbowPitchDegrees = -74,
+	rightElbowPitchDegrees = -82,
+	leftHipPitchDegrees = -22,
+	rightHipPitchDegrees = -28,
+	leftKneePitchDegrees = -34,
+	rightKneePitchDegrees = -42,
 }))
+local DASH_DRIVE = table.freeze(pose({
+	rootHeightStuds = -0.14,
+	rootForwardStuds = 0.16,
+	rootPitchDegrees = 24,
+	rootRollDegrees = -5,
+	waistPitchDegrees = 15,
+	waistRollDegrees = -5,
+	neckPitchDegrees = -12,
+	neckYawDegrees = -5,
+	leftShoulderPitchDegrees = 38,
+	leftShoulderYawDegrees = -18,
+	leftShoulderRollDegrees = -16,
+	rightShoulderPitchDegrees = 48,
+	rightShoulderYawDegrees = 12,
+	rightShoulderRollDegrees = 18,
+	leftElbowPitchDegrees = -44,
+	rightElbowPitchDegrees = -58,
+	leftHipPitchDegrees = 34,
+	rightHipPitchDegrees = -24,
+	leftKneePitchDegrees = -12,
+	rightKneePitchDegrees = -58,
+	leftAnklePitchDegrees = 18,
+	rightAnklePitchDegrees = -12,
+}))
+local DASH_RECOVER = table.freeze(pose({
+	rootHeightStuds = -0.06,
+	rootForwardStuds = 0.08,
+	rootPitchDegrees = 8,
+	waistPitchDegrees = 6,
+	neckPitchDegrees = -4,
+	leftShoulderPitchDegrees = 18,
+	leftShoulderYawDegrees = -8,
+	rightShoulderPitchDegrees = 21,
+	rightShoulderYawDegrees = 8,
+	leftHipPitchDegrees = 8,
+	rightHipPitchDegrees = -8,
+	leftKneePitchDegrees = -10,
+	rightKneePitchDegrees = -8,
+	leftAnklePitchDegrees = 8,
+	rightAnklePitchDegrees = -4,
+}))
+
 -- ── Ombro Cometa — o corpo inteiro vira o projétil ──────────────────────────
 -- A leitura obrigatória é "ombro primeiro". Os dois cotovelos ficam dobrados do
 -- início ao fim: se a mão estender, o golpe vira soco e passa a competir com o
@@ -1265,12 +1323,14 @@ function PlayerCombatAnimator.sample(
 	elseif action == "BasicHeavy" then
 		return attackPose(safeElapsed, 0.17, 0.285, DURATIONS.BasicHeavy, HEAVY_WINDUP, HEAVY_STRIKE)
 	elseif action == "Dash" then
-		if safeElapsed <= 0.075 then
-			return blend(NEUTRAL, DASH, smooth(safeElapsed / 0.075))
-		elseif safeElapsed <= 0.18 then
-			return pose(DASH :: any)
+		if safeElapsed <= 0.06 then
+			return blend(NEUTRAL, DASH_PREP, smooth(safeElapsed / 0.06))
+		elseif safeElapsed <= 0.13 then
+			return blend(DASH_PREP, DASH_DRIVE, smooth((safeElapsed - 0.06) / 0.07))
+		elseif safeElapsed <= 0.22 then
+			return blend(DASH_DRIVE, DASH_RECOVER, smooth((safeElapsed - 0.13) / 0.09))
 		end
-		return blend(DASH, NEUTRAL, smooth((safeElapsed - 0.18) / (DURATIONS.Dash - 0.18)))
+		return blend(DASH_RECOVER, NEUTRAL, smooth((safeElapsed - 0.22) / (DURATIONS.Dash - 0.22)))
 	elseif action == "Ability1" then
 		-- A sensação de avanço vem da inclinação do rig; não há translação X/Z
 		-- nem escrita no HumanoidRootPart. Quem move o jogador 7 studs é o

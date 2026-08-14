@@ -770,6 +770,57 @@ test("vfx: cada camada usa asset preparado conhecido e atlas existente", functio
 	assertTrue(ok, reason or "catálogo de VFX válido")
 end)
 
+test("vfx: defesa e dash usam receitas locais sem declarar acerto", function()
+	local guard = AbilityVfx.get("guard_raise")
+	local dash = AbilityVfx.get("dash_run")
+	assertTrue(guard ~= nil, "receita de defesa existe")
+	assertTrue(dash ~= nil, "receita de dash existe")
+	if not guard or not dash then
+		return
+	end
+	assertEq(guard.action, "GuardDown", "defesa mapeia para GuardDown")
+	assertEq(dash.action, "Dash", "corrida mapeia para Dash")
+	assertEq(guard.actionDurationSeconds, PlayerCombatAnimator.Durations.GuardDown, "duração da defesa")
+	assertEq(dash.actionDurationSeconds, PlayerCombatAnimator.Durations.Dash, "duração do dash")
+	for _, recipe in { guard, dash } do
+		for _, layer in recipe.layers do
+			assertTrue(not layer.requiresConfirmation, recipe.action .. "/" .. layer.id .. " não afirma contato")
+			assertTrue(layer.radiusStuds <= recipe.rangeStuds, recipe.action .. "/" .. layer.id .. " respeita o raio")
+		end
+	end
+	local guardPlan = AbilityVfx.planAt(guard, 0.08, false)
+	local dashPlan = AbilityVfx.planAt(dash, 0.20, false)
+	assertTrue(#guardPlan >= 1, "defesa acende durante a entrada")
+	assertTrue(#dashPlan >= 1, "dash acende no atrito")
+end)
+
+test("apresentação: dash tem preparação, passada e recuperação distintas", function()
+	local prep = PlayerCombatAnimator.sample("Dash", 0.03, false)
+	local drive = PlayerCombatAnimator.sample("Dash", 0.11, false)
+	local recover = PlayerCombatAnimator.sample("Dash", 0.20, false)
+	local neutral = PlayerCombatAnimator.sample("Dash", PlayerCombatAnimator.Durations.Dash, false)
+	assertTrue(prep.rootForwardStuds < 0, "dash comprime antes de sair")
+	assertTrue(drive.rootForwardStuds > prep.rootForwardStuds, "dash entra no passo")
+	assertTrue(math.abs(drive.rightKneePitchDegrees) > math.abs(prep.rightKneePitchDegrees), "dash levanta a perna de impulso")
+	assertTrue(recover.rootForwardStuds > 0, "dash tem recuperação com peso à frente")
+	assertEq(neutral.rootForwardStuds, 0, "dash volta ao neutro")
+end)
+
+test("apresentação: defesa fecha braços, joelhos e pulsos", function()
+	local guard = PlayerCombatAnimator.sample("GuardDown", 0.12, false)
+	assertTrue(guard.leftShoulderPitchDegrees < -35, "braço esquerdo fecha")
+	assertTrue(guard.rightShoulderPitchDegrees < -35, "braço direito fecha")
+	assertTrue(guard.leftElbowPitchDegrees < 0 and guard.rightElbowPitchDegrees < 0, "cotovelos sustentam a guarda")
+	assertTrue(guard.leftKneePitchDegrees < 0 and guard.rightKneePitchDegrees < 0, "joelhos absorvem a postura")
+	assertTrue(guard.leftWristPitchDegrees ~= 0 or guard.rightWristPitchDegrees ~= 0, "punhos dão acabamento à defesa")
+end)
+
+test("vfx: bootstrap conecta defesa e dash ao player local", function()
+	local source = fs.readFile("src/client/init.client.lua")
+	assertTrue(source:find("AbilityVfxPlayer.play(abilityVfx, action)", 1, true) ~= nil, "input dispara VFX local")
+	assertTrue(source:find("servidor continua", 1, true) ~= nil, "comentário preserva autoridade")
+end)
+
 test("vfx: bootstrap instancia, inicia e confirma o player", function()
 	local source = fs.readFile("src/client/init.client.lua")
 	assertTrue(source:find("abilityVfx = AbilityVfxPlayer.new", 1, true) ~= nil, "player de VFX é instanciado")

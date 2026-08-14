@@ -1,10 +1,10 @@
 # 12 — Testes e evidências
 
-> **Snapshot de implementação:** 2026-08-14, derivado de `d7c44e8` e atualizado no release desta rodada. `tests/run.luau` executa **227 testes de domínio** e `tests/animation.luau` executa **55 testes de animação/apresentação**. As duas suítes principais totalizam **282 casos**, e `tests/security_fuzz.luau` adiciona **29 casos determinísticos**; o total automatizado desta rodada é **311 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada (14/08): overlay procedural que nascia morto por corrida no anexo do rig, corpo que deixou de girar no golpe (mira declarada na intenção), tremida de câmera e hit-stop recalibrados, e luz de verdade na camada de VFX.
+> **Snapshot de implementação:** 2026-08-14, derivado de `d7c44e8` e atualizado no release desta rodada. `tests/run.luau` executa **227 testes de domínio** e `tests/animation.luau` executa **59 testes de animação/apresentação**. As duas suítes principais totalizam **286 casos**, e `tests/security_fuzz.luau` adiciona **29 casos determinísticos**; o total automatizado desta rodada é **315 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada (14/08): overlay procedural que nascia morto por corrida no anexo do rig, corpo que deixou de girar no golpe (mira declarada na intenção), tremida de câmera e hit-stop recalibrados, e luz de verdade na camada de VFX.
 
 ## 1. Estado da execução
 
-No snapshot de implementação atual, a verificação automatizada registrou 227/227 em `tests/run.luau`, 55/55 em `tests/animation.luau` e 29/29 em `tests/security_fuzz.luau`. Selene e StyLua continuam gates separados e precisam ser executados no mesmo release. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
+No snapshot de implementação atual, a verificação automatizada registrou 227/227 em `tests/run.luau`, 59/59 em `tests/animation.luau` e 29/29 em `tests/security_fuzz.luau`. Selene e StyLua continuam gates separados e precisam ser executados no mesmo release. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
 
 **Registro histórico, não evidência do snapshot atual:** uma rodada anterior teve confirmação em Play pelo jogador, com `avb-debug sync` = 56/56, de que a animação de golpe movia o corpo e o personagem não girava sozinho. Essa evidência pertence ao estado anterior documentado em `docs/14` e não deve ser usada para declarar o commit `d7c44e8` validado em runtime. Neste snapshot, o Play atual continua pendente.
 
@@ -45,7 +45,7 @@ O gate de tronco tem nome feio de propósito. Em 2026-08-14 o place canônico es
 
 Em checkout Windows com `core.autocrlf=true`, os arquivos de trabalho podem estar em CRLF enquanto `stylua.toml` exige `Unix`; nesse caso, o check direto acusa somente final de linha. Para reproduzir o CI, use uma cópia com bytes LF canônicos do Git (`git -c core.autocrlf=false archive ...`). `--line-endings Windows` só é equivalente quando todo o checkout está uniformemente em CRLF; ele não resolve uma árvore mista. Não reformatar código só para mascarar essa conversão do checkout.
 
-## 2. Cobertura existente: exatamente 227 testes
+## 2. Cobertura existente: exatamente 227 testes de domínio
 
 | Área | Cobertura |
 |---|---|
@@ -78,6 +78,7 @@ A divisão é deliberada: matemática e decisão ficam em módulos puros (`Geome
 
 - **`tests/harness.luau`** simula o mínimo que o Lune não fornece: `_G.game`, `_G.Instance`, `_G.task` e resolução de `require(script.Parent.X)` no filesystem.
 - **`tests/run.luau`** contém os 227 casos e usa módulos reais de `src/`, com um miniframework de asserts.
+- **`tests/animation.luau`** contém 59 casos de apresentação procedural, VFX, áudio, juntas, defesa e dash.
 - **`tests/security_fuzz.luau`** executa 29 casos determinísticos de envelope, payload, replay, sequência, rate limit, isolamento por usuário e rejoin.
 - **Services testáveis por injeção** recebem dependências em `init()`: `CatalogService`, `AbilityService`, `ResourceService`, `PlayerSessionService`, `ZoneService`, `ProgressionService`, `QuestService`, `SpatialService`, `EnemyService` e `SaveService` (adaptador de store mockado). O bootstrap Roblox monta o grafo real.
 - **`src/shared/TaskCompat.luau`** usa `task` nativo no Roblox e o polyfill somente no harness.

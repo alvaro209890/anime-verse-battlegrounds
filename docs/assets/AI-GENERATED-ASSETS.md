@@ -14,10 +14,15 @@ Os arquivos `domain-expansion-*.png` usam a paleta conceitual do mundo: Slate es
 | `domain-expansion-border-gate.png` | Referência da fronteira e duas rotas | Contrato de dano ou regra de PvP |
 | `domain-expansion-modular-ruins.png` | Biblioteca de peças para futura modelagem | Atlas Roblox ou malha 3D importável |
 | `domain-expansion-vfx-moodboard.png` | Hierarquia cromática de telegraphs e VFX | Partículas prontas para produção |
+| `combat-presentation-reference.png` | Referência-mãe de defesa, dash, materiais e escala de impacto | Captura de runtime ou atlas jogável |
+| `defense-guard-presentation.png` | Silhueta da defesa, casca ciano, órbitas e faíscas | Decal ou bloqueio confirmado |
+| `dash-run-presentation.png` | Preparação, passada, afterimages e atrito da corrida | Animação publicada ou teleport visual |
+| `ground-break-impact-presentation.png` | Sequência de crack, estilhaço, poeira e dissipação | Alteração permanente de piso/colisão |
+| `impact-vfx-micro-library.png` | Motivos reutilizáveis de anel, rastro, crack e debris | Spritesheet de produção sem preparação |
 
 ## Licença e procedência
 
-As imagens desta lista foram geradas para este projeto e devem ser tratadas como **conceito visual original**. Não foram baixadas de uma franquia, personagem ou pacote comercial. Assets externos gratuitos continuam documentados separadamente em `docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md`; cada pacote externo precisa ser verificado individualmente antes de entrar no repositório ou no Roblox Studio.
+As imagens desta lista foram geradas para este projeto e devem ser tratadas como **conceito visual original**. Não foram baixadas de uma franquia, personagem ou pacote comercial. Assets externos gratuitos continuam documentados em `docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md` e `docs/25-COMBAT-PRESENTATION-PLAN.md`; cada pacote externo precisa ser verificado individualmente antes de entrar no repositório ou no Roblox Studio.
 
 ## Pipeline futuro
 

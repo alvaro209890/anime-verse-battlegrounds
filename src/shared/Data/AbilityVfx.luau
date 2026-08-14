@@ -471,6 +471,98 @@ local Techniques: { [string]: TechniqueVfx } = {
 			}),
 		},
 	},
+
+	-- ── Apresentação de defesa ───────────────────────────────────────────────
+	-- A defesa é uma ação local de leitura imediata. Nenhuma camada abaixo afirma
+	-- que um golpe foi bloqueado; confirmação de guarda continua vindo de CombatEvent.
+	guard_raise = {
+		abilityId = "__presentation_guard",
+		action = "GuardDown",
+		actionDurationSeconds = 0.16,
+		rangeStuds = 3,
+		coreRgb = { 190, 230, 255 },
+		edgeRgb = { 44, 172, 224 },
+		layers = {
+			layer({
+				id = "guard_shell",
+				kind = "shell",
+				joint = "torso",
+				assetKey = "energy_ball",
+				startSeconds = 0,
+				durationSeconds = 0.16,
+				attackSeconds = 0.05,
+				releaseSeconds = 0.05,
+				radiusStuds = 2.1,
+				rgb = { 44, 172, 224 },
+				rate = 28,
+			}),
+			layer({
+				id = "guard_ring",
+				kind = "ring",
+				joint = "root",
+				assetKey = "power_ring",
+				startSeconds = 0.02,
+				durationSeconds = 0.14,
+				attackSeconds = 0.03,
+				releaseSeconds = 0.08,
+				radiusStuds = 2.4,
+				rgb = { 190, 230, 255 },
+				rate = 0,
+			}),
+		},
+	},
+
+	-- ── Dash de corrida ──────────────────────────────────────────────────────
+	-- O efeito desenha aceleração no chão; não cria teleporte, hitbox ou posição.
+	dash_run = {
+		abilityId = "__presentation_dash",
+		action = "Dash",
+		actionDurationSeconds = 0.32,
+		rangeStuds = 8,
+		coreRgb = { 150, 235, 255 },
+		edgeRgb = { 44, 172, 224 },
+		layers = {
+			layer({
+				id = "dash_trail",
+				kind = "trail",
+				joint = "torso",
+				assetKey = "energy_ball",
+				startSeconds = 0.03,
+				durationSeconds = 0.23,
+				attackSeconds = 0.03,
+				releaseSeconds = 0.12,
+				radiusStuds = 4.6,
+				rgb = { 150, 235, 255 },
+				rate = 0,
+			}),
+			layer({
+				id = "dash_foot_ring",
+				kind = "ring",
+				joint = "root",
+				assetKey = "power_ring",
+				startSeconds = 0.0,
+				durationSeconds = 0.22,
+				attackSeconds = 0.03,
+				releaseSeconds = 0.14,
+				radiusStuds = 2.6,
+				rgb = { 236, 184, 86 },
+				rate = 0,
+			}),
+			layer({
+				id = "dash_ground_break",
+				kind = "burst",
+				joint = "root",
+				assetKey = "explosion_0005",
+				startSeconds = 0.17,
+				durationSeconds = 0.14,
+				attackSeconds = 0.02,
+				releaseSeconds = 0.10,
+				radiusStuds = 2.8,
+				rgb = { 236, 184, 86 },
+				rate = 0,
+			}),
+		},
+	},
 }
 
 local ByAction: { [string]: TechniqueVfx } = {}

@@ -302,7 +302,7 @@ Para W1 passar, a evidência precisa mostrar, no mínimo:
 - percurso completo pelas duas saídas sem queda entre pisos;
 - prompt do Instrutor e hold de 1,5 s do Marco de Retorno funcionando com validação server-side.
 
-Até essa execução existir, W1 permanece **pendente**, mesmo com 227 testes de domínio e 55 testes de animação/apresentação verdes.
+Até essa execução existir, W1 permanece **pendente**, mesmo com 227 testes de domínio e 59 testes de animação/apresentação verdes.
 
 ### Gate A0 — direção e originalidade
 
@@ -576,3 +576,20 @@ com `LightEmission` brilha sem iluminar.
 > código; a terceira era o jogador nunca ter chegado perto o bastante para o
 > código rodar. Custa uma medição de distância e evita reescrever um sistema
 > que estava certo.
+
+
+## 11. Pacote de apresentação de defesa, dash e chão quebrando — 2026-08-14
+
+Esta rodada adiciona um pacote procedural focado nas ações que o jogador repete com maior frequência. A defesa agora tem braços fechados, cotovelos, punhos, joelhos e pequenos ajustes de tornozelo; a leitura é de absorção e não de pose estática. O dash deixou de ser uma pose única e passou a ter quatro momentos: compressão, entrada no passo, passada de aceleração e recuperação. A raiz visual pode inclinar e avançar poucos studs como ilusão de peso, mas nunca escreve posição física ou `HumanoidRootPart.CFrame`.
+
+O catálogo `src/shared/Data/AbilityVfx.luau` recebeu as receitas `guard_raise` e `dash_run`. A defesa usa uma casca ciano e um anel curto. O dash usa rastro próximo ao torso, anel de atrito nos pés e burst âmbar de chão quebrando. Todas as camadas são locais e não confirmadas: elas não afirmam dano, acerto ou bloqueio. O player de VFX foi conectado ao fluxo de input em `src/client/init.client.lua`, enquanto a confirmação de contato continua exclusiva do `CombatEvent` server-side.
+
+| Ação | Fases da pose | Apresentação | O que não pode fazer |
+|---|---|---|---|
+| Defesa | Fechar → sustentar → liberar | Casca ciano, órbita e faíscas de deflexão | Não declarar bloqueio sem evento autoritativo |
+| Dash | Comprimir → acelerar → passar → recuperar | Rastro ciano, atrito âmbar e estilhaços temporários | Não teleportar, criar hitbox ou alterar posição válida |
+| Chão quebrando | Marcar → levantar → dissipar | Anel, crack, poeira e debris em pool futuro | Não abrir buraco persistente nem mudar colisão |
+
+As imagens `docs/assets/combat-presentation-reference.png`, `defense-guard-presentation.png`, `dash-run-presentation.png`, `ground-break-impact-presentation.png` e `impact-vfx-micro-library.png` são referências conceituais originais. O documento `docs/25-COMBAT-PRESENTATION-PLAN.md` contém o inventário, as fontes CC0 candidatas e a ordem de integração. Elas orientam a arte, mas não são evidência de Play no Studio.
+
+A suíte headless passou a cobrir 59 casos de animação/apresentação, incluindo a distinção entre as fases do dash, a postura defensiva e a conexão das receitas ao input. A aprovação visual ainda exige A1/W1 no Roblox Studio, com captura em frente, perfil e três quartos, além de verificação de foot sliding, interseção, FPS e redução de efeitos em Android.

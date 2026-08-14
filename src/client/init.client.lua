@@ -173,6 +173,11 @@ InputController.subscribe(input, function(action: string, _payload: { [string]: 
 		-- O degrau da cadeia já foi avançado pelo play acima: é ele que decide
 		-- qual dos quatro clipes leves entra.
 		CharacterAnimationPlayer.play(characterAnimation, action, playerCombatAnimator.comboStep)
+		-- Defesa e dash recebem somente apresentação local. O servidor continua
+		-- decidindo bloqueio, custo, cooldown e deslocamento real.
+		if abilityVfx then
+			AbilityVfxPlayer.play(abilityVfx, action)
+		end
 	end
 end)
 local interaction = InteractionController.new({
