@@ -690,6 +690,47 @@ test("vfx: nenhum raio do cometa ultrapassa o alcance da habilidade", function()
 	end
 end)
 
+test("vfx: cada camada usa asset preparado conhecido e atlas existente", function()
+	local assets = AbilityVfx.allAssets()
+	assertEq(#assets, 5, "cinco assets preparados no catálogo")
+	for _, asset in assets do
+		assertTrue(fs.isFile(asset.preparedFile), "atlas preparado existe: " .. asset.preparedFile)
+		assertTrue(asset.assetId == nil, "IDs Roblox não são inventados antes da publicação")
+		assertTrue(asset.framerate > 0, "framerate positivo: " .. asset.key)
+	end
+	for _, technique in AbilityVfx.all() do
+		for _, layer in technique.layers do
+			assertTrue(layer.assetKey ~= nil, technique.action .. "/" .. layer.id .. " tem asset")
+			local asset = AbilityVfx.assetFor(layer.assetKey)
+			assertTrue(asset ~= nil, technique.action .. "/" .. layer.id .. " resolve asset")
+		end
+	end
+	local ok, reason = AbilityVfx.validate()
+	assertTrue(ok, reason or "catálogo de VFX válido")
+end)
+
+test("vfx: bootstrap instancia, inicia e confirma o player", function()
+	local source = fs.readFile("src/client/init.client.lua")
+	assertTrue(source:find("abilityVfx = AbilityVfxPlayer.new", 1, true) ~= nil, "player de VFX é instanciado")
+	assertTrue(source:find("AbilityVfxPlayer.start(abilityVfx)", 1, true) ~= nil, "player de VFX é iniciado")
+	assertTrue(
+		source:find("AbilityVfxPlayer.confirm(abilityVfx", 1, true) ~= nil,
+		"VFX recebe confirmação autoritativa"
+	)
+	assertTrue(
+		source:find('payload.abilityId == "pulse_return" and payload.outcome == "counter"', 1, true) ~= nil,
+		"contra é filtrado pelo evento"
+	)
+	assertTrue(
+		source:find('PlayerCombatAnimator.play(playerCombatAnimator, "Ability3Counter")', 1, true) ~= nil,
+		"contra inicia pose específica"
+	)
+	assertTrue(
+		source:find('AbilityVfxPlayer.play(abilityVfx, "Ability3Counter")', 1, true) ~= nil,
+		"contra inicia VFX específico"
+	)
+end)
+
 -- ── HUD de combate: números de dano + barras de inimigos (docs/17) ─────────
 
 test("hud: número de dano só com desfecho e dano positivo", function()

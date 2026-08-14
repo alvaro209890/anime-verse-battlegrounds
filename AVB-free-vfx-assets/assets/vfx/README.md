@@ -45,3 +45,19 @@ O pack [PIPOYA FREE VFX Time Magic](https://pipoya.itch.io/pipoya-free-vfx-time-
 | `pulse_return_counter` | Power Rings + Explosion | Contra confirmado; não usar na intenção local |
 
 Nenhuma alteração de lógica foi feita neste passo para colocar IDs fictícios. A próxima etapa de implementação deve adicionar os IDs publicados em configuração dirigida por dados, configurar os emissores no `AbilityVfxPlayer` e executar o playtest no Studio com hit, miss, guard e counter.
+
+## Atlas preparados para flipbook
+
+A primeira integração usa os seguintes atlas uniformes gerados por `prepare_vfx_atlases.py`:
+
+| Arquivo | Layout | Uso no combate |
+|---|---|---|
+| `prepared/energy_ball_4x4.png` | 4×4 | carga, aura e casca do Ombro Cometa/Retorno |
+| `prepared/power_ring_2x2.png` | 2×2 | onda de choque, dispersão e contra |
+| `prepared/lightning_shock_8x8.png` | 8×8 | dois arcos da Cadência e eco |
+| `prepared/explosion_0003_cc0_1024px_8x8.png` | 8×8 | flash/burst do Ombro Cometa |
+| `prepared/explosion_0005_cc0_1024px_8x8.png` | 8×8 | burst da Cadência e contra do Pulso |
+
+Os atlas são usados somente quando `src/shared/Data/AbilityVfx.luau` tiver um `assetId` publicado válido para a chave correspondente. Até lá, o `AbilityVfxPlayer` usa o fallback procedural, permitindo testar timing, confirmação autoritativa e limpeza sem depender do upload.
+
+O processo recomendado é importar cada atlas no Roblox Studio, registrar os IDs e substituir apenas `assetId = nil` pelo valor `rbxassetid://...`. Não use o caminho local do Git como `ParticleEmitter.Texture` e não crie IDs fictícios. Após o preenchimento, rode o roteiro de Play documentado em `docs/20-VFX-ASSETS.md`.
