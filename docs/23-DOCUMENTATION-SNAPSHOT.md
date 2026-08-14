@@ -13,6 +13,7 @@ Este arquivo é a referência única para o estado técnico atual do repositóri
 | Última alteração de código-base | `test: cover rate-limit reset across rejoin` |
 | Testes de domínio | 227 passaram, 0 falharam |
 | Testes de animação/apresentação | 55 passaram, 0 falharam |
+| Fuzz headless de segurança | 29 passaram, 0 falharam |
 | Selene | 0 erros, 0 warnings, 0 parse errors nesta rodada |
 | StyLua | não executado nesta rodada: binário não disponível no ambiente |
 | Rojo | build aprovado; check local de 293.560 bytes |
@@ -43,6 +44,6 @@ Também foi adicionada uma regressão A1 para o blocking procedural do **Ombro C
 
 A receita de build existente em `scripts/build-studio.ps1` continua sendo a fonte de geração do artefato: instala Wally, respeita lock vivo do Studio, remove apenas lock órfão, gera o `.rbxl` esperado, verifica tamanho/data e imprime SHA-256. O bridge permanece limitado a sincronização e inspeção; não foi alegado que ele executa Play, tira screenshots ou mede dispositivos reais.
 
-Nesta rodada, a suíte de animação passou com **55 casos**, a suíte de domínio passou com **227 casos**, e foram adicionados três cenários headless de dois jogadores para o Gate R1, incluindo limpeza do orçamento no rejoin. O total automatizado atual é **282 casos**. Selene, Rojo e `git diff --check` passaram; StyLua não foi executado porque o binário não está disponível neste ambiente. Isso continua sendo evidência de contratos, apresentação pura e árvore de build; não é evidência de boot, colisão, replicação, latência, Android, gamepad, DataStore real ou qualidade visual final.
+Nesta rodada, a suíte de animação passou com **55 casos**, a suíte de domínio passou com **227 casos**, e o fuzz headless de segurança passou com **29 casos**. Foram adicionados três cenários headless de dois jogadores para o Gate R1, incluindo limpeza do orçamento no rejoin. O total automatizado atual é **311 casos**. Selene, Rojo e `git diff --check` passaram; StyLua não foi executado porque o binário não está disponível neste ambiente. Isso continua sendo evidência de contratos, apresentação pura e árvore de build; não é evidência de boot, colisão, replicação, latência, Android, gamepad, DataStore real ou qualidade visual final.
 
 A conclusão recomendada permanece: preparar e abrir o artefato atual no Studio, executar W1, registrar evidência de runtime, depois A1/R1/W2. Nenhuma dessas validações externas deve ser marcada como concluída apenas por estes testes.

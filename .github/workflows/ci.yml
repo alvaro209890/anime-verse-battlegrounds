@@ -27,6 +27,7 @@ jobs:
         run: |
           lune run tests/run.luau
           lune run tests/animation.luau
+          lune run tests/security_fuzz.luau
 
       - name: Wally — instalar dependências
         run: |
