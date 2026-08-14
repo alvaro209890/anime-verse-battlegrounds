@@ -172,6 +172,83 @@ test("apresentação: quatro atores e estilo do mundo passam validação", funct
 	assertTrue(WorldPresentation.style().craterSegments >= 12, "cratera legível")
 end)
 
+test("skin: os dois bots do spawn têm receita de rig R15 válida", function()
+	local ok, reason = WorldPresentation.validateRigs()
+	assertTrue(ok, reason)
+	assertEq(#WorldPresentation.allRigs(), 2, "instrutor e boneco de treino")
+
+	local instructor = WorldPresentation.rigFor("npc_threshold_instructor")
+	local dummy = WorldPresentation.rigFor("npc_training_dummy")
+	assertTrue(instructor ~= nil, "receita do instrutor")
+	assertTrue(dummy ~= nil, "receita do boneco")
+	if not instructor or not dummy then
+		return
+	end
+	-- Rosto do instrutor é textura embutida do cliente: não depende de download
+	-- nem pode ser moderada. O boneco não tem decal — usa botão costurado.
+	assertEq(instructor.faceTexture, "rbxasset://textures/face.png", "rosto embutido")
+	assertEq(dummy.faceTexture, nil, "saco de estopa não usa rosto de avatar")
+	assertEq(WorldPresentation.rigFor("enemy_wandering_shard"), nil, "estilhaço não é humanoide")
+
+	-- Toda peça precisa pousar numa parte que existe no rig R15: um host com
+	-- erro de digitação viraria roupa solta no chão em vez de vestir o boneco.
+	for _, rig in WorldPresentation.allRigs() do
+		assertTrue(#rig.gear >= 8, rig.npcId .. " sem gear suficiente para ler como personagem")
+		for _, piece in rig.gear do
+			assertTrue(
+				WorldPresentation.rigHostExists(piece.host),
+				("%s: peça %s pendurada em host inexistente (%s)"):format(rig.npcId, piece.name, piece.host)
+			)
+		end
+	end
+end)
+
+test("skin: gear inválido é recusado antes de virar Instance", function()
+	local function piece(overrides: { [string]: any }): any
+		local base = {
+			name = "Teste",
+			class = "Part",
+			shape = "Block",
+			host = "UpperTorso",
+			sizeStuds = { 1, 1, 1 },
+			offsetStuds = { 0, 0, 0 },
+			rotationDegrees = { 0, 0, 0 },
+			rgb = { 10, 20, 30 },
+			material = "Fabric",
+		}
+		for key, value in overrides do
+			base[key] = value
+		end
+		return base
+	end
+
+	assertTrue(WorldPresentation.validateGear(piece({})), "peça bem formada passa")
+	assertTrue(not WorldPresentation.validateGear(piece({ host = "Tronco" })), "host inexistente falha")
+	assertTrue(not WorldPresentation.validateGear(piece({ material = "Plutonio" })), "material fora da lista falha")
+	-- Peça a 9 studs do host não é roupa: é peça solta boiando ao lado.
+	assertTrue(not WorldPresentation.validateGear(piece({ offsetStuds = { 0, 9, 0 } })), "offset distante falha")
+	assertTrue(
+		not WorldPresentation.validateGear(piece({ sizeStuds = { 0.01, 1, 1 } })),
+		"peça menor que o mínimo falha"
+	)
+	assertTrue(not WorldPresentation.validateGear(piece({ rgb = { 300, 0, 0 } })), "rgb fora de 0..255 falha")
+	-- WedgePart não tem Shape: pedir cilindro numa cunha seria engano silencioso.
+	assertTrue(
+		not WorldPresentation.validateGear(piece({ class = "WedgePart", shape = "Cylinder" })),
+		"cunha com shape de cilindro falha"
+	)
+
+	-- Cabelo/capuz que desce na frente do rosto tapa os olhos do instrutor.
+	local franjaBaixa = piece({ host = "Head", sizeStuds = { 0.3, 0.4, 0.3 }, offsetStuds = { 0, 0.1, -0.6 } })
+	assertTrue(not WorldPresentation.gearClearsFace(franjaBaixa), "franja na frente dos olhos falha")
+	local franjaAlta = piece({ host = "Head", sizeStuds = { 0.3, 0.36, 0.26 }, offsetStuds = { 0, 0.52, -0.48 } })
+	assertTrue(WorldPresentation.gearClearsFace(franjaAlta), "franja acima da faixa dos olhos passa")
+	-- Peça atrás do plano do rosto some dentro da malha e não ocluí nada.
+	local nuca = piece({ host = "Head", sizeStuds = { 1.3, 1.05, 0.5 }, offsetStuds = { 0, 0.14, 0.52 } })
+	assertTrue(WorldPresentation.gearClearsFace(nuca), "capuz atrás da cabeça passa")
+	assertTrue(WorldPresentation.gearClearsFace(piece({})), "peça fora da cabeça não é checada")
+end)
+
 test("apresentação: poses procedurais preservam antecipação, impacto e queda", function()
 	local recipe = WorldPresentation.getActor("enemy_wandering_shard")
 	assertTrue(recipe ~= nil, "receita")

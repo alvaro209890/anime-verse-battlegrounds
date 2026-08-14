@@ -127,37 +127,85 @@ inteiro por ação, com a decisão em dados puros e testados.
   `economy.roblox.com/v2/assets/<id>/details`:
   `522635514` "R15 Sword Slash" e `522638767` "R15 Sword Lunge" (AssetTypeId 24).
 
-| Ação | Clipe | Velocidade | Duração tocada | Orçamento da ação |
-|---|---|---:|---:|---:|
-| Leve 1 (jab) | Slash | 2,30 | 0,230 s | 0,240 s |
-| Leve 2 (direto) | Slash | 1,85 | 0,286 s | 0,300 s |
-| Leve 3 (chute) | Lunge | 1,65 | 0,364 s | 0,380 s |
-| Leve 4 (finalizador) | Lunge | 1,30 | 0,462 s | 0,480 s |
-| Pesado | Lunge | 1,20 | 0,500 s | 0,520 s |
-| Ombro Cometa | Lunge | 0,85 | 0,706 s | 0,750 s |
-| Cadência Quebrada | Slash | 1,05 | 0,505 s | 0,680 s |
-| Retorno de Pulso | Slash | 0,95 | 0,558 s | 0,730 s |
-| Eco da Cadência | Slash | 1,30 | 0,408 s | 0,520 s |
-| Contra do Pulso | Lunge | 1,55 | 0,387 s | 0,440 s |
+### 4.5 Correção de 14/08 — a causa real de "as animações estão péssimas"
+
+Duas coisas foram medidas no Studio (via MCP) em **2026-08-14** e derrubaram a
+premissa da seção anterior.
+
+**(1) O overlay procedural não estava sendo aplicado. Nunca.**
+
+O avatar R15 atual do Roblox monta o rig com `AnimationConstraint`
+(Attachment→Attachment) e **zero `Motor6D`**. Medição no personagem do jogador
+em sessão de Play: 15 `AnimationConstraint` (`Root`, `Waist`, `Neck`,
+`LeftShoulder`, …), 14 `BallSocketConstraint`, **nenhum `Motor6D`**.
+
+O `PlayerCombatAnimator` procurava exclusivamente `Motor6D`. Resultado:
+`animator.joints` ficava vazio e as ~1400 linhas de pose — as quatro silhuetas
+da cadeia, os quadros das três técnicas, o hit-stop, o follow-through — não
+saíam do papel. **O que o jogador via era só o clipe de espada acelerado.**
+
+`AnimationConstraint` expõe `Transform: CFrame` com a mesma semântica do
+`Motor6D`, então a correção foi aceitar as duas classes na busca. Vale para o
+`ActorAnimator` também (que agora posa os bots do spawn, de rig R15).
+
+**(2) O "R15 Sword Lunge" não é uma animação.**
+
+`KeyframeSequenceProvider:GetKeyframeSequenceAsync` mostrou:
+
+| Asset | Nome | Criador | Prioridade | Keyframes |
+|---|---|---|---|---|
+| `522635514` | R15 Corte de Espada | Roblox (1) | Action | **0 · 0,20 · 0,30 · 0,50 s** |
+| `522638767` | R15 Lunge de Espada | Roblox (1) | Idle | **0 · 1,5 s** — só dois |
+
+O lunge tem dois quadros: é uma interpolação linear entre duas poses, sem
+conteúdo no meio. Acelerado 2,7×–2,9× para caber numa janela de meio segundo,
+virava espasmo — e era ele que estava no finalizador, no pesado e no Ombro
+Cometa. **Saiu do catálogo**, e um teste impede que volte.
+
+O corte, por outro lado, tem estrutura legível: antecipação até 0,20, **golpe
+de 0,20 a 0,30**, recuperação até 0,50.
+
+**Janelamento em vez de aceleração.** Em vez de espremer o clipe inteiro na
+janela da ação, `startTimeSeconds` entra no instante do golpe e toca só o
+trecho que interessa, em velocidade legível:
+
+| Ação | Clipe | Início | Velocidade | Trecho visto | Orçamento |
+|---|---|---:|---:|---|---:|
+| Leve 1 (jab) | Corte | 0,20 s | 1,25× | golpe + recuperação | 0,240 s |
+| Leve 2 (direto) | Corte | 0,20 s | 1,00× | golpe + recuperação | 0,300 s |
+| Leve 3 (chute) | — | — | — | **procedural puro** | 0,380 s |
+| Leve 4 (finalizador) | Corte | 0 | 1,04× | clipe inteiro | 0,480 s |
+| Pesado | Corte | 0 | 0,96× | clipe inteiro | 0,520 s |
+| Ombro Cometa | — | — | — | **procedural puro** | 0,750 s |
+| Cadência Quebrada | Corte | 0 | 0,74× | clipe inteiro | 0,680 s |
+| Retorno de Pulso | — | — | — | **procedural puro** | 0,730 s |
+| Eco da Cadência | Corte | 0,20 s | 0,58× | golpe + recuperação | 0,520 s |
+| Contra do Pulso | Corte | 0,20 s | 0,68× | golpe + recuperação | 0,440 s |
+
+Nenhuma velocidade sai de **0,5×–1,5×** (o teto era 3×). Fora dessa faixa ou é
+câmera lenta ou é borrão.
+
+**Onde não há clipe, é decisão, não falta.** Chute, Ombro Cometa e Retorno de
+Pulso ficaram sem clipe pelo mesmo motivo que guarda e dash já estavam:
+o único clipe livre disponível é um **corte de espada**, e um braço de espada
+num chute, numa ombrada ou numa postura defensiva informa errado. Com o
+overlay procedural finalmente funcionando, essas três têm leitura própria.
 
 Regras que os testes travam (`tests/animation.luau`):
 
-- nenhum clipe dura mais que a ação (mesma honestidade do VFX — quem decide o
-  tempo do golpe é o servidor, não a animação);
+- a janela pedida **existe dentro do clipe** (`início + orçamento × velocidade
+  ≤ duração`): pedir além do fim congela o último quadro, que é exatamente a
+  pose estática que o janelamento veio eliminar;
+- velocidade dentro de 0,5×–1,5×;
+- o lunge de dois quadros não volta ao catálogo;
+- `Ability1` e `Ability3` continuam sem clipe;
 - todo `assetId` casa `rbxassetid://%d+` e sai da lista declarada;
-- os quatro degraus da cadeia têm clipes distintos e o degrau fora da faixa
-  clampa em vez de sumir com a animação;
-- a duração declarada aqui bate com `PlayerCombatAnimator.Durations`.
+- a duração declarada aqui bate com `PlayerCombatAnimator.Durations`;
+- `isPoseJointClass` aceita `Motor6D` **e** `AnimationConstraint`, nos dois
+  animadores — é este teste que impede o combate de voltar a ficar sem pose.
 
-**Guarda e dash continuam 100% procedurais de propósito:** não existe clipe
-livre do Roblox que leia como aparo ou esquiva, e usar um golpe de espada no
-lugar mentiria sobre a ação.
-
-**Isto não fecha o Gate A1.** São placeholders honestos — leem como golpe de
-braço, não são o kit final do Punho do Eclipse. O `nominalSeconds` de cada
-asset (0,53 s e 0,60 s) foi declarado a partir da documentação e precisa ser
-reconferido no Studio com `TimeLength` do track carregado; o plugin de debug
-(`docs/19-DEBUG-BRIDGE.md`) faz essa medição sem palpite.
+**Isto não fecha o Gate A1.** O corte continua sendo placeholder honesto: lê
+como golpe de braço, não é o kit final do Punho do Eclipse.
 
 Fallback: se o asset não carregar (moderação, offline), o clipe é ignorado com
 um aviso único e o overlay procedural segue sozinho. O combate nunca fica sem

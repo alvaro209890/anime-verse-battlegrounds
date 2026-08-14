@@ -116,19 +116,32 @@ function ActorAnimator.onEnemyEvent(animator: Animator, payload: { [string]: any
 	}
 end
 
+-- Classes de junta que aceitam overlay. Os atores em Parts usam Motor6D; o rig
+-- R15 dos bots do spawn (WorldService) usa AnimationConstraint, que expõe o
+-- mesmo `Transform`. Procurar só Motor6D deixaria o rig novo sem pose alguma —
+-- foi exatamente o que aconteceu com o overlay do jogador (PlayerCombatAnimator).
+local POSE_JOINT_CLASSES: { [string]: boolean } = {
+	Motor6D = true,
+	AnimationConstraint = true,
+}
+
+function ActorAnimator.isPoseJointClass(className: string): boolean
+	return POSE_JOINT_CLASSES[className] == true
+end
+
 local function setTransform(animator: Animator, model: Model, jointName: string, value: CFrame): ()
 	local cache = animator.jointCache[model]
 	if not cache then
 		cache = {}
 		for _, descendant in model:GetDescendants() do
-			if descendant:IsA("Motor6D") then
+			if ActorAnimator.isPoseJointClass(descendant.ClassName) then
 				cache[descendant.Name] = descendant
 			end
 		end
 		animator.jointCache[model] = cache
 	end
 	local joint = cache[jointName]
-	if joint and joint:IsA("Motor6D") then
+	if joint then
 		joint.Transform = value
 	end
 end
@@ -137,11 +150,25 @@ local function applyPose(animator: Animator, model: Model, recipe: any, sample: 
 	local lean = math.rad(sample.leanDegrees)
 	local limb = math.rad(sample.limbDegrees)
 	if recipe.shape == "humanoid" then
+		-- Dois conjuntos de nomes de propósito: `Joint_*` é o ator greybox em
+		-- Parts (fallback), `Root`/`Waist`/`LeftShoulder`… é o rig R15 de verdade
+		-- dos bots do spawn. Nome ausente é ignorado pelo setTransform, então o
+		-- mesmo caminho serve aos dois sem ramo por tipo de corpo.
 		setTransform(animator, model, "Joint_Torso", CFrame.new(0, sample.bobStuds, 0) * CFrame.Angles(lean, 0, 0))
 		setTransform(animator, model, "Joint_LeftArm", CFrame.Angles(limb, 0, 0))
 		setTransform(animator, model, "Joint_RightArm", CFrame.Angles(-limb, 0, 0))
 		setTransform(animator, model, "Joint_LeftLeg", CFrame.Angles(-limb, 0, 0))
 		setTransform(animator, model, "Joint_RightLeg", CFrame.Angles(limb, 0, 0))
+
+		-- No R15 a respiração vai no Root (o quadril sobe/desce) e a inclinação
+		-- na cintura: girar o Root inteiro faria o boneco pivotar nos pés.
+		setTransform(animator, model, "Root", CFrame.new(0, sample.bobStuds, 0))
+		setTransform(animator, model, "Waist", CFrame.Angles(lean, 0, 0))
+		setTransform(animator, model, "Neck", CFrame.Angles(-lean * 0.35, 0, 0))
+		setTransform(animator, model, "LeftShoulder", CFrame.Angles(limb, 0, 0))
+		setTransform(animator, model, "RightShoulder", CFrame.Angles(-limb, 0, 0))
+		setTransform(animator, model, "LeftHip", CFrame.Angles(-limb, 0, 0))
+		setTransform(animator, model, "RightHip", CFrame.Angles(limb, 0, 0))
 	else
 		local spin = math.rad(sample.spinDegrees)
 		-- O shard inteiro se move por um pivot visual comum. Assim bob, lean e

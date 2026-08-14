@@ -35,6 +35,7 @@ local CombatAudio = require("../src/shared/Data/CombatAudio")
 local AbilityVfx = require("../src/shared/Data/AbilityVfx")
 local CombatHudController = require("../src/client/Controllers/CombatHudController")
 local CombatAnimations = require("../src/shared/Data/CombatAnimations")
+local ActorAnimator = require("../src/client/Presentation/ActorAnimator")
 local fs = require("@lune/fs")
 
 local CHAIN = PlayerCombatAnimator.LightChainLength
@@ -633,32 +634,59 @@ test("clipes: catálogo válido e todo asset é rbxassetid do conjunto declarado
 	end
 end)
 
-test("clipes: cadeia leve tem quatro degraus e nenhum passa da duração da ação", function()
+test("clipes: nenhum golpe vira borrão — velocidade legível e janela dentro do clipe", function()
 	local seen: { [string]: boolean } = {}
 	for step = 1, CHAIN do
 		local clip = CombatAnimations.forAction("BasicLight", step)
-		assertTrue(clip ~= nil, "degrau " .. step .. " tem clipe")
 		if clip then
 			local budget = PlayerCombatAnimator.lightChainDuration(step)
-			-- O clipe pode passar até 15% da ação: o corte com fade é do
-			-- runtime (docs/14 §4.4). O que não pode é virar borrão.
+			-- A janela tocada dura exatamente a ação; o que se checa é que esse
+			-- trecho EXISTE no clipe. Pedir além do fim congela o último quadro.
 			assertTrue(
-				clip.nominalSeconds / clip.speed <= budget * 1.15,
-				("degrau %d estoura o limite de 15%% sobre %.3fs"):format(step, budget)
+				clip.startTimeSeconds + budget * clip.speed <= clip.nominalSeconds + 0.01,
+				("degrau %d pede trecho além do fim do clipe (%.3fs)"):format(step, clip.nominalSeconds)
 			)
-			assertTrue(clip.speed >= 0.5 and clip.speed <= 3, ("degrau %d com velocidade ilegível"):format(step))
+			assertTrue(
+				clip.speed >= CombatAnimations.MinSpeed and clip.speed <= CombatAnimations.MaxSpeed,
+				("degrau %d com velocidade ilegível (%.2f×)"):format(step, clip.speed)
+			)
 			seen[clip.action] = true
 		end
 	end
+	-- Três degraus com clipe: o 3 é CHUTE e fica sem, porque o único clipe
+	-- livre disponível é um corte de espada e um braço de espada num chute
+	-- informa errado (docs/14 §5.1).
 	local count = 0
 	for _ in seen do
 		count += 1
 	end
-	assertEq(count, CHAIN, "um clipe distinto por degrau")
-	-- Degrau fora da faixa clampa em vez de devolver nil (o jogo não pode
-	-- ficar sem animação porque o servidor mandou um step estranho).
-	assertTrue(CombatAnimations.forAction("BasicLight", 0) ~= nil, "step 0 clampa")
-	assertTrue(CombatAnimations.forAction("BasicLight", 99) ~= nil, "step alto clampa")
+	assertEq(count, 3, "um clipe distinto por degrau que tem clipe")
+	assertEq(CombatAnimations.forAction("BasicLight", 3), nil, "degrau 3 (chute) é procedural puro")
+
+	-- Degrau fora da faixa clampa em vez de estourar índice (o servidor pode
+	-- mandar um step estranho e o cliente não pode quebrar por isso).
+	assertEq(CombatAnimations.forAction("BasicLight", 0), CombatAnimations.forAction("BasicLight", 1), "step 0 clampa")
+	assertEq(
+		CombatAnimations.forAction("BasicLight", 99),
+		CombatAnimations.forAction("BasicLight", 4),
+		"step alto clampa"
+	)
+end)
+
+test("clipes: só o corte medido entra — o lunge de 2 quadros ficou fora", function()
+	-- O "R15 Lunge de Espada" (522638767) tem keyframes só em 0 e 1,5 s: é uma
+	-- interpolação linear, não uma animação. Acelerado 2,9× era o espasmo de
+	-- docs/18 §8. Se alguém o trouxer de volta, este teste cai.
+	for _, assetId in CombatAnimations.assetIds() do
+		assertTrue(string.find(assetId, "522638767") == nil, "lunge de 2 quadros não pode voltar ao catálogo")
+	end
+	for _, clip in CombatAnimations.all() do
+		assertTrue(string.find(clip.assetId, "522638767") == nil, clip.action .. " voltou a usar o lunge")
+	end
+
+	-- Ações em que um corte de espada mentiria sobre o que o corpo faz.
+	assertEq(CombatAnimations.forAction("Ability1"), nil, "Ombro Cometa é ombro, não braço de espada")
+	assertEq(CombatAnimations.forAction("Ability3"), nil, "Retorno de Pulso é postura, não golpe")
 end)
 
 test("clipes: duração declarada bate com PlayerCombatAnimator e guarda/dash seguem procedurais", function()
@@ -684,44 +712,75 @@ test("clipes: duração declarada bate com PlayerCombatAnimator e guarda/dash se
 	assertEq(CombatAnimations.forAction("Inexistente"), nil, "ação desconhecida sem clipe")
 end)
 
-test("clipes: clipe que estoura a ação é recusado pela validação", function()
-	local ok, reason = CombatAnimations.validateClip({
-		action = "Falso",
-		assetId = "rbxassetid://1",
-		speed = 0.5,
-		fadeInSeconds = 0.05,
-		fadeOutSeconds = 0.1,
-		weight = 1,
-		nominalSeconds = 1,
-		source = "teste",
-	}, 0.3)
-	assertTrue(not ok, "clipe longo demais deve falhar")
-	assertTrue(reason ~= nil and string.find(reason, "só tem") ~= nil, "motivo explica o estouro")
+test("clipes: janela fora do clipe, borrão e asset inválido são recusados", function()
+	local function fake(overrides: { [string]: any }): any
+		local base = {
+			action = "Falso",
+			assetId = "rbxassetid://1",
+			speed = 1,
+			startTimeSeconds = 0,
+			fadeInSeconds = 0.05,
+			fadeOutSeconds = 0.1,
+			weight = 1,
+			nominalSeconds = 0.5,
+			source = "teste",
+		}
+		for key, value in overrides do
+			base[key] = value
+		end
+		return base
+	end
 
-	-- Velocidade fora da faixa legível é o que deixou o lunge feio.
-	local borrao = CombatAnimations.validateClip({
-		action = "Borrao",
-		assetId = "rbxassetid://1",
-		speed = 4,
-		fadeInSeconds = 0.05,
-		fadeOutSeconds = 0.1,
-		weight = 1,
-		nominalSeconds = 1.5,
-		source = "teste",
-	}, 0.5)
-	assertTrue(not borrao, "4× é borrão e deve falhar")
+	-- Trecho pedido passa do fim do clipe: o track congelaria no último quadro.
+	local ok, reason = CombatAnimations.validateClip(fake({ startTimeSeconds = 0.4 }), 0.3)
+	assertTrue(not ok, "janela além do fim do clipe deve falhar")
+	assertTrue(reason ~= nil and string.find(reason, "estoura o clipe") ~= nil, "motivo explica o estouro")
 
-	local badAsset = CombatAnimations.validateClip({
-		action = "Falso",
-		assetId = "http://exemplo/animacao",
-		speed = 1,
-		fadeInSeconds = 0,
-		fadeOutSeconds = 0,
-		weight = 1,
-		nominalSeconds = 0.2,
-		source = "teste",
-	}, 0.3)
+	-- 2,9× era exatamente o que o lunge fazia no finalizador até 14/08.
+	local borrao = CombatAnimations.validateClip(fake({ speed = 2.9, nominalSeconds = 1.5 }), 0.5)
+	assertTrue(not borrao, "2,9× é borrão e deve falhar")
+
+	-- Câmera lenta também não lê como golpe.
+	local lerdo = CombatAnimations.validateClip(fake({ speed = 0.2 }), 0.5)
+	assertTrue(not lerdo, "0,2× é câmera lenta e deve falhar")
+
+	local janelaNegativa = CombatAnimations.validateClip(fake({ startTimeSeconds = -0.1 }), 0.3)
+	assertTrue(not janelaNegativa, "início negativo falha")
+
+	local janelaForaDoClipe = CombatAnimations.validateClip(fake({ startTimeSeconds = 0.5 }), 0.1)
+	assertTrue(not janelaForaDoClipe, "início igual ao fim do clipe falha")
+
+	local badAsset = CombatAnimations.validateClip(fake({ assetId = "http://exemplo/animacao" }), 0.3)
 	assertTrue(not badAsset, "asset fora do formato rbxassetid falha")
+end)
+
+-- ── Juntas do overlay: o bug que deixava o combate sem animação ─────────────
+
+test("juntas: overlay aceita Motor6D e AnimationConstraint", function()
+	-- O avatar R15 atual monta o rig com AnimationConstraint e ZERO Motor6D
+	-- (medido no Studio em 14/08). Enquanto o animador procurava só Motor6D, o
+	-- overlay inteiro não saía do papel — era a reclamação "as animações de
+	-- golpes estão péssimas". Este teste é o que impede a regressão.
+	assertTrue(PlayerCombatAnimator.isPoseJointClass("AnimationConstraint"), "rig novo do avatar")
+	assertTrue(PlayerCombatAnimator.isPoseJointClass("Motor6D"), "rig clássico")
+	assertTrue(not PlayerCombatAnimator.isPoseJointClass("Weld"), "weld não é junta de pose")
+	assertTrue(not PlayerCombatAnimator.isPoseJointClass("BallSocketConstraint"), "física não é junta de pose")
+
+	assertTrue(ActorAnimator.isPoseJointClass("AnimationConstraint"), "ator de rig R15")
+	assertTrue(ActorAnimator.isPoseJointClass("Motor6D"), "ator greybox em Parts")
+	assertTrue(not ActorAnimator.isPoseJointClass("Weld"), "gear soldado não é junta de pose")
+end)
+
+test("juntas: nome do rig vira papel da pose nos dois formatos", function()
+	assertEq(PlayerCombatAnimator.jointRole("RightShoulder"), "rightShoulder", "R15 sem espaço")
+	assertEq(PlayerCombatAnimator.jointRole("Right Shoulder"), "rightShoulder", "R6 com espaço")
+	assertEq(PlayerCombatAnimator.jointRole("RootJoint"), "root", "raiz do R6")
+	assertEq(PlayerCombatAnimator.jointRole("Root"), "root", "raiz do R15")
+	assertEq(PlayerCombatAnimator.jointRole("Waist"), "waist", "cintura")
+	assertEq(PlayerCombatAnimator.jointRole("LeftKnee"), "leftKnee", "joelho do chute")
+	assertEq(PlayerCombatAnimator.jointRole("RightWrist"), "rightWrist", "punho do estalo")
+	assertEq(PlayerCombatAnimator.jointRole("GearWeld"), nil, "roupa soldada não vira junta")
+	assertEq(PlayerCombatAnimator.jointRole("Handle"), nil, "nome desconhecido não vira junta")
 end)
 
 for _, entry in tests do

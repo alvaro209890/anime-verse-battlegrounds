@@ -222,3 +222,56 @@ Playtest humano completo do combate com os novos alcances, dois clientes,
 latência e performance. As correções são cobertas por 257 testes headless
 (217 run + 40 animation).
 
+
+## 9. Sessão 14/08 — "skins horríveis e golpes péssimos": as duas causas medidas
+
+Reclamação do playtest: as skins dos bots do spawn estavam feias e as animações
+de golpe, péssimas. As duas foram **medidas no Studio via MCP**, não deduzidas.
+
+### 9.1 O que a medição mostrou
+
+1. **O overlay procedural de combate nunca foi aplicado.** O personagem do
+   jogador tem 15 `AnimationConstraint` e **zero `Motor6D`** — o avatar R15
+   atual usa o rig por constraint. O `PlayerCombatAnimator` procurava só
+   `Motor6D`, então `animator.joints` ficava vazio e as ~1400 linhas de pose
+   (quatro silhuetas da cadeia, quadros das técnicas, hit-stop,
+   follow-through) não chegavam ao personagem. O jogador via **apenas** o
+   clipe de espada acelerado.
+2. **O clipe do finalizador/pesado/cometa não era uma animação.** O
+   `522638767` "R15 Lunge de Espada" tem keyframes só em 0 e 1,5 s — uma
+   interpolação linear entre duas poses. Tocado a 2,7×–2,9× para caber na
+   janela do golpe, virava espasmo. O `522635514` "Corte de Espada", medido,
+   tem quatro quadros (0 / 0,20 / 0,30 / 0,50) e estrutura legível.
+3. **Os bots eram Parts empilhadas com uma esfera de cabeça** — sem proporção
+   humana, sem mãos, sem pés.
+
+### 9.2 Correção desta rodada
+
+- Os dois animadores passaram a aceitar `Motor6D` **e** `AnimationConstraint`.
+  Um teste puro trava as duas classes nos dois animadores.
+- O lunge saiu do catálogo (teste impede o retorno). Entrou **janelamento**
+  (`startTimeSeconds`): ações curtas tocam o trecho do golpe (0,20→0,50) em
+  velocidade legível em vez do clipe inteiro acelerado. Teto de velocidade caiu
+  de 3× para 1,5×. Chute, Ombro Cometa e Retorno de Pulso ficaram **sem clipe**
+  de propósito — um corte de espada mentiria sobre essas três, e agora elas têm
+  a pose procedural funcionando.
+- Os bots do spawn ganharam corpo de **rig R15 oficial** com roupa vinda de
+  dado puro validado, mais um passo de assentamento que põe a sola no chão
+  (o rig nasce 0,186 stud enterrado). Detalhes em `docs/15` §4.1.
+
+### 9.3 Como conferir no Studio
+
+1. Play, ataque no dummy: os quatro degraus da cadeia agora têm silhueta
+   distinta **no corpo** (jab, direto, chute, giro) — não só o braço de espada.
+2. O degrau 3 é um chute sem clipe nenhum: a leitura é 100% da pose.
+3. Instrutor e boneco de treino: corpo com proporção humana, pés no chão,
+   rosto visível sob o capuz, alvo no peito do boneco e poste apoiado no chão.
+4. O `!` de telegraph fica logo acima da cabeça, não boiando.
+
+### 9.4 O que continua não comprovado
+
+Playtest humano com as skins e o overlay novos. A captura de tela do plugin do
+Studio parou de responder no meio desta sessão, então a validação visual foi
+**numérica** (posição da sola, folga de cada peça em relação ao host,
+idempotência do assentamento) e não por imagem. As mudanças são cobertas por
+262 testes headless (219 run + 43 animation).

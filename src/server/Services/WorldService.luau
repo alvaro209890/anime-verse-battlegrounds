@@ -10,11 +10,20 @@
 -- vive em `Zones.luau`, `Geometry.luau` e `SpatialService`, que são testados.
 -- Se algo aqui precisar de um `if` de gameplay, o `if` está no lugar errado.
 --
--- Arte final proibida até P1 (§17): só Parts, cores neutras, luz e animação
--- procedural genérica. Nenhuma silhueta/roupa/VFX de referência.
+-- Arte final proibida até P1 (§17): nenhuma silhueta/roupa/VFX copiada de obra
+-- de referência, nada comprado, nada subido para o catálogo. O que mudou em
+-- 2026-08-14: os dois bots do spawn deixaram de ser Parts empilhadas e passaram
+-- a usar o RIG R15 OFICIAL do Roblox (`Players:CreateHumanoidModelFrom-
+-- Description`) como corpo, com a roupa vindo de `WorldPresentation.rigFor`.
+-- O rig padrão não é arte de referência nem asset de terceiro: é o boneco que
+-- o engine já entrega a todo lugar. Um corpo com proporção de gente é o que
+-- separa "personagem" de "caixa com uma esfera em cima" — e era essa a
+-- reclamação do playtest. O caminho antigo em Parts continua aqui como
+-- FALLBACK, para o mundo nunca nascer sem NPC se a criação do rig falhar.
 
 local Lighting = game:GetService("Lighting")
 local PhysicsService = game:GetService("PhysicsService")
+local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 
 export type WorldDeps = {
@@ -141,7 +150,9 @@ local function actorRootHeight(recipe: any): number
 	return 3 * recipe.scale
 end
 
-local function buildTelegraphPresentation(model: Model, root: BasePart, rootHeight: number): ()
+-- `bodyTopOffset` é a altura do topo do corpo em relação à Root, quando ela é
+-- conhecida (corpo de rig). Sem ela cai no orçamento antigo do greybox.
+local function buildTelegraphPresentation(model: Model, root: BasePart, rootHeight: number, bodyTopOffset: number?): ()
 	local highlight = Instance.new("Highlight")
 	highlight.Name = "TelegraphHighlight"
 	highlight.Adornee = model
@@ -160,7 +171,7 @@ local function buildTelegraphPresentation(model: Model, root: BasePart, rootHeig
 	symbol.LightInfluence = 0
 	symbol.MaxDistance = 80
 	symbol.Size = UDim2.fromOffset(48, 48)
-	symbol.StudsOffsetWorldSpace = Vector3.new(0, rootHeight + 1.4, 0)
+	symbol.StudsOffsetWorldSpace = Vector3.new(0, (if bodyTopOffset then bodyTopOffset + 0.9 else rootHeight + 1.4), 0)
 	symbol.Enabled = false
 	symbol.Parent = model
 
@@ -194,7 +205,14 @@ end
 
 local function setActorVisible(model: Model, visible: boolean): ()
 	for _, descendant in model:GetDescendants() do
-		if descendant:IsA("BasePart") and descendant.Name ~= "Root" and descendant.Name ~= "VisualRoot" then
+		-- `AvbInvisible` é como a HumanoidRootPart do corpo de rig se declara:
+		-- sem isso, "tornar visível" acenderia a caixa 2×2×1 dentro do peito.
+		if
+			descendant:IsA("BasePart")
+			and descendant.Name ~= "Root"
+			and descendant.Name ~= "VisualRoot"
+			and descendant:GetAttribute("AvbInvisible") ~= true
+		then
 			descendant.Transparency = if visible then 0 else 1
 		end
 	end
@@ -560,7 +578,205 @@ local function dressTrainingDummy(
 	attach(root, post, CFrame.new(0, -1.55 * scale, 1.12 * scale) * CFrame.Angles(0, 0, math.rad(90)), "Joint_Post")
 end
 
-local function createActorModel(name: string, actorId: string, npcId: string, recipe: any, position: Vector3): Model
+-- ── Corpo de rig R15 ────────────────────────────────────────────────────────
+-- Materialização pura da receita de `WorldPresentation.rigFor`. Nenhuma decisão
+-- de aparência mora aqui: tamanho, encaixe, cor e material vêm do dado, que é
+-- validado por teste Lune. Aqui só há Instance.
+
+local RIG_LIMBS: { string } = {
+	"UpperTorso",
+	"LowerTorso",
+	"LeftUpperArm",
+	"RightUpperArm",
+	"LeftLowerArm",
+	"RightLowerArm",
+}
+
+local RIG_LEGS: { string } = {
+	"LeftUpperLeg",
+	"RightUpperLeg",
+	"LeftLowerLeg",
+	"RightLowerLeg",
+	"LeftFoot",
+	"RightFoot",
+}
+
+local RIG_SKIN: { string } = { "Head", "LeftHand", "RightHand" }
+
+local function materialOf(name: string): Enum.Material
+	local material = (Enum.Material :: any)[name]
+	return if typeof(material) == "EnumItem" then material else Enum.Material.SmoothPlastic
+end
+
+-- Peças do rig não participam de física nem de query: quem responde por
+-- colisão, alvo e alcance continua sendo a Root ancorada do ator.
+local function tameRigPart(part: BasePart): ()
+	part.CanCollide = false
+	part.CanTouch = false
+	part.CanQuery = false
+	part.Massless = true
+	part.CastShadow = true
+end
+
+local function paintRig(rig: Model, names: { string }, color: Color3, material: Enum.Material): ()
+	for _, partName in names do
+		local part = rig:FindFirstChild(partName)
+		if part and part:IsA("BasePart") then
+			part.Color = color
+			part.Material = material
+			tameRigPart(part)
+		end
+	end
+end
+
+local function dressRig(rig: Model, rigRecipe: any): ()
+	for _, piece in rigRecipe.gear do
+		local host = rig:FindFirstChild(piece.host)
+		if not host or not host:IsA("BasePart") then
+			continue
+		end
+		local part = Instance.new(piece.class) :: BasePart
+		part.Name = piece.name
+		part.Size = Vector3.new(piece.sizeStuds[1], piece.sizeStuds[2], piece.sizeStuds[3])
+		part.Color = toColor(piece.rgb)
+		part.Material = materialOf(piece.material)
+		part.TopSurface = Enum.SurfaceType.Smooth
+		part.BottomSurface = Enum.SurfaceType.Smooth
+		tameRigPart(part)
+		if piece.shape == "Ball" then
+			part.Shape = Enum.PartType.Ball
+		elseif piece.shape == "Cylinder" then
+			part.Shape = Enum.PartType.Cylinder
+		end
+
+		local offset = CFrame.new(piece.offsetStuds[1], piece.offsetStuds[2], piece.offsetStuds[3])
+			* CFrame.Angles(
+				math.rad(piece.rotationDegrees[1]),
+				math.rad(piece.rotationDegrees[2]),
+				math.rad(piece.rotationDegrees[3])
+			)
+		part.CFrame = host.CFrame * offset
+		part.Parent = rig
+
+		-- Weld rígido, não Motor6D: roupa acompanha o membro, mas não é junta —
+		-- o ActorAnimator não deve poder posar uma manga como se fosse braço.
+		local weld = Instance.new("Weld")
+		weld.Name = "GearWeld"
+		weld.Part0 = host
+		weld.Part1 = part
+		weld.C0 = offset
+		weld.Parent = part
+	end
+end
+
+-- Distância entre a HumanoidRootPart e a sola. NÃO é `Humanoid.HipHeight`:
+-- medido no Studio, o pé fica 3,192 studs abaixo da HRP enquanto o HipHeight
+-- vale 2,192. Usar o HipHeight enterraria o boneco um stud no chão. Derivar do
+-- rig real mantém isso certo se o Roblox mudar as proporções padrão.
+local function rigSoleDrop(rig: Model): number
+	local hrp = rig:FindFirstChild("HumanoidRootPart")
+	if not hrp or not hrp:IsA("BasePart") then
+		return 3.192
+	end
+	local lowest: number? = nil
+	for _, footName in { "LeftFoot", "RightFoot" } do
+		local foot = rig:FindFirstChild(footName)
+		if foot and foot:IsA("BasePart") then
+			local bottom = foot.Position.Y - foot.Size.Y / 2
+			lowest = if lowest then math.min(lowest, bottom) else bottom
+		end
+	end
+	if not lowest then
+		return 3.192
+	end
+	return hrp.Position.Y - lowest
+end
+
+-- Constrói o corpo de rig e o solda na Root ancorada. Devolve a altura do topo
+-- do corpo em relação à Root (para o aviso de telegraph ficar logo acima da
+-- cabeça), ou nil se o rig não pôde ser criado — aí o chamador usa o greybox.
+local function buildRigBody(model: Model, root: BasePart, rigRecipe: any, rootHeight: number): number?
+	local ok, rig = pcall(function()
+		return Players:CreateHumanoidModelFromDescription(Instance.new("HumanoidDescription"), Enum.HumanoidRigType.R15)
+	end)
+	if not ok or typeof(rig) ~= "Instance" or not rig:IsA("Model") then
+		warn(("[WorldService] rig R15 indisponível (%s) — corpo greybox assume"):format(tostring(rig)))
+		return nil
+	end
+
+	rig.Name = "Body"
+	local animate = rig:FindFirstChild("Animate")
+	if animate then
+		animate:Destroy()
+	end
+
+	local humanoid = rig:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		-- NPC de apresentação: sem nome flutuante, sem barra de vida, sem
+		-- máquina de estados (que tentaria andar, cair e morrer sozinha).
+		humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+		humanoid.NameDisplayDistance = 0
+		humanoid.HealthDisplayDistance = 0
+		humanoid.WalkSpeed = 0
+		humanoid.JumpPower = 0
+		humanoid.AutoRotate = false
+		humanoid.BreakJointsOnDeath = false
+		humanoid.RequiresNeck = false
+		humanoid.EvaluateStateMachine = false
+	end
+
+	paintRig(rig, RIG_LIMBS, toColor(rigRecipe.bodyRgb), materialOf(rigRecipe.bodyMaterial))
+	paintRig(rig, RIG_LEGS, toColor(rigRecipe.legRgb), materialOf(rigRecipe.legMaterial))
+	paintRig(rig, RIG_SKIN, toColor(rigRecipe.skinRgb), Enum.Material.SmoothPlastic)
+
+	local head = rig:FindFirstChild("Head")
+	if head and head:IsA("BasePart") and rigRecipe.faceTexture then
+		local face = Instance.new("Decal")
+		face.Name = "face"
+		face.Face = Enum.NormalId.Front
+		face.Texture = rigRecipe.faceTexture
+		face.Parent = head
+	end
+
+	dressRig(rig, rigRecipe)
+
+	local hrp = rig:FindFirstChild("HumanoidRootPart")
+	if not hrp or not hrp:IsA("BasePart") then
+		rig:Destroy()
+		return nil
+	end
+	hrp:SetAttribute("AvbInvisible", true)
+
+	local yOffset = rigSoleDrop(rig) - rootHeight
+	local anchorCFrame = CFrame.new(0, yOffset, 0)
+	rig:PivotTo(root.CFrame * anchorCFrame)
+	-- Alvo do assentamento (ver `settleRigBodies`): a sola tem de parar aqui.
+	rig:SetAttribute("AvbGroundY", root.Position.Y - rootHeight)
+
+	-- A Root ancorada continua sendo a única coisa que o servidor move; o rig
+	-- inteiro é um assembly soldado nela, então não precisa de âncora própria
+	-- e não briga com a física.
+	local weld = Instance.new("Weld")
+	weld.Name = "RigWeld"
+	weld.Part0 = root
+	weld.Part1 = hrp
+	weld.C0 = anchorCFrame
+	weld.Parent = hrp
+
+	rig.Parent = model
+
+	local bodyCFrame, bodySize = rig:GetBoundingBox()
+	return (bodyCFrame.Position.Y + bodySize.Y / 2) - root.Position.Y
+end
+
+local function createActorModel(
+	name: string,
+	actorId: string,
+	npcId: string,
+	recipe: any,
+	position: Vector3,
+	rigRecipe: any?
+): Model
 	local model = Instance.new("Model")
 	model.Name = name
 	model:SetAttribute("PresentationActor", true)
@@ -585,7 +801,14 @@ local function createActorModel(name: string, actorId: string, npcId: string, re
 	local bodyColor = toColor(recipe.bodyRgb)
 	local accentColor = toColor(recipe.accentRgb)
 	local coreColor = toColor(recipe.coreRgb)
-	if recipe.shape == "humanoid" then
+	-- Topo do corpo em relação à Root: com o rig R15 a cabeça termina bem mais
+	-- baixo que a torre de Parts antiga, e o "!" de telegraph precisa saber
+	-- disso para não ficar boiando três studs acima de ninguém.
+	local bodyTopOffset: number? = nil
+	if recipe.shape == "humanoid" and rigRecipe then
+		bodyTopOffset = buildRigBody(model, root, rigRecipe, rootHeight)
+	end
+	if recipe.shape == "humanoid" and bodyTopOffset == nil then
 		local torso =
 			makeVisualPart("Part", "Torso", Vector3.new(2.25, 2.45, 1.2) * scale, bodyColor, Enum.Material.Slate)
 		attach(root, torso, CFrame.new(0, 0.1, 0), "Joint_Torso")
@@ -640,7 +863,7 @@ local function createActorModel(name: string, actorId: string, npcId: string, re
 				coreColor
 			)
 		end
-	else
+	elseif recipe.shape ~= "humanoid" then
 		-- Pivot visual comum: todas as peças do shard recebem bob/lean/spin sem
 		-- deslocar o root autoritativo nem se separar umas das outras.
 		local visualRoot = makeVisualPart(
@@ -738,7 +961,7 @@ local function createActorModel(name: string, actorId: string, npcId: string, re
 		end
 	end
 
-	buildTelegraphPresentation(model, root, rootHeight)
+	buildTelegraphPresentation(model, root, rootHeight, bodyTopOffset)
 	model:PivotTo(root.CFrame)
 	return model
 end
@@ -1069,7 +1292,8 @@ local function buildStaticActors(root: Folder, presentation: any, zones: any): (
 			"npc_training_dummy",
 			dummyRecipe,
 			-- O pad de treino tem topo 0,5 stud acima do chão canônico.
-			dummyPosition + Vector3.new(0, 0.5, 0)
+			dummyPosition + Vector3.new(0, 0.5, 0),
+			presentation.rigFor("npc_training_dummy")
 		)
 		dummy:SetAttribute("PoseKind", "idle")
 		local dummyRoot = dummy.PrimaryPart
@@ -1087,7 +1311,8 @@ local function buildStaticActors(root: Folder, presentation: any, zones: any): (
 			"npc_threshold_instructor",
 			"npc_threshold_instructor",
 			instructorRecipe,
-			instructorPosition
+			instructorPosition,
+			presentation.rigFor("npc_threshold_instructor")
 		)
 		instructor:SetAttribute("PoseKind", "idle")
 		setNpcInteraction(instructor, "npc_threshold_instructor")
@@ -1204,6 +1429,62 @@ function WorldService.init(deps: WorldDeps): ()
 
 	root.Parent = Workspace
 	WorldService.root = root
+	WorldService.settleRigBodies()
+end
+
+-- Assenta os corpos de rig no chão.
+--
+-- O R15 sai de `CreateHumanoidModelFromDescription` com as pernas levemente
+-- recolhidas e só estende quando entra na simulação: medido no Studio em
+-- 2026-08-14, a sola desce 0,186 stud depois do primeiro passo de física. Quem
+-- posiciona pela medida de antes enterra o boneco esse tanto no chão — e o
+-- boneco de treino leva junto o poste e a base, que passam a nascer soterrados.
+--
+-- Em vez de fixar a constante (que muda no dia em que o Roblox mexer nas
+-- proporções padrão), o mundo espera um passo de física, MEDE o corpo já
+-- montado e corrige o C0 do weld uma única vez. Idempotente: rodar de novo com
+-- o corpo já assentado não move nada.
+function WorldService.settleRigBodies(): ()
+	local root = WorldService.root
+	local folder = if root then root:FindFirstChild("Actors") else nil
+	if not folder then
+		return
+	end
+	-- Um passo de física é o suficiente: a perna estende no primeiro Heartbeat.
+	task.wait()
+	for _, model in folder:GetChildren() do
+		if not model:IsA("Model") then
+			continue
+		end
+		local body = model:FindFirstChild("Body")
+		if not body or not body:IsA("Model") then
+			continue
+		end
+		local groundY = body:GetAttribute("AvbGroundY")
+		local hrp = body:FindFirstChild("HumanoidRootPart")
+		if type(groundY) ~= "number" or not hrp or not hrp:IsA("BasePart") then
+			continue
+		end
+		local weld = hrp:FindFirstChild("RigWeld")
+		if not weld or not weld:IsA("Weld") then
+			continue
+		end
+		local lowest: number? = nil
+		for _, footName in { "LeftFoot", "RightFoot" } do
+			local foot = body:FindFirstChild(footName)
+			if foot and foot:IsA("BasePart") then
+				local bottom = foot.Position.Y - foot.Size.Y / 2
+				lowest = if lowest then math.min(lowest, bottom) else bottom
+			end
+		end
+		if not lowest then
+			continue
+		end
+		local delta = groundY - lowest
+		if math.abs(delta) > 0.005 then
+			weld.C0 = weld.C0 * CFrame.new(0, delta, 0)
+		end
+	end
 end
 
 local function actorFolder(): Folder?
@@ -1230,14 +1511,26 @@ local function spawnActor(fighterId: string, npcId: string, position: Vector3): 
 	if not recipe then
 		return nil
 	end
-	local model =
-		createActorModel(("Actor_%s"):format((fighterId:gsub("[^%w_%-]", "_"))), fighterId, npcId, recipe, position)
+	local model = createActorModel(
+		("Actor_%s"):format((fighterId:gsub("[^%w_%-]", "_"))),
+		fighterId,
+		npcId,
+		recipe,
+		position,
+		deps.presentation.rigFor(npcId)
+	)
 	model:SetAttribute("SpawnPresentation", true)
 	local modelRoot = model.PrimaryPart
 	if modelRoot then
 		modelRoot:SetAttribute("CombatTarget", true)
 	end
 	model.Parent = folder
+	-- Ator dinâmico com corpo de rig também precisa assentar (hoje só os bots
+	-- estáticos têm rig, mas o dia em que um inimigo humanoide entrar, ele
+	-- nasceria enterrado). `settleRigBodies` é idempotente e varre a pasta.
+	if deps.presentation.rigFor(npcId) then
+		task.defer(WorldService.settleRigBodies)
+	end
 	local actor = {
 		model = model,
 		lastPosition = position,

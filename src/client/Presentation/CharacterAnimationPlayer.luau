@@ -183,6 +183,12 @@ function CharacterAnimationPlayer.play(player: any, action: string, comboStep: n
 	local played = pcall(function()
 		track:Play(clip.fadeInSeconds, clip.weight, clip.speed)
 		track:AdjustSpeed(clip.speed)
+		-- Janelamento (docs/14 §5.1): ações curtas entram no instante do golpe
+		-- em vez de tocar o clipe inteiro acelerado. TimePosition só vale depois
+		-- do Play — antes dele o track não tem duração para posicionar.
+		if clip.startTimeSeconds > 0 then
+			track.TimePosition = clip.startTimeSeconds
+		end
 	end)
 	if not played then
 		return false

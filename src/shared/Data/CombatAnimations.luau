@@ -1,36 +1,45 @@
 --!strict
 -- Catálogo de clipes de animação de combate (docs/14-ANIMATION-PLAN.md §5.1).
 --
--- Por que existe: o overlay procedural do `PlayerCombatAnimator` compõe alguns
--- graus por junta em cima da animação que o Roblox já toca. No avatar real do
--- jogador, visto de longe, isso lê como "nada aconteceu" — foi exatamente a
--- reclamação do playtest de 14:26 (docs/18 §7). Um clipe de corpo inteiro
--- resolve a leitura; o procedural continua rodando por cima como tempero.
+-- Por que existe: o overlay procedural do `PlayerCombatAnimator` compõe graus
+-- por junta. Um clipe de corpo inteiro por cima dá massa ao golpe — mas só
+-- quando o clipe é tocado numa velocidade em que dá para ver o que ele faz.
 --
--- Assets: só animações do criador **Roblox** (userId 1), que qualquer
--- experiência pode tocar sem upload nem compra. Verificados em 2026-08-13 via
--- `economy.roblox.com/v2/assets/<id>/details`:
---   522635514 — "R15 Sword Slash"  (Creator: Roblox, AssetTypeId 24)
---   522638767 — "R15 Sword Lunge"  (Creator: Roblox, AssetTypeId 24)
--- São PLACEHOLDER honesto: leem como golpe de braço, não são os clipes finais
--- do jogo (Gate A1 de docs/14 continua aberto).
+-- ⚠️ HISTÓRICO — leia antes de mexer nos números. Até 2026-08-14 este catálogo
+-- acelerava um clipe de 1,5 s a 2,7×–2,9× para "caber" na janela do golpe. Duas
+-- medições no Studio (via KeyframeSequenceProvider) explicaram por que aquilo
+-- era ilegível:
+--   522635514 "R15 Corte de Espada" — Roblox (userId 1), AssetTypeId 24,
+--     prioridade Action, 4 quadros: 0 / 0,20 / 0,30 / 0,50 s.
+--     Ou seja: antecipação até 0,20, GOLPE de 0,20 a 0,30, recuperação até 0,50.
+--   522638767 "R15 Lunge de Espada" — Roblox, prioridade Idle, e apenas DOIS
+--     quadros: 0 e 1,5 s. Não é uma animação, é uma interpolação linear entre
+--     duas poses. Acelerada 2,9× virava um espasmo — e era o clipe que estava
+--     no finalizador, no pesado e no Ombro Cometa.
+-- O lunge saiu do catálogo por isso. Nunca declare esses números de cabeça:
+-- meça de novo (KeyframeSequenceProvider) se trocar de asset.
 --
--- `nominalSeconds` é a duração do clipe na velocidade 1, **medida no Studio**
--- em 2026-08-13 15h30 (`AnimationTrack.Length` com o track carregado, via MCP):
---   522635514 → 0,500 s   ·   522638767 → 1,500 s
--- A primeira versão deste catálogo chutou 0,53/0,60 e o lunge acabou tocando a
--- 1,65× para "caber": em 1,5 s de clipe, isso mostrava um quarto do movimento
--- e lia como espasmo. Era a reclamação "as animações estão feias" (docs/18 §8).
--- Nunca declare esses números de cabeça: meça de novo se trocar de asset.
+-- A técnica que substituiu a aceleração é o JANELAMENTO: em vez de espremer o
+-- clipe inteiro na janela da ação, `startTimeSeconds` entra no instante certo e
+-- toca só o trecho que interessa, em velocidade legível. Um jab de 240 ms passa
+-- o trecho 0,20→0,50 (golpe + recuperação) a 1,25× em vez de 0→0,50 a 2,08×:
+-- o jogador vê o golpe em vez de ver tudo borrado.
+--
+-- E onde um corte de espada MENTIRIA sobre a ação, não há clipe: chute, Ombro
+-- Cometa (o que viaja é o ombro, o braço não estende — docs/18 §2.1), Retorno
+-- de Pulso, guarda e dash. Essas ficam 100% procedurais. Um braço de espada num
+-- chute é pior que nenhuma animação: informa errado.
 --
 -- Tipos inline para o módulo carregar em teste Lune (sem DataModel).
 
 export type Clip = {
 	action: string,
 	assetId: string,
-	-- Multiplicador de velocidade do track. O clipe precisa caber na duração da
-	-- ação: quem decide o tempo do golpe é o servidor, não a animação.
+	-- Multiplicador de velocidade do track. Quem decide o tempo do golpe é o
+	-- servidor; o clipe se encaixa nele, nunca o contrário.
 	speed: number,
+	-- Instante do clipe em que a reprodução começa (janelamento). 0 = do início.
+	startTimeSeconds: number,
 	fadeInSeconds: number,
 	fadeOutSeconds: number,
 	weight: number,
@@ -39,9 +48,9 @@ export type Clip = {
 }
 
 local SLASH = "rbxassetid://522635514"
-local LUNGE = "rbxassetid://522638767"
 local SLASH_SECONDS = 0.5
-local LUNGE_SECONDS = 1.5
+-- Instante em que o corte começa de fato no clipe (quadro medido em 0,20 s).
+local SLASH_STRIKE_AT = 0.2
 
 local CombatAnimations = {}
 
@@ -63,6 +72,7 @@ local function clip(values: {
 	assetId: string,
 	speed: number,
 	nominalSeconds: number,
+	startTimeSeconds: number?,
 	fadeInSeconds: number?,
 	fadeOutSeconds: number?,
 	weight: number?,
@@ -71,6 +81,7 @@ local function clip(values: {
 		action = values.action,
 		assetId = values.assetId,
 		speed = values.speed,
+		startTimeSeconds = values.startTimeSeconds or 0,
 		fadeInSeconds = values.fadeInSeconds or 0.03,
 		fadeOutSeconds = values.fadeOutSeconds or 0.16,
 		weight = values.weight or 1.15,
@@ -79,44 +90,63 @@ local function clip(values: {
 	}
 end
 
--- Cadeia leve: os três primeiros degraus usam o clipe CURTO (slash),
--- desacelerando de 1,92× até 1,22×. O jab sai estalado e o meio da cadeia
--- ganha peso sem virar borrão. O FINALIZADOR (degrau 4) troca para o clipe
--- LONGO (lunge) a 2,9×: é o único degrau com janela para ele (0,48 s de ação
--- vs 1,5/2,9 = 0,52 s de clipe — o jogador vê ~93% do movimento, quase em
--- tempo real). Fecha a cadeia com corpo inteiro em vez do 4º slash repetido.
-local LIGHT_CHAIN: { Clip } = {
-	clip({ action = "BasicLight1", assetId = SLASH, speed = 1.92, nominalSeconds = SLASH_SECONDS }),
-	clip({ action = "BasicLight2", assetId = SLASH, speed = 1.55, nominalSeconds = SLASH_SECONDS }),
-	clip({ action = "BasicLight3", assetId = SLASH, speed = 1.22, nominalSeconds = SLASH_SECONDS }),
-	clip({
+-- Cadeia leve. Os dois primeiros degraus são socos curtos: entram direto no
+-- corte (0,20 s) e ficam com o trecho golpe+recuperação, a 1,25× e 1,00×. O
+-- degrau 3 é CHUTE e não tem clipe — quem carrega é a pose procedural. O
+-- degrau 4 é o finalizador giratório, o único com janela para o clipe inteiro
+-- (0,48 s de ação para 0,50 s de clipe): entra em 1,04× e mostra tudo,
+-- antecipação incluída.
+-- Chaveada pelo degrau, não posicional: o degrau 3 é um buraco de propósito, e
+-- uma lista com nil no meio deixa `#` indefinido em Lua.
+local LIGHT_CHAIN: { [number]: Clip } = {
+	[1] = clip({
+		action = "BasicLight1",
+		assetId = SLASH,
+		speed = 1.25,
+		startTimeSeconds = SLASH_STRIKE_AT,
+		nominalSeconds = SLASH_SECONDS,
+	}),
+	[2] = clip({
+		action = "BasicLight2",
+		assetId = SLASH,
+		speed = 1.0,
+		startTimeSeconds = SLASH_STRIKE_AT,
+		nominalSeconds = SLASH_SECONDS,
+	}),
+	[4] = clip({
 		action = "BasicLight4",
-		assetId = LUNGE,
-		speed = 2.9,
-		nominalSeconds = LUNGE_SECONDS,
+		assetId = SLASH,
+		speed = 1.04,
+		nominalSeconds = SLASH_SECONDS,
 		fadeInSeconds = 0.04,
 	}),
 }
 
--- Guarda e dash ficam de fora de propósito: não existe clipe grátis do Roblox
--- que leia como aparo ou esquiva, e um golpe de espada no lugar mentiria sobre
--- a ação. Essas duas continuam 100% procedurais (docs/14 §5.1).
+-- Guarda, dash, chute, Ombro Cometa e Retorno de Pulso ficam de fora de
+-- propósito (ver cabeçalho): não existe clipe grátis do Roblox que leia como
+-- aparo, esquiva, chute, ombrada ou postura defensiva, e um corte de espada no
+-- lugar mentiria sobre a ação.
 local ACTION_CLIPS: { [string]: Clip } = {
 	BasicHeavy = clip({
 		action = "BasicHeavy",
-		assetId = LUNGE,
-		speed = 2.7,
-		nominalSeconds = LUNGE_SECONDS,
+		assetId = SLASH,
+		speed = 0.96,
+		nominalSeconds = SLASH_SECONDS,
 		weight = 1,
 	}),
-	Ability1 = clip({ action = "Ability1", assetId = LUNGE, speed = 1.9, nominalSeconds = LUNGE_SECONDS }),
-	Ability2 = clip({ action = "Ability2", assetId = SLASH, speed = 0.7, nominalSeconds = SLASH_SECONDS }),
-	Ability3 = clip({ action = "Ability3", assetId = SLASH, speed = 0.65, nominalSeconds = SLASH_SECONDS }),
-	Ability2Echo = clip({ action = "Ability2Echo", assetId = SLASH, speed = 0.9, nominalSeconds = SLASH_SECONDS }),
+	Ability2 = clip({ action = "Ability2", assetId = SLASH, speed = 0.74, nominalSeconds = SLASH_SECONDS }),
+	Ability2Echo = clip({
+		action = "Ability2Echo",
+		assetId = SLASH,
+		speed = 0.58,
+		startTimeSeconds = SLASH_STRIKE_AT,
+		nominalSeconds = SLASH_SECONDS,
+	}),
 	Ability3Counter = clip({
 		action = "Ability3Counter",
 		assetId = SLASH,
-		speed = 1.06,
+		speed = 0.68,
+		startTimeSeconds = SLASH_STRIKE_AT,
 		nominalSeconds = SLASH_SECONDS,
 	}),
 }
@@ -125,7 +155,7 @@ local ACTION_CLIPS: { [string]: Clip } = {
 -- é ignorado. Sem clipe declarado devolve nil — quem chama cai no procedural.
 function CombatAnimations.forAction(action: string, comboStep: number?): Clip?
 	if action == "BasicLight" then
-		local step = math.clamp(math.floor(tonumber(comboStep) or 1), 1, #LIGHT_CHAIN)
+		local step = math.clamp(math.floor(tonumber(comboStep) or 1), 1, #LIGHT_CHAIN_SECONDS)
 		return LIGHT_CHAIN[step]
 	end
 	return ACTION_CLIPS[action]
@@ -143,7 +173,7 @@ function CombatAnimations.all(): { Clip }
 end
 
 function CombatAnimations.assetIds(): { string }
-	return { SLASH, LUNGE }
+	return { SLASH }
 end
 
 -- Duração declarada da ação (para validação e para quem precisa do orçamento).
@@ -155,17 +185,23 @@ function CombatAnimations.actionSeconds(action: string, comboStep: number?): num
 	return ACTION_SECONDS[action]
 end
 
--- Honestidade visual (docs/14 §4.4, mesma regra do VFX): nenhuma pose
--- sobrevive à ação. Forçar o clipe INTEIRO dentro da janela exigiria acelerar
--- 4× um clipe de 1,5 s — foi o que deixou tudo feio. A regra prática: o clipe
--- pode passar no máximo 15% da ação, e quem garante o corte é o runtime
--- (`CharacterAnimationPlayer.step` para o track com fade no fim da ação).
-local OVERRUN_LIMIT = 1.15
+-- Sobra permitida no fim do clipe: com janelamento, a janela tocada dura
+-- exatamente a ação, então o trecho pedido tem de caber no clipe. 10 ms de
+-- folga absorvem o arredondamento das velocidades declaradas acima.
+local CLIP_TAIL_TOLERANCE = 0.01
+
+-- Faixa de velocidade legível. Abaixo de 0,5× é câmera lenta; acima de 1,5× o
+-- olho não acompanha e o golpe vira borrão — foi o erro que este arquivo
+-- carregou até 2026-08-14, quando o limite era 3×.
+local MIN_SPEED = 0.5
+local MAX_SPEED = 1.5
+
+CombatAnimations.MinSpeed = MIN_SPEED
+CombatAnimations.MaxSpeed = MAX_SPEED
 
 function CombatAnimations.validate(): (boolean, string?)
 	for index, entry in LIGHT_CHAIN do
-		local budget = LIGHT_CHAIN_SECONDS[index]
-		local ok, reason = CombatAnimations.validateClip(entry, budget)
+		local ok, reason = CombatAnimations.validateClip(entry, LIGHT_CHAIN_SECONDS[index])
 		if not ok then
 			return false, reason
 		end
@@ -195,23 +231,39 @@ function CombatAnimations.validateClip(entry: Clip, budgetSeconds: number?): (bo
 	if entry.weight <= 0 then
 		return false, ("%s: weight precisa ser positivo"):format(entry.action)
 	end
+	if entry.startTimeSeconds < 0 or entry.startTimeSeconds >= entry.nominalSeconds then
+		return false,
+			("%s: janela começa em %.3fs, fora do clipe de %.3fs"):format(
+				entry.action,
+				entry.startTimeSeconds,
+				entry.nominalSeconds
+			)
+	end
 	if budgetSeconds == nil then
 		return false, ("%s: ação sem duração declarada"):format(entry.action)
 	end
-	local playedSeconds = entry.nominalSeconds / entry.speed
-	if playedSeconds > budgetSeconds * OVERRUN_LIMIT then
+	if entry.speed < MIN_SPEED or entry.speed > MAX_SPEED then
 		return false,
-			("%s: clipe dura %.3fs e a ação só tem %.3fs (limite %.0f%%)"):format(
+			("%s: velocidade %.2f× fora da faixa legível (%.1f×–%.1f×)"):format(
 				entry.action,
-				playedSeconds,
-				budgetSeconds,
-				OVERRUN_LIMIT * 100
+				entry.speed,
+				MIN_SPEED,
+				MAX_SPEED
 			)
 	end
-	-- Velocidade fora de 0,5×–3× não existe como leitura: ou é câmera lenta ou
-	-- é borrão. Se um clipe novo pedir isso, o problema é a escolha do clipe.
-	if entry.speed < 0.5 or entry.speed > 3 then
-		return false, ("%s: velocidade %.2f× fora da faixa legível (0,5×–3×)"):format(entry.action, entry.speed)
+	-- Honestidade visual (docs/14 §4.4): a janela tocada tem exatamente a
+	-- duração da ação, então nenhuma pose sobrevive a ela. O que falta checar é
+	-- se esse trecho existe no clipe — pedir além do fim congela o último quadro
+	-- e devolve a pose estática que o janelamento veio eliminar.
+	local windowEnd = entry.startTimeSeconds + budgetSeconds * entry.speed
+	if windowEnd > entry.nominalSeconds + CLIP_TAIL_TOLERANCE then
+		return false,
+			("%s: janela %.3f→%.3fs estoura o clipe de %.3fs"):format(
+				entry.action,
+				entry.startTimeSeconds,
+				windowEnd,
+				entry.nominalSeconds
+			)
 	end
 	return true, nil
 end

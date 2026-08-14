@@ -1,7 +1,18 @@
 --!strict
 -- Resposta procedural local para intenções de combate do jogador. Esta camada
 -- não decide acerto, alvo, dano, custo ou deslocamento autoritativo; ela apenas
--- aplica um overlay visual temporário sobre os Motor6D do personagem local.
+-- aplica um overlay visual temporário sobre as juntas do personagem local.
+--
+-- ⚠️ Junta NÃO é sinônimo de Motor6D. O avatar R15 atual do Roblox monta o rig
+-- com `AnimationConstraint` (Attachment→Attachment) e **zero** Motor6D — medido
+-- no Studio em 2026-08-14: o personagem do jogador tinha 15 AnimationConstraint
+-- (Root, Waist, Neck, LeftShoulder…) e nenhum Motor6D. Enquanto este arquivo
+-- procurava só Motor6D, `animator.joints` ficava VAZIO e todo o overlay abaixo
+-- — as quatro silhuetas da cadeia, as três técnicas, o hit-stop — não saía do
+-- papel. O que o jogador via era apenas o clipe de espada acelerado. Era essa a
+-- reclamação "as animações de golpes estão péssimas" (docs/18 §8).
+-- As duas classes expõem `Transform: CFrame` com a mesma semântica, então o
+-- overlay é idêntico: só a busca precisa aceitar as duas.
 
 export type CombatAction =
 	"BasicLight"
@@ -12,9 +23,9 @@ export type CombatAction =
 	| "Ability1"
 	| "Ability2"
 	| "Ability3"
-	-- Eco da Cadência (reentrada) e contra do Pulso são momentos próprios da
-	-- técnica: reusar a pose da ativação faria o jogador ler "de novo o mesmo
-	-- golpe" onde a regra mudou (docs/18 §2.2 e §2.3).
+	-- Eco da Cadência (reentrada) e contra do Pulso são momentos próprios da
+	-- técnica: reusar a pose da ativação faria o jogador ler "de novo o mesmo
+	-- golpe" onde a regra mudou (docs/18 §2.2 e §2.3).
 	| "Ability2Echo"
 	| "Ability3Counter"
 
@@ -46,13 +57,18 @@ export type PoseSample = {
 	leftKneePitchDegrees: number,
 	rightKneePitchDegrees: number,
 	-- Punho permite o "estalo" no impacto: uma flexão curta fecha o soco no
-	-- momento do contato (R15 tem Motor6D de punho; R6 não — o overlay é ignorado).
+	-- momento do contato (R15 tem junta de punho; R6 não — o overlay é ignorado).
 	leftWristPitchDegrees: number,
 	rightWristPitchDegrees: number,
 }
 
+-- Motor6D (rig clássico) ou AnimationConstraint (rig atual do avatar R15). O
+-- overlay só depende de `Transform`, que as duas expõem; tipar como Instance
+-- evita afirmar em `--!strict` uma classe que o personagem pode não ter.
+type PoseJoint = Instance
+
 type JointState = {
-	motor: Motor6D,
+	joint: PoseJoint,
 	baseTransform: CFrame,
 	lastApplied: CFrame?,
 }
@@ -1087,6 +1103,10 @@ function PlayerCombatAnimator.sample(
 	return idleBreathPose(base, nowSeconds)
 end
 
+local function normalizedName(name: string): string
+	return string.lower(string.gsub(name, "[^%w]", ""))
+end
+
 local JOINT_CANDIDATES: { [string]: { string } } = {
 	root = { "root", "rootjoint" },
 	waist = { "waist" },
@@ -1105,15 +1125,47 @@ local JOINT_CANDIDATES: { [string]: { string } } = {
 	rightWrist = { "rightwrist" },
 }
 
-local function normalizedName(name: string): string
-	return string.lower(string.gsub(name, "[^%w]", ""))
+-- Nome da junta → papel da pose, já normalizado ("Left Shoulder" do R6 e
+-- "LeftShoulder" do R15 caem no mesmo papel).
+local JOINT_ROLE_BY_NAME: { [string]: string } = {}
+for role, candidates in JOINT_CANDIDATES do
+	for _, candidate in candidates do
+		JOINT_ROLE_BY_NAME[candidate] = role
+	end
+end
+
+-- Classes de junta que aceitam overlay. Motor6D é o rig clássico;
+-- AnimationConstraint é como o avatar R15 atual é montado (ver cabeçalho) — o
+-- personagem do jogador hoje só tem a segunda. Função pura para o teste Lune
+-- travar as duas sem DataModel: se alguém restringir isso a Motor6D de novo, o
+-- combate inteiro volta a ficar sem animação e o teste falha na hora.
+local POSE_JOINT_CLASSES: { [string]: boolean } = {
+	Motor6D = true,
+	AnimationConstraint = true,
+}
+
+function PlayerCombatAnimator.isPoseJointClass(className: string): boolean
+	return POSE_JOINT_CLASSES[className] == true
+end
+
+function PlayerCombatAnimator.jointRole(jointName: string): string?
+	return JOINT_ROLE_BY_NAME[normalizedName(jointName)]
+end
+
+local function jointTransform(joint: PoseJoint): CFrame
+	return (joint :: any).Transform
+end
+
+local function setJointTransform(joint: PoseJoint, value: CFrame): ()
+	local target = joint :: any
+	target.Transform = value
 end
 
 local function restoreJoints(animator: Animator): ()
 	for _, state in animator.joints do
-		local motor = state.motor
-		if motor.Parent and state.lastApplied and motor.Transform == state.lastApplied then
-			motor.Transform = state.baseTransform
+		local joint = state.joint
+		if joint.Parent and state.lastApplied and jointTransform(joint) == state.lastApplied then
+			setJointTransform(joint, state.baseTransform)
 		end
 	end
 	table.clear(animator.joints)
@@ -1129,23 +1181,20 @@ local function attachCharacter(animator: Animator, character: Model?): ()
 		return
 	end
 
-	local motorsByName: { [string]: Motor6D } = {}
+	-- Primeira junta encontrada por papel vence. O rig atual traz só
+	-- AnimationConstraint, o clássico só Motor6D; aceitar as duas é o que faz o
+	-- overlay existir nos dois mundos, sem ramo por versão de avatar.
 	for _, descendant in character:GetDescendants() do
-		if descendant:IsA("Motor6D") then
-			motorsByName[normalizedName(descendant.Name)] = descendant
+		if not PlayerCombatAnimator.isPoseJointClass(descendant.ClassName) then
+			continue
 		end
-	end
-	for role, candidates in JOINT_CANDIDATES do
-		for _, candidate in candidates do
-			local motor = motorsByName[candidate]
-			if motor then
-				animator.joints[role] = {
-					motor = motor,
-					baseTransform = motor.Transform,
-					lastApplied = nil,
-				}
-				break
-			end
+		local role = PlayerCombatAnimator.jointRole(descendant.Name)
+		if role and not animator.joints[role] then
+			animator.joints[role] = {
+				joint = descendant,
+				baseTransform = jointTransform(descendant),
+				lastApplied = nil,
+			}
 		end
 	end
 end
@@ -1157,10 +1206,10 @@ end
 
 local function applyJoint(animator: Animator, role: string, value: CFrame): ()
 	local state = animator.joints[role]
-	if not state or not state.motor.Parent then
+	if not state or not state.joint.Parent then
 		return
 	end
-	local current = state.motor.Transform
+	local current = jointTransform(state.joint)
 	-- Sem Animator ativo, Transform ainda contém nosso resultado anterior. Nesse
 	-- caso recuperamos a base salva antes de compor o novo overlay. Se o Animator
 	-- escreveu uma pose nova em PreAnimation, ela vira a nova base naturalmente.
@@ -1169,7 +1218,7 @@ local function applyJoint(animator: Animator, role: string, value: CFrame): ()
 	end
 	state.baseTransform = current
 	local applied = current * value
-	state.motor.Transform = applied
+	setJointTransform(state.joint, applied)
 	state.lastApplied = applied
 end
 

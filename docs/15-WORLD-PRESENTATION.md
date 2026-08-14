@@ -81,10 +81,68 @@ As receitas vivem em `src/shared/Data/WorldPresentation.luau`; o módulo guarda 
 
 | Ator | Forma | Escala | Papel visual |
 |---|---|---:|---|
-| Dummy de treino | humanoide em blocos + palha/alvo | 1,00 | saco de treino com cabeça e poste |
-| Instrutor do Limiar | humanoide em blocos + capuz/casaco | 1,05 | mensageiro umbral, rosto visível |
+| Dummy de treino | **rig R15** + estopa/palha/alvo | 1,00 | saco de treino amarrado, com poste |
+| Instrutor do Limiar | **rig R15** + capuz/casaco | 1,05 | mensageiro umbral, rosto visível |
 | Estilhaço Errante | núcleo + cunhas | 0,90 | ameaça móvel leve |
 | Estilhaço Ancorado | núcleo + cunhas | 1,65 | elite reconhecível por escala e massa, não só por cor |
+
+### 4.1 Corpo de rig R15 nos bots do spawn (14/08)
+
+Os dois bots do spawn eram uma torre de Parts com uma esfera no lugar da
+cabeça. De longe — que é como o jogador os vê — isso não lê como personagem.
+Desde 14/08 o **corpo** deles é o rig R15 oficial do Roblox
+(`Players:CreateHumanoidModelFromDescription`), e a **roupa** vem de
+`WorldPresentation.rigFor(npcId)`.
+
+Por que o rig oficial e não asset de terceiro: ele não é arte de referência,
+não é compra, não sobe nada para o catálogo e existe em qualquer lugar — o
+Gate P1 (§17 do `13-F0-SLICE`) continua fechado. Ganha-se de graça proporção
+humana, mãos, pés e a malha de cabeça com rosto.
+
+Estrutura resultante (`Actors/<Ator>`):
+
+- `Root` — a Part invisível **ancorada** de sempre: continua sendo a única
+  coisa que o servidor move, o dono do atributo `CombatTarget` e a referência
+  de alcance. Nada da mudança tocou o domínio.
+- `Body` — o rig R15, soldado na `Root` por um `Weld` (`RigWeld`). Todas as
+  peças com `CanCollide`/`CanTouch`/`CanQuery` falsos: o corpo é aparência,
+  não física. A `HumanoidRootPart` leva `AvbInvisible` para o
+  `setActorVisible` não acendê-la.
+- `Humanoid` sem nome flutuante, sem barra de vida e com
+  `EvaluateStateMachine = false` — senão ele tenta andar, cair e morrer sozinho.
+
+Medidas do rig padrão colhidas no Studio em 14/08 (escalas em 1) e usadas nas
+receitas: `Head` 1,159×1,182×1,161 · `UpperTorso` 1,943×1,698×1,004 ·
+`LowerTorso` 1,991×0,401×1,004 · `UpperArm` 1,001×1,242×1,002 ·
+`LowerArm` 1,001×1,118×1,002 · `LowerLeg` 0,993×1,301×0,973.
+
+**Assentamento (`WorldService.settleRigBodies`).** O R15 sai da criação com as
+pernas recolhidas e só estende no primeiro passo de física: medindo a sola
+antes disso, o boneco nasce **0,186 stud enterrado** (e o poste e a base do
+dummy nascem soterrados junto). Em vez de fixar a constante — que muda no dia
+em que o Roblox mexer nas proporções padrão — o mundo espera um Heartbeat,
+mede o corpo montado e corrige o `C0` do weld uma vez. Verificado no Studio:
+sola em 0,000 (instrutor) e 0,500 (dummy, topo do pad), erro final 0,0000, e
+rodar de novo não move nada.
+
+**Fallback.** Se `CreateHumanoidModelFromDescription` falhar, o `WorldService`
+cai no corpo greybox de Parts anterior e emite `warn`. O mundo nunca nasce sem
+NPC — o instrutor é quem entrega o objetivo 1.
+
+**Regras travadas por teste** (`tests/run.luau`, sobre dado puro):
+
+- os dois bots têm receita de rig, e nenhum estilhaço tem;
+- toda peça pousa num nome de parte que existe no rig R15 (host com erro de
+  digitação viraria roupa solta no chão);
+- material dentro da lista liberada (nome inválido seria erro de runtime no
+  boot do mundo), RGB em 0..255, tamanho em 0,05–8 studs, offset até 4 studs
+  do host, `WedgePart` não aceita `Shape`;
+- rosto só por textura **embutida do cliente** (`rbxasset://textures/face.png`)
+  — asset de catálogo pode sumir por moderação e deixar o NPC sem cara;
+- **nenhuma peça de cabelo/capuz tapa os olhos**: se a peça avança na frente do
+  plano do rosto (z < −0,581), ela tem de ficar inteira acima da faixa dos
+  olhos (y ≥ 0,28). É a regra que impede a franja de escorregar num ajuste
+  fino e devolver o vulto encapuzado sem cara.
 
 Cada modelo usa uma raiz invisível ancorada e peças sem colisão ligadas por `Motor6D`. A altura da raiz é derivada da receita para manter os pés sobre o piso; cabeça e braços seguem o torso, evitando separação visual ao inclinar. A posição/olhar da raiz vêm do `SpatialService` no servidor e só são replicados quando posição ou direção mudam. O cliente altera apenas `Motor6D.Transform`; portanto a pose nunca muda alcance, alvo, dano ou posição válida.
 
@@ -137,7 +195,17 @@ Somente o root do dummy e dos inimigos vivos possui `CombatTarget`; âncoras de 
 | died | queda limitada a até 90° e ocultação posterior | morte já foi decidida no servidor |
 | spawn/respawn | elevação e assentamento de 600 ms, inclusive para late join | respawn/cooldown continuam no domínio |
 
-Os eventos transitórios carregam `durationSeconds` e `visualPattern`, expiram e voltam a idle para não congelar a locomoção. `PoseSerial`, início e duração replicados permitem que um cliente tardio apresente o estado sem transformar timestamp em autoridade. Joints são cacheados por modelo; não há busca recursiva de `Motor6D` a cada frame depois da primeira amostra.
+Os eventos transitórios carregam `durationSeconds` e `visualPattern`, expiram e voltam a idle para não congelar a locomoção. `PoseSerial`, início e duração replicados permitem que um cliente tardio apresente o estado sem transformar timestamp em autoridade. Joints são cacheados por modelo; não há busca recursiva a cada frame depois da primeira amostra.
+
+> **Junta não é sinônimo de `Motor6D` (14/08).** O rig R15 usa
+> `AnimationConstraint`, que expõe o mesmo `Transform`. O `ActorAnimator`
+> aceita as duas classes e escreve os dois conjuntos de nomes: `Joint_*` para
+> o ator greybox em Parts e `Root`/`Waist`/`Neck`/`LeftShoulder`/`LeftHip`/… para
+> o corpo de rig. Nome ausente é ignorado, então o mesmo caminho serve aos dois
+> sem ramo por tipo de corpo. No R15 a respiração vai no `Root` (o quadril sobe
+> e desce) e a inclinação na `Waist`: girar o `Root` inteiro faria o boneco
+> pivotar sobre os pés. Detalhe completo e a razão da correção em
+> `docs/14-ANIMATION-PLAN.md` §4.5.
 
 ### 5.2 Jogador local
 
@@ -150,7 +218,14 @@ Os eventos transitórios carregam `durationSeconds` e `visualPattern`, expiram e
 | guarda down/up | 160/180 ms | pose acompanha a intenção; guarda efetiva continua server-side |
 | dash | 320 ms | inclinação visual; não move root nem concede i-frame |
 
-O overlay é reaplicado em `PreSimulation`, acompanha respawn e restaura joints ao parar. Ele **não é clip final** e não cobre as três técnicas: Ombro Cometa, Cadência Quebrada e Retorno de Pulso ainda usam somente a resposta genérica do restante do cliente.
+O overlay é reaplicado em `PreSimulation`, acompanha respawn e restaura joints ao parar. Ele **não é clip final**.
+
+> **Correção de 14/08 — o overlay não estava aplicando nada.** O animador
+> procurava só `Motor6D`; o avatar R15 atual monta o rig com
+> `AnimationConstraint` e **zero** `Motor6D`. `animator.joints` ficava vazio e
+> a pose inteira (cadeia, técnicas, hit-stop, follow-through) não chegava ao
+> personagem — só o clipe de espada acelerado chegava. Medição, correção e
+> testes de regressão em `docs/14-ANIMATION-PLAN.md` §4.5.
 
 ## 6. Interação contextual
 
