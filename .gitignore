@@ -23,3 +23,6 @@ Thumbs.db
 # Editor — commitar settings.json do projeto, ignorar estado local
 .vscode/*.local.json
 .idea/
+
+# Pacote de VFX gratuito (zip de entrega — a pasta extraída é o versionado)
+AVB-free-vfx-assets.zip
