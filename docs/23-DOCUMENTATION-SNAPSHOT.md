@@ -7,10 +7,10 @@ Este arquivo é a referência única para o estado técnico atual do repositóri
 | Campo | Estado canônico |
 |---|---|
 | Branch publicado | `main` |
-| Commit-base do código | `1ff58f2` (`test: cover rate-limit reset across rejoin`) |
+| Commit-base do código | `4389964` (`test: add deterministic security fuzz suite`) |
 | Estado deste documento | snapshot publicado após a pré-cobertura R1 headless |
 | Data do commit | 2026-08-14 |
-| Última alteração de código-base | `test: cover rate-limit reset across rejoin` |
+| Última alteração de código-base | `test: add deterministic security fuzz suite` |
 | Testes de domínio | 227 passaram, 0 falharam |
 | Testes de animação/apresentação | 55 passaram, 0 falharam |
 | Fuzz headless de segurança | 29 passaram, 0 falharam |
