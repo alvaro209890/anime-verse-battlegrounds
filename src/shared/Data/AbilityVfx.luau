@@ -604,13 +604,13 @@ function AbilityVfx.validate(): (boolean, string?)
 			-- Toda camada acende: efeito de combate que só existe em partícula
 			-- brilha mas não ilumina, e foi assim que o kit inteiro ficou sem
 			-- luz nenhuma até 14/08.
-				if entry.glowStuds <= 0 then
-					return false, ("camada %s não acende luz"):format(entry.id)
-				end
-				if entry.assetKey ~= nil and ASSETS[entry.assetKey] == nil then
-					return false, ("camada %s aponta para asset desconhecido %s"):format(entry.id, entry.assetKey)
-				end
-				if entry.attackSeconds + entry.releaseSeconds > entry.durationSeconds + 1e-9 then
+			if entry.glowStuds <= 0 then
+				return false, ("camada %s não acende luz"):format(entry.id)
+			end
+			if entry.assetKey ~= nil and ASSETS[entry.assetKey] == nil then
+				return false, ("camada %s aponta para asset desconhecido %s"):format(entry.id, entry.assetKey)
+			end
+			if entry.attackSeconds + entry.releaseSeconds > entry.durationSeconds + 1e-9 then
 				return false, ("camada %s tem envelope maior que a duração"):format(entry.id)
 			end
 			-- A regra que impede o efeito de mentir sobre alcance.

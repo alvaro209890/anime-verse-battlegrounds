@@ -713,10 +713,22 @@ test("vfx: bootstrap instancia, inicia e confirma o player", function()
 	local source = fs.readFile("src/client/init.client.lua")
 	assertTrue(source:find("abilityVfx = AbilityVfxPlayer.new", 1, true) ~= nil, "player de VFX é instanciado")
 	assertTrue(source:find("AbilityVfxPlayer.start(abilityVfx)", 1, true) ~= nil, "player de VFX é iniciado")
-	assertTrue(source:find("AbilityVfxPlayer.confirm(abilityVfx", 1, true) ~= nil, "VFX recebe confirmação autoritativa")
-	assertTrue(source:find('payload.abilityId == "pulse_return" and payload.outcome == "counter"', 1, true) ~= nil, "contra é filtrado pelo evento")
-	assertTrue(source:find('PlayerCombatAnimator.play(playerCombatAnimator, "Ability3Counter")', 1, true) ~= nil, "contra inicia pose específica")
-	assertTrue(source:find('AbilityVfxPlayer.play(abilityVfx, "Ability3Counter")', 1, true) ~= nil, "contra inicia VFX específico")
+	assertTrue(
+		source:find("AbilityVfxPlayer.confirm(abilityVfx", 1, true) ~= nil,
+		"VFX recebe confirmação autoritativa"
+	)
+	assertTrue(
+		source:find('payload.abilityId == "pulse_return" and payload.outcome == "counter"', 1, true) ~= nil,
+		"contra é filtrado pelo evento"
+	)
+	assertTrue(
+		source:find('PlayerCombatAnimator.play(playerCombatAnimator, "Ability3Counter")', 1, true) ~= nil,
+		"contra inicia pose específica"
+	)
+	assertTrue(
+		source:find('AbilityVfxPlayer.play(abilityVfx, "Ability3Counter")', 1, true) ~= nil,
+		"contra inicia VFX específico"
+	)
 end)
 
 -- ── HUD de combate: números de dano + barras de inimigos (docs/17) ─────────

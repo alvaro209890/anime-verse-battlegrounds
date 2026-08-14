@@ -165,14 +165,14 @@ local function buildNode(vfx: Player, entry: any): any?
 	local tint = color3(entry.rgb)
 
 	if entry.kind == "charge" or entry.kind == "shell" or entry.kind == "burst" then
-			local emitter = Instance.new("ParticleEmitter")
-			emitter.Name = ("AvbVfx_%s"):format(entry.id)
-			emitter.Texture = PARTICLE_TEXTURE
-			local assetId, assetSpec = publishedAssetId(vfx, entry)
-			if assetId and assetSpec and assetSpec.layout ~= "Custom" then
-				emitter.Texture = assetId
-				applyFlipbook(emitter, assetSpec)
-			end
+		local emitter = Instance.new("ParticleEmitter")
+		emitter.Name = ("AvbVfx_%s"):format(entry.id)
+		emitter.Texture = PARTICLE_TEXTURE
+		local assetId, assetSpec = publishedAssetId(vfx, entry)
+		if assetId and assetSpec and assetSpec.layout ~= "Custom" then
+			emitter.Texture = assetId
+			applyFlipbook(emitter, assetSpec)
+		end
 		emitter.Color = ColorSequence.new(tint)
 		emitter.LightEmission = 0.65
 		emitter.LightInfluence = 0
@@ -266,30 +266,30 @@ local function buildNode(vfx: Player, entry: any): any?
 		part.Massless = true
 		part.Material = Enum.Material.Neon
 		part.Color = tint
-			part.Transparency = 1
-			part.Size = Vector3.new(0.2, 1, 1)
-			part.Parent = vfx.folder
+		part.Transparency = 1
+		part.Size = Vector3.new(0.2, 1, 1)
+		part.Parent = vfx.folder
 
-			local assetId, assetSpec = publishedAssetId(vfx, entry)
-			if assetId and assetSpec and assetSpec.layout == "Grid2x2" then
-				local surface = Instance.new("SurfaceGui")
-				surface.Name = ("AvbVfx_%s_Surface"):format(entry.id)
-				surface.Face = Enum.NormalId.Top
-				surface.AlwaysOnTop = true
-				surface.LightInfluence = 0
-				surface.CanvasSize = Vector2.new(128, 128)
-				surface.Parent = part
-				local image = Instance.new("ImageLabel")
-				image.Name = ("AvbVfx_%s_Image"):format(entry.id)
-				image.BackgroundTransparency = 1
-				image.Size = UDim2.fromScale(1, 1)
-				image.Image = assetId
-				image.ImageColor3 = tint
-				image.ImageTransparency = 1
-				image.ImageRectSize = Vector2.new(64, 64)
-				image.Parent = surface
-			end
-			return part
+		local assetId, assetSpec = publishedAssetId(vfx, entry)
+		if assetId and assetSpec and assetSpec.layout == "Grid2x2" then
+			local surface = Instance.new("SurfaceGui")
+			surface.Name = ("AvbVfx_%s_Surface"):format(entry.id)
+			surface.Face = Enum.NormalId.Top
+			surface.AlwaysOnTop = true
+			surface.LightInfluence = 0
+			surface.CanvasSize = Vector2.new(128, 128)
+			surface.Parent = part
+			local image = Instance.new("ImageLabel")
+			image.Name = ("AvbVfx_%s_Image"):format(entry.id)
+			image.BackgroundTransparency = 1
+			image.Size = UDim2.fromScale(1, 1)
+			image.Image = assetId
+			image.ImageColor3 = tint
+			image.ImageTransparency = 1
+			image.ImageRectSize = Vector2.new(64, 64)
+			image.Parent = surface
+		end
+		return part
 	end
 
 	return nil
@@ -316,12 +316,12 @@ local function clearNodes(vfx: Player): ()
 	table.clear(vfx.nodes)
 	table.clear(vfx.fired)
 	for _, attachment in vfx.attachments do
-			if attachment and attachment.Parent then
-				attachment:Destroy()
-			end
+		if attachment and attachment.Parent then
+			attachment:Destroy()
 		end
-		table.clear(vfx.attachments)
-		table.clear(vfx.assetWarnings)
+	end
+	table.clear(vfx.attachments)
+	table.clear(vfx.assetWarnings)
 end
 
 local function attachCharacter(vfx: Player, character: Model?): ()
@@ -349,9 +349,9 @@ function AbilityVfxPlayer.new(deps: {
 		character = nil,
 		nodes = {},
 		fired = {},
-			attachments = {},
-			assetWarnings = {},
-			active = {},
+		attachments = {},
+		assetWarnings = {},
+		active = {},
 		folder = deps.folder,
 		connection = nil,
 		characterAddedConnection = nil,
@@ -498,34 +498,34 @@ local function applyNode(vfx: Player, planned: PlannedNode): ()
 			vfx.fired[entry.id] = true
 			node:Emit(math.max(8, math.floor(entry.radiusStuds * 10)))
 		end
-		elseif entry.kind == "trail" then
-			node.Enabled = true
-		elseif entry.kind == "arc" then
-			if node:IsA("ParticleEmitter") then
-				node.Enabled = false
-				if not vfx.fired[entry.id] then
-					vfx.fired[entry.id] = true
-					node:Emit(1)
-				end
-			else
-				node.Enabled = true
+	elseif entry.kind == "trail" then
+		node.Enabled = true
+	elseif entry.kind == "arc" then
+		if node:IsA("ParticleEmitter") then
+			node.Enabled = false
+			if not vfx.fired[entry.id] then
+				vfx.fired[entry.id] = true
+				node:Emit(1)
 			end
-		elseif entry.kind == "ring" then
+		else
+			node.Enabled = true
+		end
+	elseif entry.kind == "ring" then
 		local character = vfx.character
 		local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
 		if root and root:IsA("BasePart") then
 			local radius = entry.radiusStuds * ringRadiusFactor(intensity)
-				node.Size = Vector3.new(0.2, radius * 2, radius * 2)
-				node.CFrame = CFrame.new(root.Position - Vector3.new(0, 2.6, 0)) * CFrame.Angles(0, 0, math.rad(90))
-				node.Transparency = 1 - intensity * 0.75
-				local surface = node:FindFirstChildWhichIsA("SurfaceGui")
-				local image = if surface then surface:FindFirstChildWhichIsA("ImageLabel") else nil
-				if image then
-					local frame = math.clamp(math.floor((1 - intensity) * 3), 0, 3)
-					image.ImageRectOffset = Vector2.new((frame % 2) * 64, math.floor(frame / 2) * 64)
-					image.ImageTransparency = 1 - intensity * 0.9
-				end
+			node.Size = Vector3.new(0.2, radius * 2, radius * 2)
+			node.CFrame = CFrame.new(root.Position - Vector3.new(0, 2.6, 0)) * CFrame.Angles(0, 0, math.rad(90))
+			node.Transparency = 1 - intensity * 0.75
+			local surface = node:FindFirstChildWhichIsA("SurfaceGui")
+			local image = if surface then surface:FindFirstChildWhichIsA("ImageLabel") else nil
+			if image then
+				local frame = math.clamp(math.floor((1 - intensity) * 3), 0, 3)
+				image.ImageRectOffset = Vector2.new((frame % 2) * 64, math.floor(frame / 2) * 64)
+				image.ImageTransparency = 1 - intensity * 0.9
 			end
+		end
 	end
 end
 
@@ -537,15 +537,15 @@ local function silence(vfx: Player, lit: { [string]: boolean }): ()
 				node.Rate = 0
 			elseif node:IsA("Trail") then
 				node.Enabled = false
-							elseif node:IsA("BasePart") then
-					node.Transparency = 1
-					local surface = node:FindFirstChildWhichIsA("SurfaceGui")
-					local image = if surface then surface:FindFirstChildWhichIsA("ImageLabel") else nil
-					if image then
-						image.ImageTransparency = 1
-					end
+			elseif node:IsA("BasePart") then
+				node.Transparency = 1
+				local surface = node:FindFirstChildWhichIsA("SurfaceGui")
+				local image = if surface then surface:FindFirstChildWhichIsA("ImageLabel") else nil
+				if image then
+					image.ImageTransparency = 1
 				end
-				local holder = if node:IsA("BasePart") then node else node.Parent
+			end
+			local holder = if node:IsA("BasePart") then node else node.Parent
 			local light = if holder then holder:FindFirstChild(("AvbVfxLight_%s"):format(id)) else nil
 			if light then
 				light.Brightness = 0
