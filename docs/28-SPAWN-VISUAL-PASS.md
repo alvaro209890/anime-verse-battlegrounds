@@ -63,3 +63,21 @@ A revisão de qualidade deve também confirmar que as luzes são destruídas e r
 - [`src/shared/Data/SceneryPresentation.luau`](../src/shared/Data/SceneryPresentation.luau)
 - [`src/shared/Data/WorldPresentation.luau`](../src/shared/Data/WorldPresentation.luau)
 - [`src/server/Services/WorldService.luau`](../src/server/Services/WorldService.luau)
+
+## Revalidação integral pós-publicação
+
+A revisão de hoje comparou os commits publicados da reforma do spawn, inspecionou o diff de `WorldService`, `SceneryPresentation`, `WorldPresentation` e `tests/animation.luau`, confirmou que os assets alterados não introduzem regras de combate e repetiu os gates completos.
+
+Nenhum bug reproduzível foi encontrado fora do Studio. A iluminação é idempotente: `F0SpawnLighting` é destruída antes de ser reconstruída; os emissores não têm colisão, toque ou consulta; o número de pontos é limitado pelo catálogo; e as cores, brilho, alcance, quantidade e RGB passam por validação. A skin adicional da instrutora continua coberta por validação de rig, host, material, proporção, limite anti-caixa e proteção da faixa dos olhos.
+
+| Verificação de revalidação | Resultado |
+|---|---|
+| `tests/run.luau` | 227 passaram, 0 falharam |
+| `tests/animation.luau` | 62 passaram, 0 falharam |
+| `tests/security_fuzz.luau` | 29 passaram, 0 falharam |
+| Selene | 0 erros, 0 warnings, 0 parse errors |
+| Rojo | Build aprovado, 297.729 bytes |
+| `git diff --check` | Passou |
+| Branch remota | `origin/main` sincronizada com `ec4d3a2` |
+
+A inspeção não substitui o Gate W1. Ainda não é possível concluir headless que a iluminação não escurece a face, que não existe clipping no rig, que o teto não causa desconforto visual, que não há z-fighting ou que o desempenho em Android está dentro do orçamento. Esses pontos permanecem como validação manual no Roblox Studio.
