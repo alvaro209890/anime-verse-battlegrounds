@@ -14,6 +14,7 @@ Comece pela linha da referência desejada. Consulte o documento canônico, revis
 | `docs/assets/ground-break-impact-presentation.png` | Crack, poeira, debris e dissipação | `docs/15-WORLD-PRESENTATION.md`, `docs/25-COMBAT-PRESENTATION-PLAN.md` | F0 → F1 | Sequência temporal, pooling, ausência de colisão alterada |
 | `docs/assets/impact-vfx-micro-library.png` | Motivos de anel, rastro, faísca e impacto | `docs/25-COMBAT-PRESENTATION-PLAN.md` | F0 → F2 | Reuso consistente, limite de partículas e legibilidade mobile |
 | `docs/assets/domain-expansion-concept.png` | Escala do Bastião à Planície e ao Distrito Lumen | `docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md` | F0 → F2 | Leitura de rotas, zonas e densidade no Studio |
+| `docs/assets/anime-verse-battlegrounds-cover.png` | Capa geral, arena e identidade cromática do jogo | `docs/29-GAME-COVER.md` | F0 | Uso documental; não é evidência de runtime |
 | `docs/assets/domain-expansion-district-lumen.png` | Células urbanas e marcos verticais | `docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md` | F1/F2 | Uma célula modular construída, navegável e performática |
 | `docs/assets/domain-expansion-safe-plaza.png` | Spawn, treino, serviços e saídas | `docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md`, `docs/15-WORLD-PRESENTATION.md` | F0/F1 | W1: spawn, cobertura, rotas, prompts e colisão |
 | `docs/assets/domain-expansion-border-gate.png` | Fronteira segura/livre e beacons | `docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md`, `docs/07-SECURITY.md` | F0 | W1/R1: telegraph, transição e regra PvP no servidor |

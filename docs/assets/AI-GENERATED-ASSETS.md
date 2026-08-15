@@ -9,6 +9,7 @@ Os arquivos `domain-expansion-*.png` usam a paleta conceitual do mundo: Slate es
 | Arquivo | Função | Não usar como |
 |---|---|---|
 | `domain-expansion-concept.png` | Capa e escala geral Bastião → Planície → Distrito Lumen | Mapa navegável ou textura |
+| `anime-verse-battlegrounds-cover.png` | Capa geral do jogo, arena e identidade de batalha | Thumbnail de runtime, decal ou textura |
 | `domain-expansion-district-lumen.png` | Direção da cidade, ruas e passarelas | Planta final ou cenário já implementado |
 | `domain-expansion-safe-plaza.png` | Praça segura, spawn, treino e serviços | Guia de colisão ou layout autoritativo |
 | `domain-expansion-border-gate.png` | Referência da fronteira e duas rotas | Contrato de dano ou regra de PvP |

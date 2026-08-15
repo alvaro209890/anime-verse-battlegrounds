@@ -6,6 +6,10 @@ progressão persistente, loadout customizável e ressonância de famílias de en
 > **Status em 2026-08-13 (17h):** itens 1–13 do backlog F0 fechados em código/headless. **Skins do spawn:** Instrutor do Limiar com cabeça visível, rosto em peças, capuz, cabelo e casaco umbral; dummy de treino com cabeça, palha, alvo de três anéis e poste. As cabeças anteriores usavam um FileMesh que não carregava (NPCs sem cabeça) e nasciam de costas para a praça.
 > **Runtime:** pare o Play e rode de novo para recarregar o `WorldService`. Correções da rodada anterior seguem valendo: chegue no vão do portão norte e **SEGURE E**.
 
+![Capa conceitual do Anime Verse: Battlegrounds](docs/assets/anime-verse-battlegrounds-cover.png)
+
+> **Capa conceitual:** a imagem é uma referência original de direção de arte para a arena e a identidade do jogo; ela não é um asset de runtime. Consulte [`docs/29-GAME-COVER.md`](docs/29-GAME-COVER.md) para procedência e limites de uso.
+
 ## Estado comprovado
 
 | Camada | Estado |
@@ -13,7 +17,7 @@ progressão persistente, loadout customizável e ressonância de famílias de en
 | Produto | Q-001 a Q-030 decididas; `docs/09-OPEN-QUESTIONS.md` é o registro canônico |
 | Planejamento | visão, GDD, mundo, social, arquitetura, schemas, segurança, roster, roadmap, benchmark e plano de animação documentados |
 | Implementado | domínio F0, mundo greybox com rotas/marcos/modelos low-poly, animação procedural de NPCs e do jogador, interações semânticas com Instrutor/Marco, save/ProfileStore, cliente Input/HUD, envelope v2, `SecurityService` e `TelemetryService` mínimo |
-| Validado automaticamente | 217/217 testes em `tests/run.luau` + 40/40 em `tests/animation.luau`, Selene limpo, StyLua canônico, Wally e build Rojo |
+| Validado automaticamente | 227/227 testes em `tests/run.luau` + 67/67 em `tests/animation.luau` + 29/29 no fuzz de segurança, Selene limpo, StyLua canônico, Wally e build Rojo |
 | Ainda não comprovado | roteiro Play no Studio, physics/collision groups, DataStore real, dois clientes, latência, mobile, gamepad, performance, UX visual e assets de animação |
 
 O CI em pushes para `main` valida contratos headless e a árvore Rojo; não substitui playtest. O snapshot e os links de evidência ficam em `docs/12-TESTING.md`.

@@ -92,20 +92,21 @@ Foi acrescentado um teste de regressão em `tests/animation.luau` para impedir o
 
 ## Revalidação pós-correção
 
-A correção foi revalidada com a execução integral dos gates locais e a verificação automatizada de bootstrap:
+A implementação foi revalidada com a execução integral dos gates locais, a verificação automatizada de bootstrap e o harness de integração simulado:
 
 | Verificação | Resultado |
 |---|---|
 | `tests/run.luau` | 227 passaram, 0 falharam |
-| `tests/animation.luau` | 65 passaram, 0 falharam |
+| `tests/animation.luau` | 67 passaram, 0 falharam |
 | `tests/security_fuzz.luau` | 29 passaram, 0 falharam |
 | Selene | 0 erros, 0 warnings, 0 parse errors |
 | StyLua | passou |
 | Wally | passou, 0 dependências externas |
 | Rojo | build aprovado, 297.737 bytes |
 | `git diff --check` | passou |
-| Cobertura adicional | vínculo único da Instrutora verificado no bootstrap |
-| Commit publicado | `6310e28` em `origin/main` |
+| Cobertura adicional | reconstrução idempotente, vínculo único e fluxo cliente-servidor verificados |
+| Capa | PNG conceitual 2560 × 1440 validado |
+| Publicação | commit desta rodada será registrado após o push |
 
 A validação no Roblox Studio continua sendo o próximo gate para confirmar a criação visual do `ProximityPrompt`, a interação válida e a recusa fora de 10 studs.
 
@@ -116,3 +117,7 @@ O `WorldService` agora verifica, imediatamente após construir os atores estáti
 A regra foi extraída para `src/shared/InteractionBinding.luau`, permitindo que runtime e harness usem o mesmo contrato. O teste simulado cobre vínculo único, duplicidade e ausência, sem criar dependência de Roblox Studio.
 
 A suíte headless também verifica a presença da chamada de bootstrap, a regra de unicidade e a inspeção recursiva. Essa proteção detecta falhas de montagem e evita um diagnóstico silenciosamente verde, mas não substitui o Playtest W1 para confirmar a criação visual e a usabilidade do `ProximityPrompt`.
+
+O módulo `src/shared/WorldBootstrapContract.luau` amplia essa garantia para o snapshot do mundo: uma raiz `GreyboxF0`, uma pasta `Actors`, uma pasta `F0SpawnLighting`, os dois atores estáticos esperados e nenhum duplicado. O harness executa duas reconstruções independentes, rejeita ator duplicado e rejeita iluminação duplicada.
+
+O fluxo de interação também é exercitado de ponta a ponta em contrato: o cliente transforma o alvo em intenção semântica `npc_threshold_instructor`, o serviço server-side aceita o jogador na âncora e recusa o mesmo payload quando a posição autoritativa está a 50 studs, retornando `too_far`.

@@ -46,6 +46,10 @@ local EnemyVfxPlayer = require("../src/client/Presentation/EnemyVfxPlayer")
 local Npcs = require("../src/shared/Data/Npcs")
 local SceneryPresentation = require("../src/shared/Data/SceneryPresentation")
 local InteractionBinding = require("../src/shared/InteractionBinding")
+local WorldBootstrapContract = require("../src/shared/WorldBootstrapContract")
+local Interactions = require("../src/shared/Data/Interactions")
+local InteractionController = require("../src/client/Controllers/InteractionController")
+local InteractionService = require("../src/server/Services/InteractionService")
 local Zones = require("../src/shared/Data/Zones")
 local fs = require("@lune/fs")
 
@@ -810,6 +814,81 @@ test("npc: harness simula vínculo único, duplicado e ausente", function()
 		InteractionBinding.isUniqueNpcBinding(model({ part("Head", nil) }), "npc_threshold_instructor")
 	assertFalse(missing, "vínculo ausente é rejeitado")
 	assertEq(missingCount, 0, "contagem ausente")
+end)
+
+test("mundo: duas reconstruções mantêm snapshot estático único", function()
+	local function snapshot()
+		return {
+			rootCount = 1,
+			actorFolderCount = 1,
+			spawnLightingCount = 1,
+			staticActors = WorldBootstrapContract.expectedStaticActors(),
+		}
+	end
+
+	local first = snapshot()
+	local second = snapshot()
+	local firstOk, firstReason = WorldBootstrapContract.validate(first)
+	local secondOk, secondReason = WorldBootstrapContract.validate(second)
+	assertTrue(firstOk, firstReason or "primeiro snapshot válido")
+	assertTrue(secondOk, secondReason or "segundo snapshot válido")
+	assertTrue(first.staticActors ~= second.staticActors, "reconstruções não compartilham tabela de atores")
+
+	local duplicate = snapshot()
+	table.insert(duplicate.staticActors, duplicate.staticActors[1])
+	local duplicateOk = WorldBootstrapContract.validate(duplicate)
+	assertFalse(duplicateOk, "ator duplicado é rejeitado")
+
+	local duplicatedLighting = snapshot()
+	duplicatedLighting.spawnLightingCount = 2
+	local lightingOk = WorldBootstrapContract.validate(duplicatedLighting)
+	assertFalse(lightingOk, "iluminação duplicada é rejeitada")
+end)
+
+test("interação: fluxo cliente-servidor aceita válida e rejeita distante", function()
+	local sent: { any } = {}
+	local controller = {
+		state = { ready = true },
+		catalog = Interactions,
+		send = function(_remoteName: string, _action: string, payload: { [string]: any })
+			table.insert(sent, payload)
+		end,
+	}
+
+	InteractionController.onAction(controller, "Interact", {
+		npcId = "npc_threshold_instructor",
+		phase = "complete",
+	})
+	assertEq(#sent, 1, "cliente envia uma intenção")
+	assertEq(sent[1].npcId, "npc_threshold_instructor", "cliente envia alvo semântico")
+	assertEq(sent[1].anchorId, nil, "cliente não mistura alvo de âncora")
+
+	local anchor = Zones.getAnchor("anchor_instructor")
+	assertTrue(anchor ~= nil, "âncora da Instrutora existe")
+	if not anchor then
+		return
+	end
+	local position = { value = anchor.position }
+	InteractionService.init({
+		catalog = Interactions,
+		getAnchor = Zones.getAnchor,
+		getPlayerPosition = function(_userId: number)
+			return position.value
+		end,
+		onNpc = function(_userId: number, _targetId: string, _at: number)
+			return true, nil, { accepted = true }
+		end,
+		onAnchor = function(_userId: number, _targetId: string, _at: number)
+			return true, nil, { accepted = true }
+		end,
+	})
+
+	local accepted = InteractionService.tryInteract(700, sent[1], 10)
+	assertTrue(accepted.ok, accepted.reason or "interação válida aceita")
+	position.value = { x = anchor.position.x + 50, y = anchor.position.y, z = anchor.position.z }
+	local far = InteractionService.tryInteract(700, sent[1], 11)
+	assertFalse(far.ok, "interação distante rejeitada")
+	assertEq(far.reason, "too_far", "motivo da rejeição distante")
 end)
 
 test("npc: catálogo de habilidades e assets gratuitos é válido", function()

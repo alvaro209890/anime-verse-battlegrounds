@@ -27,6 +27,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local InteractionBinding = require(ReplicatedStorage.Shared.InteractionBinding)
+local WorldBootstrapContract = require(ReplicatedStorage.Shared.WorldBootstrapContract)
 
 export type WorldDeps = {
 	zones: any,
@@ -1463,6 +1464,46 @@ local function verifyNpcInteractionBinding(root: Folder, modelName: string, npcI
 	end
 end
 
+local function verifyWorldBootstrap(root: Folder): ()
+	local actors = root:FindFirstChild("Actors")
+	local staticActors: { WorldBootstrapContract.ActorSummary } = {}
+	if actors and actors:IsA("Folder") then
+		for _, child in actors:GetChildren() do
+			if child:IsA("Model") then
+				local npcId = child:GetAttribute("NpcId")
+				if type(npcId) == "string" then
+					local bindingCount = select(1, InteractionBinding.countNpcBindings(child, npcId))
+					table.insert(staticActors, {
+						name = child.Name,
+						npcId = npcId,
+						interactionBindingCount = bindingCount,
+					})
+				end
+			end
+		end
+	end
+
+	local rootCount = 0
+	local spawnLightingCount = 0
+	for _, child in Workspace:GetChildren() do
+		if child.Name == "GreyboxF0" then
+			rootCount += 1
+		elseif child.Name == "F0SpawnLighting" then
+			spawnLightingCount += 1
+		end
+	end
+
+	local ok, reason = WorldBootstrapContract.validate({
+		rootCount = rootCount,
+		actorFolderCount = if actors then 1 else 0,
+		spawnLightingCount = spawnLightingCount,
+		staticActors = staticActors,
+	})
+	if not ok then
+		warn("[WorldService] snapshot de bootstrap inválido: " .. (reason or "unknown"))
+	end
+end
+
 local function buildStaticActors(root: Folder, presentation: any, zones: any): ()
 	local folder = Instance.new("Folder")
 	folder.Name = "Actors"
@@ -1654,6 +1695,7 @@ function WorldService.init(deps: WorldDeps): ()
 
 	root.Parent = Workspace
 	WorldService.root = root
+	verifyWorldBootstrap(root)
 	-- Em thread própria: `settleRigBodies` espera um passo de física, e o
 	-- bootstrap não pode ceder o thread no meio — um jogador que entrasse
 	-- nesse frame ainda não teria `PlayerAdded` conectado.
