@@ -42,6 +42,7 @@ local Npcs = require("../src/shared/Data/Npcs")
 local WorldPresentation = require("../src/shared/Data/WorldPresentation")
 local SpawnDecorations = require("../src/shared/Data/SpawnDecorations")
 local WildDecorations = require("../src/shared/Data/WildDecorations")
+local StudioEvidence = require("../scripts/StudioEvidence")
 local Remotes = require("../src/shared/Remotes")
 local RemoteEnvelope = require("../src/shared/RemoteEnvelope")
 local Zones = require("../src/shared/Data/Zones")
@@ -282,6 +283,92 @@ test("planície: decoração externa entra no bootstrap do mundo", function()
 	assertTrue(source:find("buildWildDecorations(root", 1, true) ~= nil, "chamada no init")
 	local bootstrap = fs.readFile("src/server/init.server.lua")
 	assertTrue(bootstrap:find("wildDecorations = WildDecorations", 1, true) ~= nil, "dependência declarada")
+end)
+
+test("runbook: o roteiro do Studio é catálogo válido e começa pela sincronia", function()
+	local ok, reason = StudioEvidence.validate()
+	assertTrue(ok, reason)
+
+	local steps = StudioEvidence.steps()
+	assertTrue(#steps >= 8, "roteiro cobre o dia inteiro")
+	assertEq(steps[1].id, "w1_sync", "sincronia é o primeiro passo")
+	assertTrue(#StudioEvidence.stepsForGate("W1") >= 5, "W1 tem os passos de leitura do mundo")
+	assertTrue(#StudioEvidence.stepsForGate("A1") >= 2, "A1 tem impacto e cadeia")
+	assertTrue(#StudioEvidence.stepsForGate("W2") >= 1, "W2 tem desempenho")
+	assertEq(#StudioEvidence.stepsForGate("F9"), 0, "gate inexistente não devolve passo")
+
+	-- `steps()` devolve tabela nova: o CLI serializa e não pode mutar o catálogo.
+	assertTrue(StudioEvidence.steps() ~= StudioEvidence.steps(), "cópia por chamada")
+	for _, step in steps do
+		assertTrue(#step.capture > 0, step.id .. " declara o que capturar")
+		assertTrue(step.pass ~= "", step.id .. " declara critério de aprovação")
+	end
+end)
+
+test("runbook: fora de sync o porteiro barra a sessão antes de qualquer medição", function()
+	-- O defeito de 14/08: três commits invisíveis porque o Play rodava outro
+	-- place. Aqui isso é regra executável, não recomendação em doc.
+	local semResposta = select(1, StudioEvidence.syncGate(nil))
+	assertFalse(semResposta, "sem resposta do sync não libera")
+
+	local falhou = select(1, StudioEvidence.syncGate({ ok = false, error = "bridge fora do ar" }))
+	assertFalse(falhou, "sync com erro não libera")
+
+	local foraOk, foraReason = StudioEvidence.syncGate({
+		ok = true,
+		inSync = false,
+		mismatched = { {}, {} },
+		missingInStudio = { {} },
+	})
+	assertFalse(foraOk, "fora de sync não libera")
+	assertTrue(string.find(foraReason, "2 divergente", 1, true) ~= nil, "motivo conta os divergentes")
+	assertTrue(string.find(foraReason, "1 ausente", 1, true) ~= nil, "motivo conta os ausentes")
+
+	local dentro, dentroReason = StudioEvidence.syncGate({ ok = true, inSync = true, matched = 56 })
+	assertTrue(dentro, "em sync libera")
+	assertEq(dentroReason, "em sync", "motivo estável")
+end)
+
+test("runbook: orçamento de desempenho aceita o que cabe e nomeia o que estoura", function()
+	local dentro, semQuebra = StudioEvidence.evaluatePerf({
+		heartbeatTimeMs = 9.4,
+		physicsStepTimeMs = 2.1,
+		totalMemoryMb = 780,
+		workspaceParts = 3200,
+	})
+	assertTrue(dentro, "amostra saudável passa")
+	assertEq(#semQuebra, 0, "sem violação")
+
+	local fora, quebras = StudioEvidence.evaluatePerf({
+		heartbeatTimeMs = 41.7,
+		physicsStepTimeMs = 2.1,
+		totalMemoryMb = 2100,
+		workspaceParts = 3200,
+	})
+	assertFalse(fora, "amostra pesada reprova")
+	assertEq(#quebras, 2, "duas violações nomeadas")
+	assertTrue(string.find(quebras[1], "Heartbeat", 1, true) ~= nil, "a violação diz qual campo")
+
+	-- Campo ausente é ignorado de propósito: `Stats` nem sempre publica tudo, e
+	-- inventar zero viraria aprovação falsa.
+	local parcial = select(1, StudioEvidence.evaluatePerf({ workspaceParts = 10 }))
+	assertTrue(parcial, "amostra parcial não inventa reprovação")
+	local ausente, motivo = StudioEvidence.evaluatePerf(nil)
+	assertFalse(ausente, "sem amostra não aprova")
+	assertEq(#motivo, 1, "diz que faltou amostra")
+end)
+
+test("runbook: o CLI expõe roteiro e folha de evidência, e o roteiro roda sem bridge", function()
+	local source = fs.readFile("scripts/avb-debug.luau")
+	assertTrue(source:find('elseif command == "runbook" then', 1, true) ~= nil, "comando runbook no dispatch")
+	assertTrue(source:find('elseif command == "evidence" then', 1, true) ~= nil, "comando evidence no dispatch")
+	assertTrue(source:find("StudioEvidence.syncGate(sync)", 1, true) ~= nil, "a folha passa pelo porteiro")
+	-- Exit 2 fora de sync: é o contrato que o runbook promete.
+	assertTrue(source:find("process.exit(2)", 1, true) ~= nil, "fora de sync sai com 2")
+	-- Token do bridge sob demanda: o runbook precisa funcionar com o Studio
+	-- fechado, que é quando se prepara a sessão.
+	assertTrue(source:find("local function requireBridgeToken", 1, true) ~= nil, "token é exigido sob demanda")
+	assertTrue(source:find("local bridgeToken = readBridgeToken()", 1, true) == nil, "sem exigência no carregamento")
 end)
 
 test("apresentação: quatro atores e estilo do mundo passam validação", function()

@@ -10,13 +10,20 @@
 --   lune run scripts/avb-debug.luau logs --limit 80 --level error
 --   lune run scripts/avb-debug.luau eval "return #workspace:GetChildren()"
 --   lune run scripts/avb-debug.luau sync
+--   lune run scripts/avb-debug.luau evidence          (folha de evidência W1/A1/W2)
+--   lune run scripts/avb-debug.luau runbook --gate W1 (só o roteiro, sem Studio)
 --
--- Saída: JSON no stdout. Exit code 1 quando o comando falha.
+-- Saída: JSON no stdout. Exit code 1 quando o comando falha; exit 2 quando o
+-- Studio está fora de sync (nada medido nesse estado vale — docs/32 §1).
 
 local fs = require("@lune/fs")
 local net = require("@lune/net")
 local process = require("@lune/process")
 local serde = require("@lune/serde")
+
+-- Roteiro e critérios do playtest como dado puro (docs/32). Require sem efeito
+-- colateral: o módulo é catálogo + decisão, não fala com o Studio.
+local StudioEvidence = require("./StudioEvidence")
 
 local DEFAULT_PORT = 34873
 local LOG_FILE = ".avb-debug/studio-log.jsonl"
@@ -146,13 +153,19 @@ local function readBridgeToken(): string?
 	return decoded.token
 end
 
-local bridgeToken = readBridgeToken()
-if bridgeToken == nil then
-	fail(
-		"bridge sem token: suba o bridge (lune run scripts/debug-bridge.luau) para gerar "
-			.. STATE_FILE
-			.. " com o X-Avb-Token"
-	)
+-- Exigido SOB DEMANDA, não no carregamento: `runbook` e `tail` não falam com o
+-- Studio e precisam funcionar com o bridge desligado — o runbook existe
+-- justamente para preparar a sessão ANTES de abrir o Studio.
+local function requireBridgeToken(): string
+	local token = readBridgeToken()
+	if token == nil then
+		fail(
+			"bridge sem token: suba o bridge (lune run scripts/debug-bridge.luau) para gerar "
+				.. STATE_FILE
+				.. " com o X-Avb-Token"
+		)
+	end
+	return token :: string
 end
 
 local function call(method: string, path: string, body: any?): (boolean, any)
@@ -161,7 +174,7 @@ local function call(method: string, path: string, body: any?): (boolean, any)
 		method = method,
 		headers = {
 			["Content-Type"] = "application/json",
-			["X-Avb-Token"] = bridgeToken,
+			["X-Avb-Token"] = requireBridgeToken(),
 		},
 	}
 	if body ~= nil then
@@ -279,7 +292,7 @@ local function collectRepoScripts(dir: string, instancePath: string, out: { [str
 	end
 end
 
-local function cmdSync()
+local function syncReport()
 	local response = runStudioCommand("sourcemap", {}, parsed.flags.timeout or 30)
 	local studioScripts = response.data and response.data.scripts or {}
 
@@ -317,7 +330,7 @@ local function cmdSync()
 
 	table.sort(extraInStudio)
 	local inSync = #missingInStudio == 0 and #mismatched == 0
-	emit({
+	return {
 		ok = true,
 		inSync = inSync,
 		matched = matched,
@@ -327,10 +340,76 @@ local function cmdSync()
 		hint = if inSync
 			then "Studio está rodando exatamente o código do repo."
 			else "Rode scripts/build-studio.ps1 (ou rojo serve) e reabra o place — o Studio está com código diferente do repo.",
-	})
-	if not inSync then
+	}
+end
+
+local function cmdSync()
+	local report = syncReport()
+	emit(report)
+	if not report.inSync then
 		process.exit(2)
 	end
+end
+
+-- Roteiro sem Studio: imprime os passos e os limites para preparar a sessão
+-- (ou revisar o runbook) sem abrir nada.
+local function cmdRunbook()
+	local gate = parsed.flags.gate
+	local steps = if type(gate) == "string" then StudioEvidence.stepsForGate(gate) else StudioEvidence.steps()
+	local ok, reason = StudioEvidence.validate()
+	if not ok then
+		fail("roteiro inválido: " .. tostring(reason))
+	end
+	emit({
+		ok = true,
+		gate = if type(gate) == "string" then gate else "todos",
+		steps = steps,
+		thresholds = StudioEvidence.thresholds(),
+		source = "docs/32-STUDIO-PLAYTEST-RUNBOOK.md",
+	})
+end
+
+-- Folha de evidência de uma sessão: confere a sincronia PRIMEIRO e só então
+-- coleta. Fora de sync sai com exit 2 sem medir nada — a regra que faltava em
+-- 14/08, quando três commits ficaram invisíveis porque o Play rodava outro
+-- place (docs/12 §2, docs/32 §1).
+local function cmdEvidence()
+	local sync = syncReport()
+	local allowed, syncReason = StudioEvidence.syncGate(sync)
+	if not allowed then
+		emit({
+			ok = false,
+			blocked = true,
+			reason = syncReason,
+			sync = sync,
+			hint = "Nada medido nesta sessão vale. Rebuilde o place, reabra e rode de novo.",
+		})
+		process.exit(2)
+	end
+
+	local function collect(command: string): any
+		local okCall, response = pcall(runStudioCommand, command, {}, parsed.flags.timeout or 30)
+		if not okCall then
+			return { ok = false, error = tostring(response) }
+		end
+		return response.data
+	end
+
+	local perf = collect("perf")
+	local perfOk, breaches = StudioEvidence.evaluatePerf(perf)
+	emit({
+		ok = true,
+		sync = { inSync = true, matched = sync.matched, reason = syncReason },
+		perf = perf,
+		perfWithinBudget = perfOk,
+		perfBreaches = breaches,
+		errors = collect("errors"),
+		players = collect("players"),
+		greybox = collect("greybox"),
+		steps = StudioEvidence.steps(),
+		thresholds = StudioEvidence.thresholds(),
+		note = "Coleta automatizada NÃO substitui a captura visual de cada passo (docs/32).",
+	})
 end
 
 local function usage()
@@ -343,9 +422,11 @@ local function usage()
 		ok = false,
 		error = "informe um comando",
 		studioCommands = names,
-		localCommands = { "health", "logs", "errors", "tail", "sync" },
+		localCommands = { "health", "logs", "errors", "tail", "sync", "runbook", "evidence" },
 		examples = {
 			"lune run scripts/avb-debug.luau ping",
+			"lune run scripts/avb-debug.luau runbook --gate W1",
+			"lune run scripts/avb-debug.luau evidence",
 			"lune run scripts/avb-debug.luau tree Workspace.GreyboxF0 --depth 2",
 			"lune run scripts/avb-debug.luau logs --level error --limit 50",
 			"lune run scripts/avb-debug.luau sync",
@@ -369,6 +450,10 @@ elseif command == "tail" then
 	cmdTail()
 elseif command == "sync" then
 	cmdSync()
+elseif command == "runbook" then
+	cmdRunbook()
+elseif command == "evidence" then
+	cmdEvidence()
 elseif STUDIO_COMMANDS[command] ~= nil then
 	local args = {}
 	for key, value in parsed.flags do
