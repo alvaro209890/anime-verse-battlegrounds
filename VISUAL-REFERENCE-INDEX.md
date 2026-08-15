@@ -29,6 +29,22 @@ Comece pela linha da referência desejada. Consulte o documento canônico, revis
 | `docs/assets/ability-future-environment-break.png` | Ruptura de cenário futura | `docs/27-FUTURE-ABILITY-ASSET-CATALOG.md` | F1/F2 | Colisão, restauração, W1 e W2 |
 | `docs/assets/ability-future-vfx-micro-library.png` | Motivos de VFX futuros | `docs/27-FUTURE-ABILITY-ASSET-CATALOG.md` | F1/F2 | Reuso, densidade e acessibilidade |
 
+## Pacote visual F0
+
+| Referência | Sistema orientado | Documento canônico | Fase | Evidência necessária |
+|---|---|---|---|---|
+| `docs/assets/asset-pack-art-direction-board.png` | Paleta, materiais e consistência do pacote | `docs/30-VISUAL-ASSET-PACK.md` | F0 | Comparação de direção antes da produção |
+| `docs/assets/texture-slate-cracked-floor.png` | Piso slate, fissuras e leitura de arena | `docs/15-WORLD-PRESENTATION.md`, `docs/30-VISUAL-ASSET-PACK.md` | F0 | Material produzido, tiling e mobile |
+| `docs/assets/texture-runed-stone-wall.png` | Muro modular e runas discretas | `docs/30-VISUAL-ASSET-PACK.md` | F0/F1 | Célula de parede produzida, colisão e densidade |
+| `docs/assets/texture-crystal-emissive-strip.png` | Faixa emissiva e motivos de cristal | `docs/25-COMBAT-PRESENTATION-PLAN.md`, `docs/30-VISUAL-ASSET-PACK.md` | F0/F1 | Atlas ou trim convertido e otimizado |
+| `docs/assets/prop-energy-crystal-beacon.png` | Beacon, marco e navegação | `docs/15-WORLD-PRESENTATION.md`, `docs/30-VISUAL-ASSET-PACK.md` | F0/F1 | Prop navegável, colisão e orçamento |
+| `docs/assets/prop-amber-lantern-sconce.png` | Iluminação de bastião e serviço | `docs/15-WORLD-PRESENTATION.md`, `docs/30-VISUAL-ASSET-PACK.md` | F0 | Iluminação validada e desempenho mobile |
+| `docs/assets/vfx-guard-orbit-shell.png` | Defesa visual, casca e órbitas | `docs/07-SECURITY.md`, `docs/25-COMBAT-PRESENTATION-PLAN.md` | F0/A1 | VFX local separado da confirmação server-side |
+| `docs/assets/vfx-dash-afterimage-trail.png` | Dash, afterimages e rastro | `docs/25-COMBAT-PRESENTATION-PLAN.md` | F0/A1 | Movimento autoritativo separado do VFX local |
+| `docs/assets/vfx-ground-break-impact.png` | Impacto, crack, poeira e dissipação | `docs/25-COMBAT-PRESENTATION-PLAN.md` | F0/A1 | Sequência temporal, pooling e sem colisão alterada |
+| `docs/assets/animation-combat-poses-board.png` | Defesa, preparação de dash e recuperação | `docs/14-ANIMATION-PLAN.md`, `docs/25-COMBAT-PRESENTATION-PLAN.md` | F0/A1 | Pose reproduzida e testada no Studio |
+| `docs/assets/animation-heavy-strike-poses-board.png` | Antecipação, avanço, impacto e recuperação | `docs/14-ANIMATION-PLAN.md` | F0/A1 | Peso, timing e neutralização validados |
+
 ## Estados permitidos
 
 | Estado | Significado |

@@ -29,6 +29,18 @@ Os arquivos `domain-expansion-*.png` usam a paleta conceitual do mundo: Slate es
 | `ability-future-environment-break.png` | Crack, debris, poeira e restauração | Alteração persistente de chão |
 | `ability-future-vfx-micro-library.png` | Biblioteca de motivos para receitas futuras | Spritesheet de produção sem conversão |
 
+## Pacote visual F0
+
+O pacote `asset-pack-art-direction-board.png`, as texturas `texture-*.png`, os props `prop-*.png`, os VFX `vfx-*.png` e os boards `animation-*.png` ampliam as referências originais para o trabalho de mundo e combate. O catálogo completo, dimensões, hashes e pipeline de promoção está em [`docs/30-VISUAL-ASSET-PACK.md`](../30-VISUAL-ASSET-PACK.md).
+
+| Família | Arquivos | Estado | Limite |
+|---|---|---|---|
+| Direção | `asset-pack-art-direction-board.png` | Conceito | Não é screenshot nem atlas |
+| Texturas | `texture-slate-cracked-floor.png`, `texture-runed-stone-wall.png`, `texture-crystal-emissive-strip.png` | Conceito | Não importar diretamente no runtime |
+| Props | `prop-energy-crystal-beacon.png`, `prop-amber-lantern-sconce.png` | Conceito | Não são meshes finais |
+| VFX | `vfx-guard-orbit-shell.png`, `vfx-dash-afterimage-trail.png`, `vfx-ground-break-impact.png` | Conceito/receita | Não confirmam bloqueio, dano ou movimento |
+| Animação | `animation-combat-poses-board.png`, `animation-heavy-strike-poses-board.png` | Conceito/receita | Não são clips publicados |
+
 ## Licença e procedência
 
 As imagens desta lista foram geradas para este projeto e devem ser tratadas como **conceito visual original**. Não foram baixadas de uma franquia, personagem ou pacote comercial. Assets externos gratuitos continuam documentados em `docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md` e `docs/25-COMBAT-PRESENTATION-PLAN.md`; cada pacote externo precisa ser verificado individualmente antes de entrar no repositório ou no Roblox Studio.

@@ -10,6 +10,8 @@ progressão persistente, loadout customizável e ressonância de famílias de en
 
 > **Capa conceitual:** a imagem é uma referência original de direção de arte para a arena e a identidade do jogo; ela não é um asset de runtime. Consulte [`docs/29-GAME-COVER.md`](docs/29-GAME-COVER.md) para procedência e limites de uso.
 
+O pacote visual F0 de texturas, props, VFX e boards de animação está catalogado em [`docs/30-VISUAL-ASSET-PACK.md`](docs/30-VISUAL-ASSET-PACK.md). Todos os PNGs permanecem no estado **Conceito** até conversão, otimização e validação separadas.
+
 ## Estado comprovado
 
 | Camada | Estado |
