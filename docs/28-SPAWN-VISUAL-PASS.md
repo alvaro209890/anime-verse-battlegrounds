@@ -106,7 +106,7 @@ A implementação foi revalidada com a execução integral dos gates locais, a v
 | `git diff --check` | passou |
 | Cobertura adicional | reconstrução idempotente, vínculo único e fluxo cliente-servidor verificados |
 | Capa | PNG conceitual 2560 × 1440 validado |
-| Publicação | commit desta rodada será registrado após o push |
+| Publicação | commit `bc86c25` em `origin/main` |
 
 A validação no Roblox Studio continua sendo o próximo gate para confirmar a criação visual do `ProximityPrompt`, a interação válida e a recusa fora de 10 studs.
 
