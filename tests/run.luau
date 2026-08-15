@@ -286,6 +286,94 @@ test("skin: gear inválido é recusado antes de virar Instance", function()
 	assertTrue(WorldPresentation.gearClearsFace(piece({})), "peça fora da cabeça não é checada")
 end)
 
+test("skin: estilhaços têm receita própria em cima do corpo comum", function()
+	local ok, reason = WorldPresentation.validateShardSkins(Npcs)
+	assertTrue(ok, reason)
+
+	local wandering = WorldPresentation.shardGearFor("enemy_wandering_shard")
+	local anchored = WorldPresentation.shardGearFor("enemy_anchored_shard")
+	assertTrue(#wandering >= 12, "estilhaço comum tem corpo completo")
+	assertTrue(#anchored > #wandering, "elite tem mais camadas que o comum")
+	assertEq(#WorldPresentation.shardGearFor("npc_threshold_instructor"), 0, "humanoide não recebe skin mineral")
+
+	local function has(gear: { any }, name: string): boolean
+		for _, piece in gear do
+			if piece.name == name then
+				return true
+			end
+		end
+		return false
+	end
+	assertTrue(has(wandering, "Core") and has(wandering, "Halo"), "corpo comum entra nos dois")
+	assertTrue(has(wandering, "RiftRing"), "fenda ciano tem o anel de fenda")
+	assertFalse(has(wandering, "Crown_1"), "coroa é exclusiva do elite")
+	assertTrue(has(anchored, "Crown_5") and has(anchored, "AnchorCollar"), "coroa e colar do elite")
+end)
+
+test("skin: nenhuma peça de estilhaço passa do alcance real do golpe (docs/17)", function()
+	for _, npcId in { "enemy_wandering_shard", "enemy_anchored_shard" } do
+		local definition = Npcs.get(npcId)
+		assertTrue(definition ~= nil, npcId .. " existe no catálogo")
+		if definition then
+			local reach = WorldPresentation.shardReachStuds(npcId)
+			assertTrue(reach > 0, npcId .. " tem corpo visível")
+			assertTrue(
+				reach <= definition.attackRange,
+				("%s: skin alcança %.2f e o golpe alcança %.2f"):format(npcId, reach, definition.attackRange)
+			)
+		end
+	end
+
+	-- O contrário também precisa falhar: uma skin exagerada é recusada.
+	local mentirosa = {
+		get = function(npcId: string)
+			local real = Npcs.get(npcId)
+			if not real then
+				return nil
+			end
+			local copy = table.clone(real)
+			copy.attackRange = 0.5
+			return copy
+		end,
+	}
+	local ok, reason = WorldPresentation.validateShardSkins(mentirosa)
+	assertFalse(ok, "alcance menor que a skin precisa ser recusado")
+	assertTrue(reason ~= nil and string.find(reason, "alcança", 1, true) ~= nil, "motivo cita o alcance")
+end)
+
+test("skin: peça de estilhaço malformada é recusada", function()
+	local base = WorldPresentation.shardGearFor("enemy_wandering_shard")[1]
+	local function piece(overrides: { [string]: any })
+		local copy = table.clone(base)
+		for key, value in overrides do
+			copy[key] = value
+		end
+		return copy
+	end
+	assertTrue(WorldPresentation.validateShardPiece(piece({})), "peça real passa")
+	assertFalse(WorldPresentation.validateShardPiece(piece({ tint = "roxo" })), "tint fora da paleta falha")
+	assertFalse(WorldPresentation.validateShardPiece(piece({ material = "Plutonio" })), "material fora da lista falha")
+	assertFalse(WorldPresentation.validateShardPiece(piece({ transparency = 1 })), "peça invisível falha")
+	assertFalse(WorldPresentation.validateShardPiece(piece({ offsetStuds = { 0, 9, 0 } })), "offset distante falha")
+	assertFalse(
+		WorldPresentation.validateShardPiece(piece({ class = "WedgePart", shape = "Ball" })),
+		"cunha com shape de esfera falha"
+	)
+end)
+
+test("skin: WorldService materializa o estilhaço a partir dos dados", function()
+	local source = fs.readFile("src/server/Services/WorldService.luau")
+	assertTrue(source:find("buildShardBody(visualRoot", 1, true) ~= nil, "corpo mineral vem da receita")
+	assertTrue(
+		source:find('npcId == "enemy_anchored_shard"', 1, true) == nil,
+		"a coroa do elite não pode voltar a ser um if do WorldService"
+	)
+	assertTrue(
+		source:find('descendant:GetAttribute("AvbBaseTransparency")', 1, true) ~= nil,
+		"respawn devolve a transparência declarada na skin"
+	)
+end)
+
 test("apresentação: poses procedurais preservam antecipação, impacto e queda", function()
 	local recipe = WorldPresentation.getActor("enemy_wandering_shard")
 	assertTrue(recipe ~= nil, "receita")

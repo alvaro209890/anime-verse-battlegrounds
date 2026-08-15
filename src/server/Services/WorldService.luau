@@ -217,7 +217,13 @@ local function setActorVisible(model: Model, visible: boolean): ()
 			and descendant.Name ~= "VisualRoot"
 			and descendant:GetAttribute("AvbInvisible") ~= true
 		then
-			descendant.Transparency = if visible then 0 else 1
+			-- Peça com transparência declarada na skin (halo suave do núcleo,
+			-- anel de fenda) volta ao valor DELA, não a 0: senão o primeiro
+			-- respawn apaga a receita e o brilho vira placa opaca.
+			local baseTransparency = descendant:GetAttribute("AvbBaseTransparency")
+			descendant.Transparency = if visible
+				then (if type(baseTransparency) == "number" then baseTransparency else 0)
+				else 1
 		end
 	end
 	if not visible then
@@ -787,13 +793,57 @@ local function buildRigBody(model: Model, root: BasePart, rigRecipe: any, rootHe
 	return (bodyCFrame.Position.Y + bodySize.Y / 2) - root.Position.Y
 end
 
+-- Materialização pura da receita de `WorldPresentation.shardGearFor`. Mesmo
+-- contrato do corpo de rig: tamanho, offset, rotação, papel de cor, material e
+-- transparência vêm dos dados; aqui só se traduz para Parts. A coroa do elite
+-- deixou de ser um `if npcId == ...` nesta camada em 15/08.
+local function buildShardBody(visualRoot: BasePart, recipe: any, shardGear: { any }, palette: { [string]: Color3 }): ()
+	local auraScale = recipe.auraScale or 1
+	for _, piece in shardGear do
+		local pieceScale = recipe.scale * (if piece.auraScaled then auraScale else 1)
+		local part = makeVisualPart(
+			piece.class,
+			piece.name,
+			Vector3.new(piece.sizeStuds[1], piece.sizeStuds[2], piece.sizeStuds[3]) * pieceScale,
+			palette[piece.tint] or palette.body,
+			materialOf(piece.material)
+		)
+		if piece.shape == "Ball" then
+			part.Shape = Enum.PartType.Ball
+		elseif piece.shape == "Cylinder" then
+			part.Shape = Enum.PartType.Cylinder
+		end
+		if piece.transparency > 0 then
+			part.Transparency = piece.transparency
+			part:SetAttribute("AvbBaseTransparency", piece.transparency)
+			part.CastShadow = false
+		end
+		attach(
+			visualRoot,
+			part,
+			CFrame.new(
+				piece.offsetStuds[1] * pieceScale,
+				piece.offsetStuds[2] * pieceScale,
+				piece.offsetStuds[3] * pieceScale
+			)
+				* CFrame.Angles(
+					math.rad(piece.rotationDegrees[1]),
+					math.rad(piece.rotationDegrees[2]),
+					math.rad(piece.rotationDegrees[3])
+				),
+			"Joint_" .. piece.name
+		)
+	end
+end
+
 local function createActorModel(
 	name: string,
 	actorId: string,
 	npcId: string,
 	recipe: any,
 	position: Vector3,
-	rigRecipe: any?
+	rigRecipe: any?,
+	shardGear: { any }?
 ): Model
 	local model = Instance.new("Model")
 	model.Name = name
@@ -821,7 +871,6 @@ local function createActorModel(
 	local accentColor = toColor(recipe.accentRgb)
 	local coreColor = toColor(recipe.coreRgb)
 	local auraColor = toColor(recipe.auraRgb or recipe.coreRgb)
-	local auraScale = recipe.auraScale or 1
 	-- Topo do corpo em relação à Root: com o rig R15 a cabeça termina bem mais
 	-- baixo que a torre de Parts antiga, e o "!" de telegraph precisa saber
 	-- disso para não ficar boiando três studs acima de ninguém.
@@ -898,93 +947,15 @@ local function createActorModel(
 		visualRoot.CastShadow = false
 		attach(root, visualRoot, CFrame.identity, "Joint_VisualRoot")
 
-		local torso =
-			makeVisualPart("Part", "Torso", Vector3.new(2.2, 2.8, 1.6) * scale, bodyColor, Enum.Material.Slate)
-		attach(visualRoot, torso, CFrame.Angles(0, 0, math.rad(45)), "Joint_Torso")
-		local core =
-			makeVisualPart("Part", "Core", Vector3.new(1.25, 1.25, 1.25) * scale, coreColor, Enum.Material.Neon)
-		core.Shape = Enum.PartType.Ball
-		attach(visualRoot, core, CFrame.new(0, 0, -0.75 * scale), "Joint_Core")
-		local left = makeVisualPart(
-			"WedgePart",
-			"ShardLeft",
-			Vector3.new(1.1, 2.7, 0.8) * scale,
-			accentColor,
-			Enum.Material.Slate
-		)
-		attach(
-			visualRoot,
-			left,
-			CFrame.new(-1.35 * scale, 0.1, 0) * CFrame.Angles(0, 0, math.rad(28)),
-			"Joint_ShardLeft"
-		)
-		local right = left:Clone()
-		right.Name = "ShardRight"
-		attach(
-			visualRoot,
-			right,
-			CFrame.new(1.35 * scale, 0.1, 0) * CFrame.Angles(0, math.pi, math.rad(-28)),
-			"Joint_ShardRight"
-		)
-		local top = makeVisualPart(
-			"WedgePart",
-			"ShardTop",
-			Vector3.new(0.9, 2.2, 0.9) * scale,
-			accentColor,
-			Enum.Material.Slate
-		)
-		attach(visualRoot, top, CFrame.new(0, 2 * scale, 0), "Joint_ShardTop")
-
-		-- ── Toques de skin dos estilhaços ──────────────────────────────────
-		-- Halo de energia: anel Neon fino girando com o pivot visual (o
-		-- ActorAnimator já roda o VisualRoot, então o anel "orbita" sozinho).
-		local halo = makeVisualPart(
-			"Part",
-			"Halo",
-			Vector3.new(0.14, 3.6 * scale * auraScale, 3.6 * scale * auraScale),
-			auraColor,
-			Enum.Material.Neon
-		)
-		halo.Shape = Enum.PartType.Cylinder
-		attach(visualRoot, halo, CFrame.new(0, 0.2 * scale, 0) * CFrame.Angles(0, 0, math.rad(90)), "Joint_Halo")
-		-- Cristais menores flanqueando o corpo: mais volume sem mudar a hitbox.
-		local front = makeVisualPart(
-			"WedgePart",
-			"ShardFront",
-			Vector3.new(0.55, 1.5, 0.55) * scale,
-			accentColor,
-			Enum.Material.Slate
-		)
-		attach(visualRoot, front, CFrame.new(0, -0.3 * scale, -1.7 * scale), "Joint_ShardFront")
-		local back = front:Clone()
-		back.Name = "ShardBack"
-		attach(
-			visualRoot,
-			back,
-			CFrame.new(0, -0.3 * scale, 1.7 * scale) * CFrame.Angles(0, math.pi, 0),
-			"Joint_ShardBack"
-		)
-		-- Coroa do elite: três cunhas apontando para cima, a assinatura do
-		-- Estilhaço Ancorado à distância.
-		if npcId == "enemy_anchored_shard" then
-			for crownIndex = 1, 3 do
-				local angle = (crownIndex - 1) / 3 * math.pi * 2
-				local crown = makeVisualPart(
-					"WedgePart",
-					("Crown_%d"):format(crownIndex),
-					Vector3.new(0.5, 1.9, 0.5) * scale,
-					accentColor,
-					Enum.Material.Neon
-				)
-				attach(
-					visualRoot,
-					crown,
-					CFrame.new(math.cos(angle) * 0.95 * scale, 3.1 * scale, math.sin(angle) * 0.95 * scale)
-						* CFrame.Angles(0, -angle, math.rad(-28)),
-					("Joint_Crown_%d"):format(crownIndex)
-				)
-			end
-		end
+		-- Corpo mineral inteiro (lâminas, núcleo, halo, colar e coroa) vem da
+		-- receita de `WorldPresentation.shardGearFor`. O halo continua orbitando
+		-- sozinho porque o `ActorAnimator` gira o `VisualRoot`.
+		buildShardBody(visualRoot, recipe, shardGear or {}, {
+			body = bodyColor,
+			accent = accentColor,
+			core = coreColor,
+			aura = auraColor,
+		})
 	end
 
 	buildTelegraphPresentation(model, root, rootHeight, bodyTopOffset)
@@ -1519,7 +1490,8 @@ local function buildStaticActors(root: Folder, presentation: any, zones: any): (
 			dummyRecipe,
 			-- O pad de treino tem topo 0,5 stud acima do chão canônico.
 			dummyPosition + Vector3.new(0, 0.5, 0),
-			presentation.rigFor("npc_training_dummy")
+			presentation.rigFor("npc_training_dummy"),
+			presentation.shardGearFor("npc_training_dummy")
 		)
 		dummy:SetAttribute("PoseKind", "idle")
 		local dummyRoot = dummy.PrimaryPart
@@ -1538,7 +1510,8 @@ local function buildStaticActors(root: Folder, presentation: any, zones: any): (
 			"npc_threshold_instructor",
 			instructorRecipe,
 			instructorPosition,
-			presentation.rigFor("npc_threshold_instructor")
+			presentation.rigFor("npc_threshold_instructor"),
+			presentation.shardGearFor("npc_threshold_instructor")
 		)
 		instructor:SetAttribute("PoseKind", "idle")
 		setNpcInteraction(instructor, "npc_threshold_instructor")
@@ -1787,7 +1760,8 @@ local function spawnActor(fighterId: string, npcId: string, position: Vector3): 
 		npcId,
 		recipe,
 		position,
-		deps.presentation.rigFor(npcId)
+		deps.presentation.rigFor(npcId),
+		deps.presentation.shardGearFor(npcId)
 	)
 	model:SetAttribute("SpawnPresentation", true)
 	local modelRoot = model.PrimaryPart

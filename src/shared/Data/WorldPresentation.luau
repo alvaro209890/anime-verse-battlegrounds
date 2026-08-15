@@ -373,6 +373,258 @@ local DUMMY_GEAR: { RigGear } = {
 	band("Base", "LowerTorso", { 0.24, 3.10, 3.10 }, { 0, -2.76, 0.22 }, { 0, 0, 90 }, WOOD, "WoodPlanks"),
 }
 
+-- ── Skin dos Estilhaços (corpo mineral, sem rig R15) ────────────────────────
+-- Os dois inimigos não usam o rig R15: o corpo é um conjunto de peças presas a
+-- um pivot visual que o `ActorAnimator` gira. Até 15/08 essas peças viviam
+-- dentro do `WorldService`, com um `if npcId == "enemy_anchored_shard"` para a
+-- coroa do elite — decisão de apresentação escrita na camada que deveria só
+-- materializar (docs/13 §2: "se o WorldService precisar de um `if`, o `if` está
+-- no lugar errado"). Agora são dados validados e o WorldService itera.
+--
+-- Unidades: STUDS na escala 1. O WorldService multiplica tamanho e offset por
+-- `ActorRecipe.scale`; `auraScaled` multiplica AINDA por `ActorRecipe.auraScale`
+-- (é o halo, que é a leitura da aura à distância).
+--
+-- ⚠️ HONESTIDADE VISUAL (docs/17). Nenhuma peça pode passar do alcance real do
+-- golpe do NPC (`NpcDefinition.attackRange`) no plano XZ: um inimigo que PARECE
+-- alcançar 6 studs mas só acerta a 4 ensina a distância errada e o jogador
+-- aprende a recuar de menos. `Presentation.validateShardSkins(npcs)` trava isso
+-- com o mesmo número que o `EnemyVfxPlayer.rangeFor` usa para a luz.
+export type ShardPiece = {
+	name: string,
+	class: "Part" | "WedgePart",
+	shape: "Block" | "Ball" | "Cylinder",
+	sizeStuds: { number },
+	offsetStuds: { number },
+	rotationDegrees: { number },
+	-- Papel na paleta do ator, não cor crua: a skin acompanha a receita.
+	tint: "body" | "accent" | "core" | "aura",
+	material: string,
+	transparency: number,
+	auraScaled: boolean,
+}
+
+local SHARD_TINTS: { [string]: boolean } = {
+	body = true,
+	accent = true,
+	core = true,
+	aura = true,
+}
+
+local function shard(
+	name: string,
+	class: "Part" | "WedgePart",
+	shape: "Block" | "Ball" | "Cylinder",
+	sizeStuds: { number },
+	offsetStuds: { number },
+	rotationDegrees: { number },
+	tint: string,
+	material: string,
+	transparency: number,
+	auraScaled: boolean
+): ShardPiece
+	return {
+		name = name,
+		class = class,
+		shape = shape,
+		sizeStuds = sizeStuds,
+		offsetStuds = offsetStuds,
+		rotationDegrees = rotationDegrees,
+		tint = tint :: any,
+		material = material,
+		transparency = transparency,
+		auraScaled = auraScaled,
+	}
+end
+
+-- Corpo comum aos dois estilhaços. `MineralShell` e `CoreGlow` entraram em
+-- 15/08 pelo mesmo motivo da regra anti-caixa dos rigs: lâmina sobre lâmina não
+-- vira volume, e o núcleo sem halo próprio some contra a pedra escura.
+local SHARD_BODY: { ShardPiece } = {
+	shard("Torso", "Part", "Block", { 2.2, 2.8, 1.6 }, { 0, 0, 0 }, { 0, 0, 45 }, "body", "Slate", 0, false),
+	shard("MineralShell", "Part", "Ball", { 2.34, 2.34, 1.94 }, { 0, 0, 0.14 }, { 0, 0, 0 }, "body", "Slate", 0, false),
+	shard("Core", "Part", "Ball", { 1.25, 1.25, 1.25 }, { 0, 0, -0.75 }, { 0, 0, 0 }, "core", "Neon", 0, false),
+	shard("CoreGlow", "Part", "Ball", { 1.74, 1.74, 1.74 }, { 0, 0, -0.7 }, { 0, 0, 0 }, "aura", "Neon", 0.72, false),
+	shard(
+		"ShardLeft",
+		"WedgePart",
+		"Block",
+		{ 1.1, 2.7, 0.8 },
+		{ -1.35, 0.11, 0 },
+		{ 0, 0, 28 },
+		"accent",
+		"Slate",
+		0,
+		false
+	),
+	shard(
+		"ShardRight",
+		"WedgePart",
+		"Block",
+		{ 1.1, 2.7, 0.8 },
+		{ 1.35, 0.11, 0 },
+		{ 0, 180, -28 },
+		"accent",
+		"Slate",
+		0,
+		false
+	),
+	shard("ShardTop", "WedgePart", "Block", { 0.9, 2.2, 0.9 }, { 0, 2, 0 }, { 0, 0, 0 }, "accent", "Slate", 0, false),
+	shard(
+		"ShardFront",
+		"WedgePart",
+		"Block",
+		{ 0.55, 1.5, 0.55 },
+		{ 0, -0.3, -1.7 },
+		{ 0, 0, 0 },
+		"accent",
+		"Slate",
+		0,
+		false
+	),
+	shard(
+		"ShardBack",
+		"WedgePart",
+		"Block",
+		{ 0.55, 1.5, 0.55 },
+		{ 0, -0.3, 1.7 },
+		{ 0, 180, 0 },
+		"accent",
+		"Slate",
+		0,
+		false
+	),
+	-- Disco horizontal da aura: o eixo do Cylinder é X, então `z = 90` deita o
+	-- anel em volta do corpo. É a leitura de longe de que aquilo está vivo.
+	shard("Halo", "Part", "Cylinder", { 0.14, 3.6, 3.6 }, { 0, 0.2, 0 }, { 0, 0, 90 }, "aura", "Neon", 0, true),
+}
+
+-- Fenda Ciano (comum): anel de fenda em volta do núcleo e duas lascas soltas
+-- acompanhando o corpo. Nada toca o chão — anel no chão leria como área de
+-- ataque, e o alcance real dele é 4 studs.
+local WANDERING_SHARD_GEAR: { ShardPiece } = {
+	shard(
+		"RiftRing",
+		"Part",
+		"Cylinder",
+		{ 0.14, 2.1, 2.1 },
+		{ 0, 0, -0.56 },
+		{ 0, 90, 0 },
+		"aura",
+		"Neon",
+		0.1,
+		false
+	),
+	shard(
+		"SplinterLeft",
+		"WedgePart",
+		"Block",
+		{ 0.4, 1.12, 0.4 },
+		{ -0.95, 1.35, 0.34 },
+		{ 0, -34, 20 },
+		"accent",
+		"Slate",
+		0,
+		false
+	),
+	shard(
+		"SplinterRight",
+		"WedgePart",
+		"Block",
+		{ 0.4, 1.12, 0.4 },
+		{ 0.95, 1.35, 0.34 },
+		{ 0, 34, -20 },
+		"accent",
+		"Slate",
+		0,
+		false
+	),
+}
+
+-- Coroa do Vazio (elite): colar de ancoragem na base, quatro cravos apontando
+-- para fora e cinco pontas de coroa. A coroa é a assinatura à distância — é por
+-- ela que o jogador reconhece o breakpoint de 15–20 min antes de entrar na
+-- cratera (docs/13 §9.3).
+local ANCHORED_SHARD_GEAR: { ShardPiece } = {
+	shard("Mantle", "Part", "Ball", { 2.6, 2.2, 2.3 }, { 0, -0.55, 0.28 }, { 0, 0, 0 }, "body", "Slate", 0, false),
+	shard("AnchorCollar", "Part", "Cylinder", { 0.5, 3, 3 }, { 0, -1.5, 0 }, { 0, 0, 90 }, "body", "Basalt", 0, false),
+	shard(
+		"AnchorGlow",
+		"Part",
+		"Cylinder",
+		{ 0.16, 3.2, 3.2 },
+		{ 0, -1.78, 0 },
+		{ 0, 0, 90 },
+		"aura",
+		"Neon",
+		0.3,
+		false
+	),
+}
+
+-- Yaw em ±180°: a receita guarda graus e o validador recusa fora dessa faixa,
+-- então 225° tem de virar −135° antes de entrar na tabela.
+local function wrapDegrees(degrees: number): number
+	return (degrees + 180) % 360 - 180
+end
+
+do
+	for index = 1, 4 do
+		local angle = (index - 1) / 4 * 360 + 45
+		local radians = math.rad(angle)
+		table.insert(
+			ANCHORED_SHARD_GEAR,
+			shard(
+				("AnchorSpike_%d"):format(index),
+				"WedgePart",
+				"Block",
+				{ 0.45, 1.6, 0.45 },
+				{ math.cos(radians) * 1.5, -1.35, math.sin(radians) * 1.5 },
+				{ 0, wrapDegrees(-angle), 118 },
+				"accent",
+				"Slate",
+				0,
+				false
+			)
+		)
+	end
+	-- Cinco pontas (eram três): número ímpar não fecha simetria de frente e
+	-- alturas alternadas dão silhueta de coroa em vez de cerca.
+	for index = 1, 5 do
+		local angle = (index - 1) / 5 * 360
+		local radians = math.rad(angle)
+		local height = if index % 2 == 0 then 1.6 else 2.05
+		table.insert(
+			ANCHORED_SHARD_GEAR,
+			shard(
+				("Crown_%d"):format(index),
+				"WedgePart",
+				"Block",
+				{ 0.5, height, 0.5 },
+				{ math.cos(radians) * 0.95, 3.1, math.sin(radians) * 0.95 },
+				{ 0, wrapDegrees(-angle), -28 },
+				"accent",
+				"Neon",
+				0,
+				false
+			)
+		)
+	end
+	table.insert(
+		ANCHORED_SHARD_GEAR,
+		shard("CrownCore", "Part", "Ball", { 0.7, 0.7, 0.7 }, { 0, 3.35, 0 }, { 0, 0, 0 }, "core", "Neon", 0, false)
+	)
+end
+
+local ShardSkins: { [string]: { ShardPiece } } = {
+	enemy_wandering_shard = WANDERING_SHARD_GEAR,
+	enemy_anchored_shard = ANCHORED_SHARD_GEAR,
+}
+
+-- Sem skin declarada o WorldService montaria um estilhaço sem corpo: os dois
+-- inimigos jogáveis são obrigatórios, como os dois rigs do spawn.
+local SHARD_REQUIRED: { string } = { "enemy_wandering_shard", "enemy_anchored_shard" }
+
 local Rigs: { [string]: RigRecipe } = {
 	npc_threshold_instructor = {
 		npcId = "npc_threshold_instructor",
@@ -464,8 +716,146 @@ local RIG_MATERIALS: { [string]: boolean } = {
 	Metal = true,
 }
 
+-- Materiais liberados para o corpo mineral. Lista própria: o estilhaço é pedra
+-- e cristal, não tecido de rig, e `Basalt` só faz sentido aqui.
+local SHARD_MATERIALS: { [string]: boolean } = {
+	Slate = true,
+	Basalt = true,
+	Rock = true,
+	Neon = true,
+	Glass = true,
+	Ice = true,
+	Metal = true,
+	SmoothPlastic = true,
+}
+
 function Presentation.rigFor(npcId: string): RigRecipe?
 	return Rigs[npcId]
+end
+
+-- Corpo comum + peças exclusivas do NPC, na ordem de montagem. Devolve tabela
+-- nova a cada chamada: o WorldService materializa duas vezes em reconstrução e
+-- não pode compartilhar estado com a receita.
+function Presentation.shardGearFor(npcId: string): { ShardPiece }
+	local out: { ShardPiece } = {}
+	local recipe = Actors[npcId]
+	if not recipe or recipe.shape ~= "shard" then
+		return out
+	end
+	for _, piece in SHARD_BODY do
+		table.insert(out, piece)
+	end
+	for _, piece in ShardSkins[npcId] or {} do
+		table.insert(out, piece)
+	end
+	return out
+end
+
+-- Maior distância horizontal que a skin ocupa, já na escala do ator. O limite
+-- superior é conservador de propósito: usa a maior dimensão da peça como raio,
+-- então qualquer rotação continua coberta sem recalcular a caixa girada.
+function Presentation.shardReachStuds(npcId: string): number
+	local recipe = Actors[npcId]
+	if not recipe then
+		return 0
+	end
+	local reach = 0
+	for _, piece in Presentation.shardGearFor(npcId) do
+		local scale = recipe.scale * (if piece.auraScaled then recipe.auraScale else 1)
+		local half = math.max(piece.sizeStuds[1], piece.sizeStuds[2], piece.sizeStuds[3]) / 2
+		local offsetX = piece.offsetStuds[1]
+		local offsetZ = piece.offsetStuds[3]
+		local offsetXZ = math.sqrt(offsetX * offsetX + offsetZ * offsetZ)
+		reach = math.max(reach, (offsetXZ + half) * scale)
+	end
+	return reach
+end
+
+function Presentation.validateShardPiece(piece: ShardPiece): (boolean, string?)
+	if not SHARD_TINTS[piece.tint] then
+		return false, ("%s: tint fora da paleta (%s)"):format(piece.name, tostring(piece.tint))
+	end
+	if not SHARD_MATERIALS[piece.material] then
+		return false, ("%s: material fora da lista (%s)"):format(piece.name, piece.material)
+	end
+	if piece.class ~= "Part" and piece.class ~= "WedgePart" then
+		return false, ("%s: classe inválida (%s)"):format(piece.name, piece.class)
+	end
+	if piece.shape ~= "Block" and piece.shape ~= "Ball" and piece.shape ~= "Cylinder" then
+		return false, ("%s: shape inválido (%s)"):format(piece.name, piece.shape)
+	end
+	if piece.class == "WedgePart" and piece.shape ~= "Block" then
+		return false, ("%s: WedgePart não aceita shape %s"):format(piece.name, piece.shape)
+	end
+	if piece.transparency < 0 or piece.transparency >= 1 then
+		return false, ("%s: transparência %.2f fora de 0..1"):format(piece.name, piece.transparency)
+	end
+	if #piece.sizeStuds ~= 3 or #piece.offsetStuds ~= 3 or #piece.rotationDegrees ~= 3 then
+		return false, ("%s: vetor precisa de 3 componentes"):format(piece.name)
+	end
+	for _, component in piece.sizeStuds do
+		if component < 0.05 or component > 8 then
+			return false, ("%s: tamanho %.3f fora de 0,05–8 studs"):format(piece.name, component)
+		end
+	end
+	for _, component in piece.offsetStuds do
+		if math.abs(component) > 4 then
+			return false, ("%s: offset %.3f longe demais do pivot"):format(piece.name, component)
+		end
+	end
+	for _, component in piece.rotationDegrees do
+		if math.abs(component) > 180 then
+			return false, ("%s: rotação %.1f fora de ±180°"):format(piece.name, component)
+		end
+	end
+	return true, nil
+end
+
+-- Com `npcs`, aplica também a regra de honestidade visual do cabeçalho: a skin
+-- não pode passar do alcance do golpe. Sem `npcs`, valida só a estrutura — é o
+-- que o boot do catálogo consegue fazer antes de conhecer o NPC.
+function Presentation.validateShardSkins(npcs: any?): (boolean, string?)
+	for npcId in ShardSkins do
+		local recipe = Actors[npcId]
+		if not recipe then
+			return false, "shard_without_actor:" .. npcId
+		end
+		if recipe.shape ~= "shard" then
+			return false, "shard_skin_on_humanoid:" .. npcId
+		end
+	end
+	for _, npcId in SHARD_REQUIRED do
+		if not ShardSkins[npcId] then
+			return false, "missing_shard_skin:" .. npcId
+		end
+		local seen: { [string]: boolean } = {}
+		for _, piece in Presentation.shardGearFor(npcId) do
+			if seen[piece.name] then
+				return false, ("%s: peça duplicada %s"):format(npcId, piece.name)
+			end
+			seen[piece.name] = true
+			local ok, reason = Presentation.validateShardPiece(piece)
+			if not ok then
+				return false, ("%s/%s"):format(npcId, reason or "?")
+			end
+		end
+		if npcs ~= nil then
+			local definition = npcs.get(npcId)
+			if not definition then
+				return false, "shard_npc_desconhecido:" .. npcId
+			end
+			local reach = Presentation.shardReachStuds(npcId)
+			if reach > definition.attackRange then
+				return false,
+					("%s: skin alcança %.2f studs e o golpe alcança %.2f"):format(
+						npcId,
+						reach,
+						definition.attackRange
+					)
+			end
+		end
+	end
+	return true, nil
 end
 
 function Presentation.allRigs(): { RigRecipe }
@@ -546,7 +936,13 @@ function Presentation.validate(): (boolean, string?)
 	then
 		return false, "invalid_world_style"
 	end
-	return Presentation.validateRigs()
+	local rigsOk, rigsReason = Presentation.validateRigs()
+	if not rigsOk then
+		return false, rigsReason
+	end
+	-- Sem `npcs` aqui: a regra de alcance precisa do catálogo e é aplicada pelo
+	-- bootstrap do servidor, que conhece os dois módulos.
+	return Presentation.validateShardSkins(nil)
 end
 
 -- Os dois bots do spawn precisam de skin de rig; sem ela o WorldService cai no

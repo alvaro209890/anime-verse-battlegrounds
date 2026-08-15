@@ -74,6 +74,13 @@ local sceneryOk, sceneryReason = SceneryPresentation.validate()
 if not sceneryOk then
 	error("catálogo de cenário inválido: " .. (sceneryReason or "unknown"))
 end
+-- Honestidade visual (docs/17): aqui os dois catálogos existem, então a skin do
+-- inimigo é conferida contra o alcance REAL do golpe dele. Uma lâmina que passa
+-- do `attackRange` ensina o jogador a recuar de menos.
+local shardSkinOk, shardSkinReason = WorldPresentation.validateShardSkins(Npcs)
+if not shardSkinOk then
+	error("skin de estilhaço inválida: " .. (shardSkinReason or "unknown"))
+end
 
 ProgressionService.init()
 
