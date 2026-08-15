@@ -3,7 +3,9 @@
 -- pelo InputController e somente depois de SessionSnapshot ready.
 
 local GuiService = game:GetService("GuiService")
+local HapticService = game:GetService("HapticService")
 local HttpService = game:GetService("HttpService")
+local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -38,6 +40,7 @@ local CombatAudioPlayer = require(Presentation.CombatAudioPlayer)
 local AbilityVfxPlayer = require(Presentation.AbilityVfxPlayer)
 local EnemyVfxPlayer = require(Presentation.EnemyVfxPlayer)
 local CharacterAnimationPlayer = require(Presentation.CharacterAnimationPlayer)
+local ZoneSignalPlayer = require(Presentation.ZoneSignalPlayer)
 local CombatAudio = require(Shared.Data.CombatAudio)
 local CombatAnimations = require(Shared.Data.CombatAnimations)
 local AbilityVfx = require(Shared.Data.AbilityVfx)
@@ -69,6 +72,26 @@ local playerCombatAnimator: any = nil
 -- Declarado antes do AbilityController porque o callback de ativação o captura;
 -- a construção fica junto das demais camadas de apresentação, abaixo.
 local abilityVfx: any = nil
+-- Sinais de fronteira: pulso de cor local e vibração, ambos disparados só por
+-- `ZoneEvent` aceito. `HapticService` some em plataforma sem vibração, então a
+-- chamada é protegida — sinal ausente não pode derrubar a travessia.
+local zoneSignals = ZoneSignalPlayer.new({
+	lighting = Lighting,
+	runService = RunService,
+	haptics = function(intensity: number, seconds: number)
+		local ok = pcall(function()
+			HapticService:SetMotor(Enum.UserInputType.Gamepad1, Enum.VibrationMotor.Small, intensity)
+		end)
+		if ok then
+			task.delay(seconds, function()
+				pcall(function()
+					HapticService:SetMotor(Enum.UserInputType.Gamepad1, Enum.VibrationMotor.Small, 0)
+				end)
+			end)
+		end
+	end,
+	now = os.clock,
+})
 local enemyVfx = EnemyVfxPlayer.new({
 	workspace = Workspace,
 	runService = RunService,
@@ -217,6 +240,10 @@ end)
 
 remote(Remotes.Names.ZoneEvent).OnClientEvent:Connect(function(payload: { [string]: any })
 	ZoneController.onZoneEvent(zone, payload)
+	-- Sinais de fronteira (docs/13 §8.2): o pulso de cor e a vibração nascem
+	-- SOMENTE deste evento autoritativo e só quando ele traz os cinco sinais.
+	-- Travessia recusada não acende nada — nada foi atravessado.
+	ZoneSignalPlayer.onZoneEvent(zoneSignals, payload)
 end)
 
 remote(Remotes.Names.CombatEvent).OnClientEvent:Connect(function(payload: { [string]: any })
@@ -319,6 +346,7 @@ EnemyVfxPlayer.start(enemyVfx)
 -- O rastro do golpe e as camadas de VFX se apagam sozinhos quando a ação acaba.
 RunService.RenderStepped:Connect(function()
 	CharacterAnimationPlayer.step(characterAnimation)
+	ZoneSignalPlayer.step(zoneSignals)
 end)
 CombatCameraController.start(combatCamera)
 InteractionController.start(interaction)

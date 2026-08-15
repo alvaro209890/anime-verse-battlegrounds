@@ -43,6 +43,7 @@ local ActorAnimator = require("../src/client/Presentation/ActorAnimator")
 local EnemyAbilities = require("../src/shared/Data/EnemyAbilities")
 local EnemyVfxAssets = require("../src/shared/Data/EnemyVfxAssets")
 local EnemyVfxPlayer = require("../src/client/Presentation/EnemyVfxPlayer")
+local ZoneSignalPlayer = require("../src/client/Presentation/ZoneSignalPlayer")
 local Npcs = require("../src/shared/Data/Npcs")
 local SceneryPresentation = require("../src/shared/Data/SceneryPresentation")
 local InteractionBinding = require("../src/shared/InteractionBinding")
@@ -740,6 +741,143 @@ test("cenário: paleta e iluminação do spawn têm orçamento válido", functio
 		local rgb = style[key]
 		assertEq(#rgb, 3, key .. " tem RGB completo")
 	end
+end)
+
+test("fronteira: os cinco sinais do servidor viram apresentação local", function()
+	local ZoneService = require("../src/server/Services/ZoneService")
+	local signals = ZoneService.getFrontierSignals("zone_bastion_safe", "zone_plain_free")
+	assertTrue(signals ~= nil, "travessia de fronteira declara sinais")
+	if not signals then
+		return
+	end
+	assertEq(#signals, 5, "os cinco sinais vêm juntos (docs/02 §4.2)")
+	assertTrue(ZoneSignalPlayer.hasAllSignals(signals), "o cliente reconhece o conjunto completo")
+
+	local entering = ZoneSignalPlayer.plan({
+		to = "zone_plain_free",
+		pvp = true,
+		signals = signals,
+	})
+	assertTrue(entering ~= nil, "entrar na livre tem apresentação")
+	if not entering then
+		return
+	end
+	assertEq(entering.bannerKey, "hud.pvp_active", "faixa avisa o PvP")
+	assertTrue(entering.tintIntensity > 0 and entering.tintIntensity <= 0.35, "pulso fraco, não tela de dano")
+	assertTrue(entering.durationSeconds <= 1.2, "pulso curto")
+
+	local returning = ZoneSignalPlayer.plan({
+		to = "zone_bastion_safe",
+		pvp = false,
+		signals = ZoneService.getFrontierSignals("zone_plain_free", "zone_bastion_safe"),
+	})
+	assertTrue(returning ~= nil, "voltar para a segura também sinaliza")
+	if returning then
+		assertEq(returning.bannerKey, "hud.zone_safe", "faixa volta para SEGURO")
+		assertTrue(returning.tintRgb[3] > returning.tintRgb[1], "volta puxa para o frio")
+		assertTrue(entering.tintRgb[1] > entering.tintRgb[3], "ida puxa para o quente")
+	end
+end)
+
+test("fronteira: travessia recusada e evento interno não acendem nada", function()
+	local ZoneService = require("../src/server/Services/ZoneService")
+	local signals = ZoneService.getFrontierSignals("zone_bastion_safe", "zone_plain_free")
+
+	-- Recusa é o caso que mais importa: o hold ainda não terminou, o jogador
+	-- NÃO cruzou, e pintar a tela ensinaria que cruzou.
+	assertEq(
+		ZoneSignalPlayer.plan({
+			to = "zone_plain_free",
+			pvp = true,
+			signals = signals,
+			rejectedReason = "hold_required",
+		}),
+		nil,
+		"hold_required não apresenta"
+	)
+	assertEq(
+		ZoneSignalPlayer.plan({
+			to = "zone_bastion_safe",
+			pvp = false,
+			signals = signals,
+			rejectedReason = "combat_lockout",
+		}),
+		nil,
+		"lockout de combate não apresenta"
+	)
+	-- A faixa de transição É a fronteira, então segura↔transição carrega os
+	-- sinais. Quem não carrega é movimento dentro da mesma zona — e sem sinais
+	-- no payload o cliente não apresenta nada.
+	assertEq(
+		ZoneService.getFrontierSignals("zone_bastion_safe", "zone_bastion_safe"),
+		nil,
+		"mesma zona não é fronteira"
+	)
+	assertEq(ZoneSignalPlayer.plan({ to = "zone_bastion_safe", pvp = false }), nil, "sem sinais, sem pulso")
+	assertEq(
+		ZoneSignalPlayer.plan({ to = "zone_plain_free", pvp = true, signals = { "ui_banner" } }),
+		nil,
+		"conjunto incompleto é recusado"
+	)
+	assertEq(ZoneSignalPlayer.plan(nil), nil, "payload ausente é recusado")
+end)
+
+test("fronteira: o pulso sobe, desce e volta ao neutro sozinho", function()
+	local ZoneService = require("../src/server/Services/ZoneService")
+	local plan = ZoneSignalPlayer.plan({
+		to = "zone_plain_free",
+		pvp = true,
+		signals = ZoneService.getFrontierSignals("zone_bastion_safe", "zone_plain_free"),
+	})
+	assertTrue(plan ~= nil, "plano existe")
+	if not plan then
+		return
+	end
+	assertEq(ZoneSignalPlayer.intensityAt(plan, 0), 0, "começa em zero")
+	local peak = ZoneSignalPlayer.intensityAt(plan, 0.12)
+	assertTrue(peak > ZoneSignalPlayer.intensityAt(plan, 0.06), "sobe até o pico")
+	assertTrue(peak > ZoneSignalPlayer.intensityAt(plan, 0.5), "e desce depois dele")
+	assertEq(ZoneSignalPlayer.intensityAt(plan, plan.durationSeconds), 0, "acaba exatamente no fim")
+	assertEq(ZoneSignalPlayer.intensityAt(plan, 5), 0, "não fica preso aceso")
+	assertEq(ZoneSignalPlayer.intensityAt(plan, -1), 0, "tempo negativo não acende")
+
+	-- A vibração sai uma vez, no evento aceito, e nunca no recusado.
+	local pulses = 0
+	local player = ZoneSignalPlayer.new({
+		lighting = nil,
+		runService = nil,
+		haptics = function()
+			pulses += 1
+		end,
+		now = function()
+			return 0
+		end,
+	})
+	local accepted = ZoneSignalPlayer.onZoneEvent(player, {
+		to = "zone_plain_free",
+		pvp = true,
+		signals = ZoneService.getFrontierSignals("zone_bastion_safe", "zone_plain_free"),
+	})
+	assertTrue(accepted, "evento aceito arma o pulso")
+	assertEq(pulses, 1, "uma vibração por travessia")
+	local rejected = ZoneSignalPlayer.onZoneEvent(player, {
+		to = "zone_plain_free",
+		pvp = true,
+		signals = ZoneService.getFrontierSignals("zone_bastion_safe", "zone_plain_free"),
+		rejectedReason = "hold_required",
+	})
+	assertFalse(rejected, "evento recusado é ignorado")
+	assertEq(pulses, 1, "recusa não vibra")
+end)
+
+test("fronteira: o cliente liga o apresentador ao ZoneEvent e ao passo de render", function()
+	local source = fs.readFile("src/client/init.client.lua")
+	assertTrue(source:find("ZoneSignalPlayer.onZoneEvent(zoneSignals, payload)", 1, true) ~= nil, "ligado ao evento")
+	assertTrue(source:find("ZoneSignalPlayer.step(zoneSignals)", 1, true) ~= nil, "decai no passo de render")
+	-- A vibração é opcional por plataforma: sem proteção, um erro de
+	-- HapticService derrubaria a travessia inteira.
+	assertTrue(source:find("HapticService:SetMotor", 1, true) ~= nil, "vibração é um dos cinco sinais")
+	assertTrue(source:find("pcall(function()", 1, true) ~= nil, "plataforma sem vibração não quebra a travessia")
 end)
 
 test("cenário: as fontes de luz do spawn são dados, ficam na sala e cobrem o roteiro", function()
