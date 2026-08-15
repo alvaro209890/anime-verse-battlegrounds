@@ -92,7 +92,7 @@ Foi acrescentado um teste de regressão em `tests/animation.luau` para impedir o
 
 ## Revalidação pós-correção
 
-A correção foi revalidada antes da publicação no `main` com a execução integral dos gates locais:
+A correção foi revalidada com a execução integral dos gates locais e publicada no `main` no commit `d46c156`:
 
 | Verificação | Resultado |
 |---|---|
@@ -104,5 +104,6 @@ A correção foi revalidada antes da publicação no `main` com a execução int
 | Wally | passou, 0 dependências externas |
 | Rojo | build aprovado, 297.737 bytes |
 | `git diff --check` | passou |
+| Commit publicado | `d46c156` em `origin/main` |
 
 A validação no Roblox Studio continua sendo o próximo gate para confirmar a criação visual do `ProximityPrompt`, a interação válida e a recusa fora de 10 studs.
