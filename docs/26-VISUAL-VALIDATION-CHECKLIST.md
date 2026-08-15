@@ -6,6 +6,8 @@ Este documento transforma as imagens conceituais em um protocolo de comparação
 
 > Uma imagem pode orientar uma decisão visual, mas não prova que uma pose, VFX, colisão, câmera ou regra de combate funciona no runtime.
 
+> **A ordem de execução da sessão está em [`docs/32-STUDIO-PLAYTEST-RUNBOOK.md`](32-STUDIO-PLAYTEST-RUNBOOK.md)**, com o porteiro de sincronia (fora de sync não se mede), o que capturar por passo e os limites de desempenho. Este documento continua sendo a FICHA e os critérios visuais; o runbook é a ordem do dia.
+
 ## Ficha obrigatória da sessão
 
 Preencher uma ficha por ação ou cenário validado.

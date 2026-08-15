@@ -167,7 +167,7 @@ Isso importa porque a fronteira é experimento obrigatório da F0: *"pelo menos
 | `tests/run.luau` (domínio) | 235 passaram, 0 falharam |
 | `tests/animation.luau` (animação/apresentação) | 73 passaram, 0 falharam |
 | `tests/security_fuzz.luau` | 29 passaram, 0 falharam |
-| Total automatizado | 337 casos |
+| Total automatizado | 337 casos (era o número desta rodada; ver `docs/32` para o estado atual) |
 | Selene | 0 erros, 0 warnings, 0 parse errors |
 | StyLua | passou (`--check` limpo em `src tests plugins scripts`) |
 | Rojo | build aprovado, 318.988 bytes |

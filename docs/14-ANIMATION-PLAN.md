@@ -421,6 +421,36 @@ com `LightEmission` brilha sem iluminar.
 > código rodar. Custa uma medição de distância e evita reescrever um sistema
 > que estava certo.
 
+#### A cadeia agora é exercida headless (15/08)
+
+O buraco desta seção não era falta de teste por peça — era que **nenhum teste
+ligava as peças**. `tests/combat_e2e.luau` (14 casos) fecha isso: espelha os
+handlers de `init.server.lua` e `init.client.lua` linha a linha e roda posição
+→ aquisição em cone → resolução → `CombatEvent` → hit-stop, tremida, som,
+número de dano → `StateDelta`.
+
+Os três primeiros casos são a própria história desta seção:
+
+| Caso | O que prova |
+|---|---|
+| a 41,2 studs | o golpe erra e as cinco camadas ficam exatamente onde estavam: paradas |
+| a 6 studs | um leve confirmado acende as cinco de uma vez |
+| os dois lado a lado | **a distância era a única diferença** — a camada de impacto nunca esteve quebrada |
+
+A prova é por efeito observável (evento emitido, trauma acumulado, hit-stop
+ativo, deixa resolvida, número autorizado, vida replicada), nunca por
+instrumentação de módulo — a armadilha de §4.7.
+
+**Achado que saiu da simulação e ainda não tem resposta.** O perfil de câmera
+é escolhido por DESFECHO, e `HEAVY_ABILITIES` do `CombatCameraController` só
+lista técnicas (`comet_shoulder`, `broken_cadence`, `eclipse_beat`). O pesado
+básico chega como `abilityId = "heavy"` e recebe **o mesmo trauma do jab**,
+apesar de causar o dobro de dano e ser a ferramenta de quebra de guarda. O
+teste FIXA o comportamento atual em vez de mascarar: mudar feel é decisão de
+Play, não número escolhido no escuro — é a lição desta própria seção. Está no
+passo `a1_impact` do runbook (`docs/32` §6) para comparar leve e pesado com o
+olho e decidir com medição.
+
 ### 4.9 Correção de 14/08 — o corpo estalava para a câmera a cada golpe
 
 Reclamação separada das três acima, e mais fácil de reproduzir: **parado**, de
@@ -540,7 +570,7 @@ Para W1 passar, a evidência precisa mostrar, no mínimo:
 - percurso completo pelas duas saídas sem queda entre pisos;
 - prompt do Instrutor e hold de 1,5 s do Marco de Retorno funcionando com validação server-side.
 
-Até essa execução existir, W1 permanece **pendente**, mesmo com 235 testes de domínio e 73 testes de animação/apresentação verdes.
+Até essa execução existir, W1 permanece **pendente**, mesmo com 239 testes de domínio, 73 de animação/apresentação, 67 de fuzz e 14 de simulação de combate verdes. O roteiro do dia está em [`docs/32-STUDIO-PLAYTEST-RUNBOOK.md`](32-STUDIO-PLAYTEST-RUNBOOK.md).
 
 ### Gate A0 — direção e originalidade
 
