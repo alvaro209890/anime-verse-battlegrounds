@@ -28,6 +28,7 @@ jobs:
           lune run tests/run.luau
           lune run tests/animation.luau
           lune run tests/security_fuzz.luau
+          lune run tests/combat_e2e.luau
 
       - name: Wally — instalar dependências
         run: |
