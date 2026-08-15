@@ -19,6 +19,14 @@ Os arquivos `domain-expansion-*.png` usam a paleta conceitual do mundo: Slate es
 | `dash-run-presentation.png` | Preparação, passada, afterimages e atrito da corrida | Animação publicada ou teleport visual |
 | `ground-break-impact-presentation.png` | Sequência de crack, estilhaço, poeira e dissipação | Alteração permanente de piso/colisão |
 | `impact-vfx-micro-library.png` | Motivos reutilizáveis de anel, rastro, crack e debris | Spritesheet de produção sem preparação |
+| `ability-future-energy-projectile.png` | Direção de projétil, carga, trail e impacto | Habilidade pronta ou dano confirmado |
+| `ability-future-area-domain.png` | Direção de área, perímetro e pulsos | Zona PvP ou colisão autoritativa |
+| `ability-future-mobility-burst.png` | Direção de burst, afterimage e recuperação | Teleporte ou deslocamento real |
+| `ability-future-summon-construct.png` | Silhueta de constructo temporário | NPC jogável sem spec de ownership |
+| `ability-future-barrier-parry.png` | Barreira, deflexão e janela visual | Bloqueio confirmado por imagem |
+| `ability-future-ultimate-composition.png` | Direção cinematográfica de ultimate futura | Ultimate implementada ou câmera final |
+| `ability-future-environment-break.png` | Crack, debris, poeira e restauração | Alteração persistente de chão |
+| `ability-future-vfx-micro-library.png` | Biblioteca de motivos para receitas futuras | Spritesheet de produção sem conversão |
 
 ## Licença e procedência
 
@@ -30,4 +38,6 @@ O índice de uso está em `../../VISUAL-REFERENCE-INDEX.md`. O protocolo de capt
 
 ## Pipeline futuro
 
-Quando uma imagem for aprovada como referência, a produção deve separar: conceito, modelagem/peça Roblox, colisão, textura, iluminação, otimização mobile, integração por Rojo, adaptação para HUD/loading quando aplicável e teste de runtime. Nenhuma imagem deste diretório deve ser ligada automaticamente ao place por nome de arquivo.
+Quando uma imagem for aprovada como referência, a produção deve separar: conceito, modelagem/peça Roblox, colisão, textura, iluminação, otimização mobile, integração por Rojo, adaptação para HUD/loading quando aplicável e teste de runtime. O catálogo de habilidades futuras está em `../27-FUTURE-ABILITY-ASSET-CATALOG.md`. O candidato público arquivado está em `open-candidates/kenney_particle-pack.zip`; ele é CC0 conforme a fonte oficial, mas permanece fora do runtime até conversão, seleção e validação.
+
+Nenhuma imagem deste diretório deve ser ligada automaticamente ao place por nome de arquivo.

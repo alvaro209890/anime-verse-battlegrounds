@@ -19,6 +19,14 @@ Comece pela linha da referência desejada. Consulte o documento canônico, revis
 | `docs/assets/domain-expansion-border-gate.png` | Fronteira segura/livre e beacons | `docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md`, `docs/07-SECURITY.md` | F0 | W1/R1: telegraph, transição e regra PvP no servidor |
 | `docs/assets/domain-expansion-modular-ruins.png` | Biblioteca para futuras células de ruínas | `docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md` | F1/F2 | Peças com colisão, densidade e orçamento mobile |
 | `docs/assets/domain-expansion-vfx-moodboard.png` | Hierarquia cromática de risco, rota e telegraph | `docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md` | F0 → F2 | Acessibilidade sem depender somente de cor |
+| `docs/assets/ability-future-energy-projectile.png` | Projétil energético futuro | `docs/27-FUTURE-ABILITY-ASSET-CATALOG.md` | F1/F2 | Spec server-side, A1 e W2 |
+| `docs/assets/ability-future-area-domain.png` | Área/domínio temporário futuro | `docs/27-FUTURE-ABILITY-ASSET-CATALOG.md` | F1/F2 | Spec de zona, R1 e W2 |
+| `docs/assets/ability-future-mobility-burst.png` | Mobilidade avançada futura | `docs/27-FUTURE-ABILITY-ASSET-CATALOG.md` | F1/F2 | Movimento autoritativo, R1 e A1 |
+| `docs/assets/ability-future-summon-construct.png` | Constructo invocado futuro | `docs/27-FUTURE-ABILITY-ASSET-CATALOG.md` | F1/F2 | Ownership, despawn e segurança |
+| `docs/assets/ability-future-barrier-parry.png` | Barreira/parry futuro | `docs/27-FUTURE-ABILITY-ASSET-CATALOG.md` | F1/F2 | Confirmação server-side e A1/R1 |
+| `docs/assets/ability-future-ultimate-composition.png` | Ultimate futura | `docs/27-FUTURE-ABILITY-ASSET-CATALOG.md` | F1/F2 | Spec completa, mobile e câmera |
+| `docs/assets/ability-future-environment-break.png` | Ruptura de cenário futura | `docs/27-FUTURE-ABILITY-ASSET-CATALOG.md` | F1/F2 | Colisão, restauração, W1 e W2 |
+| `docs/assets/ability-future-vfx-micro-library.png` | Motivos de VFX futuros | `docs/27-FUTURE-ABILITY-ASSET-CATALOG.md` | F1/F2 | Reuso, densidade e acessibilidade |
 
 ## Estados permitidos
 
@@ -39,3 +47,4 @@ O estado atual das imagens permanece **Conceito**. As receitas de defesa e dash 
 - [`docs/15-WORLD-PRESENTATION.md`](docs/15-WORLD-PRESENTATION.md): gate W1 e apresentação do mundo.
 - [`docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md`](docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md): atlas do mundo.
 - [`docs/assets/AI-GENERATED-ASSETS.md`](docs/assets/AI-GENERATED-ASSETS.md): procedência, hashes e limites dos PNGs.
+- [`docs/27-FUTURE-ABILITY-ASSET-CATALOG.md`](docs/27-FUTURE-ABILITY-ASSET-CATALOG.md): habilidades futuras, assets públicos, licenças e promoção para produção.

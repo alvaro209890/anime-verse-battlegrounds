@@ -91,3 +91,20 @@ Descrever divergências em termos observáveis: “o rastro termina 0,3 s depois
 ## Limites de licença e procedência
 
 PNG gerado por IA permanece conceito original do projeto e deve ser referenciado por hash. Assets externos abertos devem ter licença, URL, versão, data de acesso e localização documentados antes de integração. O protocolo visual não substitui revisão de licença, otimização ou aprovação de produção.
+
+
+## Habilidades futuras
+
+As imagens do catálogo `docs/27-FUTURE-ABILITY-ASSET-CATALOG.md` orientam somente revisão e planejamento. Quando uma habilidade futura receber uma spec server-side, aplicar os critérios abaixo antes de considerá-la pronta para produção.
+
+| Família | Evidência visual mínima | Risco a observar |
+|---|---|---|
+| Projétil | Carga, lançamento, trajetória, impacto confirmado e dissipação | Trail pode sugerir acerto ou alcance que o servidor não autorizou |
+| Área/domínio | Perímetro, pulsos, centro e saída legíveis em câmera distante | Anel visual pode ser confundido com zona PvP ou colisão |
+| Mobilidade | Preparação, burst, chegada e recuperação com correção de rede visível | Afterimage pode mascarar teleporte, invulnerabilidade ou posição inválida |
+| Constructo | Spawn, idle, telegraph, despawn e limite de quantidade | Silhueta não prova ownership, vida, dano ou persistência |
+| Barreira/parry | Postura, janela, deflexão e quebra em três câmeras | Escudo local não prova bloqueio ou dano negado |
+| Ultimate | Charge, assinatura, impacto contido, recuperação e efeitos reduzidos | Excesso de partículas, câmera incapacitante e degradação mobile |
+| Ruptura de cenário | Marca, crack, debris, poeira, restauração e navegação contínua | VFX pode parecer alteração persistente de colisão ou mapa |
+
+Toda nova ficha precisa registrar a referência usada, o hash, o build, a plataforma e o evento server-side que confirma qualquer efeito de gameplay. Antes desse evento existir, somente a camada de antecipação visual pode ser avaliada.
