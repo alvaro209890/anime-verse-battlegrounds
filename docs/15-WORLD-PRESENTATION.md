@@ -1,6 +1,6 @@
 # 15 — Fundação de mundo e apresentação F0
 
-> **Estado canônico em 2026-08-14 (rodada de apresentação de combate):** implementado em código e validado por lint, 227 testes de domínio, 59 testes de animação/apresentação, 29 casos de fuzz e build Rojo. O artefato de verificação possui 294.793 bytes; isso prova somente a saída do build, não boot ou runtime. A expansão de cenário, os VFX e as skins estão implementados, mas **não houve Play atual no Studio neste snapshot**.
+> **Estado canônico em 2026-08-14 (rodada de apresentação de combate):** implementado em código e validado por lint, 227 testes de domínio, 60 testes de animação/apresentação, 29 casos de fuzz e build Rojo. O artefato de verificação possui 296.661 bytes; isso prova somente a saída do build, não boot ou runtime. A expansão de cenário, os VFX e as skins estão implementados, mas **não houve Play atual no Studio neste snapshot**.
 
 ## 1. Objetivo e limite
 
@@ -319,8 +319,8 @@ Comprovado automaticamente:
 - interação valida catálogo, alvo único, alcance, hold, abandono e limpeza de sessão;
 - o gate exige Studio + atributo e libera somente três técnicas;
 - unlock de sessão aparece para habilidade/HUD e fica fora do snapshot durável;
-- 227 testes de domínio, 59 testes de animação/apresentação e 29 casos de fuzz passam; Selene passou e StyLua não foi executado nesta rodada por indisponibilidade do binário;
-- o build Rojo atual foi concluído com 294.793 bytes no check reproduzido desta rodada.
+- 227 testes de domínio, 60 testes de animação/apresentação e 29 casos de fuzz passam; Selene passou e StyLua não foi executado nesta rodada por indisponibilidade do binário;
+- o build Rojo atual foi concluído com 296.661 bytes no check reproduzido desta rodada.
 
 O último item é evidência de **build reproduzido**. Não demonstra que o arquivo abriu, iniciou servidor/cliente, renderizou Parts ou respondeu a input.
 

@@ -24,6 +24,10 @@ Os arquivos `domain-expansion-*.png` usam a paleta conceitual do mundo: Slate es
 
 As imagens desta lista foram geradas para este projeto e devem ser tratadas como **conceito visual original**. Não foram baixadas de uma franquia, personagem ou pacote comercial. Assets externos gratuitos continuam documentados em `docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md` e `docs/25-COMBAT-PRESENTATION-PLAN.md`; cada pacote externo precisa ser verificado individualmente antes de entrar no repositório ou no Roblox Studio.
 
+## Navegação e validação
+
+O índice de uso está em `../../VISUAL-REFERENCE-INDEX.md`. O protocolo de captura e aprovação está em `../26-VISUAL-VALIDATION-CHECKLIST.md`. Esses documentos transformam as imagens em referências comparáveis para animações, VFX, HUD e mundo, mas não promovem nenhum PNG a asset de runtime.
+
 ## Pipeline futuro
 
-Quando uma imagem for aprovada como referência, a produção deve separar: conceito, modelagem/peça Roblox, colisão, textura, iluminação, otimização mobile, integração por Rojo e teste de runtime. Nenhuma imagem deste diretório deve ser ligada automaticamente ao place por nome de arquivo.
+Quando uma imagem for aprovada como referência, a produção deve separar: conceito, modelagem/peça Roblox, colisão, textura, iluminação, otimização mobile, integração por Rojo, adaptação para HUD/loading quando aplicável e teste de runtime. Nenhuma imagem deste diretório deve ser ligada automaticamente ao place por nome de arquivo.

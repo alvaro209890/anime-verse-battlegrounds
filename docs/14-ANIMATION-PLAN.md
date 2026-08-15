@@ -302,7 +302,7 @@ Para W1 passar, a evidência precisa mostrar, no mínimo:
 - percurso completo pelas duas saídas sem queda entre pisos;
 - prompt do Instrutor e hold de 1,5 s do Marco de Retorno funcionando com validação server-side.
 
-Até essa execução existir, W1 permanece **pendente**, mesmo com 227 testes de domínio e 59 testes de animação/apresentação verdes.
+Até essa execução existir, W1 permanece **pendente**, mesmo com 227 testes de domínio e 60 testes de animação/apresentação verdes.
 
 ### Gate A0 — direção e originalidade
 
@@ -592,4 +592,11 @@ O catálogo `src/shared/Data/AbilityVfx.luau` recebeu as receitas `guard_raise` 
 
 As imagens `docs/assets/combat-presentation-reference.png`, `defense-guard-presentation.png`, `dash-run-presentation.png`, `ground-break-impact-presentation.png` e `impact-vfx-micro-library.png` são referências conceituais originais. O documento `docs/25-COMBAT-PRESENTATION-PLAN.md` contém o inventário, as fontes CC0 candidatas e a ordem de integração. Elas orientam a arte, mas não são evidência de Play no Studio.
 
-A suíte headless passou a cobrir 59 casos de animação/apresentação, incluindo a distinção entre as fases do dash, a postura defensiva e a conexão das receitas ao input. A aprovação visual ainda exige A1/W1 no Roblox Studio, com captura em frente, perfil e três quartos, além de verificação de foot sliding, interseção, FPS e redução de efeitos em Android.
+A suíte headless passou a cobrir 60 casos de animação/apresentação, incluindo a distinção entre as fases do dash, a postura defensiva e a conexão das receitas ao input. A aprovação visual ainda exige A1/W1 no Roblox Studio, com captura em frente, perfil e três quartos, além de verificação de foot sliding, interseção, FPS e redução de efeitos em Android.
+
+
+## 12. Referências visuais como evidência de revisão
+
+O índice `VISUAL-REFERENCE-INDEX.md` relaciona cada referência às poses, receitas e gates. Para qualquer revisão de defesa, dash ou impacto, usar `docs/26-VISUAL-VALIDATION-CHECKLIST.md` e registrar a referência, o hash do PNG, o build, as três câmeras, a captura sem VFX, a captura com efeitos reduzidos e as divergências observáveis.
+
+A imagem orienta a silhueta, o ritmo e a hierarquia de materiais; não comprova que o personagem se moveu, que o bloqueio foi aceito ou que o chão foi alterado. A decisão de aprovação exige Play no Studio, e A1 continua separado dos testes headless de fases e amplitudes.

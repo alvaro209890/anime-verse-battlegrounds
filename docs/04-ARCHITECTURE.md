@@ -2,7 +2,7 @@
 
 ## 1. Escopo e decisões arquiteturais
 
-Este documento descreve a arquitetura-alvo e distingue o que já existe do que ainda precisa ser entregue. O repositório contém um **esqueleto executável da F0**: bootstrap de servidor/cliente, catálogos, mundo greybox, modelos/animação procedural de NPCs, apresentação local do jogador, receitas visuais de defesa/dash, interação contextual, domínio, save/ProfileStore, controllers de Input/HUD, registry v2, `SecurityService` e `TelemetryService`. A CI versionada executa StyLua, Selene, 227 testes de domínio, 59 testes de animação/apresentação, instalação Wally e build Rojo no snapshot canônico `d7c44e8`. Isso comprova estrutura e lógica automatizada; **não comprova** roteiro runtime no Studio, DataStore real, teleporte, servidor publicado, mobile ou gamepad.
+Este documento descreve a arquitetura-alvo e distingue o que já existe do que ainda precisa ser entregue. O repositório contém um **esqueleto executável da F0**: bootstrap de servidor/cliente, catálogos, mundo greybox, modelos/animação procedural de NPCs, apresentação local do jogador, receitas visuais de defesa/dash, interação contextual, domínio, save/ProfileStore, controllers de Input/HUD, registry v2, `SecurityService` e `TelemetryService`. A CI versionada executa StyLua, Selene, 227 testes de domínio, 60 testes de animação/apresentação, instalação Wally e build Rojo no snapshot canônico `d7c44e8`. Isso comprova estrutura e lógica automatizada; **não comprova** roteiro runtime no Studio, DataStore real, teleporte, servidor publicado, mobile ou gamepad.
 
 Decisões principais:
 
@@ -119,7 +119,7 @@ Regras adicionais:
 - `InteractionController` envia somente alvo/fase semânticos; `InteractionService` fecha catálogo, distância e hold no servidor. Prompts e fluxo real continuam pendentes de Play;
 - existem implementações iniciais de `AbilityService`, `CatalogService`, `CombatService`, `CooldownService`, `PlayerSessionService`, `ProgressionService` (flags de unlock; spawn sem técnicas), `RemoteGateway`, `ResourceService`, `SaveService` e `ZoneService` (zona atual, `canPvp`, transição 5 s, lockout 15 s e os 5 sinais da fronteira — domínio headless, item 6 do backlog);
 - `src/client/init.client.lua` monta os controllers F0, a extensão contextual de interação e as utilities de apresentação; layout, dispositivos e feeling continuam pendentes de runtime;
-- os 227 testes de domínio e 59 testes de animação/apresentação cobrem dados, domínio, controllers, interação, apresentação pura e segurança/telemetria, mas ainda não substituem os testes de integração e runtime previstos neste documento.
+- os 227 testes de domínio e 60 testes de animação/apresentação cobrem dados, domínio, controllers, interação, apresentação pura e segurança/telemetria, mas ainda não substituem os testes de integração e runtime previstos neste documento.
 
 As tabelas seguintes são o mapa-alvo. Uma linha em F0 não significa que o contrato inteiro esteja pronto; o roadmap e os testes de aceite determinam a conclusão.
 
@@ -389,7 +389,7 @@ Regras de implementação futura:
 | ProfileStore | Session locking e ciclo de perfil atrás de adaptador | Dependência presente; contrato, takeover e DataStore real ainda precisam de teste publicado |
 | GitHub Actions | Formato, lint, testes, dependências e build no push/PR | Pipeline existente; sem credencial ou deploy automático |
 
-Pipeline atual: StyLua check → Selene → 227 testes de domínio + 59 testes de animação/apresentação → instalação Wally → build Rojo. A evolução aprovada acrescenta type check Roblox e fixtures de migração sem remover os gates existentes. A CI não terá credenciais de produção e não publicará place automaticamente.
+Pipeline atual: StyLua check → Selene → 227 testes de domínio + 60 testes de animação/apresentação → instalação Wally → build Rojo. A evolução aprovada acrescenta type check Roblox e fixtures de migração sem remover os gates existentes. A CI não terá credenciais de produção e não publicará place automaticamente.
 
 ## 13. Ordem arquitetural por fase
 

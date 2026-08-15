@@ -1,10 +1,10 @@
 # 12 — Testes e evidências
 
-> **Snapshot de implementação:** 2026-08-14, derivado de `d7c44e8` e atualizado no release desta rodada. `tests/run.luau` executa **227 testes de domínio** e `tests/animation.luau` executa **59 testes de animação/apresentação**. As duas suítes principais totalizam **286 casos**, e `tests/security_fuzz.luau` adiciona **29 casos determinísticos**; o total automatizado desta rodada é **315 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada (14/08): overlay procedural que nascia morto por corrida no anexo do rig, corpo que deixou de girar no golpe (mira declarada na intenção), tremida de câmera e hit-stop recalibrados, e luz de verdade na camada de VFX.
+> **Snapshot de implementação:** 2026-08-14, derivado de `d7c44e8` e atualizado no release desta rodada. `tests/run.luau` executa **227 testes de domínio** e `tests/animation.luau` executa **60 testes de animação/apresentação**. As duas suítes principais totalizam **287 casos**, e `tests/security_fuzz.luau` adiciona **29 casos determinísticos**; o total automatizado desta rodada é **316 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada (14/08): overlay procedural que nascia morto por corrida no anexo do rig, corpo que deixou de girar no golpe (mira declarada na intenção), tremida de câmera e hit-stop recalibrados, e luz de verdade na camada de VFX.
 
 ## 1. Estado da execução
 
-No snapshot de implementação atual, a verificação automatizada registrou 227/227 em `tests/run.luau`, 59/59 em `tests/animation.luau` e 29/29 em `tests/security_fuzz.luau`. Selene e StyLua continuam gates separados e precisam ser executados no mesmo release. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
+No snapshot de implementação atual, a verificação automatizada registrou 227/227 em `tests/run.luau`, 60/60 em `tests/animation.luau` e 29/29 em `tests/security_fuzz.luau`. Selene e StyLua continuam gates separados e precisam ser executados no mesmo release. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
 
 **Registro histórico, não evidência do snapshot atual:** uma rodada anterior teve confirmação em Play pelo jogador, com `avb-debug sync` = 56/56, de que a animação de golpe movia o corpo e o personagem não girava sozinho. Essa evidência pertence ao estado anterior documentado em `docs/14` e não deve ser usada para declarar o commit `d7c44e8` validado em runtime. Neste snapshot, o Play atual continua pendente.
 
@@ -78,7 +78,7 @@ A divisão é deliberada: matemática e decisão ficam em módulos puros (`Geome
 
 - **`tests/harness.luau`** simula o mínimo que o Lune não fornece: `_G.game`, `_G.Instance`, `_G.task` e resolução de `require(script.Parent.X)` no filesystem.
 - **`tests/run.luau`** contém os 227 casos e usa módulos reais de `src/`, com um miniframework de asserts.
-- **`tests/animation.luau`** contém 59 casos de apresentação procedural, VFX, áudio, juntas, defesa e dash.
+- **`tests/animation.luau`** contém 60 casos de apresentação procedural, VFX, áudio, juntas, defesa e dash.
 - **`tests/security_fuzz.luau`** executa 29 casos determinísticos de envelope, payload, replay, sequência, rate limit, isolamento por usuário e rejoin.
 - **Services testáveis por injeção** recebem dependências em `init()`: `CatalogService`, `AbilityService`, `ResourceService`, `PlayerSessionService`, `ZoneService`, `ProgressionService`, `QuestService`, `SpatialService`, `EnemyService` e `SaveService` (adaptador de store mockado). O bootstrap Roblox monta o grafo real.
 - **`src/shared/TaskCompat.luau`** usa `task` nativo no Roblox e o polyfill somente no harness.
@@ -167,3 +167,12 @@ rg -n "\\x{FFFD}" README.md docs
 - Contar casos pelo resumo pode mascarar erro: a fonte é a quantidade real de chamadas `test(...)` em `tests/run.luau`; nesta versão são 224.
 - Lua patterns não têm alternação (`a|b` é literal): validar IDs de sinal por pertencimento a uma tabela, não com regex no teste.
 - Quirk do Lune/MLua: closure auto-referente (`local x = { fn = function() ... x ... end }`) vê `x` como nil dentro da função. Declarar a variável antes (`local x; x = { ... }`) ou o mock do SaveService quebra com "attempt to index nil".
+
+
+## 7. Protocolo visual baseado em referências
+
+As imagens do pacote de combate e da expansão de domínio são referências de comparação, não provas de runtime. O índice na raiz (`VISUAL-REFERENCE-INDEX.md`) relaciona cada PNG aos sistemas, documentos e gates correspondentes. O protocolo reproduzível de captura, critérios e registro de divergências está em `docs/26-VISUAL-VALIDATION-CHECKLIST.md`.
+
+A validação visual deve registrar commit do build, SHA-256 do `.rbxl`, referência usada, plataforma, resolução, preset, FPS/frame time, câmera, sequência de inputs, capturas sem VFX e com efeitos reduzidos, divergências observáveis e decisão. Defesa, dash e chão quebrando possuem critérios específicos: postura e retorno ao neutro; quatro fases da corrida; e sequência de marcação, anel, crack, poeira/debris e dissipação.
+
+Os testes headless podem comprovar fases, amplitudes, duração, raio, envelopes e ausência de mutação da raiz física. Eles não comprovam foot sliding, clipping, legibilidade, colisão, câmera, replicação, latência real ou desempenho em Android. Esses itens permanecem gates A1/W1/R1/W2 no Roblox Studio.

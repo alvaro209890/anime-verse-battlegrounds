@@ -88,3 +88,26 @@ Os hashes abaixo identificam exatamente os PNGs presentes neste commit. Eles ser
 | `dash-run-presentation.png` | 2176×1632 | `f3523f39ddcff2d40f681cb18071359a9dd6cb6a5ecb9267a47dfb535f8301d8` |
 | `ground-break-impact-presentation.png` | 2176×1632 | `5528ddee28adcf057cfac5df42e52bdee18a500ac6ae3dbe72ca56154775f60a` |
 | `impact-vfx-micro-library.png` | 2560×1440 | `64afdbef9cd9f36bb2199904f22cec030b62ba3c15223238edd1824ce8873f2c` |
+
+
+## 9. Matriz de validação visual e uso futuro
+
+As imagens deste pacote deixam de ser apenas moodboards e passam a ter um uso documental controlado: cada uma serve como referência de comparação, mas sua aprovação depende de critérios observáveis e de evidência real no Studio. O índice navegável está em `../VISUAL-REFERENCE-INDEX.md` e o protocolo reproduzível está em `26-VISUAL-VALIDATION-CHECKLIST.md`.
+
+| Imagem | Critério visual primário | Código/receita relacionada | Uso futuro possível | Gate obrigatório |
+|---|---|---|---|---|
+| `combat-presentation-reference.png` | Escala, contraste, câmera e hierarquia | `PlayerCombatAnimator`, `AbilityVfx` | Direção de arte, loading e review interno | A0/A1 |
+| `defense-guard-presentation.png` | Postura fechada, mãos/cotovelos e leitura de estado | `PlayerCombatAnimator`, `guard_raise` | Preview de defesa e tutorial | A1 + evento server-side para confirmar bloqueio |
+| `dash-run-presentation.png` | Quatro fases, passada e recuperação | `PlayerCombatAnimator`, `dash_run` | Tutorial, preview e guia de movimento | A1/R1 |
+| `ground-break-impact-presentation.png` | Ordem temporal de crack, poeira e debris | `dash_run`, futuras receitas de impacto | VFX temporário e guia de chão destruível | A1/W1/W2 |
+| `impact-vfx-micro-library.png` | Reuso de motivos sem excesso de partículas | `AbilityVfx` e futuro pool de VFX | Biblioteca de telegraphs e feedback confirmado | A0/W2 |
+
+### Estados de promoção
+
+Cada referência deve avançar por estados explícitos: **Conceito**, **Receita headless**, **Candidato de produção** e **Runtime validado**. A transição para Candidato de produção exige decisão de formato (mesh, textura, sprite ou somente direção), revisão de licença, orçamento mobile e plano de integração. A transição para Runtime validado exige captura no Studio, verificação de câmera, colisão, performance e comportamento sob latência.
+
+### Critérios visuais fixados
+
+A comparação deve incluir frente, perfil e três quartos, além de uma captura sem VFX e outra com efeitos reduzidos. A defesa precisa manter mãos e cotovelos legíveis e retornar ao neutro. O dash precisa mostrar compressão, aceleração, passada e recuperação sem teleporte visual ou foot sliding grave. O chão quebrando precisa seguir marcação → anel → crack → poeira/debris → dissipação, sem alterar colisão por conta própria.
+
+As imagens não autorizam dano, bloqueio, deslocamento, alteração de piso, persistência de debris ou recompensa. Esses efeitos só podem ser promovidos com contratos server-side próprios. O checklist completo de captura e decisão está em `docs/26-VISUAL-VALIDATION-CHECKLIST.md`.
