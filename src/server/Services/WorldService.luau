@@ -1039,7 +1039,7 @@ local function buildFloors(root: Folder, greybox: any, style: any, zones: any, s
 	local groupByKind = { safe = "Safe", transition = "Transition", free = "Free" }
 	local sceneryStyle = scenery.style()
 	local colorByKind = {
-		safe = COLORS.bastion,
+		safe = toColor(sceneryStyle.floorColor),
 		transition = COLORS.transition,
 		free = toColor(sceneryStyle.terrainColor),
 	}
@@ -1059,6 +1059,7 @@ local function buildFloors(root: Folder, greybox: any, style: any, zones: any, s
 				true
 			)
 			floor:SetAttribute("ZoneId", zone.id)
+			floor.Material = if zone.kind == "free" then Enum.Material.Ground else Enum.Material.Slate
 			floor.Parent = folder
 		end
 	end
@@ -1067,10 +1068,11 @@ local function buildFloors(root: Folder, greybox: any, style: any, zones: any, s
 		"TrainingPad",
 		Vector3.new(greybox.trainingSize, FLOOR_THICKNESS / 2, greybox.trainingSize),
 		Vector3.new(28, GROUND_Y, -20),
-		COLORS.bastion,
+		toColor(sceneryStyle.floorColor),
 		"Safe",
 		true
 	)
+	training.Material = Enum.Material.Slate
 	training.Parent = folder
 
 	-- Praça e rotas tornam spawn → treino → dois portões legíveis sem minimapa.
@@ -1078,10 +1080,11 @@ local function buildFloors(root: Folder, greybox: any, style: any, zones: any, s
 		"SpawnPlaza",
 		Vector3.new(0.35, style.spawnPlazaRadius * 2, style.spawnPlazaRadius * 2),
 		Vector3.new(0, 0.18, 16),
-		COLORS.lightStone,
+		toColor(sceneryStyle.floorAccent),
 		"Safe",
 		true
 	)
+	plaza.Material = Enum.Material.Slate
 	plaza.Shape = Enum.PartType.Cylinder
 	plaza.CFrame = CFrame.new(plaza.Position) * CFrame.Angles(0, 0, math.pi / 2)
 	plaza.Parent = folder
@@ -1090,28 +1093,31 @@ local function buildFloors(root: Folder, greybox: any, style: any, zones: any, s
 		"PathNorthGate",
 		Vector3.new(style.pathWidth, 0.3, 43),
 		Vector3.new(0, 0.16, -10.5),
-		COLORS.path,
+		toColor(sceneryStyle.floorAccent),
 		"Safe",
 		true
 	)
+	northPath.Material = Enum.Material.Slate
 	northPath.Parent = folder
 	local trainingPath = makePart(
 		"PathTraining",
 		Vector3.new(30, 0.3, style.pathWidth),
 		Vector3.new(15, 0.16, -20),
-		COLORS.path,
+		toColor(sceneryStyle.floorAccent),
 		"Safe",
 		true
 	)
+	trainingPath.Material = Enum.Material.Slate
 	trainingPath.Parent = folder
 	local westPath = makePart(
 		"PathWestGate",
 		Vector3.new(40, 0.3, style.pathWidth),
 		Vector3.new(-20, 0.16, 0),
-		COLORS.path,
+		toColor(sceneryStyle.floorAccent),
 		"Safe",
 		true
 	)
+	westPath.Material = Enum.Material.Slate
 	westPath.Parent = folder
 	local wildPath = makePart(
 		"PathToCrater",
@@ -1503,13 +1509,16 @@ local function buildAnchors(root: Folder, zones: any): ()
 	end
 end
 
-local function buildLighting(): ()
-	Lighting.Brightness = 2.2
-	Lighting.ClockTime = 15.25
-	Lighting.EnvironmentDiffuseScale = 0.35
-	Lighting.EnvironmentSpecularScale = 0.2
+local function buildLighting(scenery: any): ()
+	local style = scenery.style()
+	Lighting.Brightness = 2.0
+	Lighting.ClockTime = 18.25
+	Lighting.EnvironmentDiffuseScale = 0.42
+	Lighting.EnvironmentSpecularScale = 0.28
 	Lighting.GlobalShadows = true
-	Lighting.OutdoorAmbient = Color3.fromRGB(132, 136, 142)
+	Lighting.OutdoorAmbient = toColor(style.ceilingColor)
+	Lighting.ColorShift_Top = toColor(style.lightColor)
+	Lighting.ColorShift_Bottom = toColor(style.fillLightColor)
 
 	local oldAtmosphere = Lighting:FindFirstChild("F0Atmosphere")
 	if oldAtmosphere then
@@ -1517,12 +1526,47 @@ local function buildLighting(): ()
 	end
 	local atmosphere = Instance.new("Atmosphere")
 	atmosphere.Name = "F0Atmosphere"
-	atmosphere.Color = Color3.fromRGB(204, 211, 218)
-	atmosphere.Decay = Color3.fromRGB(114, 105, 97)
-	atmosphere.Density = 0.22
-	atmosphere.Glare = 0.08
-	atmosphere.Haze = 1.25
+	atmosphere.Color = toColor(style.lightColor)
+	atmosphere.Decay = toColor(style.ceilingColor)
+	atmosphere.Density = 0.18
+	atmosphere.Glare = 0.12
+	atmosphere.Haze = 0.9
 	atmosphere.Parent = Lighting
+
+	local oldSpawnLights = Workspace:FindFirstChild("F0SpawnLighting")
+	if oldSpawnLights then
+		oldSpawnLights:Destroy()
+	end
+	local lightFolder = Instance.new("Folder")
+	lightFolder.Name = "F0SpawnLighting"
+	lightFolder.Parent = Workspace
+	local lightPositions = {
+		Vector3.new(-20, 12, 12),
+		Vector3.new(20, 12, 12),
+		Vector3.new(-12, 10, -18),
+		Vector3.new(12, 10, -18),
+		Vector3.new(0, 18, 6),
+		Vector3.new(0, 9, 6),
+	}
+	for index = 1, math.min(style.spawnLightCount, #lightPositions) do
+		local emitter = Instance.new("Part")
+		emitter.Name = ("SpawnLight_%02d"):format(index)
+		emitter.Anchored = true
+		emitter.CanCollide = false
+		emitter.CanTouch = false
+		emitter.CanQuery = false
+		emitter.Transparency = 1
+		emitter.Size = Vector3.new(0.2, 0.2, 0.2)
+		emitter.Position = lightPositions[index]
+		emitter.Parent = lightFolder
+		local point = Instance.new("PointLight")
+		point.Name = "SoftFill"
+		point.Brightness = style.spawnLightBrightness
+		point.Range = style.spawnLightRange
+		point.Color = if index % 2 == 0 then toColor(style.fillLightColor) else toColor(style.lightColor)
+		point.Shadows = index <= 4
+		point.Parent = emitter
+	end
 end
 
 -- Decoração da área de spawn a partir das receitas puras de
@@ -1581,7 +1625,7 @@ function WorldService.init(deps: WorldDeps): ()
 	buildZoneVolumes(root, deps.zones)
 	buildStaticActors(root, deps.presentation, deps.zones)
 	buildAnchors(root, deps.zones)
-	buildLighting()
+	buildLighting(deps.scenery)
 
 	root.Parent = Workspace
 	WorldService.root = root

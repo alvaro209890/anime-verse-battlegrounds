@@ -9,8 +9,16 @@ export type SceneryStyle = {
 	terrainColor: { number },
 	terrainAccent: { number },
 	roofColor: { number },
+	floorColor: { number },
+	floorAccent: { number },
+	ceilingColor: { number },
+	lightColor: { number },
+	fillLightColor: { number },
 	roofTransparency: number,
 	wallCapHeight: number,
+	spawnLightBrightness: number,
+	spawnLightRange: number,
+	spawnLightCount: number,
 	rockCount: number,
 	grassCount: number,
 }
@@ -21,9 +29,17 @@ local STYLE: SceneryStyle = {
 	wallCap = { 105, 109, 122 },
 	terrainColor = { 92, 82, 70 },
 	terrainAccent = { 117, 103, 82 },
-	roofColor = { 46, 50, 62 },
-	roofTransparency = 0.22,
+	roofColor = { 32, 38, 54 },
+	floorColor = { 57, 63, 76 },
+	floorAccent = { 96, 102, 122 },
+	ceilingColor = { 32, 38, 54 },
+	lightColor = { 144, 216, 255 },
+	fillLightColor = { 184, 142, 255 },
+	roofTransparency = 0.18,
 	wallCapHeight = 0.7,
+	spawnLightBrightness = 1.35,
+	spawnLightRange = 18,
+	spawnLightCount = 6,
 	rockCount = 22,
 	grassCount = 28,
 }
@@ -66,7 +82,19 @@ local function distanceXZ(a: any, b: any): number
 end
 
 function SceneryPresentation.validate(): (boolean, string?)
-	for _, key in { "wallColor", "wallAccent", "wallCap", "terrainColor", "terrainAccent", "roofColor" } do
+	for _, key in {
+		"wallColor",
+		"wallAccent",
+		"wallCap",
+		"terrainColor",
+		"terrainAccent",
+		"roofColor",
+		"floorColor",
+		"floorAccent",
+		"ceilingColor",
+		"lightColor",
+		"fillLightColor",
+	} do
 		local rgb = STYLE[key]
 		if not validRgb(rgb) then
 			return false, ("cor RGB inválida: %s"):format(key)
@@ -74,6 +102,16 @@ function SceneryPresentation.validate(): (boolean, string?)
 	end
 	if STYLE.wallCapHeight <= 0 or STYLE.wallCapHeight > 4 then
 		return false, "altura da tampa de parede fora do orçamento"
+	end
+	if
+		STYLE.spawnLightBrightness <= 0
+		or STYLE.spawnLightBrightness > 4
+		or STYLE.spawnLightRange < 8
+		or STYLE.spawnLightRange > 32
+		or STYLE.spawnLightCount < 2
+		or STYLE.spawnLightCount > 12
+	then
+		return false, "iluminação do spawn fora do orçamento"
 	end
 	if STYLE.rockCount < 20 or STYLE.rockCount > 64 or STYLE.grassCount < 20 or STYLE.grassCount > 96 then
 		return false, "densidade natural fora do orçamento do cenário"

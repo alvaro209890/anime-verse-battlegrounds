@@ -722,6 +722,29 @@ test("cenário: catálogo visual, terreno e teto têm parâmetros válidos", fun
 	assertEq(SceneryPresentation.assetSources()[1].license, "CC0", "fonte de cenário CC0")
 end)
 
+test("cenário: paleta e iluminação do spawn têm orçamento válido", function()
+	local style = SceneryPresentation.style()
+	assertTrue(style.spawnLightBrightness > 0 and style.spawnLightBrightness <= 4, "brilho do spawn limitado")
+	assertTrue(style.spawnLightRange >= 8 and style.spawnLightRange <= 32, "alcance da luz limitado")
+	assertTrue(style.spawnLightCount >= 2 and style.spawnLightCount <= 12, "quantidade de luzes limitada")
+	for _, key in { "floorColor", "floorAccent", "ceilingColor", "lightColor", "fillLightColor" } do
+		local rgb = style[key]
+		assertEq(#rgb, 3, key .. " tem RGB completo")
+	end
+end)
+
+test("npc: instrutora tem silhueta visual enriquecida e rosto validado", function()
+	local rig = require("../src/shared/Data/WorldPresentation").rigFor("npc_threshold_instructor")
+	assertTrue(rig ~= nil, "rig da instrutora existe")
+	if not rig then
+		return
+	end
+	assertTrue(#rig.gear >= 20, "instrutora tem camadas suficientes")
+	assertEq(rig.faceTexture, "rbxasset://textures/face.png", "rosto usa textura embutida")
+	local ok, reason = require("../src/shared/Data/WorldPresentation").validateRigs()
+	assertTrue(ok, reason or "rigs válidos")
+end)
+
 test("npc: catálogo de habilidades e assets gratuitos é válido", function()
 	local ok, reason = EnemyAbilities.validate()
 	assertTrue(ok, reason or "habilidades de NPC válidas")

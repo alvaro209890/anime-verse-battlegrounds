@@ -275,6 +275,8 @@ end
 local INSTRUCTOR_GEAR: { RigGear } = {
 	blob("HairBack", "Head", { 1.36, 1.30, 1.34 }, { 0, 0.26, 0.12 }, { 0, 0, 0 }, HAIR, "Fabric"),
 	blob("HairTop", "Head", { 1.24, 0.86, 1.24 }, { 0, 0.62, 0.02 }, { 0, 0, 0 }, HAIR, "Fabric"),
+	blob("HairSideL", "Head", { 0.38, 0.92, 0.84 }, { -0.62, 0.02, 0.22 }, { 0, 0, -8 }, HAIR, "Fabric"),
+	blob("HairSideR", "Head", { 0.38, 0.92, 0.84 }, { 0.62, 0.02, 0.22 }, { 0, 0, 8 }, HAIR, "Fabric"),
 	-- Franja em cinco mechas de alturas e ângulos diferentes: uma mecha só, ou
 	-- cinco iguais, lê como capacete.
 	spike("Fringe", "Head", { 0.30, 0.42, 0.26 }, { -0.44, 0.58, -0.48 }, { -26, -22, -8 }, HAIR, "Fabric"),
@@ -293,6 +295,9 @@ local INSTRUCTOR_GEAR: { RigGear } = {
 	band("Collar", "UpperTorso", { 0.46, 1.24, 1.24 }, { 0, 0.86, 0.02 }, { 0, 0, 90 }, COAT, "Fabric"),
 	band("CollarGlow", "UpperTorso", { 0.10, 1.30, 1.30 }, { 0, 1.06, 0.02 }, { 0, 0, 90 }, UMBRAL, "Neon"),
 	blob("Sash", "UpperTorso", { 0.34, 1.70, 1.22 }, { -0.30, 0, -0.02 }, { 0, 0, -18 }, COAT_DARK, "Fabric"),
+	blob("WaistPanel", "LowerTorso", { 1.62, 1.12, 1.16 }, { 0, -0.18, 0.04 }, { 0, 0, 0 }, COAT, "Fabric"),
+	blob("CapePanelL", "UpperTorso", { 0.62, 1.72, 0.38 }, { -0.70, -0.62, 0.34 }, { 8, 0, -8 }, COAT, "Fabric"),
+	blob("CapePanelR", "UpperTorso", { 0.62, 1.72, 0.38 }, { 0.70, -0.62, 0.34 }, { 8, 0, 8 }, COAT, "Fabric"),
 	blob("Emblem", "UpperTorso", { 0.36, 0.44, 0.20 }, { 0, 0.20, -0.62 }, { 0, 0, 0 }, UMBRAL, "Neon"),
 	blob("EmblemCore", "UpperTorso", { 0.16, 0.18, 0.14 }, { 0, 0.20, -0.66 }, { 0, 0, 0 }, UMBRAL_CORE, "Neon"),
 	band("Belt", "UpperTorso", { 0.34, 1.55, 1.20 }, { 0, -0.86, 0.02 }, { 0, 0, 90 }, COAT_DARK, "Leather"),
