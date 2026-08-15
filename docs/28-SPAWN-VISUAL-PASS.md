@@ -105,6 +105,7 @@ A correção foi revalidada com a execução integral dos gates locais e a verif
 | Rojo | build aprovado, 297.737 bytes |
 | `git diff --check` | passou |
 | Cobertura adicional | vínculo único da Instrutora verificado no bootstrap |
+| Commit publicado | `6db7e78` em `origin/main` |
 
 A validação no Roblox Studio continua sendo o próximo gate para confirmar a criação visual do `ProximityPrompt`, a interação válida e a recusa fora de 10 studs.
 
