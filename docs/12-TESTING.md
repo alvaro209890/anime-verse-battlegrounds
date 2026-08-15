@@ -20,14 +20,30 @@ Essa evidência valida a **regra** espacial: distância, lado do golpe, cápsula
 
 Ela **não** valida a **execução**. Nesta rodada o novo snapshot não foi reaberto nem houve playtest atual: boot, spawn, dummy, técnicas, animações, interações, morte/respawn, fronteira, objetivo, câmera, HUD e dispositivos continuam sem evidência runtime. A afirmação honesta é "camada cliente e bootstrap compilam e têm regras testadas headless" — não "o jogo atual foi testado no Studio".
 
-## 1. Gates reproduzíveis
+## 2. Gates reproduzíveis
 
 Depois de instalar o toolchain, a verificação completa do repositório é:
 
+No Linux/macOS (o que o CI roda, na mesma ordem):
+
+```bash
+export PATH="$HOME/.aftman/bin:$HOME/.local/bin:$PATH"
+aftman install                 # 1ª vez neste PC: aftman install --no-trust-check
+stylua --check src tests plugins scripts
+selene src tests plugins scripts
+lune run tests/run.luau
+lune run tests/animation.luau
+lune run tests/security_fuzz.luau
+wally install && mkdir -p Packages
+rojo build -o build.rbxl
+```
+
+No Windows, com o snapshot canônico no fim:
+
 ```powershell
 aftman install
-stylua --check src tests
-selene src tests
+stylua --check src tests plugins scripts
+selene src tests plugins scripts
 lune run tests/run.luau
 lune run tests/animation.luau
 lune run tests/security_fuzz.luau
@@ -37,6 +53,10 @@ rojo build -o .rojo-tree-check.rbxl
 .\scripts\build-studio.ps1
 ```
 
+Os quatro caminhos (`src tests plugins scripts`) são os mesmos do
+`.github/workflows/ci.yml`. Rodar `selene src tests` só — sem `plugins` e
+`scripts` — passa localmente e quebra no CI.
+
 O CI executa StyLua, Selene, os testes Lune, a instalação Wally e o build Rojo em todo pull request e em pushes para `main` (`.github/workflows/ci.yml`). Cada resultado precisa registrar commit, ambiente e saída; “verde no CI” não significa “testado no runtime Roblox”. `.rojo-tree-check.rbxl` valida a árvore e é descartável; `scripts/build-studio.ps1` produz o snapshot canônico `anime-verse-battlegrounds.rbxl` e verifica tamanho/data/hash. Nenhum dos dois comandos equivale a abrir o arquivo e usar Play.
 
 O gate de tronco tem nome feio de propósito. Em 2026-08-14 o place canônico estava com um lock órfão, o build saiu para um `build.rbxl` na raiz, e esse arquivo virou o place que o jogador abria no Studio — três commits de correção de animação ficaram invisíveis porque o Play rodava um snapshot anterior a todos eles. Dois `.rbxl` abríveis lado a lado é o bug; o gate de tronco agora escreve num nome que ninguém confunde com place de trabalho, e `build-studio.ps1` limpa lock de sessão morta em vez de empurrar o build para outro arquivo.
@@ -45,7 +65,7 @@ O gate de tronco tem nome feio de propósito. Em 2026-08-14 o place canônico es
 
 Em checkout Windows com `core.autocrlf=true`, os arquivos de trabalho podem estar em CRLF enquanto `stylua.toml` exige `Unix`; nesse caso, o check direto acusa somente final de linha. Para reproduzir o CI, use uma cópia com bytes LF canônicos do Git (`git -c core.autocrlf=false archive ...`). `--line-endings Windows` só é equivalente quando todo o checkout está uniformemente em CRLF; ele não resolve uma árvore mista. Não reformatar código só para mascarar essa conversão do checkout.
 
-## 2. Cobertura existente: exatamente 235 testes de domínio
+## 3. Cobertura existente: exatamente 235 testes de domínio
 
 | Área | Cobertura |
 |---|---|
@@ -74,7 +94,7 @@ Esses testes cobrem o catálogo, o domínio F0, a **regra** da camada espacial e
 
 A divisão é deliberada: matemática e decisão ficam em módulos puros (`Geometry`, `Zones`, `SpatialService`, `EnemyService`), e só o `WorldService` toca Instances. Um teste que precisasse de `Vector3` ou `workspace` é sinal de que a regra vazou para a camada errada.
 
-## 3. Arquitetura do harness
+## 4. Arquitetura do harness
 
 - **`tests/harness.luau`** simula o mínimo que o Lune não fornece: `_G.game`, `_G.Instance`, `_G.task` e resolução de `require(script.Parent.X)` no filesystem.
 - **`tests/run.luau`** contém os 235 casos e usa módulos reais de `src/`, com um miniframework de asserts.
@@ -85,7 +105,7 @@ A divisão é deliberada: matemática e decisão ficam em módulos puros (`Geome
 
 Os módulos de dados declaram tipos inline porque o Lune não resolve `script.Parent` como o Roblox. `src/shared/Types.luau` continua sendo o contrato canônico para tooling, mas a duplicação precisa ser comparada em revisão sempre que o tipo evoluir.
 
-## 4. Evidência por camada
+## 5. Evidência por camada
 
 | Camada | O que demonstra | O que não demonstra |
 |---|---|---|
@@ -96,7 +116,7 @@ Os módulos de dados declaram tipos inline porque o Lune não resolve `script.Pa
 
 Uma entrega deve dizer explicitamente quais camadas foram executadas, em vez de resumir tudo como “testado”.
 
-## 5. Casos obrigatórios antes de F1/F2
+## 6. Casos obrigatórios antes de F1/F2
 
 Os testes abaixo são backlog, não parte dos 205 existentes:
 
@@ -109,7 +129,7 @@ Os testes abaixo são backlog, não parte dos 205 existentes:
 - normalização competitiva remove bônus numéricos de maestria e preserva apenas variantes permitidas pela versão do snapshot;
 - IDs de runner/fallback ausentes derrubam validação, e falha não debita recurso nem inicia cooldown.
 
-## 6. Matriz runtime ainda pendente
+## 7. Matriz runtime ainda pendente
 
 A spec de execução da fatia (`docs/13-F0-SLICE.md` §19–§21) lista os testes Lune que devem mudar com o catálogo novo e o roteiro Studio. Antes de chamar F0 de jogável ou liberar a fase seguinte, registrar evidência para:
 
@@ -139,7 +159,7 @@ Para o item 11 (consolidação, morte, ProfileStore — 2026-08-12): **comprovad
 
 Para a camada espacial (greybox, hitbox, lunge, AI): **comprovado** é toda a regra — os volumes concordam com as âncoras, a hitbox à frente seleciona um alvo, o lunge respeita 7/8 studs e para na guarda, o lado do golpe se mede da origem do avanço, a perseguição respeita 12 studs/s. **Não comprovado** é qualquer coisa que exija abrir o place: as parts existirem e estarem no lugar certo, os collision groups se comportarem, o `Heartbeat` conseguir ler o personagem, o desempenho do tick de AI com 8 jogadores e o feeling do lunge com latência.
 
-## 7. Checklist de consistência documental
+## 8. Checklist de consistência documental
 
 Antes de fechar uma revisão de planejamento:
 
@@ -151,6 +171,23 @@ rg -n "recomendação provisória|\| Proposta \|" docs/09-OPEN-QUESTIONS.md
 rg -n "\\x{FFFD}" README.md docs
 ```
 
+Números e nomes de função também precisam bater com o código, porque envelhecem
+sozinhos a cada rodada:
+
+```bash
+# contagens reais das três suítes (a fonte é a saída, não o que o doc afirma)
+lune run tests/run.luau | tail -1
+lune run tests/animation.luau | tail -1
+lune run tests/security_fuzz.luau | tail -1
+rojo build -o build.rbxl && stat -c%s build.rbxl   # bytes citados nos docs
+
+# toda contagem/artefato citado em doc, para conferir de uma vez
+rg -n "testes de domínio|testes de animação|casos automatizados|bytes" docs README.md
+
+# função citada em doc que não existe mais no código (foi como o faceAim vazou)
+rg -n '`[A-Za-z]+\.[a-zA-Z]+\(' docs | sed 's/.*`\([A-Za-z]*\.[a-zA-Z]*\)(.*/\1/' | sort -u
+```
+
 - os quatro primeiros comandos devem ficar sem ocorrência normativa obsoleta; menção histórica só permanece se estiver marcada como revogada;
 - `rawD > 3` deve ser inválido em schema, GDD, spec e testes planejados;
 - pity pertence somente ao loot pessoal de boss, nunca à forja;
@@ -159,17 +196,20 @@ rg -n "\\x{FFFD}" README.md docs
 - revisar UTF-8, links, tabelas, âncoras e referências cruzadas após renomear seções;
 - confirmar a terminologia transversal: RPG / Action RPG, três presets gratuitos e seis máximos, soft launch Brasil-first e território/F7 pós-lançamento.
 
-## 8. Pitfalls conhecidos
+## 9. Pitfalls conhecidos
 
 - `task.wait` real em teste cria loop infinito se o polyfill síncrono for usado no `spawn`; o harness injeta `spawn = noop` para o loop de regen. `ZoneService` usa relógio injetado (`fakeNow`), nunca `task.wait`, para as janelas de 5 s e 15 s.
 - Busy-wait curto com `os.clock` substitui `task.wait` nos testes de expiração de cooldown.
 - Selene permite `global_usage` e `empty_loop` no `selene.toml` porque o harness usa `_G` e busy-waits deliberadamente.
-- Contar casos pelo resumo pode mascarar erro: a fonte é a quantidade real de chamadas `test(...)` em `tests/run.luau`; nesta versão são 224.
+- Contar casos pelo resumo pode mascarar erro: a fonte é a quantidade real de chamadas `test(...)` em `tests/run.luau`; nesta versão são 235.
 - Lua patterns não têm alternação (`a|b` é literal): validar IDs de sinal por pertencimento a uma tabela, não com regex no teste.
 - Quirk do Lune/MLua: closure auto-referente (`local x = { fn = function() ... x ... end }`) vê `x` como nil dentro da função. Declarar a variável antes (`local x; x = { ... }`) ou o mock do SaveService quebra com "attempt to index nil".
+- **Forward reference quebra o Selene no CI.** Chamar uma `local function` antes da linha em que ela é definida passa em Lua e é erro de lint. Aconteceu em 13/08 com `buildSpawnDecorations`: mover a função para antes de quem a chama (e passar dependência por parâmetro) é o conserto.
+- **`selene ... | tail -1` esconde o erro.** O resumo final ("Results:") sai depois dos diagnósticos, então cortar a saída mostra "0 errors" de uma execução que falhou. Ler as últimas ~5 linhas, ou nenhuma.
+- **Teste headless não pega defeito de anexo.** Toda a classe de bug de `docs/14` §4.7 (rig R15 ausente no `CharacterAdded`, cache de junta congelado vazio, `Trail` nulo permanente) tem função pura verde: o que faltava era alguém aplicar a pose. Verificação dessa camada sai da parte materializada em Play, nunca do dado que alimenta a pose.
 
 
-## 7. Protocolo visual baseado em referências
+## 10. Protocolo visual baseado em referências
 
 As imagens do pacote de combate e da expansão de domínio são referências de comparação, não provas de runtime. O índice na raiz (`VISUAL-REFERENCE-INDEX.md`) relaciona cada PNG aos sistemas, documentos e gates correspondentes. O protocolo reproduzível de captura, critérios e registro de divergências está em `docs/26-VISUAL-VALIDATION-CHECKLIST.md`.
 

@@ -1,6 +1,8 @@
 # 14 — Plano de animação e apresentação de combate
 
-> **Status canônico em 2026-08-14 (`d7c44e8`):** existe uma fundação procedural para NPCs e para o personagem local em ataque leve, ataque pesado, guarda e dash. O ataque leve virou uma **cadeia de quatro golpes de silhueta distinta** (§4.3), com cotovelo e joelho articulados. Validação apenas por análise estática, build e testes headless. **Nenhum dos 45 clipes finais foi criado ou validado, nenhuma das três técnicas possui animação dedicada e não houve Play atual no Studio.** A F0 continua usando apresentação genérica até os gates W1, P1 e A1.
+> **Status canônico em 2026-08-15 (`86228ee`):** existe uma fundação procedural para NPCs e para o personagem local em ataque leve, ataque pesado, guarda e dash. O ataque leve virou uma **cadeia de quatro golpes de silhueta distinta** (§4.3), com cotovelo e joelho articulados. Validação apenas por análise estática, build e testes headless. **Nenhum dos 45 clipes finais foi criado ou validado, nenhuma das três técnicas possui animação dedicada e não houve Play atual no Studio.** A F0 continua usando apresentação genérica até os gates W1, P1 e A1.
+>
+> **Antes de investigar qualquer "não anima", leia §4.7.** A série de correções de 14/08 terminou num defeito que nenhum teste headless pega: o rig R15 não existe no instante do `CharacterAdded`, o anexo capturava zero junta e nunca mais procurava. A receita de diagnóstico em seis passos está no fim daquela seção; a rotação do corpo no golpe está em §4.9.
 >
 > Áudio de combate tem documento próprio: `16-COMBAT-AUDIO.md`. Polimento procedural de game-feel (easing, follow-through, idle, wrist snap, hit-stop e câmera de impacto) está em `17-COMBAT-FEEL.md`.
 
@@ -214,6 +216,242 @@ nenhuma leitura.
 Rastro de golpe: um `Trail` sem textura (recurso do próprio engine, nada para
 subir) na mão direita acende durante a ação e apaga sozinho no fim dela.
 
+### 4.6 Correção de 14/08 (tarde) — "o personagem só levanta o braço"
+
+Terceira rodada. O overlay já chegava à tela (§4.5), mas o golpe continuava
+ilegível. Duas medições no Studio explicaram por quê, e as duas foram cegas
+para quem só lia o código.
+
+**(1) As duas camadas discordavam sobre qual braço ataca.**
+
+O clipe `522635514` ("Corte de Espada") balança o braço **DIREITO**. O jab
+procedural — degrau 1 — soca com o **ESQUERDO**:
+
+| Camada | Braço que age no degrau 1 |
+|---|---|
+| Clipe de espada (prioridade Action) | direito |
+| `JAB_STRIKE` procedural | esquerdo (`leftShoulderPitch = −92`) |
+
+E **todo ataque solto é o degrau 1** — só encadeando é que se chega ao 2, 3, 4.
+Ou seja: o golpe que o jogador mais vê era exatamente aquele em que as camadas
+brigavam, e o clipe, sendo animação autoral em prioridade Action, ganhava a
+tela. O que sobrava para o olho era um braço subindo.
+
+Quando as duas concordavam (pesado, ambas no direito), o problema virava o
+oposto: os ângulos **somavam** e hiperestendiam o ombro.
+
+**Decisão: a apresentação de combate é 100% procedural.** O catálogo de clipes
+está vazio, e isso é decisão, não pendência — o kit do jogo é punho e chute
+(Punho do Eclipse) e o único clipe livre disponível é de espada. `Combat-
+Animations` continua existindo como a costura do Gate A1: declarar um clipe lá
+volta a ligar a camada. O rastro do golpe (`Trail`) foi movido para fora do
+caminho do clipe, senão sumiria junto.
+
+**(2) A pose tinha dois quadros, e o corpo chegava inteiro de uma vez.**
+
+Cada degrau era `recolhe → bate`. Com um único quadro forte, o rig cobre todo
+o arco num segmento só e o que o olho registra é a extremidade. Agora cada
+degrau é uma trilha de quatro quadros, no mesmo motor das técnicas
+(`techniquePose`):
+
+| Quadro | Papel | Instante |
+|---|---|---|
+| neutro | de onde sai | 0 |
+| **recolhe** | peso vai para trás, extremidade carrega | fim da antecipação |
+| **dirige** | o quadril já virou, a extremidade ainda está a caminho | 60% do caminho até o impacto |
+| **impacto** | silhueta do golpe | instante autoritativo |
+| (sustenta) | pausa de impacto, depois recuperação elástica | fim da pausa |
+
+Duas coisas novas entraram na pose para o corpo aparecer:
+
+- **`rootForwardStuds`** — o passo. Entrar no golpe em vez de girar no lugar.
+  Medido no Studio: 0,220 pedido → **0,220 em todas as partes do corpo**, então
+  o deslocamento move o personagem inteiro. É **visual**: a
+  `HumanoidRootPart` física não sai do lugar, então alcance, hitbox e posição
+  autoritativa não mudam. No impacto vale de 0,26 (chute) a 0,48 stud (pesado),
+  e é **negativo** na antecipação — o peso recua antes de ir.
+- **tornozelos** (`leftAnklePitchDegrees` / `rightAnklePitchDegrees`) — sem
+  eles o pé de trás fica colado enquanto o quadril gira, e o golpe lê como
+  braço mexendo em cima de um boneco parado.
+
+**Resultado medido no personagem real do Studio.** Percurso do corpo (soma do
+deslocamento de tronco, cabeça, quadril, pernas e pés entre os quadros do
+golpe), jab antigo × jab novo:
+
+| | Quadros | Percurso do corpo |
+|---|---:|---:|
+| Antes (2 quadros, sem passo, com clipe) | 2 | 1,30 studs |
+| Depois (4 quadros, passo, tornozelos) | 4 | **4,36 studs** |
+
+**+235%.**
+
+Regras travadas por teste (`tests/animation.luau`):
+
+- todo degrau gira o quadril ≥ 18° e o tronco ≥ 20° **no impacto** — inclusive
+  o jab, que é o mais visto;
+- todo degrau baixa o centro de massa, mexe os dois joelhos e ao menos um
+  tornozelo;
+- todo degrau entra no golpe (`rootForwardStuds ≥ 0,2`) e **recua o peso** na
+  antecipação (negativo);
+- o quadro do meio é distinto do impacto (senão a trilha voltou a ter dois);
+- nenhuma ação de combate tem clipe declarado, e o construtor de clipe continua
+  válido para o Gate A1.
+
+> O helper de teste `strikeOf` passou a amostrar o **instante de impacto**
+> publicado por `lightChainImpact`. Antes usava `duração × 0,45`, que com
+> quatro quadros cai em cima do "dirige" nos degraus 3 e 4 — mediria o quadro
+> errado e deixaria a regressão passar.
+
+### 4.7 Correção de 14/08 (noite) — o overlay nascia morto
+
+Tudo de §4.5 e §4.6 estava certo no código e **nada disso aparecia no jogo**.
+Com o place correto aberto e o `sync` acusando 56/56 arquivos batendo, o
+jogador atacava e o corpo não se mexia.
+
+O que a medição no personagem real mostrou, atacando de verdade (cliques
+sintéticos, 421 quadros, 4 ataques confirmados no servidor):
+
+| Medida | Valor |
+|---|---|
+| Maiores ângulos de junta | todos de perna — a caminhada do Animate padrão |
+| `Root.Transform.Z` (o passo à frente) | **0,0000 em todos os quadros** |
+| Quadros com o rastro do golpe ligado | **0** |
+| Ombro no impacto | abaixo de 8°, onde a pose pede 92° |
+
+A pose nunca chegava na junta. A causa é uma corrida no anexo, medida
+direto no `CharacterAdded`:
+
+| No instante em que o personagem chega | 0,5 s depois |
+|---|---|
+| 0 `AnimationConstraint` | 15 |
+| 0 `Motor6D` | 0 |
+| sem `RightHand` | com `RightHand` |
+
+**O rig R15 não existe quando o personagem existe.** `attachCharacter` varria
+os descendentes exatamente nesse instante, capturava zero junta, e — como o
+anexo sai cedo quando o personagem é o mesmo — nunca mais procurava. O overlay
+inteiro ficava morto pelo resto da sessão.
+
+Isso reescreve o diagnóstico das rodadas anteriores: o "só levantava o braço"
+de §4.6 era o clipe de espada sozinho na tela, porque o procedural **nunca**
+tinha entrado. Tirar o clipe (decisão correta por outro motivo) removeu a única
+camada que ainda animava, e o sintoma virou "ataque sem animação nenhuma".
+
+Três lugares tinham o mesmo padrão de anexo-uma-vez-só:
+
+| Arquivo | Sintoma | Conserto |
+|---|---|---|
+| `PlayerCombatAnimator` | pose nunca aplicada | adota junta que chega depois, via `DescendantAdded` |
+| `CharacterAnimationPlayer` | rastro do golpe nunca acende (`buildTrail` sem `RightHand` devolve nil e o nil ficava permanente) | tenta montar o rastro de novo no golpe |
+| `ActorAnimator` | cache de juntas do bot congelado vazio | não guarda cache vazio; a próxima chamada procura de novo |
+
+A regra de adoção virou `PlayerCombatAnimator.jointSlotFor(joints, className,
+jointName)`, pura e testada: classe válida, nome com papel, papel ainda livre
+(primeira vista vence). O teste começa com `joints` **vazio de propósito** —
+como no anexo que chegou cedo — e oferece as 15 juntas depois, travando
+justamente o caso que quebrou.
+
+> Lição de método, terceira desta série: medir a função pura não é medir o
+> jogo. `sample()` devolvia a pose certa em todas as rodadas — o que faltava
+> era alguém aplicá-la. Verificação de apresentação tem que sair da parte
+> materializada (posição de parte, `Transform` de junta, `Trail.Enabled`)
+> durante uma ação de verdade, nunca do dado que alimenta a pose.
+
+#### Onde o conserto vive no código
+
+Quem for mexer nessas camadas precisa saber o que **não** pode voltar a ser
+uma varredura única. Os três pontos, com âncora:
+
+| Âncora | Regra que não pode regredir |
+|---|---|
+| `PlayerCombatAnimator.jointSlotFor(joints, className, jointName)` | Pura: devolve o papel da junta só se a classe for de pose (`Motor6D`/`AnimationConstraint`), o nome tiver papel conhecido e o papel ainda estiver livre. Primeira vista vence — senão um acessório com nome de junta trocaria o rig no meio do jogo. |
+| `PlayerCombatAnimator.attachCharacter` → `character.DescendantAdded:Connect` | O anexo **continua escutando** depois da varredura inicial e adota junta que chega atrasada. A conexão é guardada em `animator.descendantConnection` e desligada ao desanexar. |
+| `CharacterAnimationPlayer.flashTrail` | Se `player.trail` é nil e o personagem existe, tenta `buildTrail` **de novo, a cada golpe**. Só roda em golpe, então é barato, e nessa altura a `RightHand` já existe. |
+| `ActorAnimator.setTransform` | Só grava `jointCache[model]` quando achou **pelo menos uma** junta. Guardar a lista vazia de um rig em montagem congelaria o bot sem pose para sempre. |
+
+#### Receita para o próximo "não anima"
+
+Esta classe de defeito não aparece em teste headless nenhum: a função pura
+devolve a pose certa e o teste passa. A ordem abaixo é a que separou as quatro
+hipóteses em 14/08 e vale para qualquer camada de apresentação:
+
+1. **O código no Studio é este?** `lune run scripts/avb-debug.luau sync`
+   (exit 2 = fora de sync). Duas janelas do Studio abertas medem places
+   diferentes — ver `docs/19` §5.
+2. **A intenção chega ao servidor?** Uma linha por golpe no Output com
+   `F0Debug` (`[Combat] light errou` já é chegada).
+3. **O mecanismo funciona?** Escrever `Transform` numa junta à mão e ver a mão
+   se mover prova que a junta responde.
+4. **O animador roda?** O idle mexe Root/Waist/Ombro sem input nenhum.
+5. **A pose chega na junta?** Ler `Root.Transform.Z` durante o golpe. Zero em
+   todos os quadros = o anexo não pegou as juntas, que é o defeito desta seção.
+6. Só depois disso vale suspeitar da pose em si.
+
+> `require` de um módulo via MCP devolve uma **cópia separada** — o estado vive
+> na closure original. Instrumentação que dá zero por esse caminho não prova
+> "não roda"; provar por efeito observável.
+
+### 4.8 Correção de 14/08 (noite) — impacto sem luz, sem tremida e sem acerto
+
+Reclamação: "não está tendo luzes, efeitos, tremidas". Três causas distintas,
+duas delas no código e uma que não era código nenhum.
+
+**(1) O jogador nunca tinha acertado nada.** Medido na sessão: o personagem
+estava a **41,2 studs** do único alvo vivo do mundo, e o alcance do golpe leve é
+**9**. Toda a camada de impacto — tremida de câmera, hit-stop, som de acerto e
+número de dano — só dispara em desfecho confirmado pelo servidor
+(`CombatEvent`, ver §5 e a tabela de `PresentationImpact`). Ela é correta e
+nunca tinha rodado uma única vez. O console dizia isso o tempo todo, uma linha
+por golpe: `[Combat] light errou`.
+
+Isso não é defeito de apresentação, é o mundo F0 ter um alvo só e ele estar
+longe. Fica registrado porque explica metade da reclamação e porque a próxima
+pessoa que for investigar "o impacto não aparece" precisa checar **primeiro** se
+houve impacto.
+
+**(2) A tremida estava calibrada para ser invisível.** Ver §6: o problema não
+era o teto, era a curva quadrática engolir o acerto comum. Recalibrado lá.
+
+**(3) Luz não existia.** Ver §6: `PointLight` nenhum no kit inteiro, e partícula
+com `LightEmission` brilha sem iluminar.
+
+> Lição de método, quarta desta série: antes de mexer na apresentação de um
+> evento, confirme que o evento **acontece**. Duas das três reclamações eram
+> código; a terceira era o jogador nunca ter chegado perto o bastante para o
+> código rodar. Custa uma medição de distância e evita reescrever um sistema
+> que estava certo.
+
+### 4.9 Correção de 14/08 — o corpo estalava para a câmera a cada golpe
+
+Reclamação separada das três acima, e mais fácil de reproduzir: **parado**, de
+costas para a câmera, o personagem girava sozinho no instante do golpe e de
+cada técnica.
+
+Não era a animação. `CharacterController.faceAim` girava a `HumanoidRootPart`
+com `CFrame.lookAt` **antes** de enviar a intenção, desligava o `AutoRotate`
+por 0,6 s e devolvia o giro depois. O servidor então lia essa rotação
+replicada para resolver alcance e cone. Ou seja: a direção do golpe chegava ao
+servidor como **efeito colateral no estado físico**, e o preço era o corpo
+mudar de ângulo em relação à câmera a cada ação.
+
+A mira agora é **declarada**:
+
+| Camada | Antes | Agora |
+|---|---|---|
+| Cliente | `root.CFrame = CFrame.lookAt(...)` + `AutoRotate = false` por 0,6 s | `CharacterController.aimVector(controller)` devolve `{ x, z }` unitário |
+| Rede | direção viajava implícita, na rotação replicada | campo `aim` no payload da intenção, validado como o do dash |
+| Servidor | lia a rotação da `HumanoidRootPart` | `applyDeclaredAim` → `SpatialService.aimLook(aim)` |
+
+**Nenhuma autoridade mudou de lado.** Quem escrevia aquela rotação já era este
+mesmo cliente; a diferença é que a direção passou a viajar num campo fechado e
+validado em vez de sair de um efeito colateral. Alcance, abertura, escolha de
+alvo e dano continuam 100% no servidor (§5.1 de `docs/13`), e o corpo fica onde
+o jogador deixou.
+
+> `docs/18` §8.2 descreve o `faceAim` como correção da rodada de 13/08. Aquele
+> texto é registro histórico: a função não existe mais no código.
+
+
 ## 5. Fases e markers
 
 Cada clip de combate declara os markers abaixo quando aplicáveis:
@@ -393,7 +631,7 @@ Ainda pendente:
 2. definir conta/grupo proprietário dos assets;
 3. escolher animador e ferramenta-fonte;
 4. executar e aprovar W1 no Studio;
-5. **ver a cadeia leve rodando no Studio** — quatro cliques seguidos num Estilhaço, conferindo leitura do chute e do finalizador na câmera padrão;
+5. **ver a cadeia leve rodando no Studio** — quatro cliques seguidos num Estilhaço, conferindo leitura do chute e do finalizador na câmera padrão, e confirmando pela parte materializada (`Root.Transform.Z` ≠ 0 no golpe) que o anexo de junta de §4.7 continua pegando;
 6. publicar os 29 `.ogg` e preencher `assetId` em `CombatAudio.luau` (`16-COMBAT-AUDIO.md` §5);
 7. produzir o blocking original do Ombro Cometa;
 8. substituir gradualmente o procedural somente quando houver asset real aprovado — não criar serviço vazio;
@@ -405,178 +643,6 @@ Ainda pendente:
 > scaffolding descartável, sem keyframe/asset, e **não reduz** a contagem de
 > clipes do gate A1 — mas é o que deve aparecer no Studio já no próximo
 > playtest (tecla 1 contra o dummy).
-
-### 4.6 Correção de 14/08 (tarde) — "o personagem só levanta o braço"
-
-Terceira rodada. O overlay já chegava à tela (§4.5), mas o golpe continuava
-ilegível. Duas medições no Studio explicaram por quê, e as duas foram cegas
-para quem só lia o código.
-
-**(1) As duas camadas discordavam sobre qual braço ataca.**
-
-O clipe `522635514` ("Corte de Espada") balança o braço **DIREITO**. O jab
-procedural — degrau 1 — soca com o **ESQUERDO**:
-
-| Camada | Braço que age no degrau 1 |
-|---|---|
-| Clipe de espada (prioridade Action) | direito |
-| `JAB_STRIKE` procedural | esquerdo (`leftShoulderPitch = −92`) |
-
-E **todo ataque solto é o degrau 1** — só encadeando é que se chega ao 2, 3, 4.
-Ou seja: o golpe que o jogador mais vê era exatamente aquele em que as camadas
-brigavam, e o clipe, sendo animação autoral em prioridade Action, ganhava a
-tela. O que sobrava para o olho era um braço subindo.
-
-Quando as duas concordavam (pesado, ambas no direito), o problema virava o
-oposto: os ângulos **somavam** e hiperestendiam o ombro.
-
-**Decisão: a apresentação de combate é 100% procedural.** O catálogo de clipes
-está vazio, e isso é decisão, não pendência — o kit do jogo é punho e chute
-(Punho do Eclipse) e o único clipe livre disponível é de espada. `Combat-
-Animations` continua existindo como a costura do Gate A1: declarar um clipe lá
-volta a ligar a camada. O rastro do golpe (`Trail`) foi movido para fora do
-caminho do clipe, senão sumiria junto.
-
-**(2) A pose tinha dois quadros, e o corpo chegava inteiro de uma vez.**
-
-Cada degrau era `recolhe → bate`. Com um único quadro forte, o rig cobre todo
-o arco num segmento só e o que o olho registra é a extremidade. Agora cada
-degrau é uma trilha de quatro quadros, no mesmo motor das técnicas
-(`techniquePose`):
-
-| Quadro | Papel | Instante |
-|---|---|---|
-| neutro | de onde sai | 0 |
-| **recolhe** | peso vai para trás, extremidade carrega | fim da antecipação |
-| **dirige** | o quadril já virou, a extremidade ainda está a caminho | 60% do caminho até o impacto |
-| **impacto** | silhueta do golpe | instante autoritativo |
-| (sustenta) | pausa de impacto, depois recuperação elástica | fim da pausa |
-
-Duas coisas novas entraram na pose para o corpo aparecer:
-
-- **`rootForwardStuds`** — o passo. Entrar no golpe em vez de girar no lugar.
-  Medido no Studio: 0,220 pedido → **0,220 em todas as partes do corpo**, então
-  o deslocamento move o personagem inteiro. É **visual**: a
-  `HumanoidRootPart` física não sai do lugar, então alcance, hitbox e posição
-  autoritativa não mudam. No impacto vale de 0,26 (chute) a 0,48 stud (pesado),
-  e é **negativo** na antecipação — o peso recua antes de ir.
-- **tornozelos** (`leftAnklePitchDegrees` / `rightAnklePitchDegrees`) — sem
-  eles o pé de trás fica colado enquanto o quadril gira, e o golpe lê como
-  braço mexendo em cima de um boneco parado.
-
-**Resultado medido no personagem real do Studio.** Percurso do corpo (soma do
-deslocamento de tronco, cabeça, quadril, pernas e pés entre os quadros do
-golpe), jab antigo × jab novo:
-
-| | Quadros | Percurso do corpo |
-|---|---:|---:|
-| Antes (2 quadros, sem passo, com clipe) | 2 | 1,30 studs |
-| Depois (4 quadros, passo, tornozelos) | 4 | **4,36 studs** |
-
-**+235%.**
-
-Regras travadas por teste (`tests/animation.luau`):
-
-- todo degrau gira o quadril ≥ 18° e o tronco ≥ 20° **no impacto** — inclusive
-  o jab, que é o mais visto;
-- todo degrau baixa o centro de massa, mexe os dois joelhos e ao menos um
-  tornozelo;
-- todo degrau entra no golpe (`rootForwardStuds ≥ 0,2`) e **recua o peso** na
-  antecipação (negativo);
-- o quadro do meio é distinto do impacto (senão a trilha voltou a ter dois);
-- nenhuma ação de combate tem clipe declarado, e o construtor de clipe continua
-  válido para o Gate A1.
-
-> O helper de teste `strikeOf` passou a amostrar o **instante de impacto**
-> publicado por `lightChainImpact`. Antes usava `duração × 0,45`, que com
-> quatro quadros cai em cima do "dirige" nos degraus 3 e 4 — mediria o quadro
-> errado e deixaria a regressão passar.
-
-### 4.7 Correção de 14/08 (noite) — o overlay nascia morto
-
-Tudo de §4.5 e §4.6 estava certo no código e **nada disso aparecia no jogo**.
-Com o place correto aberto e o `sync` acusando 56/56 arquivos batendo, o
-jogador atacava e o corpo não se mexia.
-
-O que a medição no personagem real mostrou, atacando de verdade (cliques
-sintéticos, 421 quadros, 4 ataques confirmados no servidor):
-
-| Medida | Valor |
-|---|---|
-| Maiores ângulos de junta | todos de perna — a caminhada do Animate padrão |
-| `Root.Transform.Z` (o passo à frente) | **0,0000 em todos os quadros** |
-| Quadros com o rastro do golpe ligado | **0** |
-| Ombro no impacto | abaixo de 8°, onde a pose pede 92° |
-
-A pose nunca chegava na junta. A causa é uma corrida no anexo, medida
-direto no `CharacterAdded`:
-
-| No instante em que o personagem chega | 0,5 s depois |
-|---|---|
-| 0 `AnimationConstraint` | 15 |
-| 0 `Motor6D` | 0 |
-| sem `RightHand` | com `RightHand` |
-
-**O rig R15 não existe quando o personagem existe.** `attachCharacter` varria
-os descendentes exatamente nesse instante, capturava zero junta, e — como o
-anexo sai cedo quando o personagem é o mesmo — nunca mais procurava. O overlay
-inteiro ficava morto pelo resto da sessão.
-
-Isso reescreve o diagnóstico das rodadas anteriores: o "só levantava o braço"
-de §4.6 era o clipe de espada sozinho na tela, porque o procedural **nunca**
-tinha entrado. Tirar o clipe (decisão correta por outro motivo) removeu a única
-camada que ainda animava, e o sintoma virou "ataque sem animação nenhuma".
-
-Três lugares tinham o mesmo padrão de anexo-uma-vez-só:
-
-| Arquivo | Sintoma | Conserto |
-|---|---|---|
-| `PlayerCombatAnimator` | pose nunca aplicada | adota junta que chega depois, via `DescendantAdded` |
-| `CharacterAnimationPlayer` | rastro do golpe nunca acende (`buildTrail` sem `RightHand` devolve nil e o nil ficava permanente) | tenta montar o rastro de novo no golpe |
-| `ActorAnimator` | cache de juntas do bot congelado vazio | não guarda cache vazio; a próxima chamada procura de novo |
-
-A regra de adoção virou `PlayerCombatAnimator.jointSlotFor(joints, className,
-jointName)`, pura e testada: classe válida, nome com papel, papel ainda livre
-(primeira vista vence). O teste começa com `joints` **vazio de propósito** —
-como no anexo que chegou cedo — e oferece as 15 juntas depois, travando
-justamente o caso que quebrou.
-
-> Lição de método, terceira desta série: medir a função pura não é medir o
-> jogo. `sample()` devolvia a pose certa em todas as rodadas — o que faltava
-> era alguém aplicá-la. Verificação de apresentação tem que sair da parte
-> materializada (posição de parte, `Transform` de junta, `Trail.Enabled`)
-> durante uma ação de verdade, nunca do dado que alimenta a pose.
-
-### 4.8 Correção de 14/08 (noite) — impacto sem luz, sem tremida e sem acerto
-
-Reclamação: "não está tendo luzes, efeitos, tremidas". Três causas distintas,
-duas delas no código e uma que não era código nenhum.
-
-**(1) O jogador nunca tinha acertado nada.** Medido na sessão: o personagem
-estava a **41,2 studs** do único alvo vivo do mundo, e o alcance do golpe leve é
-**9**. Toda a camada de impacto — tremida de câmera, hit-stop, som de acerto e
-número de dano — só dispara em desfecho confirmado pelo servidor
-(`CombatEvent`, ver §5 e a tabela de `PresentationImpact`). Ela é correta e
-nunca tinha rodado uma única vez. O console dizia isso o tempo todo, uma linha
-por golpe: `[Combat] light errou`.
-
-Isso não é defeito de apresentação, é o mundo F0 ter um alvo só e ele estar
-longe. Fica registrado porque explica metade da reclamação e porque a próxima
-pessoa que for investigar "o impacto não aparece" precisa checar **primeiro** se
-houve impacto.
-
-**(2) A tremida estava calibrada para ser invisível.** Ver §6: o problema não
-era o teto, era a curva quadrática engolir o acerto comum. Recalibrado lá.
-
-**(3) Luz não existia.** Ver §6: `PointLight` nenhum no kit inteiro, e partícula
-com `LightEmission` brilha sem iluminar.
-
-> Lição de método, quarta desta série: antes de mexer na apresentação de um
-> evento, confirme que o evento **acontece**. Duas das três reclamações eram
-> código; a terceira era o jogador nunca ter chegado perto o bastante para o
-> código rodar. Custa uma medição de distância e evita reescrever um sistema
-> que estava certo.
-
 
 ## 11. Pacote de apresentação de defesa, dash e chão quebrando — 2026-08-14
 
@@ -592,7 +658,7 @@ O catálogo `src/shared/Data/AbilityVfx.luau` recebeu as receitas `guard_raise` 
 
 As imagens `docs/assets/combat-presentation-reference.png`, `defense-guard-presentation.png`, `dash-run-presentation.png`, `ground-break-impact-presentation.png` e `impact-vfx-micro-library.png` são referências conceituais originais. O documento `docs/25-COMBAT-PRESENTATION-PLAN.md` contém o inventário, as fontes CC0 candidatas e a ordem de integração. Elas orientam a arte, mas não são evidência de Play no Studio.
 
-A suíte headless passou a cobrir 62 casos de animação/apresentação, incluindo a distinção entre as fases do dash, a postura defensiva, a conexão das receitas ao input e a validação da paleta/iluminação do spawn e da silhueta da instrutora. A aprovação visual ainda exige A1/W1 no Roblox Studio, com captura em frente, perfil e três quartos, além de verificação de foot sliding, interseção, FPS e redução de efeitos em Android.
+A suíte headless passou a cobrir 73 casos de animação/apresentação, incluindo a distinção entre as fases do dash, a postura defensiva, a conexão das receitas ao input, a adoção de junta atrasada (§4.7), os sinais de fronteira e a validação da paleta/iluminação do spawn e da silhueta dos dois bots. A aprovação visual ainda exige A1/W1 no Roblox Studio, com captura em frente, perfil e três quartos, além de verificação de foot sliding, interseção, FPS e redução de efeitos em Android.
 
 
 ## 12. Referências visuais como evidência de revisão

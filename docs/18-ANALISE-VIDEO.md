@@ -184,6 +184,10 @@ regra de combate:
   gira a HRP para a direção do alvo travado ou da câmera, desliga o AutoRotate
   por 0,6 s (cobre a ação mais longa da cadeia) e devolve o giro depois. Apenas
   rotação — posição idêntica, então o PlayerMotionGuard não vê deslocamento.
+  > **Superado em 14/08 (`73d8b96`).** `faceAim` não existe mais: girar a HRP
+  > fazia o personagem estalar para a câmera a cada golpe, mesmo parado. A mira
+  > virou campo declarado na intenção (`CharacterController.aimVector` →
+  > `applyDeclaredAim` → `SpatialService.aimLook`). Ver `docs/14` §4.9.
 - **Reconciliação de zona** (ZoneService.reconcile): quem já está fisicamente
   na zona livre É da zona livre. O hold continua sendo a porta da frente no
   portão, mas estado lógico e mundo nunca mais divergem; a proteção de 5 s da
