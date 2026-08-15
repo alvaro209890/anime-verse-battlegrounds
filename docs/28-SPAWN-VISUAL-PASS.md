@@ -78,6 +78,31 @@ Nenhum bug reproduzível foi encontrado fora do Studio. A iluminação é idempo
 | Selene | 0 erros, 0 warnings, 0 parse errors |
 | Rojo | Build aprovado, 297.737 bytes |
 | `git diff --check` | Passou |
-| Branch remota | `origin/main` sincronizada com `417990b` |
+| Commit base da auditoria | `1abb8a1` — antes da correção do prompt |
 
 A inspeção não substitui o Gate W1. Ainda não é possível concluir headless que a iluminação não escurece a face, que não existe clipping no rig, que o teto não causa desconforto visual, que não há z-fighting ou que o desempenho em Android está dentro do orçamento. Esses pontos permanecem como validação manual no Roblox Studio.
+
+## Correção pós-auditoria
+
+A integração do prompt da Instrutora foi corrigida após a migração para o rig R15. O corpo R15 fica aninhado em `Body`, portanto `WorldService.setNpcInteraction` agora procura `Head` recursivamente e continua compatível com o fallback low-poly, no qual a cabeça fica diretamente no ator.
+
+Foi acrescentado um teste de regressão em `tests/animation.luau` para impedir o retorno da busca não-recursiva. A validação no Studio continua obrigatória para confirmar a criação visual do `ProximityPrompt`, a interação válida e a recusa fora de 10 studs.
+
+> Esta alteração não muda catálogo, distância, hold, recompensa ou autoridade server-side; ela apenas restaura a ponte entre o ator visual instanciado e o controlador de interação do cliente.
+
+## Revalidação pós-correção
+
+A correção foi revalidada antes da publicação no `main` com a execução integral dos gates locais:
+
+| Verificação | Resultado |
+|---|---|
+| `tests/run.luau` | 227 passaram, 0 falharam |
+| `tests/animation.luau` | 63 passaram, 0 falharam |
+| `tests/security_fuzz.luau` | 29 passaram, 0 falharam |
+| Selene | 0 erros, 0 warnings, 0 parse errors |
+| StyLua | passou |
+| Wally | passou, 0 dependências externas |
+| Rojo | build aprovado, 297.737 bytes |
+| `git diff --check` | passou |
+
+A validação no Roblox Studio continua sendo o próximo gate para confirmar a criação visual do `ProximityPrompt`, a interação válida e a recusa fora de 10 studs.

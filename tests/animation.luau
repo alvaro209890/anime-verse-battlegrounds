@@ -745,6 +745,14 @@ test("npc: instrutora tem silhueta visual enriquecida e rosto validado", functio
 	assertTrue(ok, reason or "rigs válidos")
 end)
 
+test("npc: interação procura a cabeça também dentro do Body R15", function()
+	local source = fs.readFile("src/server/Services/WorldService.luau")
+	assertTrue(
+		source:find('model:FindFirstChild("Head", true)', 1, true) ~= nil,
+		"cabeça do rig R15 precisa ser localizada recursivamente"
+	)
+end)
+
 test("npc: catálogo de habilidades e assets gratuitos é válido", function()
 	local ok, reason = EnemyAbilities.validate()
 	assertTrue(ok, reason or "habilidades de NPC válidas")

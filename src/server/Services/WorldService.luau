@@ -1433,7 +1433,9 @@ end
 
 local function setNpcInteraction(model: Model, npcId: string): ()
 	-- Um único alvo visível evita dois prompts concorrentes para o mesmo NPC.
-	local part = model:FindFirstChild("Head")
+	-- O rig R15 fica aninhado em `Body`; a busca recursiva mantém o contrato
+	-- também quando o fallback low-poly deixa `Head` diretamente no ator.
+	local part = model:FindFirstChild("Head", true)
 	if part and part:IsA("BasePart") then
 		part:SetAttribute("InteractionNpcId", npcId)
 	end
