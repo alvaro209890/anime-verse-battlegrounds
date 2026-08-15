@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-15T23:37:49.411527+00:00",
+  "source": "docs/assets/anime-verse-battlegrounds-cover.png",
+  "sourceSha256": "f8a3c4fb76db57a9cf4e117dca9a3a39caa3dc16ebf4fc1c956c131701f2db30",
+  "policy": "Derivado de asset já existente no repositório. Conceito, não captura de runtime; publicar exige decisão separada de formato, leitura em tela pequena e Gate P1.",
+  "assets": [
+    {
+      "output": "docs/assets/roblox-ready/store/avb_thumbnail_1920x1080.jpg",
+      "role": "thumbnail",
+      "dimensions": {
+        "width": 1920,
+        "height": 1080
+      },
+      "format": "JPEG",
+      "roblox_use": "candidato a thumbnail 16:9 da página da experiência; requer revisão de leitura e P1",
+      "published": false,
+      "sha256": "ba9767601f307d1e4c9bddcb20d5299c4cfcfa2e38aff4ba77676abfd56b8b19"
+    },
+    {
+      "output": "docs/assets/roblox-ready/store/avb_icon_512.png",
+      "role": "icon",
+      "dimensions": {
+        "width": 512,
+        "height": 512
+      },
+      "format": "PNG",
+      "roblox_use": "candidato a ícone 512x512; recorte quadrado abaixo da faixa do título, requer teste em tamanho pequeno",
+      "published": false,
+      "sha256": "afd69ec0b052e22f6c8c18a063cc9a7927d9fb96ca8f7188177a440e72dd6f3b"
+    }
+  ]
+}
