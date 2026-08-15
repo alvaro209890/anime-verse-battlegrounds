@@ -47,6 +47,7 @@ local Quests = require(ReplicatedStorage.Shared.Data.Quests)
 local RemoteEnvelope = require(ReplicatedStorage.Shared.RemoteEnvelope)
 local WorldPresentation = require(ReplicatedStorage.Shared.Data.WorldPresentation)
 local SpawnDecorations = require(ReplicatedStorage.Shared.Data.SpawnDecorations)
+local WildDecorations = require(ReplicatedStorage.Shared.Data.WildDecorations)
 local SceneryPresentation = require(ReplicatedStorage.Shared.Data.SceneryPresentation)
 local Zones = require(ReplicatedStorage.Shared.Data.Zones)
 
@@ -92,6 +93,7 @@ WorldService.init({
 	presentation = WorldPresentation,
 	scenery = SceneryPresentation,
 	spawnDecorations = SpawnDecorations,
+	wildDecorations = WildDecorations,
 })
 print("[Bootstrap] greybox construído")
 

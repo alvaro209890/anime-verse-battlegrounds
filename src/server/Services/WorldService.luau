@@ -35,6 +35,7 @@ export type WorldDeps = {
 	presentation: any,
 	scenery: any,
 	spawnDecorations: any,
+	wildDecorations: any,
 }
 
 export type ActorVisual = {
@@ -1638,6 +1639,48 @@ local function buildSpawnDecorations(root: Folder, spawnDecorations: any): ()
 	end
 end
 
+-- Decoração da planície a partir de `WildDecorations.luau` (docs/22: rota
+-- norte, corredor oeste e borda da cratera). Nada colide e nada entra no
+-- ringue do elite — isso é regra dos dados, validada headless; aqui só se
+-- materializa, inclusive a luz de tocha declarada na peça.
+local function buildWildDecorations(root: Folder, wildDecorations: any): ()
+	local folder = Instance.new("Folder")
+	folder.Name = "WildDecorations"
+	folder.Parent = root
+
+	for _, decoration in wildDecorations.all() do
+		local part = Instance.new(decoration.class) :: BasePart
+		part.Name = decoration.name
+		part.Anchored = true
+		part.CanCollide = false
+		part.CanTouch = false
+		part.CanQuery = false
+		part.Size = Vector3.new(decoration.size.x, decoration.size.y, decoration.size.z)
+		part.Color = toColor(decoration.rgb)
+		part.Material = materialOf(decoration.material)
+		part.Transparency = decoration.transparency
+		part.CastShadow = decoration.transparency == 0
+		part.TopSurface = Enum.SurfaceType.Smooth
+		part.BottomSurface = Enum.SurfaceType.Smooth
+		part.CollisionGroup = "Free"
+		part.CFrame = CFrame.new(decoration.position.x, decoration.position.y, decoration.position.z)
+			* CFrame.Angles(0, math.rad(decoration.yawDegrees), 0)
+		if decoration.shape == "Ball" and part:IsA("Part") then
+			part.Shape = Enum.PartType.Ball
+		end
+		if decoration.light then
+			local light = Instance.new("PointLight")
+			light.Name = "TorchLight"
+			light.Brightness = decoration.light.brightness
+			light.Range = decoration.light.rangeStuds
+			light.Color = toColor(decoration.light.rgb)
+			light.Shadows = decoration.light.shadows
+			light.Parent = part
+		end
+		part.Parent = folder
+	end
+end
+
 -- Constrói o mundo. Idempotente: rodar de novo em Studio limpa e reconstrói.
 function WorldService.init(deps: WorldDeps): ()
 	WorldService.deps = deps
@@ -1660,6 +1703,7 @@ function WorldService.init(deps: WorldDeps): ()
 	buildSpawnRoof(root, deps.scenery)
 	buildLandmarks(root, greybox, style)
 	buildSpawnDecorations(root, deps.spawnDecorations)
+	buildWildDecorations(root, deps.wildDecorations)
 	buildZoneVolumes(root, deps.zones)
 	buildStaticActors(root, deps.presentation, deps.zones)
 	verifyNpcInteractionBinding(root, "ThresholdInstructor", "npc_threshold_instructor")

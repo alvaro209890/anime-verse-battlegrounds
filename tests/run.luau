@@ -41,6 +41,7 @@ local EnergyFamilies = require("../src/shared/Data/EnergyFamilies")
 local Npcs = require("../src/shared/Data/Npcs")
 local WorldPresentation = require("../src/shared/Data/WorldPresentation")
 local SpawnDecorations = require("../src/shared/Data/SpawnDecorations")
+local WildDecorations = require("../src/shared/Data/WildDecorations")
 local Remotes = require("../src/shared/Remotes")
 local RemoteEnvelope = require("../src/shared/RemoteEnvelope")
 local Zones = require("../src/shared/Data/Zones")
@@ -162,6 +163,125 @@ test("greybox: decoração do spawn não bloqueia o treino nem o spawn", functio
 	}
 	local errors = SpawnDecorations.validate(SpawnDecorations.all(), bastion.volumes[1], transition.volumes, anchors)
 	assertEq(#errors, 0, "nenhum erro com as âncoras críticas")
+end)
+
+-- Dados reais do catálogo: a validação da planície precisa ver os mesmos
+-- volumes, âncoras e cratera que o `zoneAtPosition` do servidor usa.
+local function wildFixture()
+	local free = Zones.get("zone_plain_free")
+	local transition = Zones.get("zone_threshold_transition")
+	local greybox = Zones.greybox()
+	local elite = Zones.getAnchor("anchor_elite")
+	local anchors = {}
+	for _, anchorId in Zones.shardAnchors() do
+		local anchor = Zones.getAnchor(anchorId)
+		if anchor then
+			table.insert(anchors, anchor.position)
+		end
+	end
+	return free,
+		transition,
+		anchors,
+		{
+			x = if elite then elite.position.x else 0,
+			z = if elite then elite.position.z else 0,
+			radius = greybox.eliteCraterRadius,
+		}
+end
+
+test("planície: decoração externa valida contra zonas, cratera e âncoras reais", function()
+	local free, transition, anchors, crater = wildFixture()
+	assertTrue(free ~= nil and transition ~= nil, "zonas existem")
+	if not free or not transition then
+		return
+	end
+	assertEq(#anchors, 6, "seis âncoras de Estilhaço")
+	local errors = WildDecorations.validate(WildDecorations.all(), free.volumes, transition.volumes, anchors, crater)
+	assertEq(#errors, 0, table.concat(errors, "; "))
+	assertTrue(#WildDecorations.all() >= 60, "planície decorada de verdade")
+end)
+
+test("planície: nada colide, nada entra no ringue do elite e a luz tem teto", function()
+	local _, _, _, crater = wildFixture()
+	for _, decoration in WildDecorations.all() do
+		assertTrue(decoration.transparency < 1, ("%s invisível"):format(decoration.name))
+		local dx = decoration.position.x - crater.x
+		local dz = decoration.position.z - crater.z
+		assertTrue(math.sqrt(dx * dx + dz * dz) >= crater.radius, ("%s dentro da cratera"):format(decoration.name))
+	end
+	-- Colisão é decisão do WorldService e é uma só: nenhuma peça da planície
+	-- pode virar parede invisível em cima de perseguição, dash ou Cometa.
+	local source = fs.readFile("src/server/Services/WorldService.luau")
+	local build = source:match("local function buildWildDecorations.-\nend\n")
+	assertTrue(build ~= nil, "materialização existe")
+	if build then
+		assertTrue(build:find("part.CanCollide = false", 1, true) ~= nil, "decoração da planície não colide")
+		assertTrue(build:find("part.CanQuery = false", 1, true) ~= nil, "não entra em raycast de combate")
+	end
+	assertTrue(WildDecorations.lightCount() <= 8, "orçamento de luz da planície")
+	assertTrue(WildDecorations.lightCount() >= 4, "a rota precisa ser legível à noite")
+end)
+
+test("planície: validação recusa peça fora da zona, no ringue e na âncora", function()
+	local free, transition, anchors, crater = wildFixture()
+	if not free or not transition then
+		return
+	end
+	local function bad(position: { x: number, y: number, z: number })
+		return {
+			{
+				name = "Ruim",
+				class = "Part",
+				shape = "Block",
+				size = { x = 1, y = 2, z = 1 },
+				position = position,
+				yawDegrees = 0,
+				rgb = { 80, 80, 80 },
+				material = "Slate",
+				transparency = 0,
+				light = nil,
+			},
+		}
+	end
+	-- Dentro do Bastião (zona segura), não da planície.
+	assertTrue(
+		#WildDecorations.validate(bad({ x = 0, y = 1, z = 10 }), free.volumes, transition.volumes, anchors, crater) > 0,
+		"fora da zona livre é recusado"
+	)
+	-- Centro da cratera: onde o elite luta.
+	assertTrue(
+		#WildDecorations.validate(
+				bad({ x = 0, y = 1, z = -102 }),
+				free.volumes,
+				transition.volumes,
+				anchors,
+				crater
+			) > 0,
+		"ringue do elite é recusado"
+	)
+	-- Em cima da âncora do primeiro Estilhaço.
+	assertTrue(
+		#WildDecorations.validate(
+				bad({ x = -50, y = 1, z = -60 }),
+				free.volumes,
+				transition.volumes,
+				anchors,
+				crater
+			) > 0,
+		"âncora de spawn é recusada"
+	)
+	-- No meio da faixa de caminhada da rota.
+	assertTrue(
+		#WildDecorations.validate(bad({ x = 0, y = 1, z = -70 }), free.volumes, transition.volumes, anchors, crater) > 0,
+		"rota da cratera é recusada"
+	)
+end)
+
+test("planície: decoração externa entra no bootstrap do mundo", function()
+	local source = fs.readFile("src/server/Services/WorldService.luau")
+	assertTrue(source:find("buildWildDecorations(root", 1, true) ~= nil, "chamada no init")
+	local bootstrap = fs.readFile("src/server/init.server.lua")
+	assertTrue(bootstrap:find("wildDecorations = WildDecorations", 1, true) ~= nil, "dependência declarada")
 end)
 
 test("apresentação: quatro atores e estilo do mundo passam validação", function()
