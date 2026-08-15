@@ -7,10 +7,10 @@ Este arquivo é a referência única para o estado técnico atual do repositóri
 | Campo | Estado canônico |
 |---|---|
 | Branch publicado | `main` |
-| Commit-base do código | `f2e7bb5` (`feat: enrich guard dash and ground impact presentation`) |
+| Commit-base do código | `8447d16` (`feat: refresh spawn room lighting and quest giver`) |
 | Estado deste documento | snapshot de documentação visual publicado após validação headless da apresentação de combate |
 | Data do commit | 2026-08-14 |
-| Última alteração de código-base | receitas locais de defesa/dash, fases de pose do dash e integração de input |
+| Última alteração de código-base | paleta data-driven de piso/teto, iluminação do spawn e skin enriquecida da instrutora |
 | Testes de domínio | 227 passaram, 0 falharam |
 | Testes de animação/apresentação | 62 passaram, 0 falharam |
 | Fuzz headless de segurança | 29 passaram, 0 falharam |
