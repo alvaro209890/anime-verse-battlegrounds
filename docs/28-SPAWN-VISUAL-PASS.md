@@ -78,6 +78,6 @@ Nenhum bug reproduzível foi encontrado fora do Studio. A iluminação é idempo
 | Selene | 0 erros, 0 warnings, 0 parse errors |
 | Rojo | Build aprovado, 297.737 bytes |
 | `git diff --check` | Passou |
-| Branch remota | `origin/main` sincronizada com `ec4d3a2` |
+| Branch remota | `origin/main` sincronizada com `417990b` |
 
 A inspeção não substitui o Gate W1. Ainda não é possível concluir headless que a iluminação não escurece a face, que não existe clipping no rig, que o teto não causa desconforto visual, que não há z-fighting ou que o desempenho em Android está dentro do orçamento. Esses pontos permanecem como validação manual no Roblox Studio.
