@@ -46,7 +46,7 @@ A suíte adicionou cobertura para a paleta, orçamento de iluminação e densida
 | Fuzz de segurança | 29 passaram, 0 falharam |
 | Total automatizado | 318 casos |
 | Selene | 0 erros, 0 warnings, 0 parse errors |
-| Rojo | Build passou; artefato reproduzido com 297.729 bytes |
+| Rojo | Build passou; artefato reproduzido com 297.737 bytes |
 | `git diff --check` | Passou |
 
 ## Limites e próximo gate
@@ -76,7 +76,7 @@ Nenhum bug reproduzível foi encontrado fora do Studio. A iluminação é idempo
 | `tests/animation.luau` | 62 passaram, 0 falharam |
 | `tests/security_fuzz.luau` | 29 passaram, 0 falharam |
 | Selene | 0 erros, 0 warnings, 0 parse errors |
-| Rojo | Build aprovado, 297.729 bytes |
+| Rojo | Build aprovado, 297.737 bytes |
 | `git diff --check` | Passou |
 | Branch remota | `origin/main` sincronizada com `ec4d3a2` |
 

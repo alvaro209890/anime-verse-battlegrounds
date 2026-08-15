@@ -16,7 +16,7 @@ Este arquivo é a referência única para o estado técnico atual do repositóri
 | Fuzz headless de segurança | 29 passaram, 0 falharam |
 | Selene | 0 erros, 0 warnings, 0 parse errors nesta rodada |
 | StyLua | não executado nesta rodada: binário não disponível no ambiente |
-| Rojo | build aprovado; check local de 297.729 bytes |
+| Rojo | build aprovado; check local de 297.737 bytes |
 | Runtime Roblox Studio | ainda não validado neste snapshot |
 | Dispositivos reais | Android, gamepad e PC integrado ainda não validados neste snapshot |
 | DataStore publicado | ainda não validado em place privado |

@@ -82,19 +82,21 @@ local function distanceXZ(a: any, b: any): number
 end
 
 function SceneryPresentation.validate(): (boolean, string?)
-	for _, key in {
-		"wallColor",
-		"wallAccent",
-		"wallCap",
-		"terrainColor",
-		"terrainAccent",
-		"roofColor",
-		"floorColor",
-		"floorAccent",
-		"ceilingColor",
-		"lightColor",
-		"fillLightColor",
-	} do
+	for _, key in
+		{
+			"wallColor",
+			"wallAccent",
+			"wallCap",
+			"terrainColor",
+			"terrainAccent",
+			"roofColor",
+			"floorColor",
+			"floorAccent",
+			"ceilingColor",
+			"lightColor",
+			"fillLightColor",
+		}
+	do
 		local rgb = STYLE[key]
 		if not validRgb(rgb) then
 			return false, ("cor RGB inválida: %s"):format(key)
