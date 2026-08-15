@@ -33,6 +33,8 @@ Os arquivos `domain-expansion-*.png` usam a paleta conceitual do mundo: Slate es
 
 O pacote `asset-pack-art-direction-board.png`, as texturas `texture-*.png`, os props `prop-*.png`, os VFX `vfx-*.png` e os boards `animation-*.png` ampliam as referências originais para o trabalho de mundo e combate. O catálogo completo, dimensões, hashes e pipeline de promoção está em [`docs/30-VISUAL-ASSET-PACK.md`](../30-VISUAL-ASSET-PACK.md).
 
+As variantes técnicas vivem em [`roblox-ready/`](roblox-ready/). Elas são candidatos de importação e previews derivados; não são runtime, não possuem IDs publicados e não devem ser conectadas automaticamente ao place.
+
 | Família | Arquivos | Estado | Limite |
 |---|---|---|---|
 | Direção | `asset-pack-art-direction-board.png` | Conceito | Não é screenshot nem atlas |

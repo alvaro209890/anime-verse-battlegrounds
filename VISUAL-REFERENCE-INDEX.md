@@ -44,6 +44,7 @@ Comece pela linha da referência desejada. Consulte o documento canônico, revis
 | `docs/assets/vfx-ground-break-impact.png` | Impacto, crack, poeira e dissipação | `docs/25-COMBAT-PRESENTATION-PLAN.md` | F0/A1 | Sequência temporal, pooling e sem colisão alterada |
 | `docs/assets/animation-combat-poses-board.png` | Defesa, preparação de dash e recuperação | `docs/14-ANIMATION-PLAN.md`, `docs/25-COMBAT-PRESENTATION-PLAN.md` | F0/A1 | Pose reproduzida e testada no Studio |
 | `docs/assets/animation-heavy-strike-poses-board.png` | Antecipação, avanço, impacto e recuperação | `docs/14-ANIMATION-PLAN.md` | F0/A1 | Peso, timing e neutralização validados |
+| `docs/assets/roblox-ready/` | Variantes de textura, mapas PBR, previews e manifesto | `docs/30-VISUAL-ASSET-PACK.md` | Candidato técnico | Importação, SurfaceAppearance, mobile e Playtest no Studio |
 
 ## Estados permitidos
 

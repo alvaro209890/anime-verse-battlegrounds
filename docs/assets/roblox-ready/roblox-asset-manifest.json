@@ -1,0 +1,352 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-15T21:10:31.419991+00:00",
+  "sourcePolicy": "Conversão determinística de PNG conceitual; nenhum output é ligado automaticamente ao runtime.",
+  "robloxImportPolicy": "Color, Normal, Roughness e Metalness são candidatos a SurfaceAppearance; previews e máscaras são referências. IDs, materiais, meshes, partículas e animações exigem validação separada no Roblox Studio.",
+  "textureSets": [
+    {
+      "source": "docs/assets/texture-slate-cracked-floor.png",
+      "baseName": "avb_slate_cracked_floor",
+      "colorMap": "docs/assets/roblox-ready/textures/avb_slate_cracked_floor_color.png",
+      "normalMap": "docs/assets/roblox-ready/textures/avb_slate_cracked_floor_normal.png",
+      "roughnessMap": "docs/assets/roblox-ready/textures/avb_slate_cracked_floor_roughness.png",
+      "metalnessMap": "docs/assets/roblox-ready/textures/avb_slate_cracked_floor_metalness.png",
+      "emissiveMaskReference": "docs/assets/roblox-ready/references/avb_slate_cracked_floor_emissive_mask.png",
+      "runtimeLinked": false
+    },
+    {
+      "source": "docs/assets/texture-runed-stone-wall.png",
+      "baseName": "avb_runed_stone_wall",
+      "colorMap": "docs/assets/roblox-ready/textures/avb_runed_stone_wall_color.png",
+      "normalMap": "docs/assets/roblox-ready/textures/avb_runed_stone_wall_normal.png",
+      "roughnessMap": "docs/assets/roblox-ready/textures/avb_runed_stone_wall_roughness.png",
+      "metalnessMap": "docs/assets/roblox-ready/textures/avb_runed_stone_wall_metalness.png",
+      "emissiveMaskReference": "docs/assets/roblox-ready/references/avb_runed_stone_wall_emissive_mask.png",
+      "runtimeLinked": false
+    },
+    {
+      "source": "docs/assets/texture-crystal-emissive-strip.png",
+      "baseName": "avb_crystal_emissive_strip",
+      "colorMap": "docs/assets/roblox-ready/textures/avb_crystal_emissive_strip_color.png",
+      "normalMap": "docs/assets/roblox-ready/textures/avb_crystal_emissive_strip_normal.png",
+      "roughnessMap": "docs/assets/roblox-ready/textures/avb_crystal_emissive_strip_roughness.png",
+      "metalnessMap": "docs/assets/roblox-ready/textures/avb_crystal_emissive_strip_metalness.png",
+      "emissiveMaskReference": "docs/assets/roblox-ready/references/avb_crystal_emissive_strip_emissive_mask.png",
+      "runtimeLinked": false
+    }
+  ],
+  "assets": [
+    {
+      "source": "docs/assets/texture-slate-cracked-floor.png",
+      "output": "docs/assets/roblox-ready/textures/avb_slate_cracked_floor_color.png",
+      "kind": "color_map",
+      "dimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "format": "PNG/RGB",
+      "roblox_use": "candidato a ColorMap para SurfaceAppearance; requer importação e teste no Studio",
+      "runtime_linked": false,
+      "sha256": "94cf5ff4656df0456bcfe5dcd46538855f737b9544c582d5daa7b2394d8d8c13"
+    },
+    {
+      "source": "docs/assets/texture-slate-cracked-floor.png",
+      "output": "docs/assets/roblox-ready/textures/avb_slate_cracked_floor_normal.png",
+      "kind": "normal_map_candidate",
+      "dimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "format": "PNG/RGB",
+      "roblox_use": "candidato a NormalMap; requer revisão de intensidade e teste em MeshPart",
+      "runtime_linked": false,
+      "sha256": "b98c675b2819d2cca1900be2f3312e8ea127ee71c23315a1d95385bd979a95c4"
+    },
+    {
+      "source": "docs/assets/texture-slate-cracked-floor.png",
+      "output": "docs/assets/roblox-ready/textures/avb_slate_cracked_floor_roughness.png",
+      "kind": "roughness_map_candidate",
+      "dimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "format": "PNG/L",
+      "roblox_use": "candidato a RoughnessMap; valor inicial derivado de brilho e material",
+      "runtime_linked": false,
+      "sha256": "3b570f786116278134e51f6206f2f32f29776aa68c234893aada8a1dfec3f422"
+    },
+    {
+      "source": "docs/assets/texture-slate-cracked-floor.png",
+      "output": "docs/assets/roblox-ready/textures/avb_slate_cracked_floor_metalness.png",
+      "kind": "metalness_map_candidate",
+      "dimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "format": "PNG/L",
+      "roblox_use": "candidato a MetalnessMap; pedra configurada como não metálica",
+      "runtime_linked": false,
+      "sha256": "1eb50a3ee3fcac0adc60c0e90baa6d051c642f3a930330ac9aec9dd92996f3f7"
+    },
+    {
+      "source": "docs/assets/texture-slate-cracked-floor.png",
+      "output": "docs/assets/roblox-ready/references/avb_slate_cracked_floor_emissive_mask.png",
+      "kind": "emissive_mask_reference",
+      "dimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "format": "PNG/L",
+      "roblox_use": "máscara emissiva de referência; Roblox não a liga automaticamente ao runtime",
+      "runtime_linked": false,
+      "sha256": "7897562e2909db5e714cd1684273c573f8d5f7501fcec2a66ca120a7cd117093"
+    },
+    {
+      "source": "docs/assets/texture-runed-stone-wall.png",
+      "output": "docs/assets/roblox-ready/textures/avb_runed_stone_wall_color.png",
+      "kind": "color_map",
+      "dimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "format": "PNG/RGB",
+      "roblox_use": "candidato a ColorMap para SurfaceAppearance; requer importação e teste no Studio",
+      "runtime_linked": false,
+      "sha256": "a8a199ee7c24bcc59921f1ed4f8f9b37d284334406a9c00a4ca9bb26f5afa2dc"
+    },
+    {
+      "source": "docs/assets/texture-runed-stone-wall.png",
+      "output": "docs/assets/roblox-ready/textures/avb_runed_stone_wall_normal.png",
+      "kind": "normal_map_candidate",
+      "dimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "format": "PNG/RGB",
+      "roblox_use": "candidato a NormalMap; requer revisão de intensidade e teste em MeshPart",
+      "runtime_linked": false,
+      "sha256": "d2c5babf0f317f6d0014cbcefb72e38025fb4db4198e68119d34165dc7275d12"
+    },
+    {
+      "source": "docs/assets/texture-runed-stone-wall.png",
+      "output": "docs/assets/roblox-ready/textures/avb_runed_stone_wall_roughness.png",
+      "kind": "roughness_map_candidate",
+      "dimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "format": "PNG/L",
+      "roblox_use": "candidato a RoughnessMap; valor inicial derivado de brilho e material",
+      "runtime_linked": false,
+      "sha256": "0a5c2b6e0210b064281244f4217c7275a5b2f23334649f8bc0be66c5e72dc115"
+    },
+    {
+      "source": "docs/assets/texture-runed-stone-wall.png",
+      "output": "docs/assets/roblox-ready/textures/avb_runed_stone_wall_metalness.png",
+      "kind": "metalness_map_candidate",
+      "dimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "format": "PNG/L",
+      "roblox_use": "candidato a MetalnessMap; pedra configurada como não metálica",
+      "runtime_linked": false,
+      "sha256": "1eb50a3ee3fcac0adc60c0e90baa6d051c642f3a930330ac9aec9dd92996f3f7"
+    },
+    {
+      "source": "docs/assets/texture-runed-stone-wall.png",
+      "output": "docs/assets/roblox-ready/references/avb_runed_stone_wall_emissive_mask.png",
+      "kind": "emissive_mask_reference",
+      "dimensions": {
+        "width": 1024,
+        "height": 1024
+      },
+      "format": "PNG/L",
+      "roblox_use": "máscara emissiva de referência; Roblox não a liga automaticamente ao runtime",
+      "runtime_linked": false,
+      "sha256": "9fa471ab927d8991fe506c060ef812d64c36926c10e4e683870de4a69eeb0db8"
+    },
+    {
+      "source": "docs/assets/texture-crystal-emissive-strip.png",
+      "output": "docs/assets/roblox-ready/textures/avb_crystal_emissive_strip_color.png",
+      "kind": "color_map",
+      "dimensions": {
+        "width": 1024,
+        "height": 683
+      },
+      "format": "PNG/RGB",
+      "roblox_use": "candidato a ColorMap para SurfaceAppearance; requer importação e teste no Studio",
+      "runtime_linked": false,
+      "sha256": "1d61bef7982406f8e2553512112627a6432cb5dd8e22690fa2afdf8f391e6cfd"
+    },
+    {
+      "source": "docs/assets/texture-crystal-emissive-strip.png",
+      "output": "docs/assets/roblox-ready/textures/avb_crystal_emissive_strip_normal.png",
+      "kind": "normal_map_candidate",
+      "dimensions": {
+        "width": 1024,
+        "height": 683
+      },
+      "format": "PNG/RGB",
+      "roblox_use": "candidato a NormalMap; requer revisão de intensidade e teste em MeshPart",
+      "runtime_linked": false,
+      "sha256": "0c7b833a265a8fb9f739095313132634628b5c70db5946d302839b25cf4033de"
+    },
+    {
+      "source": "docs/assets/texture-crystal-emissive-strip.png",
+      "output": "docs/assets/roblox-ready/textures/avb_crystal_emissive_strip_roughness.png",
+      "kind": "roughness_map_candidate",
+      "dimensions": {
+        "width": 1024,
+        "height": 683
+      },
+      "format": "PNG/L",
+      "roblox_use": "candidato a RoughnessMap; valor inicial derivado de brilho e material",
+      "runtime_linked": false,
+      "sha256": "272b0df085eceb8ee5122ecc70fd18f3f803b72a91b8c5e36747426529fb17f7"
+    },
+    {
+      "source": "docs/assets/texture-crystal-emissive-strip.png",
+      "output": "docs/assets/roblox-ready/textures/avb_crystal_emissive_strip_metalness.png",
+      "kind": "metalness_map_candidate",
+      "dimensions": {
+        "width": 1024,
+        "height": 683
+      },
+      "format": "PNG/L",
+      "roblox_use": "candidato a MetalnessMap; pedra configurada como não metálica",
+      "runtime_linked": false,
+      "sha256": "95fd314d99b1201a22f1a9f87547d72b488fa2f04ca6d7232326ed2d96d8569f"
+    },
+    {
+      "source": "docs/assets/texture-crystal-emissive-strip.png",
+      "output": "docs/assets/roblox-ready/references/avb_crystal_emissive_strip_emissive_mask.png",
+      "kind": "emissive_mask_reference",
+      "dimensions": {
+        "width": 1024,
+        "height": 683
+      },
+      "format": "PNG/L",
+      "roblox_use": "máscara emissiva de referência; Roblox não a liga automaticamente ao runtime",
+      "runtime_linked": false,
+      "sha256": "ac10784fef685afbfca49d2789e266df6efda5490249c86411a820b49c43caac"
+    },
+    {
+      "source": "docs/assets/asset-pack-art-direction-board.png",
+      "output": "docs/assets/roblox-ready/references/asset-pack-art-direction-board_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "e8790ac29e94530e88c744305cb7bb539130b96c3063539c4bbe6573dfefb77d"
+    },
+    {
+      "source": "docs/assets/anime-verse-battlegrounds-cover.png",
+      "output": "docs/assets/roblox-ready/references/anime-verse-battlegrounds-cover_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "19c8e092ed77462802c1a858d60af597b3643087936a5a7b76a8f6b75480af3e"
+    },
+    {
+      "source": "docs/assets/prop-energy-crystal-beacon.png",
+      "output": "docs/assets/roblox-ready/references/prop-energy-crystal-beacon_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 1280
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "fe7825788b8a13dbcf1bc09b56743a40a6325dbe2a5e5ee0277a1d904fa55d0f"
+    },
+    {
+      "source": "docs/assets/prop-amber-lantern-sconce.png",
+      "output": "docs/assets/roblox-ready/references/prop-amber-lantern-sconce_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 1280
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "6856985b0c4c9420ba3a4bb588a66ba6ca968c7ecb739dbc05b94c26a9b3c58a"
+    },
+    {
+      "source": "docs/assets/vfx-guard-orbit-shell.png",
+      "output": "docs/assets/roblox-ready/references/vfx-guard-orbit-shell_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 1280
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "5f8649e0dcaab7284f491316ecac159dbe87cbffddcd03d333019a1a840844be"
+    },
+    {
+      "source": "docs/assets/vfx-dash-afterimage-trail.png",
+      "output": "docs/assets/roblox-ready/references/vfx-dash-afterimage-trail_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 853
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "4aa43545a3989776f2d84c35df7c778dad4e91e9324526e57ae99c86c7a44de2"
+    },
+    {
+      "source": "docs/assets/vfx-ground-break-impact.png",
+      "output": "docs/assets/roblox-ready/references/vfx-ground-break-impact_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 1280
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "594312787a479106898b5dc42afce49982931ad9d964b07f4372dbb216172152"
+    },
+    {
+      "source": "docs/assets/animation-combat-poses-board.png",
+      "output": "docs/assets/roblox-ready/references/animation-combat-poses-board_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "c15ce342336b0811f3f89f564f7c1b320586e049ed44e07c8ec6be642a0752aa"
+    },
+    {
+      "source": "docs/assets/animation-heavy-strike-poses-board.png",
+      "output": "docs/assets/roblox-ready/references/animation-heavy-strike-poses-board_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "4d37b6e6851a7ffb2c115d735a503e01cfefe8b648f54d17b13ce8bbe77fad69"
+    }
+  ]
+}

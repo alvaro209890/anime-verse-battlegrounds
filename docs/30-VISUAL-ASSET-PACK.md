@@ -44,3 +44,13 @@ As imagens de VFX que possuem pequenos rótulos ou decomposições visuais devem
 | Validação | Executar Studio, Playtest e critérios do documento canônico correspondente |
 
 O pacote atual permanece no estado **Conceito**. A capa geral continua documentada em [`docs/29-GAME-COVER.md`](29-GAME-COVER.md), enquanto o índice navegável está em [`VISUAL-REFERENCE-INDEX.md`](../VISUAL-REFERENCE-INDEX.md).
+
+## Conversão Roblox-ready
+
+A primeira conversão determinística está organizada em [`docs/assets/roblox-ready/`](assets/roblox-ready/). Ela contém três conjuntos de mapas PBR candidatos, previews JPEG leves e máscaras emissivas de referência. O manifesto em [`roblox-asset-manifest.json`](assets/roblox-ready/roblox-asset-manifest.json) registra cada output, dimensão, hash e relação entre mapas.
+
+O processo é reproduzível por [`scripts/prepare_roblox_assets.py`](../scripts/prepare_roblox_assets.py) e a validação automatizada é feita por [`scripts/verify_roblox_assets.py`](../scripts/verify_roblox_assets.py). A conversão normaliza imagens, deriva mapas e verifica integridade; ela não publica IDs, cria meshes, insere `SurfaceAppearance` no place nem altera o runtime.
+
+Para o procedimento de importação, configuração de `SurfaceAppearance`, uso da máscara emissiva e limites de produção, consulte [`docs/assets/roblox-ready/README.md`](assets/roblox-ready/README.md).
+
+O estado dos outputs permanece **Candidato técnico / não integrado** até a importação manual, revisão visual, medição mobile e Playtest no Roblox Studio.

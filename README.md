@@ -12,6 +12,8 @@ progressão persistente, loadout customizável e ressonância de famílias de en
 
 O pacote visual F0 de texturas, props, VFX e boards de animação está catalogado em [`docs/30-VISUAL-ASSET-PACK.md`](docs/30-VISUAL-ASSET-PACK.md). Todos os PNGs permanecem no estado **Conceito** até conversão, otimização e validação separadas.
 
+As variantes técnicas para importação no Roblox estão em [`docs/assets/roblox-ready/`](docs/assets/roblox-ready/), com manifesto PBR, previews e scripts reproduzíveis. Elas continuam sem ligação automática ao runtime.
+
 ## Estado comprovado
 
 | Camada | Estado |

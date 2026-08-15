@@ -16,6 +16,10 @@ Packages/
 # Quadros extraídos de vídeo para análise (evidência fica nos docs, não no Git)
 tmp-video-frames2/
 
+# Python
+__pycache__/
+*.pyc
+
 # OS
 .DS_Store
 Thumbs.db
