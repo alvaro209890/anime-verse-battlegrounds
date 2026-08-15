@@ -320,6 +320,17 @@ local INSTRUCTOR_GEAR: { RigGear } = {
 
 	blob("Boot", "LeftLowerLeg", { 1.06, 1.10, 1.20 }, { 0, -0.44, -0.02 }, { 0, 0, 0 }, COAT_DARK, "Leather"),
 	blob("Boot", "RightLowerLeg", { 1.06, 1.10, 1.20 }, { 0, -0.44, -0.02 }, { 0, 0, 0 }, COAT_DARK, "Leather"),
+
+	-- 15/08: a silhueta de trás e de perfil ainda era lisa. Cachecol e nó dão
+	-- movimento no ombro, a bolsa quebra a linha reta do quadril e a joelheira
+	-- fecha a perna entre a barra do casaco e a bota. Tudo atrás do plano do
+	-- rosto ou fora da cabeça: nada disso pode tapar os olhos.
+	band("HairTie", "Head", { 0.16, 0.62, 0.62 }, { 0, 0.10, 0.66 }, { 0, 0, 90 }, UMBRAL, "Neon"),
+	blob("ScarfKnot", "UpperTorso", { 0.42, 0.40, 0.34 }, { -0.16, 0.80, 0.30 }, { 0, 0, 0 }, UMBRAL, "Neon"),
+	spike("ScarfTail", "UpperTorso", { 0.34, 1.30, 0.28 }, { -0.22, 0.10, 0.52 }, { 14, 0, -10 }, COAT_DARK, "Fabric"),
+	blob("HipPouch", "LowerTorso", { 0.52, 0.56, 0.44 }, { 0.62, -0.20, 0.10 }, { 0, 0, -12 }, COAT_DARK, "Leather"),
+	band("KneeGuard", "LeftLowerLeg", { 0.22, 1.14, 1.22 }, { 0, 0.42, 0 }, { 0, 0, 90 }, COAT, "Leather"),
+	band("KneeGuard", "RightLowerLeg", { 0.22, 1.14, 1.22 }, { 0, 0.42, 0 }, { 0, 0, 90 }, COAT, "Leather"),
 }
 
 -- Boneco de treino: saco de estopa amarrado, palha saindo pelas costuras,
@@ -371,6 +382,15 @@ local DUMMY_GEAR: { RigGear } = {
 	-- atravessar o corpo.
 	band("Post", "LowerTorso", { 5.20, 0.44, 0.44 }, { 0, -0.28, 0.78 }, { 0, 0, 90 }, WOOD, "Wood"),
 	band("Base", "LowerTorso", { 0.24, 3.10, 3.10 }, { 0, -2.76, 0.22 }, { 0, 0, 90 }, WOOD, "WoodPlanks"),
+
+	-- 15/08: o saco estava bem resolvido de frente e vazio de perfil. A argola
+	-- explica por que ele fica em pé, a palha na cintura repete a da cabeça
+	-- (é o mesmo boneco, não duas ideias) e o remendo do joelho fecha a perna.
+	band("HangRing", "Head", { 0.14, 0.52, 0.52 }, { 0, 0.96, 0.46 }, { 0, 0, 90 }, ROPE, "Fabric"),
+	spike("StrawWaist", "UpperTorso", { 0.24, 0.56, 0.22 }, { -0.62, -0.72, -0.26 }, { 0, -30, -46 }, ROPE, "Grass"),
+	spike("StrawWaist", "UpperTorso", { 0.24, 0.56, 0.22 }, { 0.62, -0.72, -0.26 }, { 0, 30, 46 }, ROPE, "Grass"),
+	blob("KneePatch", "LeftLowerLeg", { 0.92, 0.62, 1.00 }, { 0, 0.34, -0.06 }, { 0, 0, 0 }, BURLAP_DARK, "Fabric"),
+	blob("KneePatch", "RightLowerLeg", { 0.92, 0.62, 1.00 }, { 0, 0.34, -0.06 }, { 0, 0, 0 }, BURLAP_DARK, "Fabric"),
 }
 
 -- ── Skin dos Estilhaços (corpo mineral, sem rig R15) ────────────────────────

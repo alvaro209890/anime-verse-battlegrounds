@@ -2,6 +2,21 @@
 -- Os assets externos são referências/importações opcionais; o runtime usa peças
 -- Roblox nativas para o mundo funcionar antes de publicar modelos externos.
 
+-- Uma fonte de luz da sala de spawn. As posições viviam dentro do
+-- `WorldService` (15/08) e voltaram para cá pelo mesmo motivo do resto do
+-- cenário: onde a luz cai é decisão de apresentação, e decisão é dado.
+--
+-- `tone` escolhe entre as duas cores do estilo (`lightColor` frio de chave e
+-- `fillLightColor` violeta de preenchimento). `shadows` é caro: PointLight com
+-- sombra pesa no Android, então só as duas fontes que definem a leitura da sala
+-- projetam — as outras só preenchem.
+export type SpawnLight = {
+	name: string,
+	position: { number },
+	tone: "key" | "fill",
+	shadows: boolean,
+}
+
 export type SceneryStyle = {
 	wallColor: { number },
 	wallAccent: { number },
@@ -39,15 +54,34 @@ local STYLE: SceneryStyle = {
 	wallCapHeight = 0.7,
 	spawnLightBrightness = 1.35,
 	spawnLightRange = 18,
-	spawnLightCount = 6,
+	spawnLightCount = 8,
 	rockCount = 22,
 	grassCount = 28,
+}
+
+-- Oito fontes: as seis da praça mais duas que a rodada de 15/08 não tinha —
+-- uma em cima da Instrutora e uma no pad de treino. Os dois pontos onde o
+-- jogador precisa ENXERGAR alguma coisa nos primeiros 60 s do roteiro (docs/13
+-- §10) eram justamente os que ficavam no escuro.
+local SPAWN_LIGHTS: { SpawnLight } = {
+	{ name = "PlazaKey", position = { 0, 18, 6 }, tone = "key", shadows = true },
+	{ name = "PlazaFill", position = { 0, 9, 6 }, tone = "fill", shadows = false },
+	{ name = "SouthWest", position = { -20, 12, 12 }, tone = "key", shadows = false },
+	{ name = "SouthEast", position = { 20, 12, 12 }, tone = "fill", shadows = false },
+	{ name = "NorthWest", position = { -12, 10, -18 }, tone = "fill", shadows = false },
+	{ name = "NorthEast", position = { 12, 10, -18 }, tone = "key", shadows = false },
+	{ name = "QuestGiver", position = { 20, 8.5, -12.5 }, tone = "key", shadows = true },
+	{ name = "TrainingPad", position = { 28, 9, -20 }, tone = "fill", shadows = false },
 }
 
 local SceneryPresentation = {}
 
 function SceneryPresentation.style(): SceneryStyle
 	return STYLE
+end
+
+function SceneryPresentation.spawnLights(): { SpawnLight }
+	return SPAWN_LIGHTS
 end
 
 function SceneryPresentation.assetSources(): { { name: string, url: string, license: string } }
@@ -115,6 +149,30 @@ function SceneryPresentation.validate(): (boolean, string?)
 	then
 		return false, "iluminação do spawn fora do orçamento"
 	end
+	if #SPAWN_LIGHTS ~= STYLE.spawnLightCount then
+		return false, ("fontes declaradas (%d) diferem do orçamento (%d)"):format(#SPAWN_LIGHTS, STYLE.spawnLightCount)
+	end
+	local shadowCasters = 0
+	local names: { [string]: boolean } = {}
+	for _, light in SPAWN_LIGHTS do
+		if light.name == "" or names[light.name] then
+			return false, "fonte de luz sem nome único: " .. light.name
+		end
+		names[light.name] = true
+		if light.tone ~= "key" and light.tone ~= "fill" then
+			return false, ("tom de luz inválido em %s"):format(light.name)
+		end
+		if #light.position ~= 3 then
+			return false, ("posição de luz inválida em %s"):format(light.name)
+		end
+		if light.shadows then
+			shadowCasters += 1
+		end
+	end
+	-- Sombra de PointLight é o item mais caro desta sala no Android (docs/15).
+	if shadowCasters > 2 then
+		return false, ("fontes com sombra além do orçamento: %d"):format(shadowCasters)
+	end
 	if STYLE.rockCount < 20 or STYLE.rockCount > 64 or STYLE.grassCount < 20 or STYLE.grassCount > 96 then
 		return false, "densidade natural fora do orçamento do cenário"
 	end
@@ -167,6 +225,19 @@ function SceneryPresentation.validateLayout(zones: any): (boolean, string?)
 		end
 		if zones.zoneAtPosition(anchor.position) ~= anchor.zoneId then
 			return false, ("âncora fora da zona declarada: %s"):format(anchorId)
+		end
+	end
+	-- Luz fora da sala ilumina o lado de fora e deixa a praça escura; luz acima
+	-- do teto (Y = 22) fica presa no painel de vidro.
+	local bastionHalfX = greybox.bastionSize.x / 2 - 2
+	local bastionHalfZ = greybox.bastionSize.z / 2 - 2
+	for _, light in SPAWN_LIGHTS do
+		local x, y, z = light.position[1], light.position[2], light.position[3]
+		if math.abs(x) > bastionHalfX or math.abs(z) > bastionHalfZ then
+			return false, ("fonte de luz fora do bastião: %s"):format(light.name)
+		end
+		if y < 4 or y > 21 then
+			return false, ("altura de luz fora da sala: %s (%.1f)"):format(light.name, y)
 		end
 	end
 	local gates = zones.gateAnchors()

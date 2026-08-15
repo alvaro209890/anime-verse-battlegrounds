@@ -742,6 +742,53 @@ test("cenário: paleta e iluminação do spawn têm orçamento válido", functio
 	end
 end)
 
+test("cenário: as fontes de luz do spawn são dados, ficam na sala e cobrem o roteiro", function()
+	local lights = SceneryPresentation.spawnLights()
+	local style = SceneryPresentation.style()
+	assertEq(#lights, style.spawnLightCount, "quantidade declarada bate com o orçamento")
+
+	local shadowCasters = 0
+	local greybox = Zones.greybox()
+	for _, light in lights do
+		assertEq(#light.position, 3, light.name .. " tem posição completa")
+		assertTrue(light.tone == "key" or light.tone == "fill", light.name .. " usa um tom do estilo")
+		-- Luz fora da sala ilumina o lado de fora; acima do teto (Y = 22) fica
+		-- presa no painel de vidro.
+		assertTrue(math.abs(light.position[1]) <= greybox.bastionSize.x / 2 - 2, light.name .. " dentro em X")
+		assertTrue(math.abs(light.position[3]) <= greybox.bastionSize.z / 2 - 2, light.name .. " dentro em Z")
+		assertTrue(light.position[2] >= 4 and light.position[2] <= 21, light.name .. " na altura da sala")
+		if light.shadows then
+			shadowCasters += 1
+		end
+	end
+	assertTrue(shadowCasters <= 2, "sombra de PointLight é o item caro no Android")
+
+	-- Os dois alvos dos primeiros 60 s do roteiro (docs/13 §10) precisam de luz
+	-- própria: sem isso o jogador procura a Instrutora e o boneco no escuro.
+	local function lightNear(x: number, z: number, radius: number): boolean
+		for _, light in lights do
+			local dx = light.position[1] - x
+			local dz = light.position[3] - z
+			if math.sqrt(dx * dx + dz * dz) <= radius then
+				return true
+			end
+		end
+		return false
+	end
+	local instructor = Zones.getAnchor("anchor_instructor")
+	local training = Zones.getAnchor("anchor_training")
+	assertTrue(instructor ~= nil and training ~= nil, "âncoras existem")
+	if instructor and training then
+		assertTrue(lightNear(instructor.position.x, instructor.position.z, 6), "Instrutora iluminada")
+		assertTrue(lightNear(training.position.x, training.position.z, 6), "pad de treino iluminado")
+	end
+
+	-- A materialização não pode voltar a ter posição escrita à mão.
+	local source = fs.readFile("src/server/Services/WorldService.luau")
+	assertTrue(source:find("scenery.spawnLights()", 1, true) ~= nil, "buildLighting lê o catálogo")
+	assertTrue(source:find("local lightPositions", 1, true) == nil, "sem lista de posições no WorldService")
+end)
+
 test("npc: instrutora tem silhueta visual enriquecida e rosto validado", function()
 	local rig = require("../src/shared/Data/WorldPresentation").rigFor("npc_threshold_instructor")
 	assertTrue(rig ~= nil, "rig da instrutora existe")
@@ -752,6 +799,31 @@ test("npc: instrutora tem silhueta visual enriquecida e rosto validado", functio
 	assertEq(rig.faceTexture, "rbxasset://textures/face.png", "rosto usa textura embutida")
 	local ok, reason = require("../src/shared/Data/WorldPresentation").validateRigs()
 	assertTrue(ok, reason or "rigs válidos")
+end)
+
+test("npc: os dois bots têm volume de perfil, de costas e nas pernas", function()
+	local Presentation = require("../src/shared/Data/WorldPresentation")
+	for _, rig in Presentation.allRigs() do
+		local lateral, back, legs = 0, 0, 0
+		for _, piece in rig.gear do
+			if math.abs(piece.offsetStuds[1]) >= 0.3 then
+				lateral += 1
+			end
+			if piece.offsetStuds[3] >= 0.2 then
+				back += 1
+			end
+			if string.find(piece.host, "Leg") or string.find(piece.host, "Foot") then
+				legs += 1
+			end
+		end
+		-- Um boneco resolvido só de frente vira papelão quando a câmera gira —
+		-- é o que a rodada de 15/08 foi corrigir nos dois.
+		assertTrue(lateral >= 6, rig.npcId .. " precisa de volume lateral")
+		assertTrue(back >= 3, rig.npcId .. " precisa de volume nas costas")
+		assertTrue(legs >= 4, rig.npcId .. " precisa de camada nas pernas")
+	end
+	local ok, reason = Presentation.validateRigs()
+	assertTrue(ok, reason or "rigs continuam válidos após o enriquecimento")
 end)
 
 test("npc: interação procura a cabeça também dentro do Body R15", function()

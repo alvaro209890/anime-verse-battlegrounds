@@ -1579,31 +1579,26 @@ local function buildLighting(scenery: any): ()
 	local lightFolder = Instance.new("Folder")
 	lightFolder.Name = "F0SpawnLighting"
 	lightFolder.Parent = Workspace
-	local lightPositions = {
-		Vector3.new(-20, 12, 12),
-		Vector3.new(20, 12, 12),
-		Vector3.new(-12, 10, -18),
-		Vector3.new(12, 10, -18),
-		Vector3.new(0, 18, 6),
-		Vector3.new(0, 9, 6),
-	}
-	for index = 1, math.min(style.spawnLightCount, #lightPositions) do
+	-- Posição, tom e sombra vêm de `SceneryPresentation.spawnLights()`: onde a
+	-- luz cai é decisão de apresentação e mora nos dados, como o resto do
+	-- cenário. Aqui só se instancia.
+	for _, light in scenery.spawnLights() do
 		local emitter = Instance.new("Part")
-		emitter.Name = ("SpawnLight_%02d"):format(index)
+		emitter.Name = ("SpawnLight_%s"):format(light.name)
 		emitter.Anchored = true
 		emitter.CanCollide = false
 		emitter.CanTouch = false
 		emitter.CanQuery = false
 		emitter.Transparency = 1
 		emitter.Size = Vector3.new(0.2, 0.2, 0.2)
-		emitter.Position = lightPositions[index]
+		emitter.Position = Vector3.new(light.position[1], light.position[2], light.position[3])
 		emitter.Parent = lightFolder
 		local point = Instance.new("PointLight")
 		point.Name = "SoftFill"
 		point.Brightness = style.spawnLightBrightness
 		point.Range = style.spawnLightRange
-		point.Color = if index % 2 == 0 then toColor(style.fillLightColor) else toColor(style.lightColor)
-		point.Shadows = index <= 4
+		point.Color = if light.tone == "fill" then toColor(style.fillLightColor) else toColor(style.lightColor)
+		point.Shadows = light.shadows
 		point.Parent = emitter
 	end
 end
