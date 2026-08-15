@@ -23,8 +23,10 @@
 
 local Lighting = game:GetService("Lighting")
 local PhysicsService = game:GetService("PhysicsService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
+local InteractionBinding = require(ReplicatedStorage.Shared.InteractionBinding)
 
 export type WorldDeps = {
 	zones: any,
@@ -1449,20 +1451,13 @@ local function verifyNpcInteractionBinding(root: Folder, modelName: string, npcI
 		return
 	end
 
-	local bindingCount = 0
-	local boundPartName = ""
-	for _, descendant in model:GetDescendants() do
-		if descendant:IsA("BasePart") and descendant:GetAttribute("InteractionNpcId") == npcId then
-			bindingCount += 1
-			boundPartName = descendant.Name
-		end
-	end
-	if bindingCount ~= 1 then
+	local unique, bindingCount, boundPartName = InteractionBinding.isUniqueNpcBinding(model, npcId)
+	if not unique then
 		warn(
 			("[WorldService] vínculo de interação inválido para %s: esperado 1, obtido %d (última parte: %s)"):format(
 				npcId,
 				bindingCount,
-				boundPartName
+				boundPartName or ""
 			)
 		)
 	end

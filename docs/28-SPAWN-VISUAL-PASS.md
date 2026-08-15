@@ -97,7 +97,7 @@ A correção foi revalidada com a execução integral dos gates locais e a verif
 | Verificação | Resultado |
 |---|---|
 | `tests/run.luau` | 227 passaram, 0 falharam |
-| `tests/animation.luau` | 64 passaram, 0 falharam |
+| `tests/animation.luau` | 65 passaram, 0 falharam |
 | `tests/security_fuzz.luau` | 29 passaram, 0 falharam |
 | Selene | 0 erros, 0 warnings, 0 parse errors |
 | StyLua | passou |
@@ -112,5 +112,7 @@ A validação no Roblox Studio continua sendo o próximo gate para confirmar a c
 ## Diagnóstico automatizado de bootstrap
 
 O `WorldService` agora verifica, imediatamente após construir os atores estáticos, se `ThresholdInstructor` existe e se exatamente uma `BasePart` recebeu `InteractionNpcId = "npc_threshold_instructor"`. A inspeção usa `GetDescendants()`, cobrindo o rig R15 aninhado em `Body` e o fallback low-poly. Ausência ou duplicidade gera um aviso explícito no Output do servidor.
+
+A regra foi extraída para `src/shared/InteractionBinding.luau`, permitindo que runtime e harness usem o mesmo contrato. O teste simulado cobre vínculo único, duplicidade e ausência, sem criar dependência de Roblox Studio.
 
 A suíte headless também verifica a presença da chamada de bootstrap, a regra de unicidade e a inspeção recursiva. Essa proteção detecta falhas de montagem e evita um diagnóstico silenciosamente verde, mas não substitui o Playtest W1 para confirmar a criação visual e a usabilidade do `ProximityPrompt`.

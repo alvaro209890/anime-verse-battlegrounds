@@ -28,6 +28,10 @@ local function assertTrue(cond: boolean, msg: string?)
 	end
 end
 
+local function assertFalse(cond: boolean, msg: string?)
+	assertTrue(not cond, msg or "assertFalse falhou")
+end
+
 local PlayerCombatAnimator = require("../src/client/Presentation/PlayerCombatAnimator")
 local CombatCameraController = require("../src/client/Presentation/CombatCameraController")
 local CombatAudioPlayer = require("../src/client/Presentation/CombatAudioPlayer")
@@ -41,6 +45,7 @@ local EnemyVfxAssets = require("../src/shared/Data/EnemyVfxAssets")
 local EnemyVfxPlayer = require("../src/client/Presentation/EnemyVfxPlayer")
 local Npcs = require("../src/shared/Data/Npcs")
 local SceneryPresentation = require("../src/shared/Data/SceneryPresentation")
+local InteractionBinding = require("../src/shared/InteractionBinding")
 local Zones = require("../src/shared/Data/Zones")
 local fs = require("@lune/fs")
 
@@ -760,8 +765,51 @@ test("npc: bootstrap verifica vínculo único da Instrutora", function()
 			~= nil,
 		"bootstrap verifica o vínculo da Instrutora"
 	)
-	assertTrue(source:find("bindingCount ~= 1", 1, true) ~= nil, "bootstrap detecta vínculo ausente ou duplicado")
-	assertTrue(source:find(":GetDescendants()", 1, true) ~= nil, "bootstrap inspeciona o rig aninhado")
+	assertTrue(
+		source:find("InteractionBinding.isUniqueNpcBinding", 1, true) ~= nil,
+		"bootstrap usa a regra compartilhada de vínculo"
+	)
+end)
+
+test("npc: harness simula vínculo único, duplicado e ausente", function()
+	local function part(name: string, npcId: string?)
+		return {
+			Name = name,
+			IsA = function(_self: any, className: string)
+				return className == "BasePart"
+			end,
+			GetAttribute = function(_self: any, attributeName: string)
+				return if attributeName == "InteractionNpcId" then npcId else nil
+			end,
+		}
+	end
+	local function model(descendants: { any })
+		return {
+			GetDescendants = function(_self: any)
+				return descendants
+			end,
+		}
+	end
+
+	local unique, uniqueCount, uniquePart = InteractionBinding.isUniqueNpcBinding(
+		model({ part("Head", "npc_threshold_instructor"), part("Hair", nil) }),
+		"npc_threshold_instructor"
+	)
+	assertTrue(unique, "rig R15 com Head aninhado tem vínculo único")
+	assertEq(uniqueCount, 1, "contagem única")
+	assertEq(uniquePart, "Head", "parte vinculada")
+
+	local duplicate, duplicateCount = InteractionBinding.isUniqueNpcBinding(
+		model({ part("Head", "npc_threshold_instructor"), part("Face", "npc_threshold_instructor") }),
+		"npc_threshold_instructor"
+	)
+	assertFalse(duplicate, "duplicidade é rejeitada")
+	assertEq(duplicateCount, 2, "contagem duplicada")
+
+	local missing, missingCount =
+		InteractionBinding.isUniqueNpcBinding(model({ part("Head", nil) }), "npc_threshold_instructor")
+	assertFalse(missing, "vínculo ausente é rejeitado")
+	assertEq(missingCount, 0, "contagem ausente")
 end)
 
 test("npc: catálogo de habilidades e assets gratuitos é válido", function()
