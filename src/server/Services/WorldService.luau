@@ -1441,6 +1441,33 @@ local function setNpcInteraction(model: Model, npcId: string): ()
 	end
 end
 
+local function verifyNpcInteractionBinding(root: Folder, modelName: string, npcId: string): ()
+	local actors = root:FindFirstChild("Actors")
+	local model = if actors then actors:FindFirstChild(modelName) else nil
+	if not model or not model:IsA("Model") then
+		warn(("[WorldService] NPC interativo ausente: %s/%s"):format(modelName, npcId))
+		return
+	end
+
+	local bindingCount = 0
+	local boundPartName = ""
+	for _, descendant in model:GetDescendants() do
+		if descendant:IsA("BasePart") and descendant:GetAttribute("InteractionNpcId") == npcId then
+			bindingCount += 1
+			boundPartName = descendant.Name
+		end
+	end
+	if bindingCount ~= 1 then
+		warn(
+			("[WorldService] vínculo de interação inválido para %s: esperado 1, obtido %d (última parte: %s)"):format(
+				npcId,
+				bindingCount,
+				boundPartName
+			)
+		)
+	end
+end
+
 local function buildStaticActors(root: Folder, presentation: any, zones: any): ()
 	local folder = Instance.new("Folder")
 	folder.Name = "Actors"
@@ -1626,6 +1653,7 @@ function WorldService.init(deps: WorldDeps): ()
 	buildSpawnDecorations(root, deps.spawnDecorations)
 	buildZoneVolumes(root, deps.zones)
 	buildStaticActors(root, deps.presentation, deps.zones)
+	verifyNpcInteractionBinding(root, "ThresholdInstructor", "npc_threshold_instructor")
 	buildAnchors(root, deps.zones)
 	buildLighting(deps.scenery)
 

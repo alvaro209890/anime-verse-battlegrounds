@@ -753,6 +753,17 @@ test("npc: interação procura a cabeça também dentro do Body R15", function()
 	)
 end)
 
+test("npc: bootstrap verifica vínculo único da Instrutora", function()
+	local source = fs.readFile("src/server/Services/WorldService.luau")
+	assertTrue(
+		source:find('verifyNpcInteractionBinding(root, "ThresholdInstructor", "npc_threshold_instructor")', 1, true)
+			~= nil,
+		"bootstrap verifica o vínculo da Instrutora"
+	)
+	assertTrue(source:find("bindingCount ~= 1", 1, true) ~= nil, "bootstrap detecta vínculo ausente ou duplicado")
+	assertTrue(source:find(":GetDescendants()", 1, true) ~= nil, "bootstrap inspeciona o rig aninhado")
+end)
+
 test("npc: catálogo de habilidades e assets gratuitos é válido", function()
 	local ok, reason = EnemyAbilities.validate()
 	assertTrue(ok, reason or "habilidades de NPC válidas")

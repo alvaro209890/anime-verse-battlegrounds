@@ -92,18 +92,24 @@ Foi acrescentado um teste de regressão em `tests/animation.luau` para impedir o
 
 ## Revalidação pós-correção
 
-A correção foi revalidada com a execução integral dos gates locais e publicada no `main` no commit `d46c156`:
+A correção foi revalidada com a execução integral dos gates locais e a verificação automatizada de bootstrap:
 
 | Verificação | Resultado |
 |---|---|
 | `tests/run.luau` | 227 passaram, 0 falharam |
-| `tests/animation.luau` | 63 passaram, 0 falharam |
+| `tests/animation.luau` | 64 passaram, 0 falharam |
 | `tests/security_fuzz.luau` | 29 passaram, 0 falharam |
 | Selene | 0 erros, 0 warnings, 0 parse errors |
 | StyLua | passou |
 | Wally | passou, 0 dependências externas |
 | Rojo | build aprovado, 297.737 bytes |
 | `git diff --check` | passou |
-| Commit publicado | `d46c156` em `origin/main` |
+| Cobertura adicional | vínculo único da Instrutora verificado no bootstrap |
 
 A validação no Roblox Studio continua sendo o próximo gate para confirmar a criação visual do `ProximityPrompt`, a interação válida e a recusa fora de 10 studs.
+
+## Diagnóstico automatizado de bootstrap
+
+O `WorldService` agora verifica, imediatamente após construir os atores estáticos, se `ThresholdInstructor` existe e se exatamente uma `BasePart` recebeu `InteractionNpcId = "npc_threshold_instructor"`. A inspeção usa `GetDescendants()`, cobrindo o rig R15 aninhado em `Body` e o fallback low-poly. Ausência ou duplicidade gera um aviso explícito no Output do servidor.
+
+A suíte headless também verifica a presença da chamada de bootstrap, a regra de unicidade e a inspeção recursiva. Essa proteção detecta falhas de montagem e evita um diagnóstico silenciosamente verde, mas não substitui o Playtest W1 para confirmar a criação visual e a usabilidade do `ProximityPrompt`.
