@@ -23,6 +23,8 @@ A versão atual usa peças nativas do Roblox como materialização final porque 
 
 A sequência recomendada é construir primeiro a praça coberta do Bastião, depois o caminho norte e o portão, em seguida o corredor oeste e, por fim, a planície externa ao redor da cratera. Estruturas maiores devem ser adicionadas em pastas próprias e receber atributos de identificação, sem ocupar as âncoras existentes ou os volumes de transição.
 
+> **Atualização 15/08/2026 — sequência concluída em código.** A praça coberta saiu em `docs/28-SPAWN-VISUAL-PASS.md`; caminho norte, corredor oeste e planície ao redor da cratera saíram em `docs/31-WILD-VISUAL-PASS.md`, como `src/shared/Data/WildDecorations.luau` (80 peças, 7 luzes) materializado em uma pasta própria `WildDecorations`. As regras pedidas acima viraram gate headless: nada colide, nada invade transição, nada entra no ringue do elite nem na faixa de caminhada e nada encosta em âncora de spawn. O Playtest visual no Studio continua pendente.
+
 O Playtest visual no Roblox Studio deve verificar: entrada e saída do teto sem colisão, leitura dos dois portões, ausência de rochas sobre âncoras de inimigos, continuidade do piso até a cratera e espaço suficiente para os ataques do boss.
 
 ## Referências

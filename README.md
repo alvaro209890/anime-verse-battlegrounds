@@ -21,7 +21,7 @@ As variantes técnicas para importação no Roblox estão em [`docs/assets/roblo
 | Produto | Q-001 a Q-030 decididas; `docs/09-OPEN-QUESTIONS.md` é o registro canônico |
 | Planejamento | visão, GDD, mundo, social, arquitetura, schemas, segurança, roster, roadmap, benchmark e plano de animação documentados |
 | Implementado | domínio F0, mundo greybox com rotas/marcos/modelos low-poly, animação procedural de NPCs e do jogador, interações semânticas com Instrutor/Marco, save/ProfileStore, cliente Input/HUD, envelope v2, `SecurityService` e `TelemetryService` mínimo |
-| Validado automaticamente | 227/227 testes em `tests/run.luau` + 67/67 em `tests/animation.luau` + 29/29 no fuzz de segurança, Selene limpo, StyLua canônico, Wally e build Rojo |
+| Validado automaticamente | 235/235 testes em `tests/run.luau` + 73/73 em `tests/animation.luau` + 29/29 no fuzz de segurança, Selene limpo, StyLua canônico, Wally e build Rojo |
 | Ainda não comprovado | roteiro Play no Studio, physics/collision groups, DataStore real, dois clientes, latência, mobile, gamepad, performance, UX visual e assets de animação |
 
 O CI em pushes para `main` valida contratos headless e a árvore Rojo; não substitui playtest. O snapshot e os links de evidência ficam em `docs/12-TESTING.md`.
@@ -55,8 +55,12 @@ reabra esse `.rbxl` antes de clicar em **Play**.
 Esse `.rbxl` é um artefato local ignorado pelo Git: atualizar ou baixar a branch
 `main` não reconstrói o arquivo. Rode o script novamente depois de cada atualização.
 
-Snapshot canônico gerado em 2026-08-14 13:53:05 -03: `275301` bytes, SHA256
-`B90E9417A1CB59D3B372CFCEB2DD831FB5C58274971F716071AE379A1072C697`. Esses
+Snapshot histórico gerado no Windows em 2026-08-14 13:53:05 -03: `275301` bytes,
+SHA256 `B90E9417A1CB59D3B372CFCEB2DD831FB5C58274971F716071AE379A1072C697`.
+
+O check headless de 2026-08-15 (`rojo build -o build.rbxl`, commit `86228ee`)
+produziu `318988` bytes, SHA256
+`bc6b5056f238787ce2e857f835a1486b193f4f08db7a38bdccb4878d7f83bff4`. Esses
 dados comprovam a geração do arquivo, não a execução dele no Studio.
 
 **`anime-verse-battlegrounds.rbxl` é o único place que se abre.** Qualquer outro

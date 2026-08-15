@@ -1,6 +1,6 @@
 # 15 — Fundação de mundo e apresentação F0
 
-> **Estado canônico em 2026-08-14 (rodada de apresentação de combate):** implementado em código e validado por lint, 227 testes de domínio, 62 testes de animação/apresentação, 29 casos de fuzz e build Rojo. O artefato de verificação possui 297.737 bytes; isso prova somente a saída do build, não boot ou runtime. A expansão de cenário, os VFX, as skins e a reforma visual do spawn estão implementados, mas **não houve Play atual no Studio neste snapshot**.
+> **Estado canônico em 2026-08-15 (rodada do mundo aberto — `docs/31`):** implementado em código e validado por Selene, StyLua, 235 testes de domínio, 73 testes de animação/apresentação, 29 casos de fuzz e build Rojo. O artefato de verificação possui 318.988 bytes; isso prova somente a saída do build, não boot ou runtime. A expansão de cenário, os VFX, as skins (agora dirigidas por dados também para os Estilhaços), a reforma visual do spawn, a decoração da planície/rotas/cratera e os cinco sinais de fronteira estão implementados, mas **não houve Play atual no Studio neste snapshot**.
 
 ## 1. Objetivo e limite
 
@@ -319,8 +319,10 @@ Comprovado automaticamente:
 - interação valida catálogo, alvo único, alcance, hold, abandono e limpeza de sessão;
 - o gate exige Studio + atributo e libera somente três técnicas;
 - unlock de sessão aparece para habilidade/HUD e fica fora do snapshot durável;
-- 227 testes de domínio, 62 testes de animação/apresentação e 29 casos de fuzz passam; Selene passou e StyLua não foi executado nesta rodada por indisponibilidade do binário;
-- o build Rojo atual foi concluído com 297.737 bytes no check reproduzido desta rodada.
+- a planície, as duas rotas e a borda da cratera têm decoração dirigida por dados que não colide, não entra no ringue do elite e não encosta nas âncoras de spawn;
+- os cinco sinais da fronteira têm apresentação local, e travessia recusada não acende nada;
+- 235 testes de domínio, 73 testes de animação/apresentação e 29 casos de fuzz passam; Selene e StyLua passaram nesta rodada;
+- o build Rojo atual foi concluído com 318.988 bytes no check reproduzido desta rodada.
 
 O último item é evidência de **build reproduzido**. Não demonstra que o arquivo abriu, iniciou servidor/cliente, renderizou Parts ou respondeu a input.
 

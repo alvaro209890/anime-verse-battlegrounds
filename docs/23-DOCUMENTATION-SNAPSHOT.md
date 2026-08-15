@@ -1,4 +1,4 @@
-# Snapshot Canônico da Documentação — 14/08/2026
+# Snapshot Canônico da Documentação — 15/08/2026
 
 Este arquivo é a referência única para o estado técnico atual do repositório. Os demais documentos preservam decisões e histórico de implementação, mas afirmações antigas sobre commits, contagens de testes ou artefatos devem ser interpretadas como registros históricos quando divergirem deste snapshot.
 
@@ -7,16 +7,16 @@ Este arquivo é a referência única para o estado técnico atual do repositóri
 | Campo | Estado canônico |
 |---|---|
 | Branch publicado | `main` |
-| Commit-base do código | `8447d16` (`feat: refresh spawn room lighting and quest giver`) |
-| Estado deste documento | snapshot de documentação visual publicado após validação headless da apresentação de combate |
-| Data do commit | 2026-08-14 |
-| Última alteração de código-base | paleta data-driven de piso/teto, iluminação do spawn e skin enriquecida da instrutora |
-| Testes de domínio | 227 passaram, 0 falharam |
-| Testes de animação/apresentação | 62 passaram, 0 falharam |
+| Commit-base do código | `86228ee` (`feat(fronteira): apresentar os cinco sinais da travessia no cliente`) |
+| Estado deste documento | snapshot publicado após a rodada do mundo aberto e das skins de inimigo (`docs/31`) |
+| Data do commit | 2026-08-15 |
+| Última alteração de código-base | skins de Estilhaço em dados com alcance honesto, decoração da planície/rotas/cratera, iluminação do spawn em catálogo e sinais de fronteira no cliente |
+| Testes de domínio | 235 passaram, 0 falharam |
+| Testes de animação/apresentação | 73 passaram, 0 falharam |
 | Fuzz headless de segurança | 29 passaram, 0 falharam |
 | Selene | 0 erros, 0 warnings, 0 parse errors nesta rodada |
-| StyLua | não executado nesta rodada: binário não disponível no ambiente |
-| Rojo | build aprovado; check local de 297.737 bytes |
+| StyLua | passou nesta rodada (`--check` limpo em `src tests plugins scripts`) |
+| Rojo | build aprovado; check local de 318.988 bytes |
 | Runtime Roblox Studio | ainda não validado neste snapshot |
 | Dispositivos reais | Android, gamepad e PC integrado ainda não validados neste snapshot |
 | DataStore publicado | ainda não validado em place privado |
@@ -24,7 +24,7 @@ Este arquivo é a referência única para o estado técnico atual do repositóri
 
 ## O que está implementado
 
-O repositório contém a fatia de combate server-authoritative, as três habilidades F0, progressão e quests, inimigo comum e elite, VFX de jogador e inimigos, skins procedurais, defesa e dash com apresentação procedural em fases, receitas locais de impacto de chão, paredes decoradas, teto translúcido no spawn, terreno contínuo, rochas e grama procedurais, referências visuais originais, índice visual na raiz, checklist de validação em `docs/26`, catálogo de habilidades futuras em `docs/27`, oito novas referências originais, reforma visual do spawn em `docs/28` e documentação de assets CC0; o pacote público Kenney está arquivado como candidato externo.
+O repositório contém a fatia de combate server-authoritative, as três habilidades F0, progressão e quests, inimigo comum e elite, VFX de jogador e inimigos, skins procedurais, defesa e dash com apresentação procedural em fases, receitas locais de impacto de chão, paredes decoradas, teto translúcido no spawn, terreno contínuo, rochas e grama procedurais, referências visuais originais, índice visual na raiz, checklist de validação em `docs/26`, catálogo de habilidades futuras em `docs/27`, oito novas referências originais, reforma visual do spawn em `docs/28`, reforma do mundo aberto e das skins de inimigo em `docs/31` e documentação de assets CC0; o pacote público Kenney está arquivado como candidato externo.
 
 O build e os testes automatizados demonstram integridade de código, contratos puros, catálogos, geometria, segurança modelada, apresentação procedural e árvore Rojo. Eles não demonstram que Parts, joints, iluminação, prompts, física, câmera, replicação, DataStore ou dispositivos reais funcionam como esperado dentro do Roblox Studio.
 
@@ -34,7 +34,7 @@ A ordem oficial continua sendo **sincronização do Studio → W1 de leitura do 
 
 ## Regra de leitura dos documentos
 
-Quando um documento mencionar commits como `108be31`, `d0f6f8d`, contagens como 166, 169, 238 ou 49 testes, ou artefatos antigos de 160.553/128.744 bytes, essas referências são históricas e não representam o snapshot atual. Para esta consolidação, usar o commit final informado no GitHub, 227 testes de domínio, 62 testes de animação/apresentação, 29 casos de fuzz e a ausência de validação de runtime.
+Quando um documento mencionar commits como `108be31`, `d0f6f8d`, contagens como 166, 169, 238 ou 49 testes, ou artefatos antigos de 160.553/128.744 bytes, essas referências são históricas e não representam o snapshot atual. Para esta consolidação, usar o commit final informado no GitHub, 235 testes de domínio, 73 testes de animação/apresentação, 29 casos de fuzz e a ausência de validação de runtime. Contagens de 227/62 e artefatos de 297.737 bytes pertencem à rodada de 14/08.
 
 ## Consolidação automatizada adicional
 
@@ -44,6 +44,6 @@ Também foi adicionada uma regressão A1 para o blocking procedural do **Ombro C
 
 A receita de build existente em `scripts/build-studio.ps1` continua sendo a fonte de geração do artefato: instala Wally, respeita lock vivo do Studio, remove apenas lock órfão, gera o `.rbxl` esperado, verifica tamanho/data e imprime SHA-256. O bridge permanece limitado a sincronização e inspeção; não foi alegado que ele executa Play, tira screenshots ou mede dispositivos reais.
 
-Nesta rodada, a suíte de animação passou com **62 casos**, a suíte de domínio passou com **227 casos**, e o fuzz headless de segurança passou com **29 casos**. Foram adicionadas receitas testadas para defesa e dash, fases de pose de corrida, integração de VFX local, referências visuais de chão quebrando e uma reforma data-driven do spawn com iluminação e skin enriquecida da instrutora. O total automatizado atual é **318 casos**. Selene, Rojo e `git diff --check` passaram; StyLua não foi executado porque o binário não está disponível neste ambiente. Isso continua sendo evidência de contratos, apresentação pura e árvore de build; não é evidência de boot, colisão, replicação, latência, Android, gamepad, DataStore real ou qualidade visual final.
+Nesta rodada, a suíte de animação passou com **73 casos**, a suíte de domínio passou com **235 casos**, e o fuzz headless de segurança passou com **29 casos**. Foram adicionadas as skins de Estilhaço como receita de dados (com o alcance da skin travado contra o `attackRange` real do NPC), a decoração dirigida por dados da planície, das duas rotas e da borda da cratera, a iluminação do spawn como catálogo e a apresentação local dos cinco sinais da fronteira. O total automatizado atual é **337 casos**. Selene, StyLua, Rojo e `git diff --check` passaram. Isso continua sendo evidência de contratos, apresentação pura e árvore de build; não é evidência de boot, colisão, replicação, latência, Android, gamepad, DataStore real ou qualidade visual final.
 
 A conclusão recomendada permanece: usar `VISUAL-REFERENCE-INDEX.md` para selecionar a referência, consultar `docs/27-FUTURE-ABILITY-ASSET-CATALOG.md`, preencher `docs/26-VISUAL-VALIDATION-CHECKLIST.md`, preparar e abrir o artefato atual no Studio, executar W1, registrar evidência de runtime, depois A1/R1/W2. Nenhuma dessas validações externas deve ser marcada como concluída apenas por estes testes.

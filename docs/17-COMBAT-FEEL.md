@@ -176,6 +176,24 @@ Novos testes em `tests/animation.luau` (executado pelo CI junto de
   desfecho; ambos nascem logo após o impacto autoritativo (0,42 s); nenhum raio
   passa do alcance da habilidade.
 
+A regra "nada aparenta mais alcance do que tem" ganhou dois gates novos em
+15/08 (`docs/31`), fora da camada de VFX:
+
+- **Skin de inimigo** — `WorldPresentation.validateShardSkins(Npcs)` recusa
+  peça de corpo que ocupe, no plano horizontal, mais studs do que o
+  `attackRange` do NPC. É o mesmo número que o `EnemyVfxPlayer.rangeFor` usa
+  para a luz de ataque desde 14/08, então corpo e luz mentem ou dizem a verdade
+  juntos. Hoje: comum 2,43 de 4 studs, elite 4,46 de 8.
+- **Sinais da fronteira** — o `ZoneSignalPlayer` só apresenta pulso de cor e
+  vibração a partir de um `ZoneEvent` aceito. `hold_required` e
+  `combat_lockout` não acendem nada: pintar a tela numa recusa ensinaria ao
+  jogador que ele cruzou. O envelope do pulso é puro e testado para não ficar
+  preso aceso.
+
+A decoração da planície segue a mesma regra pelo outro lado: nenhuma peça
+desenha anel ou área no chão que possa ser lida como alcance de golpe, e as
+tochas são luz de ambiente, nunca telegraph.
+
 ## 5. Fora de escopo (ainda pendente)
 
 - Clipes reais com keyframe/animação R15 (Gate A1, depende de P1 + arte).

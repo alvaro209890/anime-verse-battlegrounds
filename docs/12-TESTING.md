@@ -1,10 +1,10 @@
 # 12 — Testes e evidências
 
-> **Snapshot de implementação:** 2026-08-14, derivado de `d7c44e8` e atualizado no release desta rodada. `tests/run.luau` executa **227 testes de domínio** e `tests/animation.luau` executa **62 testes de animação/apresentação**. As duas suítes principais totalizam **287 casos**, e `tests/security_fuzz.luau` adiciona **29 casos determinísticos**; o total automatizado desta rodada é **318 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada (14/08): overlay procedural que nascia morto por corrida no anexo do rig, corpo que deixou de girar no golpe (mira declarada na intenção), tremida de câmera e hit-stop recalibrados, e luz de verdade na camada de VFX e reforma data-driven da sala de spawn com piso, teto, iluminação e skin da instrutora.
+> **Snapshot de implementação:** 2026-08-15, derivado de `86228ee`. `tests/run.luau` executa **235 testes de domínio** e `tests/animation.luau` executa **73 testes de animação/apresentação**. As duas suítes principais totalizam **308 casos**, e `tests/security_fuzz.luau` adiciona **29 casos determinísticos**; o total automatizado desta rodada é **337 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada (15/08, `docs/31`): skins de Estilhaço viraram receita de dados com alcance travado contra o `attackRange` real, decoração dirigida por dados da planície/rotas/cratera, iluminação do spawn virou catálogo (com luz sobre a Instrutora e o pad de treino) e os cinco sinais de fronteira ganharam apresentação local.
 
 ## 1. Estado da execução
 
-No snapshot de implementação atual, a verificação automatizada registrou 227/227 em `tests/run.luau`, 62/62 em `tests/animation.luau` e 29/29 em `tests/security_fuzz.luau`. Selene e StyLua continuam gates separados e precisam ser executados no mesmo release. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
+No snapshot de implementação atual, a verificação automatizada registrou 235/235 em `tests/run.luau`, 73/73 em `tests/animation.luau` e 29/29 em `tests/security_fuzz.luau`. Selene e StyLua continuam gates separados e foram executados neste release: Selene com 0 erros/0 warnings e StyLua com `--check` limpo em `src tests plugins scripts`. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
 
 **Registro histórico, não evidência do snapshot atual:** uma rodada anterior teve confirmação em Play pelo jogador, com `avb-debug sync` = 56/56, de que a animação de golpe movia o corpo e o personagem não girava sozinho. Essa evidência pertence ao estado anterior documentado em `docs/14` e não deve ser usada para declarar o commit `d7c44e8` validado em runtime. Neste snapshot, o Play atual continua pendente.
 
@@ -45,7 +45,7 @@ O gate de tronco tem nome feio de propósito. Em 2026-08-14 o place canônico es
 
 Em checkout Windows com `core.autocrlf=true`, os arquivos de trabalho podem estar em CRLF enquanto `stylua.toml` exige `Unix`; nesse caso, o check direto acusa somente final de linha. Para reproduzir o CI, use uma cópia com bytes LF canônicos do Git (`git -c core.autocrlf=false archive ...`). `--line-endings Windows` só é equivalente quando todo o checkout está uniformemente em CRLF; ele não resolve uma árvore mista. Não reformatar código só para mascarar essa conversão do checkout.
 
-## 2. Cobertura existente: exatamente 227 testes de domínio
+## 2. Cobertura existente: exatamente 235 testes de domínio
 
 | Área | Cobertura |
 |---|---|
@@ -53,9 +53,9 @@ Em checkout Windows com `core.autocrlf=true`, os arquivos de trabalho podem esta
 | **Cliente** (13) | gate de `SessionSnapshot.ready`; limite de 8 intenções de combate/s; no máximo 2 botões de toque simultâneos; `CharacterController` envia intenção sem alvo/dano; ToggleLock solta sem remote; `clearLock` solta sem procurar outro alvo; ToggleHelp fora do rate limit; clique de combate passa por HUD `processed` salvo em GuiButton/TextBox; 3 slots, ultimate oculta, unlock e cooldown no `AbilityController`; rejeição reconciliada sem código interno na UI; Umbral/zona/perda só após ready; hold de fronteira de 0,6 s; Locale cobre PT-BR/EN do HUD F0 (inclui MENU/mira/câmera/ATACAR) |
 | **Bootstrap/Rojo** (1) | o bootstrap resolve `Services` como filho do Script `Server` gerado pelo Rojo e não procura a pasta em `ServerScriptService` |
 | **Telemetria/segurança** (13) | allowlist/remoção de campos arbitrários; tipo/buffer; execução dos sete schemas; envelope/payload válido; campo extra e direção; replay de request/sequence; envelope fechado e amostragem de rejeição; limite 8/s separado de interação; NaN/vetor impossível/interação ambígua; limpeza entre sessões; orçamento de combate isolado entre dois jogadores; sequência fora de ordem não atravessa jogadores |
-| **Mundo/apresentação/Studio debug** (6) | quatro receitas e estilo procedural válidos; poses de NPC preservam antecipação/ataque/queda; apresentação local do jogador diferencia antecipação/impacto leve, peso do ataque pesado, guarda e recuperação; gate exige Studio + atributo e exclui ultimate; flags de sessão aparecem para habilidade/HUD e não entram no snapshot durável; `resolveAttribute` cai no Script Server e `applySessionUnlocks` só no Studio |
+| **Mundo/apresentação/Studio debug** (10) | quatro receitas e estilo procedural válidos; skin de Estilhaço/elite vem de `WorldPresentation.shardGearFor` e nenhuma peça passa do `attackRange` real do NPC; peça de skin malformada é recusada; o `WorldService` materializa o corpo mineral só a partir dos dados e devolve a transparência declarada no respawn; poses de NPC preservam antecipação/ataque/queda; apresentação local do jogador diferencia antecipação/impacto leve, peso do ataque pesado, guarda e recuperação; gate exige Studio + atributo e exclui ultimate; flags de sessão aparecem para habilidade/HUD e não entram no snapshot durável; `resolveAttribute` cai no Script Server e `applySessionUnlocks` só no Studio |
 | **Geometria** (5) | distância no plano ignora altura; normalize de vetor nulo não vira NaN; costas vs. frente vs. perpendicular; cápsula do trajeto dentro/fora do raio e além do fim; lunge de 7 com cap 8 e parada antes do contato; `moveToward` a 12 studs/s parando no alcance |
-| **Greybox** (3) | o `WorldService` gera piso rastreável a partir de cada volume canônico; o volume de cada zona resolve a zona declarada por todas as âncoras, o plano do portão resolve como transição e fora de todo volume devolve nil; 6 pontos de Estilhaço ≥ 24 studs entre si e ≥ 20 dos portões |
+| **Greybox** (7) | o `WorldService` gera piso rastreável a partir de cada volume canônico; a decoração da planície valida contra zonas, cratera e âncoras reais, não colide nem entra em raycast, respeita o teto de 8 luzes, entra no bootstrap, e os quatro casos negativos (fora da zona livre, no ringue do elite, colada na âncora de spawn e na faixa de caminhada) são recusados; o volume de cada zona resolve a zona declarada por todas as âncoras, o plano do portão resolve como transição e fora de todo volume devolve nil; 6 pontos de Estilhaço ≥ 24 studs entre si e ≥ 20 dos portões |
 | **Interação mínima** (5) | catálogo allowlisted/localizado do Instrutor e Marco; cliente bloqueado até `ready` e payload sem recompensa; Instrutor exige alvo conhecido e proximidade medida pelo servidor; Marco exige hold de 1,5 s no relógio do servidor; conclusão revalida distância e pending é limpo no leave |
 | **SpatialService** (4) | hitbox à frente acerta 1 e ignora quem está atrás/longe; Ombro Cometa avança 7, commita a posição e acerta 1 alvo na cápsula; guarda inimiga trava o avanço; avanço sem alvo é resultado válido |
 | **EnemyService** (5 + elite 3) | spawn até o teto de 4 com a âncora no id e sem duplicar; persegue, para no alcance, telegraph de 400 ms sem dano e 6 depois; sem aggro para jogador na zona segura; respawn de 45 s bloqueado por jogador a menos de 20 studs; kill reporta âncora e autor; **elite**: spawn único na `anchor_elite`; leeching por dano ≥ 1% na morte; leeching por 8 s no raio sem dano |
@@ -77,8 +77,8 @@ A divisão é deliberada: matemática e decisão ficam em módulos puros (`Geome
 ## 3. Arquitetura do harness
 
 - **`tests/harness.luau`** simula o mínimo que o Lune não fornece: `_G.game`, `_G.Instance`, `_G.task` e resolução de `require(script.Parent.X)` no filesystem.
-- **`tests/run.luau`** contém os 227 casos e usa módulos reais de `src/`, com um miniframework de asserts.
-- **`tests/animation.luau`** contém 62 casos de apresentação procedural, VFX, áudio, juntas, defesa e dash.
+- **`tests/run.luau`** contém os 235 casos e usa módulos reais de `src/`, com um miniframework de asserts.
+- **`tests/animation.luau`** contém 73 casos de apresentação procedural, VFX, áudio, juntas, defesa, dash, sinais de fronteira, iluminação do spawn e volume das skins.
 - **`tests/security_fuzz.luau`** executa 29 casos determinísticos de envelope, payload, replay, sequência, rate limit, isolamento por usuário e rejoin.
 - **Services testáveis por injeção** recebem dependências em `init()`: `CatalogService`, `AbilityService`, `ResourceService`, `PlayerSessionService`, `ZoneService`, `ProgressionService`, `QuestService`, `SpatialService`, `EnemyService` e `SaveService` (adaptador de store mockado). O bootstrap Roblox monta o grafo real.
 - **`src/shared/TaskCompat.luau`** usa `task` nativo no Roblox e o polyfill somente no harness.
@@ -89,7 +89,7 @@ Os módulos de dados declaram tipos inline porque o Lune não resolve `script.Pa
 
 | Camada | O que demonstra | O que não demonstra |
 |---|---|---|
-| lint + 227 testes Lune | sintaxe, estilo e comportamento unitário coberto no ambiente simulado, incluindo isolamento headless de dois jogadores | física, replicação, UI renderizada, dispositivo ou serviços Roblox reais |
+| lint + 235 testes Lune | sintaxe, estilo e comportamento unitário coberto no ambiente simulado, incluindo isolamento headless de dois jogadores | física, replicação, UI renderizada, dispositivo ou serviços Roblox reais |
 | Wally + build Rojo | dependências resolvidas e árvore de projeto montável | que o place abre sem erro ou que um fluxo é jogável |
 | Studio | bootstrap, UI/input, câmera, física e replicação no cenário testado | DataStore/teleport/rede pública com fidelidade total |
 | publicado privado | serviços reais, múltiplos servidores, reconnect, teleport e condições reais de rede | cobertura de dispositivo que não foi executada |

@@ -6,10 +6,18 @@ Esta atualização transforma os modelos greybox dos inimigos em identidades vis
 
 Cada NPC agora possui uma skin declarada em `WorldPresentation.luau`, com paleta de aura e escala visual próprias.
 
+> **Atualização 15/08/2026 (`docs/31`):** o corpo dos dois Estilhaços deixou de
+> ser construído dentro do `WorldService` e virou receita de dados em
+> `WorldPresentation.shardGearFor(npcId)` — inclusive a coroa do elite, que era
+> um `if npcId == "enemy_anchored_shard"` na camada de materialização. A skin
+> ganhou volume nas duas (13 e 23 peças) e passou a ter alcance travado por
+> teste: nenhuma peça pode ocupar, no plano horizontal, mais studs do que o
+> `attackRange` real do NPC (comum 2,43 de 4; elite 4,46 de 8).
+
 | NPC | Skin | Aura | Diferencial Visual |
 |---|---|---|---|
-| `enemy_wandering_shard` | **Fenda Ciano** | Ciano (104, 220, 238) | Halo ciano orbitando o núcleo mineral. |
-| `enemy_anchored_shard` | **Coroa do Vazio** | Laranja (255, 118, 92) | Coroa de cristais Neon e aura laranja intensa. |
+| `enemy_wandering_shard` | **Fenda Ciano** | Ciano (104, 220, 238) | Halo ciano orbitando o núcleo mineral, casca de rocha arredondando o volume, anel de fenda e duas lascas soltas. |
+| `enemy_anchored_shard` | **Coroa do Vazio** | Laranja (255, 118, 92) | Coroa de cinco pontas de alturas alternadas, colar de ancoragem em basalto com quatro cravos e manto de pedra. |
 | `npc_training_dummy` | **Saco de Treino** | Vermelho (226, 78, 78) | Alvo Neon vermelho no peito. |
 | `npc_threshold_instructor`| **Guardião do Limiar** | Violeta (138, 96, 196) | Bordas do capuz e gola em Neon violeta. |
 

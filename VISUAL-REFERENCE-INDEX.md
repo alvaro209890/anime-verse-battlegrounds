@@ -6,6 +6,11 @@ Este índice conecta as imagens conceituais do Anime Verse Battlegrounds aos doc
 
 Comece pela linha da referência desejada. Consulte o documento canônico, revise a receita ou pose relacionada e, somente depois, execute o protocolo em `docs/26-VISUAL-VALIDATION-CHECKLIST.md`. Uma referência só pode ser promovida a asset de runtime depois de produção separada, revisão de licença, otimização e validação no Roblox Studio.
 
+> **15/08/2026:** o que existe hoje em runtime continua sendo 100% procedural e
+> dirigido por dados — nenhuma imagem deste índice está ligada ao place. O
+> estado atual da apresentação do mundo, das skins de inimigo e dos sinais de
+> fronteira está em [`docs/31-WILD-VISUAL-PASS.md`](docs/31-WILD-VISUAL-PASS.md).
+
 | Referência | Sistema orientado | Documento canônico | Fase | Evidência necessária |
 |---|---|---|---|---|
 | `docs/assets/combat-presentation-reference.png` | Direção de câmera, escala, materiais e contraste | `docs/25-COMBAT-PRESENTATION-PLAN.md` | F0/A0 | Capturas frontal, perfil e três quartos com e sem VFX |

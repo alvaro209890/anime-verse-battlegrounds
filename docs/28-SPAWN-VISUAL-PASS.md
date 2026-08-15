@@ -20,6 +20,13 @@ A sala agora usa uma base de **ardósia azul-grafite**, caminhos e praça em tom
 | Atmosfera | `ClockTime 18.25`, haze `0.9`, density `0.18` | Contraste de crepúsculo controlado |
 | Luzes | 6 PointLights, range 18, brilho 1.35 | Preenchimento alternado ciano/âmbar-umbral, com sombras apenas nas quatro primeiras |
 
+> **Atualização 15/08/2026 (`docs/31`):** as posições saíram do `WorldService` e
+> viraram catálogo (`SceneryPresentation.spawnLights`). A sala passou a ter **8**
+> fontes — as duas novas ficam sobre a Instrutora e sobre o pad de treino, que
+> são os alvos dos primeiros 60 s do roteiro e ficavam no escuro — e as sombras
+> caíram de quatro fontes para **duas**, que é o item mais caro da sala no
+> Android.
+
 Os valores são dados puros e passam por limites de RGB, transparência, brilho, alcance e quantidade. O código não cria texturas externas nem depende do pacote Kenney para o boot do mundo.
 
 ## Skin da instrutora
