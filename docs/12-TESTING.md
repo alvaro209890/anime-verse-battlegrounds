@@ -1,6 +1,6 @@
 # 12 — Testes e evidências
 
-> **Snapshot de implementação:** 2026-08-16, derivado desta rodada (`scripts/ci.sh`, e2e de pesado/Cometa, atalho `avb-debug home`). Quatro suítes Lune: `tests/run.luau` **241 casos de domínio**, `tests/animation.luau` **73 de animação/apresentação**, `tests/security_fuzz.luau` **67 de fuzz adversarial** e `tests/combat_e2e.luau` **19 de simulação de combate ponta a ponta** — total automatizado de **400 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada: o CI Linux cabe num script, a cadeia de impacto cobre pesado e Ombro Cometa nos desfechos miss/hit/guarda, e o atalho de casa imprime três passos com o Studio fechado.
+> **Snapshot de implementação:** 2026-08-16, derivado de `0b96d82`. Quatro suítes Lune: `tests/run.luau` **241 casos de domínio**, `tests/animation.luau` **73 de animação/apresentação**, `tests/security_fuzz.luau` **67 de fuzz adversarial** e `tests/combat_e2e.luau` **19 de simulação de combate ponta a ponta** — total automatizado de **400 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada: o CI Linux cabe num script, a cadeia de impacto cobre pesado e Ombro Cometa nos desfechos miss/hit/guarda, e o atalho de casa imprime três passos com o Studio fechado.
 
 ## 1. Estado da execução
 

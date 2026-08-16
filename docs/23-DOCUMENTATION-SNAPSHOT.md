@@ -7,7 +7,7 @@ Este arquivo é a referência única para o estado técnico atual do repositóri
 | Campo | Estado canônico |
 |---|---|
 | Branch publicado | `main` (esta rodada entra por PR) |
-| Commit-base do código | a ser preenchido no hash desta rodada |
+| Commit-base do código | `0b96d82` (`feat(headless): CI Linux, e2e de pesado/Cometa e atalho de casa`) |
 | Estado deste documento | snapshot após CI Linux reproduzível, e2e de pesado/Cometa e atalho de casa |
 | Data do commit | 2026-08-16 |
 | Última alteração de código-base | `scripts/ci.sh`; 5 casos novos em `tests/combat_e2e.luau` (pesado miss/hit/guarda, Cometa miss/guarda); catálogo `homePrep` + comando `avb-debug home` |
