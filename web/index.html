@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#080b18" />
+    <meta name="description" content="Anime Verse Battlegrounds — um RPG de ação no Roblox sobre construir uma identidade de combate própria." />
+    <meta property="og:title" content="Anime Verse Battlegrounds" />
+    <meta property="og:description" content="Explore. Conquiste. Encontre seu próprio ritmo." />
+    <meta property="og:image" content="assets/images/cover.webp" />
+    <meta property="og:type" content="website" />
+    <title>Anime Verse Battlegrounds — Encontre seu próprio ritmo</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="site-noise" aria-hidden="true"></div>
+    <div class="progress-line" id="progress-line" aria-hidden="true"></div>
+
+    <header class="topbar" id="topbar">
+      <a class="brand" href="#top" aria-label="Anime Verse Battlegrounds — início">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span class="brand-copy"><strong>ANIME VERSE</strong><em>BATTLEGROUNDS</em></span>
+      </a>
+      <nav class="desktop-nav" aria-label="Navegação principal">
+        <a href="#combat">Combate</a>
+        <a href="#world">Mundo</a>
+        <a href="#roadmap">Roadmap</a>
+        <a href="#media">Media</a>
+      </nav>
+      <div class="nav-actions">
+        <button class="audio-toggle" type="button" id="audio-toggle" aria-pressed="false" title="Ativar trilha ambiente">
+          <span class="audio-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <span class="audio-label">Som off</span>
+        </button>
+        <a class="nav-cta" href="#follow">Acompanhar <span aria-hidden="true">↗</span></a>
+        <button class="menu-toggle" type="button" id="menu-toggle" aria-expanded="false" aria-controls="mobile-menu" aria-label="Abrir menu">
+          <span></span><span></span>
+        </button>
+      </div>
+      <div class="mobile-menu" id="mobile-menu" hidden>
+        <a href="#combat">Combate</a>
+        <a href="#world">Mundo</a>
+        <a href="#roadmap">Roadmap</a>
+        <a href="#media">Media</a>
+        <a href="#follow">Acompanhar o projeto</a>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-backdrop" data-parallax="0.16"></div>
+        <div class="hero-grid" aria-hidden="true"></div>
+        <div class="hero-orbit hero-orbit-a" aria-hidden="true"></div>
+        <div class="hero-orbit hero-orbit-b" aria-hidden="true"></div>
+        <div class="hero-particles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="hero-content container">
+          <div class="eyebrow reveal"><span class="eyebrow-line"></span> RPG de ação · mundo aberto · Roblox</div>
+          <h1 id="hero-title" class="hero-title reveal"><span>Encontre</span><span>seu próprio</span><span class="gradient-text">ritmo.</span></h1>
+          <p class="hero-lead reveal">Um universo de combate em que a sua build não é só uma coleção de habilidades. É uma assinatura.</p>
+          <div class="hero-actions reveal">
+            <a class="button button-primary" href="#media"><span class="button-icon">▶</span> Assistir ao trailer</a>
+            <a class="button button-ghost" href="#combat">Explorar o conceito <span aria-hidden="true">↓</span></a>
+          </div>
+          <div class="hero-footnote reveal"><span class="status-dot"></span> Em desenvolvimento · Fase 0 em validação headless</div>
+        </div>
+        <div class="hero-side-note" aria-hidden="true"><span>AVB / 001</span><span>BR → GLOBAL</span></div>
+        <div class="hero-scroll" aria-hidden="true"><span>Scroll para entrar</span><i></i></div>
+      </section>
+
+      <section class="signal-strip" aria-label="Resumo do projeto">
+        <div class="container signal-grid">
+          <div class="signal-item reveal"><span class="signal-value">01</span><span class="signal-label">Identidade<br />de combate</span></div>
+          <div class="signal-item reveal"><span class="signal-value">04</span><span class="signal-label">Famílias<br />de energia</span></div>
+          <div class="signal-item reveal"><span class="signal-value">∞</span><span class="signal-label">Caminhos<br />de build</span></div>
+          <div class="signal-quote reveal"><span class="quote-mark">“</span><p>Ganhe porque leu o adversário — não porque comprou poder.</p></div>
+        </div>
+      </section>
+
+      <section class="intro section" id="concept" aria-labelledby="intro-title">
+        <div class="container intro-grid">
+          <div class="section-kicker reveal">01 / A visão</div>
+          <div class="intro-copy">
+            <h2 id="intro-title" class="display-title reveal">Não é só uma arena.<br /><span class="muted-text">É o caminho até ela.</span></h2>
+            <p class="body-large reveal">Anime Verse Battlegrounds é um RPG de ação de mundo aberto para quem quer sentir evolução em cada escolha. Você começa com ataque, guarda e dash. O resto é conquistado jogando — e montado do seu jeito.</p>
+            <div class="principle-row reveal">
+              <div><span class="principle-number">01</span><strong>Progressão<br />é o produto</strong></div>
+              <div><span class="principle-number">02</span><strong>Combate<br />legível e justo</strong></div>
+              <div><span class="principle-number">03</span><strong>Build com<br />identidade</strong></div>
+            </div>
+          </div>
+          <div class="intro-aside reveal">
+            <div class="vertical-label">A FANTASIA</div>
+            <blockquote>“Eu conquistei cada técnica que uso.”</blockquote>
+            <span class="aside-caption">— a promessa central do projeto</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="combat section section-dark" id="combat" aria-labelledby="combat-title">
+        <div class="combat-bg" aria-hidden="true"></div>
+        <div class="container">
+          <div class="section-head reveal">
+            <div class="section-kicker">02 / O combate</div>
+            <div class="section-index">FIGHT / FEEL / READ</div>
+          </div>
+          <div class="combat-heading">
+            <h2 id="combat-title" class="display-title reveal">Cada impacto<br /><span class="gradient-text">tem um motivo.</span></h2>
+            <p class="body-large reveal">Movimento cria ângulo. Guarda compra tempo. Aparo vira leitura. O servidor confirma — a tela faz você sentir.</p>
+          </div>
+          <div class="combat-showcase">
+            <div class="combat-visual reveal">
+              <img src="assets/images/combat-impact.webp" alt="Impacto de energia e parry em uma arena fraturada" loading="lazy" />
+              <div class="visual-scan" aria-hidden="true"></div>
+              <div class="visual-caption"><span>IMPACT / 04</span><span>READABLE VFX</span></div>
+            </div>
+            <div class="combat-cards">
+              <article class="combat-card reveal"><span class="card-index">01</span><div class="card-icon icon-crosshair">⊕</div><h3>Leia primeiro</h3><p>Distância, recurso, guarda e intenção. A melhor jogada começa antes do golpe.</p></article>
+              <article class="combat-card reveal"><span class="card-index">02</span><div class="card-icon icon-burst">✦</div><h3>Sinta o frame</h3><p>Antecipação, hit-stop, câmera e áudio trabalham juntos para deixar o impacto claro.</p></article>
+              <article class="combat-card reveal"><span class="card-index">03</span><div class="card-icon icon-arrow">↗</div><h3>Escolha a saída</h3><p>Confirmou? Converta. Errou? Recupere. Toda ação abre espaço para uma resposta.</p></article>
+            </div>
+          </div>
+          <div class="control-rail reveal" aria-label="Controles planejados">
+            <div class="control-item"><span class="control-key">LMB</span><span>Ataque leve</span></div>
+            <div class="control-item"><span class="control-key">RMB</span><span>Ataque pesado</span></div>
+            <div class="control-item"><span class="control-key">F</span><span>Guarda / aparo</span></div>
+            <div class="control-item"><span class="control-key">Q</span><span>Dash</span></div>
+            <div class="control-item control-note"><span class="status-dot"></span><span>PC · mobile · console</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="energy section" id="energy" aria-labelledby="energy-title">
+        <div class="container">
+          <div class="energy-layout">
+            <div class="energy-copy">
+              <div class="section-kicker reveal">03 / A construção</div>
+              <h2 id="energy-title" class="display-title reveal">Sua técnica.<br /><span class="muted-text">Sua frequência.</span></h2>
+              <p class="body-large reveal">Escolha um núcleo, monte um loadout e aceite as consequências. Builds puras ganham consistência. Híbridas ganham respostas — pagando em dissonância.</p>
+              <a class="text-link reveal" href="#roadmap">Ver como a progressão se abre <span aria-hidden="true">↗</span></a>
+            </div>
+            <div class="energy-core reveal">
+              <div class="core-rings" aria-hidden="true"><span></span><span></span><span></span></div>
+              <img src="assets/images/ether-umbral-core.webp" alt="Núcleo visual do Éter Umbral" loading="lazy" />
+              <div class="core-label"><span class="mono-label">FAMÍLIA / 02</span><strong>Éter Umbral</strong><small>precisão · janela · retorno</small></div>
+            </div>
+          </div>
+          <div class="family-grid">
+            <article class="family-card reveal family-void"><span class="family-symbol">◒</span><span class="mono-label">01 / NÚCLEO</span><h3>Fluxo Vital</h3><p>Ritmo constante para quem transforma preparação em pressão.</p><span class="family-arrow">↗</span></article>
+            <article class="family-card active reveal"><span class="family-symbol">◈</span><span class="mono-label">02 / NÚCLEO</span><h3>Éter Umbral</h3><p>Precisão e leitura para quem espera a janela certa.</p><span class="family-arrow">↗</span></article>
+            <article class="family-card reveal family-counter"><span class="family-symbol">⟲</span><span class="mono-label">03 / NÚCLEO</span><h3>Contrafluxo</h3><p>Defesa e resposta para quem transforma impacto em recurso.</p><span class="family-arrow">↗</span></article>
+            <article class="family-card reveal family-shift"><span class="family-symbol">✧</span><span class="mono-label">04 / NÚCLEO</span><h3>Ímpeto</h3><p>Movimento e transformação com custo visível e decisivo.</p><span class="family-arrow">↗</span></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="world section section-dark" id="world" aria-labelledby="world-title">
+        <div class="container">
+          <div class="section-head reveal"><div class="section-kicker">04 / O mundo</div><div class="section-index">SAFE → FREE → RISK</div></div>
+          <div class="world-intro">
+            <h2 id="world-title" class="display-title reveal">O perigo deve<br /><span class="gradient-text">ser percebido.</span></h2>
+            <p class="body-large reveal">Zonas seguras são preparação e convivência. Zonas livres oferecem mais valor — mas toda travessia avisa antes de pedir uma decisão.</p>
+          </div>
+          <div class="world-feature reveal">
+            <div class="world-image"><img src="assets/images/bastiao-do-limiar.webp" alt="Bastião do Limiar, posto avançado com forja e portal luminoso" loading="lazy" /><div class="world-image-overlay"></div><span class="image-tag">WORLD / 001</span></div>
+            <div class="world-copy"><span class="mono-label">ZONA SEGURA · FASE 0</span><h3>Bastião do Limiar</h3><p>O primeiro ponto de retorno. Treino, forja básica, quadro de missão e uma porta para o desconhecido.</p><div class="world-meta"><span><strong>01</strong> spawn inicial</span><span><strong>02</strong> preparação</span><span><strong>03</strong> fronteira</span></div><a class="button button-ghost" href="#media">Ver atlas visual <span aria-hidden="true">↗</span></a></div>
+          </div>
+          <div class="world-route reveal"><div class="route-node active"><span>01</span><strong>Bastião</strong><small>segura</small></div><div class="route-line"><i></i></div><div class="route-node"><span>02</span><strong>Planície</strong><small>livre</small></div><div class="route-line dim"><i></i></div><div class="route-node dim"><span>03</span><strong>Bosque</strong><small>mista</small></div><div class="route-line dim"><i></i></div><div class="route-node dim"><span>04</span><strong>Cratera</strong><small>alto risco</small></div></div>
+        </div>
+      </section>
+
+      <section class="roadmap section" id="roadmap" aria-labelledby="roadmap-title">
+        <div class="container">
+          <div class="section-head reveal"><div class="section-kicker">05 / O caminho</div><div class="section-index">BUILD IN PUBLIC</div></div>
+          <div class="roadmap-heading"><h2 id="roadmap-title" class="display-title reveal">Um universo<br /><span class="muted-text">em construção.</span></h2><p class="body-large reveal">O projeto cresce por gates: primeiro a sensação, depois a escala. Abaixo está a direção atual — não uma promessa de datas.</p></div>
+          <div class="roadmap-list">
+            <article class="roadmap-row current reveal"><div class="roadmap-status"><span class="status-dot"></span><span>agora</span></div><div class="roadmap-main"><span class="roadmap-phase">F0 / PROVA VERTICAL</span><h3>Fazer o primeiro minuto funcionar</h3><p>Uma identidade, uma família, uma zona compacta, combate básico, progressão e save ponta a ponta.</p></div><div class="roadmap-side"><span class="roadmap-state">em validação</span><span class="roadmap-arrow">↗</span></div></article>
+            <article class="roadmap-row reveal"><div class="roadmap-status"><span class="status-ring"></span><span>próximo</span></div><div class="roadmap-main"><span class="roadmap-phase">F1 / COMPOSIÇÃO</span><h3>Mais caminhos para a mesma arena</h3><p>Duas novas identidades, famílias adicionais e a primeira camada de Ressonância.</p></div><div class="roadmap-side"><span class="roadmap-state">planejado</span><span class="roadmap-arrow">↗</span></div></article>
+            <article class="roadmap-row reveal"><div class="roadmap-status"><span class="status-ring"></span><span>depois</span></div><div class="roadmap-main"><span class="roadmap-phase">F2 / MUNDO VIVO</span><h3>Descoberta que muda a build</h3><p>Maestria ramificada, regiões com densidade, bosses, missões, reputação e economia.</p></div><div class="roadmap-side"><span class="roadmap-state">visão</span><span class="roadmap-arrow">↗</span></div></article>
+            <article class="roadmap-row reveal"><div class="roadmap-status"><span class="status-ring"></span><span>futuro</span></div><div class="roadmap-main"><span class="roadmap-phase">EXPANSÃO / PRESTÍGIO</span><h3>Clãs, torneios e novas fronteiras</h3><p>Competição e social entram depois que combate, economia e reconexão estiverem comprovados.</p></div><div class="roadmap-side"><span class="roadmap-state">visão</span><span class="roadmap-arrow">↗</span></div></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="media section section-dark" id="media" aria-labelledby="media-title">
+        <div class="container">
+          <div class="section-head reveal"><div class="section-kicker">06 / A transmissão</div><div class="section-index">WATCH THE FEEL</div></div>
+          <div class="media-heading"><h2 id="media-title" class="display-title reveal">Veja o que<br /><span class="gradient-text">já está vivo.</span></h2><p class="body-large reveal">Frames de desenvolvimento, direção visual e um recorte real da experiência em movimento.</p></div>
+          <div class="trailer reveal">
+            <video id="trailer" controls preload="metadata" poster="assets/images/trailer-poster.jpg" playsinline>
+              <source src="assets/video/combat-preview.mp4" type="video/mp4" />
+              Seu navegador não consegue reproduzir o vídeo deste recorte.
+            </video>
+            <button class="trailer-play" type="button" id="trailer-play" aria-label="Reproduzir trailer"><span>▶</span><small>play / 00:27</small></button>
+            <div class="trailer-overlay"><span>DEV CAPTURE / 2026.08</span><span>COMBAT FEEL PASS</span></div>
+          </div>
+          <div class="gallery-grid">
+            <button class="gallery-item gallery-wide reveal" type="button" data-gallery-src="assets/images/cover.webp" data-gallery-alt="Capa conceitual de Anime Verse Battlegrounds"><img src="assets/images/cover.webp" alt="Capa conceitual de Anime Verse Battlegrounds" loading="lazy" /><span class="gallery-caption"><strong>ORIGIN</strong><small>capa conceitual</small></span><span class="gallery-open">↗</span></button>
+            <button class="gallery-item gallery-tall reveal" type="button" data-gallery-src="assets/images/domain-expansion.webp" data-gallery-alt="Conceito de expansão de domínio em ruínas"><img src="assets/images/domain-expansion.webp" alt="Conceito de expansão de domínio em ruínas" loading="lazy" /><span class="gallery-caption"><strong>DOMAIN</strong><small>ruínas modulares</small></span><span class="gallery-open">↗</span></button>
+            <button class="gallery-item reveal" type="button" data-gallery-src="assets/images/dash.webp" data-gallery-alt="Referência visual do dash com trilha de energia"><img src="assets/images/dash.webp" alt="Referência visual do dash com trilha de energia" loading="lazy" /><span class="gallery-caption"><strong>MOTION</strong><small>dash / afterimage</small></span><span class="gallery-open">↗</span></button>
+            <button class="gallery-item reveal" type="button" data-gallery-src="assets/images/guard.webp" data-gallery-alt="Referência visual da guarda com casca de energia"><img src="assets/images/guard.webp" alt="Referência visual da guarda com casca de energia" loading="lazy" /><span class="gallery-caption"><strong>DEFENSE</strong><small>guard / parry</small></span><span class="gallery-open">↗</span></button>
+          </div>
+        </div>
+      </section>
+
+      <section class="follow section" id="follow" aria-labelledby="follow-title">
+        <div class="follow-glow" aria-hidden="true"></div>
+        <div class="container follow-grid">
+          <div class="follow-copy"><div class="section-kicker reveal">07 / O próximo sinal</div><h2 id="follow-title" class="display-title reveal">Fique perto<br /><span class="gradient-text">da próxima faísca.</span></h2><p class="body-large reveal">O projeto ainda está em desenvolvimento. Quando os canais oficiais estiverem prontos, este será o ponto de encontro para jogar, testar e acompanhar cada nova versão.</p></div>
+          <div class="follow-card reveal"><div class="follow-card-top"><span class="status-dot"></span><span>CANAL OFICIAL / EM BREVE</span></div><h3>A primeira arena<br /><em>ainda está abrindo.</em></h3><button class="button button-primary full-width placeholder-action" type="button" data-message="Os canais oficiais serão adicionados aqui assim que forem publicados.">Avisar quando estiver pronto <span aria-hidden="true">↗</span></button><small>Por enquanto, acompanhe o desenvolvimento pelo repositório.</small><a class="repository-link" href="https://github.com/alvaro209890/anime-verse-battlegrounds" target="_blank" rel="noreferrer">Abrir repositório <span aria-hidden="true">↗</span></a></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer"><div class="container footer-grid"><div class="brand footer-brand"><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span><span class="brand-copy"><strong>ANIME VERSE</strong><em>BATTLEGROUNDS</em></span></div><div class="footer-note">Um RPG de ação em construção.<br />Feito para quem lê o combate.</div><div class="footer-links"><a href="#top">Voltar ao topo ↑</a><a href="https://github.com/alvaro209890/anime-verse-battlegrounds" target="_blank" rel="noreferrer">GitHub ↗</a></div></div><div class="container footer-bottom"><span>© 2026 Anime Verse Battlegrounds</span><span>PT-BR / BR → GLOBAL</span><span>Conceito e materiais em desenvolvimento</span></div></footer>
+
+    <div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-labelledby="lightbox-title"><div class="lightbox-backdrop" data-close-lightbox></div><div class="lightbox-panel"><button class="lightbox-close" type="button" data-close-lightbox aria-label="Fechar visualização">×</button><img id="lightbox-image" src="" alt="" /><p id="lightbox-title"></p></div></div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <audio id="ambient-audio" loop preload="none"><source src="assets/audio/battle-theme.mp3" type="audio/mpeg" /></audio>
+    <script src="script.js"></script>
+  </body>
+</html>
