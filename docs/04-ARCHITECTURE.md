@@ -390,7 +390,7 @@ Regras de implementação futura:
 | ProfileStore | Session locking e ciclo de perfil atrás de adaptador | Dependência presente; contrato, takeover e DataStore real ainda precisam de teste publicado |
 | GitHub Actions | Formato, lint, testes, dependências e build no push/PR | Pipeline existente; sem credencial ou deploy automático |
 
-Pipeline atual: StyLua check → Selene → auditoria visual → 241 testes de domínio + 76 de animação/apresentação + 67 de fuzz + 19 de combate ponta a ponta → instalação Wally → build Rojo. A evolução aprovada acrescenta type check Roblox e fixtures de migração sem remover os gates existentes. A CI não terá credenciais de produção e não publicará place automaticamente.
+Pipeline atual: StyLua check → Selene → auditoria visual → snapshot canônico → 241 testes de domínio + 76 de animação/apresentação + 67 de fuzz + 19 de combate ponta a ponta → instalação Wally → build Rojo. A evolução aprovada acrescenta type check Roblox e fixtures de migração sem remover os gates existentes. A CI não terá credenciais de produção e não publicará place automaticamente.
 
 ## 13. Ordem arquitetural por fase
 

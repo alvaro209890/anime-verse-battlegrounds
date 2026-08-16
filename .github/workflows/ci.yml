@@ -26,6 +26,9 @@ jobs:
       - name: Inventário visual — hashes, vereditos e catálogos
         run: python3 scripts/audit_visual_assets.py --check
 
+      - name: Snapshot canônico — testes, NPCs, áudio e docs
+        run: python3 scripts/audit_snapshot.py --check
+
       - name: Testes unitários (Lune)
         run: |
           lune run tests/run.luau

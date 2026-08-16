@@ -310,11 +310,12 @@ end)
 test("áudio: catálogo passa validação", function()
 	local ok, reason = CombatAudio.validate()
 	assertTrue(ok, reason)
+	assertEq(#CombatAudio.all(), 15, "15 deixas no catálogo")
 end)
 
 test("áudio: todo arquivo de origem existe no disco", function()
 	local files = CombatAudio.sourceFiles()
-	assertTrue(#files > 0, "catálogo referencia ao menos um arquivo")
+	assertEq(#files, 33, "33 ogg distintos a publicar")
 	for _, path in files do
 		assertTrue(fs.isFile(path), ("arquivo existe: %s"):format(path))
 	end
@@ -399,7 +400,7 @@ test("áudio: todo o catálogo aponta para um asset tocável", function()
 			("deixa %s sem assetId válido (%s)"):format(entry.id, entry.assetId)
 		)
 	end
-	assertTrue(count >= 15, "catálogo completo percorrido")
+	assertEq(count, 15, "catálogo completo percorrido")
 end)
 
 test("áudio: com assetId publicado, resolve com pitch dentro da faixa", function()

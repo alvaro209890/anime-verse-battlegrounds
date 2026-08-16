@@ -3,7 +3,7 @@
 RPG / Action RPG de mundo aberto no Roblox (Luau) — combate estilo battlegrounds com
 progressão persistente, loadout customizável e ressonância de famílias de energia.
 
-> **Status em 2026-08-13 (17h):** itens 1–13 do backlog F0 fechados em código/headless. **Skins do spawn:** Instrutor do Limiar com cabeça visível, rosto em peças, capuz, cabelo e casaco umbral; dummy de treino com cabeça, palha, alvo de três anéis e poste. As cabeças anteriores usavam um FileMesh que não carregava (NPCs sem cabeça) e nasciam de costas para a praça.
+> **Status em 2026-08-16:** itens 1–13 do backlog F0 fechados em código/headless. Validação total desta rodada: 241/76/67/19 (403 casos), auditoria visual, snapshot canônico (`docs/ci-snapshot.json`) e docs alinhados ao catálogo implementado. **Não é F0 pronta:** falta Play (W1/A1/R1/W2). Skins do spawn e dummy de treino continuam como na rodada visual; o dummy é alvo — o ciclo de ataque existe no domínio e **não** entra no Heartbeat.
 > **Runtime:** pare o Play e rode de novo para recarregar o `WorldService`. Correções da rodada anterior seguem valendo: chegue no vão do portão norte e **SEGURE E**.
 
 ![Capa conceitual do Anime Verse: Battlegrounds](docs/assets/anime-verse-battlegrounds-cover.png)
@@ -69,10 +69,11 @@ Esse `.rbxl` é um artefato local ignorado pelo Git: atualizar ou baixar a branc
 Snapshot histórico gerado no Windows em 2026-08-14 13:53:05 -03: `275301` bytes,
 SHA256 `B90E9417A1CB59D3B372CFCEB2DD831FB5C58274971F716071AE379A1072C697`.
 
-O check headless de 2026-08-15 (`rojo build -o build.rbxl`, commit `86228ee`)
+O check headless de 2026-08-16 (`rojo build -o /tmp/build.rbxl`, `src/` inalterado desde `2a713af`)
 produziu `318988` bytes, SHA256
 `bc6b5056f238787ce2e857f835a1486b193f4f08db7a38bdccb4878d7f83bff4`. Esses
-dados comprovam a geração do arquivo, não a execução dele no Studio.
+dados comprovam a geração do arquivo, não a execução dele no Studio. O commit
+`86228ee` (15/08) é o registro histórico da mesma árvore de build, não o HEAD.
 
 **`anime-verse-battlegrounds.rbxl` é o único place que se abre.** Qualquer outro
 `.rbxl` na raiz é descartável e não recebe as mudanças do repositório — abrir um

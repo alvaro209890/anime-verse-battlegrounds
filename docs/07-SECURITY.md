@@ -303,7 +303,7 @@ Ataque de spam não deve consumir budget de save. Rejeições repetidas são amo
 ## 11. Segredos, dependências e CI
 
 - nenhum segredo, token de place, chave de API ou credencial em repositório, atributo replicado ou log;
-- a CI atual usa permissões mínimas e executa StyLua, Selene, auditoria visual, 241 testes de domínio, 76 de animação/apresentação, 67 casos de fuzz determinístico, 19 de combate ponta a ponta, Wally e build Rojo;
+- a CI atual usa permissões mínimas e executa StyLua, Selene, auditoria visual, snapshot canônico, 241 testes de domínio, 76 de animação/apresentação, 67 casos de fuzz determinístico, 19 de combate ponta a ponta, Wally e build Rojo;
 - Wally packages passam por revisão de licença, manutenção e superfície de código;
 - a evolução da CI adicionará type/schema/migrações; publicação continua não automática e sem credenciais de produção;
 - ambientes de desenvolvimento, staging e produção usam identificadores e stores separados;
