@@ -21,11 +21,11 @@ Nas configurações do repositório, abra **Pages**, escolha a branch que conté
 
 O texto usa a documentação atual do projeto como fonte e separa o que está implementado/validado automaticamente do que ainda é roadmap. Os canais sociais e o link do jogo permanecem em estado de “em breve” até que os destinos oficiais sejam definidos.
 
-As imagens em `assets/images/` incluem visuais complementares gerados para a landing page. O vídeo `assets/video/anime-verse-trailer-generated.mp4` é o trailer atual, com cerca de 37 segundos, composto exclusivamente por artes geradas, animações de câmera, flashes, expansão de domínio violeta e a trilha Jackpot integrada; o poster correspondente é `assets/images/anime-verse-trailer-generated-poster.jpg`. O clipe `assets/video/trailer-domain-expansion-vfx.mp4` é o interlúdio de VFX gerado usado na montagem. Nenhum gameplay gravado pelo usuário é usado pelo player atual. A trilha principal do site é `assets/audio/jackpot.mp3`, convertida e normalizada a partir do arquivo enviado para esta atualização.
+O vídeo `assets/video/anime-verse-trailer-animated.mp4` é o trailer atual, com cerca de 35 segundos, baseado no trailer animado de referência e ampliado com cortes de vídeo, expansão de domínio, dois clipes de VFX em movimento, flashes de transição e a trilha Jackpot integrada; o poster correspondente é `assets/images/anime-verse-trailer-animated-poster.jpg`. Os clipes `assets/video/trailer-domain-expansion-vfx.mp4` e `assets/video/trailer-violet-pulse-vfx.mp4` são sequências de VFX animadas usadas na montagem. Nenhuma foto estática é usada no corpo do trailer, e o gameplay gravado pelo usuário não é usado pelo player atual. A trilha principal do site é `assets/audio/jackpot.mp3`, convertida e normalizada a partir do arquivo enviado para esta atualização.
 
 ## Personalização rápida
 
-Para trocar o destino do CTA principal, edite os links no `index.html`. Para substituir a trilha, troque `assets/audio/jackpot.mp3` e mantenha o mesmo caminho ou ajuste o elemento `<audio>`. Para trocar o trailer, substitua `assets/video/anime-verse-trailer-generated.mp4` e o poster correspondente. Para adicionar canais oficiais, substitua o botão “Avisar quando estiver pronto” por links reais e remova o estado de placeholder no `script.js`.
+Para trocar o destino do CTA principal, edite os links no `index.html`. Para substituir a trilha, troque `assets/audio/jackpot.mp3` e mantenha o mesmo caminho ou ajuste o elemento `<audio>`. Para trocar o trailer, substitua `assets/video/anime-verse-trailer-animated.mp4` e o poster correspondente. Para adicionar canais oficiais, substitua o botão “Avisar quando estiver pronto” por links reais e remova o estado de placeholder no `script.js`.
 
 ## Acessibilidade e performance
 
