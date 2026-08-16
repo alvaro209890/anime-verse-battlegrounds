@@ -1,4 +1,6 @@
 const body = document.body;
+const root = document.documentElement;
+const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 const topbar = document.querySelector('#topbar');
 const progressLine = document.querySelector('#progress-line');
 const heroBackdrop = document.querySelector('[data-parallax]');
@@ -72,8 +74,8 @@ mobileMenu?.querySelectorAll('a').forEach((link) => link.addEventListener('click
 const syncAudioLabel = (isPlaying) => {
   if (!audioToggle) return;
   audioToggle.setAttribute('aria-pressed', String(isPlaying));
-  audioToggle.setAttribute('title', isPlaying ? 'Desativar trilha ambiente' : 'Ativar trilha ambiente');
-  if (audioLabel) audioLabel.textContent = isPlaying ? 'Som on' : 'Som off';
+  audioToggle.setAttribute('title', isPlaying ? 'Desativar trilha Jackpot' : 'Ativar trilha Jackpot');
+  if (audioLabel) audioLabel.textContent = isPlaying ? 'Jackpot on' : 'Som off';
 };
 
 audioToggle?.addEventListener('click', async () => {
@@ -149,3 +151,19 @@ document.querySelectorAll('a[href^="#"]').forEach((link) => {
     target.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
   });
 });
+
+const updatePointerMotion = (event) => {
+  if (motionQuery.matches || !window.matchMedia('(pointer: fine)').matches) return;
+  const x = ((event.clientX / window.innerWidth) - 0.5) * 2;
+  const y = ((event.clientY / window.innerHeight) - 0.5) * 2;
+  root.style.setProperty('--pointer-x', `${(x * -8).toFixed(2)}px`);
+  root.style.setProperty('--pointer-y', `${(y * -6).toFixed(2)}px`);
+  root.style.setProperty('--pointer-tilt', `${(x * 0.6).toFixed(2)}deg`);
+};
+
+window.addEventListener('pointermove', updatePointerMotion, { passive: true });
+window.addEventListener('blur', () => {
+  root.style.setProperty('--pointer-x', '0px');
+  root.style.setProperty('--pointer-y', '0px');
+  root.style.setProperty('--pointer-tilt', '0deg');
+}, { passive: true });

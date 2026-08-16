@@ -238,3 +238,53 @@ img, video { display: block; max-width: 100%; }
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   .reveal { opacity: 1; transform: none; }
 }
+
+/* Motion pass 02 — movimento atmosférico contínuo, discreto e GPU-friendly */
+.site-noise { animation: noise-drift 13s steps(2, end) infinite; }
+.hero::before { content: ''; position: absolute; inset: -24%; z-index: -2; pointer-events: none; opacity: .35; background: radial-gradient(ellipse at 28% 58%, rgba(90, 214, 255, .18), transparent 32%), radial-gradient(ellipse at 74% 28%, rgba(155, 99, 255, .2), transparent 36%), radial-gradient(ellipse at 58% 78%, rgba(255, 135, 92, .12), transparent 28%); filter: blur(28px); animation: aurora-drift 19s ease-in-out infinite alternate; }
+.hero-grid { animation: grid-drift 22s ease-in-out infinite alternate; }
+.hero-backdrop { will-change: transform; }
+.hero-orbit-a, .hero-orbit-b { will-change: transform; }
+.hero-orbit-a::after, .hero-orbit-b::after { content: ''; position: absolute; top: 13%; left: 8%; width: 5px; height: 5px; border-radius: 50%; background: var(--violet-bright); box-shadow: 0 0 18px 4px rgba(185, 140, 255, .75); }
+.hero-orbit-b::after { top: auto; right: 10%; bottom: 13%; left: auto; width: 4px; height: 4px; background: var(--blue); box-shadow: 0 0 16px 4px rgba(90, 214, 255, .65); }
+.hero-footnote .status-dot { animation: dot-breathe 2.4s ease-in-out infinite; }
+.audio-toggle[aria-pressed='true'] { color: var(--violet-bright); text-shadow: 0 0 12px rgba(185, 140, 255, .6); }
+.signal-strip::before { content: ''; position: absolute; top: 0; left: -20%; width: 17%; height: 1px; background: linear-gradient(90deg, transparent, var(--blue), transparent); animation: rail-sweep 8s var(--ease-in-out) infinite; }
+.section-dark::before { content: ''; position: absolute; top: 0; left: 0; width: 34%; height: 1px; background: linear-gradient(90deg, transparent, rgba(90, 214, 255, .75), transparent); opacity: .45; animation: section-scan 12s var(--ease-in-out) infinite; }
+.combat-bg { will-change: transform, opacity; animation: background-breathe 13s ease-in-out infinite alternate; }
+.combat-visual::before { content: ''; position: absolute; z-index: 1; inset: 0; pointer-events: none; opacity: .22; background: repeating-linear-gradient(0deg, transparent 0 5px, rgba(185, 140, 255, .055) 6px 7px); mix-blend-mode: screen; animation: scanline-drift 7s linear infinite; }
+.combat-visual img { will-change: transform; }
+.energy-core { will-change: transform; animation: core-float 8s ease-in-out infinite; }
+.energy-core::after { content: ''; position: absolute; right: 6%; bottom: 7%; width: 80px; height: 1px; background: linear-gradient(90deg, transparent, var(--ember), transparent); opacity: .6; animation: ember-spark 3.8s ease-in-out infinite; }
+.family-card.active { isolation: isolate; }
+.family-card.active::after { content: ''; position: absolute; z-index: -1; top: -30%; right: -12%; width: 160px; height: 160px; border: 1px solid rgba(185, 140, 255, .18); border-radius: 50%; box-shadow: 0 0 32px rgba(155, 99, 255, .12); animation: card-orbit 9s linear infinite; }
+.current .roadmap-status .status-dot { animation: dot-breathe 2.2s ease-in-out infinite; }
+.route-node.active span { text-shadow: 0 0 14px rgba(185, 140, 255, .85); }
+.route-line:not(.dim) i { animation: route-pulse 2.8s ease-in-out infinite; }
+.trailer::before { content: ''; position: absolute; z-index: 1; top: 0; left: -18%; width: 18%; height: 100%; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .08), transparent); transform: skewX(-18deg); animation: trailer-sheen 11s var(--ease-in-out) infinite; }
+.gallery-item::before { content: ''; position: absolute; z-index: 1; top: 0; left: -70%; width: 45%; height: 100%; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .08), transparent); transform: skewX(-18deg); animation: gallery-sheen 12s var(--ease-in-out) infinite; }
+.follow::after { content: ''; position: absolute; right: -5%; bottom: 12%; width: 42%; height: 1px; background: linear-gradient(90deg, transparent, var(--ember), transparent); opacity: .34; animation: follow-scan 10s var(--ease-in-out) infinite; }
+
+@keyframes noise-drift { 0%, 100% { transform: translate3d(0, 0, 0); } 25% { transform: translate3d(-1%, 1%, 0); } 50% { transform: translate3d(1%, -1%, 0); } 75% { transform: translate3d(1%, 1%, 0); } }
+@keyframes aurora-drift { 0% { transform: translate3d(-3%, 1%, 0) rotate(-1deg) scale(.98); opacity: .24; } 50% { transform: translate3d(3%, -2%, 0) rotate(1deg) scale(1.04); opacity: .42; } 100% { transform: translate3d(-1%, 3%, 0) rotate(-.5deg) scale(1); opacity: .3; } }
+@keyframes grid-drift { 0% { transform: perspective(800px) rotateX(56deg) scale(2.2) translate3d(-2%, 18%, 0); } 100% { transform: perspective(800px) rotateX(56deg) scale(2.2) translate3d(2%, 14%, 0); } }
+@keyframes dot-breathe { 0%, 100% { opacity: .55; transform: scale(.82); box-shadow: 0 0 8px var(--blue); } 50% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 19px 3px rgba(90, 214, 255, .55); } }
+@keyframes rail-sweep { 0% { transform: translateX(0); opacity: 0; } 16%, 72% { opacity: .8; } 100% { transform: translateX(820%); opacity: 0; } }
+@keyframes section-scan { 0%, 100% { transform: translateX(-20%); opacity: 0; } 18%, 70% { opacity: .7; } 90% { transform: translateX(320%); opacity: 0; } }
+@keyframes background-breathe { 0% { transform: translate3d(-2%, 0, 0) scale(1); opacity: .08; } 100% { transform: translate3d(3%, -1%, 0) scale(1.06); opacity: .16; } }
+@keyframes scanline-drift { 0% { transform: translateY(-12%); } 100% { transform: translateY(12%); } }
+@keyframes core-float { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(0, -9px, 0); } }
+@keyframes ember-spark { 0%, 100% { transform: translateX(0) scaleX(.55); opacity: .1; } 45% { transform: translateX(-30px) scaleX(1); opacity: .8; } 65% { transform: translateX(13px) scaleX(.7); opacity: .22; } }
+@keyframes card-orbit { to { transform: rotate(360deg); } }
+@keyframes route-pulse { 0%, 100% { opacity: .45; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.35); } }
+@keyframes trailer-sheen { 0%, 70%, 100% { left: -18%; opacity: 0; } 78% { opacity: 1; } 90% { left: 112%; opacity: 0; } }
+@keyframes gallery-sheen { 0%, 74%, 100% { left: -70%; opacity: 0; } 82% { opacity: 1; } 96% { left: 125%; opacity: 0; } }
+@keyframes follow-scan { 0%, 100% { transform: translateX(12%); opacity: 0; } 18%, 76% { opacity: .55; } 92% { transform: translateX(-220%); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .site-noise, .hero::before, .hero-grid, .hero-orbit-a, .hero-orbit-b, .hero-footnote .status-dot, .signal-strip::before, .section-dark::before, .combat-bg, .combat-visual::before, .energy-core, .energy-core::after, .family-card.active::after, .current .roadmap-status .status-dot, .route-line:not(.dim) i, .trailer::before, .gallery-item::before, .follow::after { animation: none !important; }
+}
+
+.hero-backdrop { transform: translate3d(var(--pointer-x, 0px), var(--parallax, 0px), 0) scale(1.04); }
+.hero-content { transform: translate3d(calc(var(--pointer-x, 0px) * -.32), calc(var(--pointer-y, 0px) * -.32), 0) rotateX(var(--pointer-tilt, 0deg)); transition: transform .35s var(--ease-out); transform-origin: 50% 50%; }
+@media (max-width: 720px), (pointer: coarse) { .hero-content { transform: none; } }
