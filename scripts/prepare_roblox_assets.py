@@ -15,7 +15,6 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
-import numpy as np
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,6 +39,25 @@ REFERENCE_SOURCES = [
     "vfx-ground-break-impact.png",
     "animation-combat-poses-board.png",
     "animation-heavy-strike-poses-board.png",
+    "combat-presentation-reference.png",
+    "defense-guard-presentation.png",
+    "dash-run-presentation.png",
+    "ground-break-impact-presentation.png",
+    "impact-vfx-micro-library.png",
+    "domain-expansion-concept.png",
+    "domain-expansion-district-lumen.png",
+    "domain-expansion-safe-plaza.png",
+    "domain-expansion-border-gate.png",
+    "domain-expansion-modular-ruins.png",
+    "domain-expansion-vfx-moodboard.png",
+    "ability-future-energy-projectile.png",
+    "ability-future-area-domain.png",
+    "ability-future-mobility-burst.png",
+    "ability-future-summon-construct.png",
+    "ability-future-barrier-parry.png",
+    "ability-future-ultimate-composition.png",
+    "ability-future-environment-break.png",
+    "ability-future-vfx-micro-library.png",
 ]
 
 
@@ -51,15 +69,17 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def save_png_array(array: np.ndarray, destination: Path) -> None:
+def save_png_array(array, destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
-    Image.fromarray(array.astype(np.uint8), mode="RGB" if array.ndim == 3 else "L").save(
+    Image.fromarray(array.astype("uint8"), mode="RGB" if array.ndim == 3 else "L").save(
         destination, format="PNG", optimize=True
     )
 
 
 def save_pbr_maps(source: Path, stem: str, size: tuple[int, int]) -> list[tuple[Path, str, str]]:
     """Gera mapas candidatos para SurfaceAppearance e uma máscara de emissão de referência."""
+    import numpy as np
+
     with Image.open(source) as image:
         rgb = image.convert("RGB").resize(size, Image.Resampling.LANCZOS)
         color = np.asarray(rgb, dtype=np.float32) / 255.0
@@ -155,51 +175,87 @@ def image_mode(path: Path) -> str:
         return image.mode
 
 
+def load_existing_manifest() -> dict[str, object]:
+    manifest_path = OUTPUT_DIR / "roblox-asset-manifest.json"
+    if not manifest_path.is_file():
+        return {"textureSets": [], "assets": []}
+    return json.loads(manifest_path.read_text(encoding="utf-8"))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--clean", action="store_true", help="remove o diretório de saída antes de gerar")
+    parser.add_argument(
+        "--previews-only",
+        action="store_true",
+        help="gera só JPEGs de briefing que faltam; não regenera mapas PBR (hashes estáveis)",
+    )
     args = parser.parse_args()
+
+    if args.clean and args.previews_only:
+        raise SystemExit("--clean e --previews-only não combinam: --clean apagaria os PBR")
 
     if args.clean and OUTPUT_DIR.exists():
         shutil.rmtree(OUTPUT_DIR)
     TEXTURE_DIR.mkdir(parents=True, exist_ok=True)
     REFERENCE_DIR.mkdir(parents=True, exist_ok=True)
 
+    existing = load_existing_manifest()
     assets: list[dict[str, object]] = []
     texture_sets: list[dict[str, object]] = []
 
-    for source_name, (stem, size) in TEXTURE_TARGETS.items():
-        source = SOURCE_DIR / source_name
-        outputs = save_pbr_maps(source, stem, size)
-        output_by_kind = {kind: output.relative_to(ROOT).as_posix() for output, kind, _ in outputs}
-        texture_sets.append(
-            {
-                "source": source.relative_to(ROOT).as_posix(),
-                "baseName": stem,
-                "colorMap": output_by_kind["color_map"],
-                "normalMap": output_by_kind["normal_map_candidate"],
-                "roughnessMap": output_by_kind["roughness_map_candidate"],
-                "metalnessMap": output_by_kind["metalness_map_candidate"],
-                "emissiveMaskReference": output_by_kind["emissive_mask_reference"],
-                "runtimeLinked": False,
-            }
+    if args.previews_only:
+        texture_sets = list(existing.get("textureSets") or [])
+        assets.extend(
+            entry
+            for entry in existing.get("assets") or []
+            if entry.get("kind") != "reference_preview"
         )
-        for output, kind, _ in outputs:
-            if kind == "color_map":
-                use = "candidato a ColorMap para SurfaceAppearance; requer importação e teste no Studio"
-            elif kind == "normal_map_candidate":
-                use = "candidato a NormalMap; requer revisão de intensidade e teste em MeshPart"
-            elif kind == "roughness_map_candidate":
-                use = "candidato a RoughnessMap; valor inicial derivado de brilho e material"
-            elif kind == "metalness_map_candidate":
-                use = "candidato a MetalnessMap; pedra configurada como não metálica"
-            else:
-                use = "máscara emissiva de referência; Roblox não a liga automaticamente ao runtime"
-            record_asset(assets, source, output, kind, use)
+    else:
+        for source_name, (stem, size) in TEXTURE_TARGETS.items():
+            source = SOURCE_DIR / source_name
+            outputs = save_pbr_maps(source, stem, size)
+            output_by_kind = {kind: output.relative_to(ROOT).as_posix() for output, kind, _ in outputs}
+            texture_sets.append(
+                {
+                    "source": source.relative_to(ROOT).as_posix(),
+                    "baseName": stem,
+                    "colorMap": output_by_kind["color_map"],
+                    "normalMap": output_by_kind["normal_map_candidate"],
+                    "roughnessMap": output_by_kind["roughness_map_candidate"],
+                    "metalnessMap": output_by_kind["metalness_map_candidate"],
+                    "emissiveMaskReference": output_by_kind["emissive_mask_reference"],
+                    "runtimeLinked": False,
+                }
+            )
+            for output, kind, _ in outputs:
+                if kind == "color_map":
+                    use = "candidato a ColorMap para SurfaceAppearance; requer importação e teste no Studio"
+                elif kind == "normal_map_candidate":
+                    use = "candidato a NormalMap; requer revisão de intensidade e teste em MeshPart"
+                elif kind == "roughness_map_candidate":
+                    use = "candidato a RoughnessMap; valor inicial derivado de brilho e material"
+                elif kind == "metalness_map_candidate":
+                    use = "candidato a MetalnessMap; pedra configurada como não metálica"
+                else:
+                    use = "máscara emissiva de referência; Roblox não a liga automaticamente ao runtime"
+                record_asset(assets, source, output, kind, use)
+
+    existing_previews = {
+        entry["output"]: entry
+        for entry in existing.get("assets") or []
+        if entry.get("kind") == "reference_preview"
+    }
 
     for source_name in REFERENCE_SOURCES:
         source = SOURCE_DIR / source_name
+        if not source.is_file():
+            raise SystemExit(f"referência ausente: {source}")
         output = REFERENCE_DIR / f"{source.stem}_preview.jpg"
+        rel = output.relative_to(ROOT).as_posix()
+        if args.previews_only and output.is_file() and rel in existing_previews:
+            assets.append(existing_previews[rel])
+            continue
         save_jpeg(source, output)
         record_asset(
             assets,

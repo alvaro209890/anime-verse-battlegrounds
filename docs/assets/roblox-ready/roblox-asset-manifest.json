@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-15T21:10:31.419991+00:00",
+  "generatedAt": "2026-08-16T00:22:57.368892+00:00",
   "sourcePolicy": "Conversão determinística de PNG conceitual; nenhum output é ligado automaticamente ao runtime.",
   "robloxImportPolicy": "Color, Normal, Roughness e Metalness são candidatos a SurfaceAppearance; previews e máscaras são referências. IDs, materiais, meshes, partículas e animações exigem validação separada no Roblox Studio.",
   "textureSets": [
@@ -347,6 +347,253 @@
       "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
       "runtime_linked": false,
       "sha256": "4d37b6e6851a7ffb2c115d735a503e01cfefe8b648f54d17b13ce8bbe77fad69"
+    },
+    {
+      "source": "docs/assets/combat-presentation-reference.png",
+      "output": "docs/assets/roblox-ready/references/combat-presentation-reference_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "58407462aefecacc53ea687aecd431f7c2b62700ffbbbf905c863fdea627a236"
+    },
+    {
+      "source": "docs/assets/defense-guard-presentation.png",
+      "output": "docs/assets/roblox-ready/references/defense-guard-presentation_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 960
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "5d9ac2572fd83e6c8f2af0e69f5916f9f5112e1adb560bad080de89aadc52ab5"
+    },
+    {
+      "source": "docs/assets/dash-run-presentation.png",
+      "output": "docs/assets/roblox-ready/references/dash-run-presentation_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 960
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "446b5c5d8babcb2caf401dc90db188cef48336f9ee74fcc5ebacaaa9a91b8c56"
+    },
+    {
+      "source": "docs/assets/ground-break-impact-presentation.png",
+      "output": "docs/assets/roblox-ready/references/ground-break-impact-presentation_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 960
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "cf1299637c162cb6be808a1c8043aac75ced1477d6ce2e80cba8a9ccb6fea6f0"
+    },
+    {
+      "source": "docs/assets/impact-vfx-micro-library.png",
+      "output": "docs/assets/roblox-ready/references/impact-vfx-micro-library_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "484f6522b4bb16db2d107f276e515602907ef50d7e1972a575d01f45808182a9"
+    },
+    {
+      "source": "docs/assets/domain-expansion-concept.png",
+      "output": "docs/assets/roblox-ready/references/domain-expansion-concept_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "11ced9f0ef64357ccc429d823d4fe97cb88559b41fb21e58d84eb6c25d46131d"
+    },
+    {
+      "source": "docs/assets/domain-expansion-district-lumen.png",
+      "output": "docs/assets/roblox-ready/references/domain-expansion-district-lumen_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "89e78ae5b753898e7ec8b9aa38d0eb4c4e2e730a7bd9f2d7b59069e5d4c20581"
+    },
+    {
+      "source": "docs/assets/domain-expansion-safe-plaza.png",
+      "output": "docs/assets/roblox-ready/references/domain-expansion-safe-plaza_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "33ed7bf5611e8a6fc651c6a5345d46f418084f1cca571171b9cc1ae8dd77e953"
+    },
+    {
+      "source": "docs/assets/domain-expansion-border-gate.png",
+      "output": "docs/assets/roblox-ready/references/domain-expansion-border-gate_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "842d9617b6457e587ebd9802837b15b8d1ba49e38059324decf608a8d37fdf9d"
+    },
+    {
+      "source": "docs/assets/domain-expansion-modular-ruins.png",
+      "output": "docs/assets/roblox-ready/references/domain-expansion-modular-ruins_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "da650cd467b5b77289b0829bb1f98b96599f105c94882dfb5d7009e9f82224d7"
+    },
+    {
+      "source": "docs/assets/domain-expansion-vfx-moodboard.png",
+      "output": "docs/assets/roblox-ready/references/domain-expansion-vfx-moodboard_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "49d336b84499315a63dbd893cbf88c5363ded1ea3e2161a9a3da2ffe7b4e43c2"
+    },
+    {
+      "source": "docs/assets/ability-future-energy-projectile.png",
+      "output": "docs/assets/roblox-ready/references/ability-future-energy-projectile_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "f2c4defe17c46e57e5a5775c25a921785fa0897dfad61bdede368606f6cfccdb"
+    },
+    {
+      "source": "docs/assets/ability-future-area-domain.png",
+      "output": "docs/assets/roblox-ready/references/ability-future-area-domain_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "18664cd82042e2d123efe8457515375071bfe4d27ce983e3a22d35531a924671"
+    },
+    {
+      "source": "docs/assets/ability-future-mobility-burst.png",
+      "output": "docs/assets/roblox-ready/references/ability-future-mobility-burst_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "75aba8e4ba2606e980547894550b77472498b2806cb6f3be51ec08787f0c829d"
+    },
+    {
+      "source": "docs/assets/ability-future-summon-construct.png",
+      "output": "docs/assets/roblox-ready/references/ability-future-summon-construct_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "d3193e575ceb11b4e27a43e20c48d970a71a5744fcf5ca6f9de6007a8863224e"
+    },
+    {
+      "source": "docs/assets/ability-future-barrier-parry.png",
+      "output": "docs/assets/roblox-ready/references/ability-future-barrier-parry_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "55511bfd16dd2ef7761eb3ffae44a4b45223019299e9ae0e379da5a40f0b0169"
+    },
+    {
+      "source": "docs/assets/ability-future-ultimate-composition.png",
+      "output": "docs/assets/roblox-ready/references/ability-future-ultimate-composition_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "88f573b7680b9172735b34d320aac927819f23415d3941cdcea36215f5525cdf"
+    },
+    {
+      "source": "docs/assets/ability-future-environment-break.png",
+      "output": "docs/assets/roblox-ready/references/ability-future-environment-break_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "39831802b196f8ce9882b6f637f1bedec42160657337145c655e88e7893632b3"
+    },
+    {
+      "source": "docs/assets/ability-future-vfx-micro-library.png",
+      "output": "docs/assets/roblox-ready/references/ability-future-vfx-micro-library_preview.jpg",
+      "kind": "reference_preview",
+      "dimensions": {
+        "width": 1280,
+        "height": 720
+      },
+      "format": "JPEG/RGB",
+      "roblox_use": "briefing visual; não é decal, mesh, partícula ou animação publicada",
+      "runtime_linked": false,
+      "sha256": "40d225cdfac064d5163acb33709efb93d65545f127c499b67c9a56bd7ec93b9e"
     }
   ]
 }

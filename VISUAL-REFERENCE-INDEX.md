@@ -6,10 +6,13 @@ Este índice conecta as imagens conceituais do Anime Verse Battlegrounds aos doc
 
 Comece pela linha da referência desejada. Consulte o documento canônico, revise a receita ou pose relacionada e, somente depois, execute o protocolo em `docs/26-VISUAL-VALIDATION-CHECKLIST.md`. Uma referência só pode ser promovida a asset de runtime depois de produção separada, revisão de licença, otimização e validação no Roblox Studio.
 
-> **15/08/2026:** o que existe hoje em runtime continua sendo 100% procedural e
-> dirigido por dados — nenhuma imagem deste índice está ligada ao place. O
-> estado atual da apresentação do mundo, das skins de inimigo e dos sinais de
-> fronteira está em [`docs/31-WILD-VISUAL-PASS.md`](docs/31-WILD-VISUAL-PASS.md).
+> **16/08/2026:** o que existe hoje em runtime continua sendo 100% procedural e
+> dirigido por dados — nenhuma imagem deste índice está ligada ao place. A
+> usabilidade (vitrine, PBR candidato, receita, F1-only, não importar) está em
+> [`docs/33-ASSET-USABILITY.md`](docs/33-ASSET-USABILITY.md). Hashes e vereditos
+> executáveis estão em [`docs/assets/visual-inventory.json`](docs/assets/visual-inventory.json).
+> O estado da apresentação do mundo, das skins de inimigo e dos sinais de
+> fronteira permanece em [`docs/31-WILD-VISUAL-PASS.md`](docs/31-WILD-VISUAL-PASS.md).
 
 | Referência | Sistema orientado | Documento canônico | Fase | Evidência necessária |
 |---|---|---|---|---|
@@ -57,10 +60,13 @@ Comece pela linha da referência desejada. Consulte o documento canônico, revis
 |---|---|
 | **Conceito** | PNG original usado para direção, comparação e briefing. |
 | **Receita headless** | Pose/VFX determinístico testado sem Instances reais. |
+| **Candidato de vitrine** | Capa/thumbnail/ícone derivados; `published: false` até P1. |
+| **Candidato de textura** | ColorMap/PBR em `roblox-ready/`; ainda sem `SurfaceAppearance` no place. |
 | **Candidato externo** | Asset aberto registrado, ainda não integrado nem necessariamente baixado. |
+| **F1-only** | Direção de habilidade ou célula urbana futura; não implementar na F0. |
 | **Runtime validado** | Integração observada no Roblox Studio com evidência reproduzível. |
 
-O estado atual das imagens permanece **Conceito**. As receitas de defesa e dash possuem também estado **Receita headless**; nenhum dos gates W1/A1/R1 é concluído por este índice.
+O estado atual das imagens permanece **Conceito**, com as peças de loja em **Candidato de vitrine** e os três conjuntos PBR em **Candidato de textura**. As receitas de defesa e dash possuem também estado **Receita headless**. Nenhum dos gates W1/A1/R1/P1 é concluído por este índice. As oito imagens `ability-future-*` são **F1-only**.
 
 ## Documentos relacionados
 
@@ -71,3 +77,5 @@ O estado atual das imagens permanece **Conceito**. As receitas de defesa e dash 
 - [`docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md`](docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md): atlas do mundo.
 - [`docs/assets/AI-GENERATED-ASSETS.md`](docs/assets/AI-GENERATED-ASSETS.md): procedência, hashes e limites dos PNGs.
 - [`docs/27-FUTURE-ABILITY-ASSET-CATALOG.md`](docs/27-FUTURE-ABILITY-ASSET-CATALOG.md): habilidades futuras, assets públicos, licenças e promoção para produção.
+- [`docs/33-ASSET-USABILITY.md`](docs/33-ASSET-USABILITY.md): o que as imagens geradas podem virar agora, e o que não deve ser importado.
+- [`docs/assets/visual-inventory.json`](docs/assets/visual-inventory.json): hashes, dimensões e vereditos conferidos no CI.

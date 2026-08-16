@@ -94,7 +94,7 @@ A expansão não deve começar por uma grande cidade completa. O critério corre
 
 As imagens deste documento **não** provam que Distrito Lumen, seus serviços, passarelas ou ruínas já existem no jogo. Elas também não definem dimensões de hitbox, streaming, pathfinding, colisão, DataStore, telemetria ou desempenho. Toda integração futura precisa gerar código, testes, build e evidência de runtime separados.
 
-Os assets externos citados são candidatos de pesquisa. A presença de um link ou imagem de referência não significa que o arquivo foi importado, publicado, licenciado por uma conta Roblox ou adicionado ao place. Para produção, cada modelo deve ter origem, licença, escala, colisão, triagem de segurança e custo registrados.
+Os assets externos citados são candidatos de pesquisa. A presença de um link ou imagem de referência não significa que o arquivo foi importado, publicado, licenciado por uma conta Roblox ou adicionado ao place. Para produção, cada modelo deve ter origem, licença, escala, colisão, triagem de segurança e custo registrados. O Kenney Nature Kit, neste repositório, tem **somente** `License.txt` e README — malhas não foram versionadas; o greybox continua nativo. Hashes das imagens deste atlas entram no inventário [`docs/assets/visual-inventory.json`](assets/visual-inventory.json). Usabilidade: [`docs/33-ASSET-USABILITY.md`](33-ASSET-USABILITY.md).
 
 ## Referências
 

@@ -1,10 +1,10 @@
 # 12 — Testes e evidências
 
-> **Snapshot de implementação:** 2026-08-16, derivado de `0b96d82`. Quatro suítes Lune: `tests/run.luau` **241 casos de domínio**, `tests/animation.luau` **73 de animação/apresentação**, `tests/security_fuzz.luau` **67 de fuzz adversarial** e `tests/combat_e2e.luau` **19 de simulação de combate ponta a ponta** — total automatizado de **400 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada: o CI Linux cabe num script, a cadeia de impacto cobre pesado e Ombro Cometa nos desfechos miss/hit/guarda, e o atalho de casa imprime três passos com o Studio fechado.
+> **Snapshot de implementação:** 2026-08-16, derivado de `2a713af` em `src/` (inalterado nesta rodada). Quatro suítes Lune: `tests/run.luau` **241 casos de domínio**, `tests/animation.luau` **76 de animação/apresentação**, `tests/security_fuzz.luau` **67 de fuzz adversarial** e `tests/combat_e2e.luau` **19 de simulação de combate ponta a ponta** — total automatizado de **403 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada: auditoria visual executável (`scripts/audit_visual_assets.py --check`), matriz de usabilidade em `docs/33`, inventário com hashes dos 31 PNGs conceituais, e três testes que travam veredito/F1-only/vitrine unpublished.
 
 ## 1. Estado da execução
 
-No snapshot de implementação atual, a verificação automatizada registrou 241/241 em `tests/run.luau`, 73/73 em `tests/animation.luau`, 67/67 em `tests/security_fuzz.luau` e 19/19 em `tests/combat_e2e.luau`. Selene e StyLua continuam gates separados e foram executados neste release: Selene com 0 erros/0 warnings e StyLua com `--check` limpo em `src tests plugins scripts`. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
+No snapshot de implementação atual, a verificação automatizada registrou 241/241 em `tests/run.luau`, 76/76 em `tests/animation.luau`, 67/67 em `tests/security_fuzz.luau` e 19/19 em `tests/combat_e2e.luau`. Selene e StyLua continuam gates separados e foram executados neste release: Selene com 0 erros/0 warnings e StyLua com `--check` limpo em `src tests plugins scripts`. A auditoria visual (`python3 scripts/audit_visual_assets.py --check`) entra na mesma ordem do CI. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
 
 **Registro histórico, não evidência do snapshot atual:** uma rodada anterior teve confirmação em Play pelo jogador, com `avb-debug sync` = 56/56, de que a animação de golpe movia o corpo e o personagem não girava sozinho. Essa evidência pertence ao estado anterior documentado em `docs/14` e não deve ser usada para declarar o commit `d7c44e8` validado em runtime. Neste snapshot, o Play atual continua pendente.
 
@@ -39,6 +39,7 @@ Os comandos expandidos (iguais ao workflow e ao `ci.sh`):
 ```bash
 stylua --check src tests plugins scripts
 selene src tests plugins scripts
+python3 scripts/audit_visual_assets.py --check
 lune run tests/run.luau
 lune run tests/animation.luau
 lune run tests/security_fuzz.luau
@@ -53,6 +54,7 @@ No Windows, com o snapshot canônico no fim:
 aftman install
 stylua --check src tests plugins scripts
 selene src tests plugins scripts
+python3 scripts/audit_visual_assets.py --check
 lune run tests/run.luau
 lune run tests/animation.luau
 lune run tests/security_fuzz.luau
@@ -67,7 +69,7 @@ Os quatro caminhos (`src tests plugins scripts`) são os mesmos do
 `.github/workflows/ci.yml`. Rodar `selene src tests` só — sem `plugins` e
 `scripts` — passa localmente e quebra no CI.
 
-O CI executa StyLua, Selene, os testes Lune, a instalação Wally e o build Rojo em todo pull request e em pushes para `main` (`.github/workflows/ci.yml`). Cada resultado precisa registrar commit, ambiente e saída; “verde no CI” não significa “testado no runtime Roblox”. `.rojo-tree-check.rbxl` valida a árvore e é descartável; `scripts/build-studio.ps1` produz o snapshot canônico `anime-verse-battlegrounds.rbxl` e verifica tamanho/data/hash. Nenhum dos dois comandos equivale a abrir o arquivo e usar Play.
+O CI executa StyLua, Selene, a auditoria visual, os testes Lune, a instalação Wally e o build Rojo em todo pull request e em pushes para `main` (`.github/workflows/ci.yml`). Cada resultado precisa registrar commit, ambiente e saída; “verde no CI” não significa “testado no runtime Roblox”. `.rojo-tree-check.rbxl` valida a árvore e é descartável; `scripts/build-studio.ps1` produz o snapshot canônico `anime-verse-battlegrounds.rbxl` e verifica tamanho/data/hash. Nenhum dos dois comandos equivale a abrir o arquivo e usar Play.
 
 O gate de tronco tem nome feio de propósito. Em 2026-08-14 o place canônico estava com um lock órfão, o build saiu para um `build.rbxl` na raiz, e esse arquivo virou o place que o jogador abria no Studio — três commits de correção de animação ficaram invisíveis porque o Play rodava um snapshot anterior a todos eles. Dois `.rbxl` abríveis lado a lado é o bug; o gate de tronco agora escreve num nome que ninguém confunde com place de trabalho, e `build-studio.ps1` limpa lock de sessão morta em vez de empurrar o build para outro arquivo.
 
@@ -108,7 +110,7 @@ A divisão é deliberada: matemática e decisão ficam em módulos puros (`Geome
 
 - **`tests/harness.luau`** simula o mínimo que o Lune não fornece: `_G.game`, `_G.Instance`, `_G.task` e resolução de `require(script.Parent.X)` no filesystem.
 - **`tests/run.luau`** contém os 241 casos e usa módulos reais de `src/`, com um miniframework de asserts.
-- **`tests/animation.luau`** contém 73 casos de apresentação procedural, VFX, áudio, juntas, defesa, dash, sinais de fronteira, iluminação do spawn e volume das skins.
+- **`tests/animation.luau`** contém 76 casos de apresentação procedural, VFX, áudio, juntas, defesa, dash, sinais de fronteira, iluminação do spawn, volume das skins e inventário visual (31 conceitos, paleta travada, vitrine unpublished).
 - **`tests/security_fuzz.luau`** executa 67 casos determinísticos de envelope, payload aninhado, replay de request e de sequência, rate limit por classe com janela de 1 s, hold de fronteira adulterado e combinações.
 - **`tests/combat_e2e.luau`** executa 19 casos que ligam servidor e cliente numa cadeia só: posição → aquisição em cone → resolução → `CombatEvent` → hit-stop, tremida, som, número de dano → `StateDelta`. Leve, pesado e Ombro Cometa cobrem miss longe, acerto perto e guarda. É a suíte que faltava: cada peça tinha teste próprio e a cadeia inteira nunca era exercida.
 - **`scripts/ci.sh`** reproduz a ordem de `.github/workflows/ci.yml` no Linux. **`avb-debug home`** imprime o atalho de três passos com o Studio fechado.

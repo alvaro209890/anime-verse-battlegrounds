@@ -92,7 +92,7 @@ Descrever divergências em termos observáveis: “o rastro termina 0,3 s depois
 
 ## Limites de licença e procedência
 
-PNG gerado por IA permanece conceito original do projeto e deve ser referenciado por hash. Assets externos abertos devem ter licença, URL, versão, data de acesso e localização documentados antes de integração. O protocolo visual não substitui revisão de licença, otimização ou aprovação de produção.
+PNG gerado por IA permanece conceito original do projeto e deve ser referenciado por hash. Assets externos abertos devem ter licença, URL, versão, data de acesso e localização documentados antes de integração. O protocolo visual não substitui revisão de licença, otimização ou aprovação de produção. A matriz de promoção (vitrine vs. PBR vs. F1-only vs. não importar) está em [`docs/33-ASSET-USABILITY.md`](33-ASSET-USABILITY.md); os hashes conferidos no CI estão em [`docs/assets/visual-inventory.json`](assets/visual-inventory.json).
 
 
 ## Habilidades futuras

@@ -14,10 +14,10 @@ Isso está de acordo com a política de conteúdo original do projeto
 
 | Pack | Arquivos | Uso no jogo |
 |---|---|---|
-| `ui-audio/` | 50 | cliques, rollover, switches, toques de menu e HUD |
+| `ui-audio/` | 51 | cliques, rollover, switches, toques de menu e HUD |
 | `impact-sounds/` | 130 | golpes (leve/pesado), soco, metal, madeira, vidro, guarda/bloqueio, passos em 5 pisos |
-| `sci-fi-sounds/` | 70 | habilidades/energia, lasers, explosões, telegraph, campo de força, dash/thruster, portas |
-| `rpg-audio/` | 50 | foley fantasia: armas, couro, livros, moedas, facas, creaks, passos |
+| `sci-fi-sounds/` | 73 | habilidades/energia, lasers, explosões, telegraph, campo de força, dash/thruster, portas |
+| `rpg-audio/` | 51 | foley fantasia: armas, couro, livros, moedas, facas, creaks, passos |
 
 ## Mapeamento sugerido para sistemas do jogo (F0)
 

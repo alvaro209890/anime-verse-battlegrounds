@@ -44,8 +44,14 @@ A conversão pode ser refeita de forma determinística com:
 python3 scripts/prepare_roblox_assets.py --clean
 ```
 
-O script preserva os PNGs de origem, grava somente em `docs/assets/roblox-ready` e recalcula o manifesto. Não há dependência de rede nem chamada a serviço externo nessa etapa.
+Para só completar JPEGs de briefing que faltam, **sem** regenerar os mapas PBR (os hashes atuais são a linha de base):
+
+```bash
+python3 scripts/prepare_roblox_assets.py --previews-only
+```
+
+O script preserva os PNGs de origem, grava somente em `docs/assets/roblox-ready` e recalcula o manifesto. Não há dependência de rede nem chamada a serviço externo nessa etapa. `--clean` e `--previews-only` não combinam.
 
 ## Limites da conversão
 
-A conversão não cria meshes, decals, partículas, animações, IDs publicados, `SurfaceAppearance` dentro do place, materiais Roblox ou integração em `WorldService`. As imagens de props, VFX e animação permanecem previews de referência; transformá-las em runtime exigirá produção separada, otimização e validação no Studio.
+A conversão não cria meshes, decals, partículas, animações, IDs publicados, `SurfaceAppearance` dentro do place, materiais Roblox ou integração em `WorldService`. As imagens de props, VFX, animação, domínio e habilidades futuras permanecem previews de referência; transformá-las em runtime exigirá produção separada, otimização e validação no Studio. O veredito por arquivo está em [`docs/33-ASSET-USABILITY.md`](../../33-ASSET-USABILITY.md).
