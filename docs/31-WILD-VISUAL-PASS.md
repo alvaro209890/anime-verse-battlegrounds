@@ -197,6 +197,12 @@ A validação headless prova contrato, invariante puro e árvore de build. Ela
 Em dispositivo de entrada, a ordem de corte continua sendo sombra e partícula
 antes de leitura cromática ou densidade de decoração.
 
+Peça nova no Estilhaço **não** volta para o `WorldService`. Envelope de
+`attackRange` continua lei. O plano de melhorar a skin com asset grátis e
+só edição de código está em [`docs/34-CODE-DRIVEN-SKINS.md`](34-CODE-DRIVEN-SKINS.md):
+S0 (primitivas) depois do W1; S1 (CC0 + `assetId`) só se o W1 disser que a
+pedra está plástica. Particle Pack Kenney permanece VFX de golpe, não casca.
+
 ## Referências relacionadas
 
 - [`docs/13-F0-SLICE.md`](13-F0-SLICE.md) §8.1, §8.2, §9, §17
@@ -205,6 +211,7 @@ antes de leitura cromática ou densidade de decoração.
 - [`docs/21-MONSTER-SKINS-ABILITIES.md`](21-MONSTER-SKINS-ABILITIES.md)
 - [`docs/22-SCENERY-EXPANSION.md`](22-SCENERY-EXPANSION.md)
 - [`docs/28-SPAWN-VISUAL-PASS.md`](28-SPAWN-VISUAL-PASS.md)
+- [`docs/34-CODE-DRIVEN-SKINS.md`](34-CODE-DRIVEN-SKINS.md)
 - [`src/shared/Data/WildDecorations.luau`](../src/shared/Data/WildDecorations.luau)
 - [`src/shared/Data/WorldPresentation.luau`](../src/shared/Data/WorldPresentation.luau)
 - [`src/shared/Data/SceneryPresentation.luau`](../src/shared/Data/SceneryPresentation.luau)

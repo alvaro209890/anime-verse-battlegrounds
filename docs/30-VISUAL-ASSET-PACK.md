@@ -43,7 +43,7 @@ As imagens de VFX que possuem pequenos rótulos ou decomposições visuais devem
 | Runtime | Integrar por Rojo somente após revisão de licença e testes |
 | Validação | Executar Studio, Playtest e critérios do documento canônico correspondente |
 
-O pacote atual permanece no estado **Conceito**. A capa geral continua documentada em [`docs/29-GAME-COVER.md`](29-GAME-COVER.md), enquanto o índice navegável está em [`VISUAL-REFERENCE-INDEX.md`](../VISUAL-REFERENCE-INDEX.md).
+O pacote atual permanece no estado **Conceito**. A capa geral continua documentada em [`docs/29-GAME-COVER.md`](29-GAME-COVER.md), o índice navegável está em [`VISUAL-REFERENCE-INDEX.md`](../VISUAL-REFERENCE-INDEX.md) e a matriz de usabilidade (o que importar, o que não) está em [`docs/33-ASSET-USABILITY.md`](33-ASSET-USABILITY.md). Os hashes deste catálogo são revalidados no CI contra [`docs/assets/visual-inventory.json`](assets/visual-inventory.json); um PNG novo em `docs/assets/` sem veredito quebra a auditoria.
 
 ## Conversão Roblox-ready
 

@@ -1,10 +1,10 @@
 # 12 — Testes e evidências
 
-> **Snapshot de implementação:** 2026-08-16, derivado de `0b96d82`. Quatro suítes Lune: `tests/run.luau` **241 casos de domínio**, `tests/animation.luau` **73 de animação/apresentação**, `tests/security_fuzz.luau` **67 de fuzz adversarial** e `tests/combat_e2e.luau` **19 de simulação de combate ponta a ponta** — total automatizado de **400 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada: o CI Linux cabe num script, a cadeia de impacto cobre pesado e Ombro Cometa nos desfechos miss/hit/guarda, e o atalho de casa imprime três passos com o Studio fechado.
+> **Snapshot de implementação:** 2026-08-16, derivado de `2a713af` em `src/` (inalterado nesta rodada). Quatro suítes Lune: `tests/run.luau` **241 casos de domínio**, `tests/animation.luau` **76 de animação/apresentação**, `tests/security_fuzz.luau` **67 de fuzz adversarial** e `tests/combat_e2e.luau` **19 de simulação de combate ponta a ponta** — total automatizado de **403 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada: auditoria visual, matriz `docs/33`, e o porteiro `scripts/audit_snapshot.py --check` que trava contagens, NPCs, áudio (15 deixas / 33 ogg) e recusa frases documentais já desmentidas.
 
 ## 1. Estado da execução
 
-No snapshot de implementação atual, a verificação automatizada registrou 241/241 em `tests/run.luau`, 73/73 em `tests/animation.luau`, 67/67 em `tests/security_fuzz.luau` e 19/19 em `tests/combat_e2e.luau`. Selene e StyLua continuam gates separados e foram executados neste release: Selene com 0 erros/0 warnings e StyLua com `--check` limpo em `src tests plugins scripts`. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
+No snapshot de implementação atual, a verificação automatizada registrou 241/241 em `tests/run.luau`, 76/76 em `tests/animation.luau`, 67/67 em `tests/security_fuzz.luau` e 19/19 em `tests/combat_e2e.luau`. Selene e StyLua continuam gates separados e foram executados neste release: Selene com 0 erros/0 warnings e StyLua com `--check` limpo em `src tests plugins scripts`. A auditoria visual (`python3 scripts/audit_visual_assets.py --check`) e o snapshot canônico (`python3 scripts/audit_snapshot.py --check`) entram na mesma ordem do CI. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
 
 **Registro histórico, não evidência do snapshot atual:** uma rodada anterior teve confirmação em Play pelo jogador, com `avb-debug sync` = 56/56, de que a animação de golpe movia o corpo e o personagem não girava sozinho. Essa evidência pertence ao estado anterior documentado em `docs/14` e não deve ser usada para declarar o commit `d7c44e8` validado em runtime. Neste snapshot, o Play atual continua pendente.
 
@@ -39,6 +39,8 @@ Os comandos expandidos (iguais ao workflow e ao `ci.sh`):
 ```bash
 stylua --check src tests plugins scripts
 selene src tests plugins scripts
+python3 scripts/audit_visual_assets.py --check
+python3 scripts/audit_snapshot.py --check
 lune run tests/run.luau
 lune run tests/animation.luau
 lune run tests/security_fuzz.luau
@@ -53,6 +55,8 @@ No Windows, com o snapshot canônico no fim:
 aftman install
 stylua --check src tests plugins scripts
 selene src tests plugins scripts
+python3 scripts/audit_visual_assets.py --check
+python3 scripts/audit_snapshot.py --check
 lune run tests/run.luau
 lune run tests/animation.luau
 lune run tests/security_fuzz.luau
@@ -67,7 +71,7 @@ Os quatro caminhos (`src tests plugins scripts`) são os mesmos do
 `.github/workflows/ci.yml`. Rodar `selene src tests` só — sem `plugins` e
 `scripts` — passa localmente e quebra no CI.
 
-O CI executa StyLua, Selene, os testes Lune, a instalação Wally e o build Rojo em todo pull request e em pushes para `main` (`.github/workflows/ci.yml`). Cada resultado precisa registrar commit, ambiente e saída; “verde no CI” não significa “testado no runtime Roblox”. `.rojo-tree-check.rbxl` valida a árvore e é descartável; `scripts/build-studio.ps1` produz o snapshot canônico `anime-verse-battlegrounds.rbxl` e verifica tamanho/data/hash. Nenhum dos dois comandos equivale a abrir o arquivo e usar Play.
+O CI executa StyLua, Selene, a auditoria visual, o snapshot canônico, os testes Lune, a instalação Wally e o build Rojo em todo pull request e em pushes para `main` (`.github/workflows/ci.yml`). Cada resultado precisa registrar commit, ambiente e saída; “verde no CI” não significa “testado no runtime Roblox”. `.rojo-tree-check.rbxl` valida a árvore e é descartável; `scripts/build-studio.ps1` produz o snapshot canônico `anime-verse-battlegrounds.rbxl` e verifica tamanho/data/hash. Nenhum dos dois comandos equivale a abrir o arquivo e usar Play.
 
 O gate de tronco tem nome feio de propósito. Em 2026-08-14 o place canônico estava com um lock órfão, o build saiu para um `build.rbxl` na raiz, e esse arquivo virou o place que o jogador abria no Studio — três commits de correção de animação ficaram invisíveis porque o Play rodava um snapshot anterior a todos eles. Dois `.rbxl` abríveis lado a lado é o bug; o gate de tronco agora escreve num nome que ninguém confunde com place de trabalho, e `build-studio.ps1` limpa lock de sessão morta em vez de empurrar o build para outro arquivo.
 
@@ -79,7 +83,7 @@ Em checkout Windows com `core.autocrlf=true`, os arquivos de trabalho podem esta
 
 | Área | Cobertura |
 |---|---|
-| **Dados e rede** (15) | Punho do Eclipse 3+1; `comet_shoulder`; Umbral baseline; 4 famílias; remotes incl. `SessionSnapshot`, `AbilityIntent`, `CombatEvent`, `InteractionIntent`, `StateDelta` e `EnemyEvent`; envelope v2 exige versão, request ID, sequência, ação e payload válidos; dummy 10000 HP / dano 4; Estilhaço Errante 40/6/4; zonas: 3 zonas, PvP só na livre, âncoras persistidas + pontos de Estilhaço, spawn no bastião; Locale PT-BR/EN das chaves §16 e formatação de `{n}`; `quest_hunt` 3 kills / +40 XP / unlock Cometa |
+| **Dados e rede** (15) | Punho do Eclipse 3+1; `comet_shoulder`; Umbral baseline; 4 famílias; remotes incl. `SessionSnapshot`, `AbilityIntent`, `CombatEvent`, `InteractionIntent`, `StateDelta` e `EnemyEvent`; envelope v2 exige versão, request ID, sequência, ação e payload válidos; dummy 10000 HP / dano 5; Estilhaço Errante 60/8/4; zonas: 3 zonas, PvP só na livre, âncoras persistidas + pontos de Estilhaço, spawn no bastião; Locale PT-BR/EN das chaves §16 e formatação de `{n}`; `quest_hunt` 3 kills / +40 XP / unlock Cometa |
 | **Cliente** (13) | gate de `SessionSnapshot.ready`; limite de 8 intenções de combate/s; no máximo 2 botões de toque simultâneos; `CharacterController` envia intenção sem alvo/dano; ToggleLock solta sem remote; `clearLock` solta sem procurar outro alvo; ToggleHelp fora do rate limit; clique de combate passa por HUD `processed` salvo em GuiButton/TextBox; 3 slots, ultimate oculta, unlock e cooldown no `AbilityController`; rejeição reconciliada sem código interno na UI; Umbral/zona/perda só após ready; hold de fronteira de 0,6 s; Locale cobre PT-BR/EN do HUD F0 (inclui MENU/mira/câmera/ATACAR) |
 | **Bootstrap/Rojo** (1) | o bootstrap resolve `Services` como filho do Script `Server` gerado pelo Rojo e não procura a pasta em `ServerScriptService` |
 | **Telemetria/segurança** (13) | allowlist/remoção de campos arbitrários; tipo/buffer; execução dos sete schemas; envelope/payload válido; campo extra e direção; replay de request/sequence; envelope fechado e amostragem de rejeição; limite 8/s separado de interação; NaN/vetor impossível/interação ambígua; limpeza entre sessões; orçamento de combate isolado entre dois jogadores; sequência fora de ordem não atravessa jogadores |
@@ -88,13 +92,13 @@ Em checkout Windows com `core.autocrlf=true`, os arquivos de trabalho podem esta
 | **Greybox** (7) | o `WorldService` gera piso rastreável a partir de cada volume canônico; a decoração da planície valida contra zonas, cratera e âncoras reais, não colide nem entra em raycast, respeita o teto de 8 luzes, entra no bootstrap, e os quatro casos negativos (fora da zona livre, no ringue do elite, colada na âncora de spawn e na faixa de caminhada) são recusados; o volume de cada zona resolve a zona declarada por todas as âncoras, o plano do portão resolve como transição e fora de todo volume devolve nil; 6 pontos de Estilhaço ≥ 24 studs entre si e ≥ 20 dos portões |
 | **Interação mínima** (5) | catálogo allowlisted/localizado do Instrutor e Marco; cliente bloqueado até `ready` e payload sem recompensa; Instrutor exige alvo conhecido e proximidade medida pelo servidor; Marco exige hold de 1,5 s no relógio do servidor; conclusão revalida distância e pending é limpo no leave |
 | **SpatialService** (4) | hitbox à frente acerta 1 e ignora quem está atrás/longe; Ombro Cometa avança 7, commita a posição e acerta 1 alvo na cápsula; guarda inimiga trava o avanço; avanço sem alvo é resultado válido |
-| **EnemyService** (5 + elite 3) | spawn até o teto de 4 com a âncora no id e sem duplicar; persegue, para no alcance, telegraph de 400 ms sem dano e 6 depois; sem aggro para jogador na zona segura; respawn de 45 s bloqueado por jogador a menos de 20 studs; kill reporta âncora e autor; **elite**: spawn único na `anchor_elite`; leeching por dano ≥ 1% na morte; leeching por 8 s no raio sem dano |
+| **EnemyService** (5 + elite 3) | spawn até o teto de 4 com a âncora no id e sem duplicar; persegue, para no alcance, telegraph de 400 ms sem dano e 8 depois; sem aggro para jogador na zona segura; respawn de 45 s bloqueado por jogador a menos de 20 studs; kill reporta âncora e autor; **elite**: spawn único na `anchor_elite`; leeching por dano ≥ 1% na morte; leeching por 8 s no raio sem dano |
 | **CooldownService** (3) | inicia zerado; `start` aplica e expira; `clear` zera |
 | **CombatService** (28) | applyDamage legado; cadeia 6+6+8+12; `basicCombatEvent` leva dano no HUD e miss esconde número; reset 0,65 s; guarda 40%; aparo 120 ms; costas; pesado 12/28/2; quebra+overflow; miss bloqueia leve; dash i-frame/CD; dummy alcance/período; comet 14 aberto; guarda para avanço (6 HP + 14 guarda); aparo; i-frame; Estilhaço telegraph+dano 8; sem aggro na fronteira; alcance 4; recovery; respawn 45 s; cap 4 vivos; `killed` só na transição vivo → morto e `diedAt` não é re-carimbado; **elite**: ciclo alterna combo 6+6 e slam 14; slam na guarda corta 30%; Pulso na postura reduz 50% e consome a postura |
 | **ResourceService** (6) | pool; `trySpend`; `grantFlowGain`; família desconhecida; `tryGrantFlow` 6+3 e cap 1,5 s; regen 2 / atraso 3 s / 6 |
-| **AbilityService** (14) | Ombro Cometa em `ServerPlayerState`; recusas; ultimate `disabled`; `locked`; Cadência 5+6, janela de reentrada e eco 4 no tick com Fluxo; Pulso: postura sem dano → erro vira recovery 600 ms; postura reduz 50% + contra 8; costas e slam do elite vencem a postura; comet no fighter dummy + `CombatEvent` |
+| **AbilityService** (14) | Ombro Cometa em `ServerPlayerState`; recusas; ultimate `disabled`; `locked`; Cadência 7+9, janela de reentrada e eco 6 no tick com Fluxo; Pulso: postura sem dano → erro vira recovery 600 ms; postura reduz 50% + contra 10; costas e slam do elite vencem a postura; comet no fighter dummy + `CombatEvent` |
 | **CatalogService** (6) | dados reais (incl. dummy, instrutor e cadeia de objetivos); personagem sem habilidade falha; zona/âncora inválida falha; objetivo com alvo/ofertante desconhecido, `requiredCount = 0` ou `acceptFlag` vazia falha; `displayNameKey` sem entrada no Locale falha; âncora que declara uma zona mas cai no volume de outra falha |
-| **PlayerSessionService / fatia** (4) | join/leave; snapshot Ready sem unlocks e, após grant, lista `unlock_comet_shoulder`; join Ready → comet `locked` até grant, depois 18 Umbral e dummy 9991 HP; roteiro 0–5 min ponta a ponta (aceite → travessia → 3 kills → 115 XP → Cometa liberado) |
+| **PlayerSessionService / fatia** (4) | join/leave; snapshot Ready sem unlocks e, após grant, lista `unlock_comet_shoulder`; join Ready → comet `locked` até grant, depois 18 Umbral e dummy 9986 HP; roteiro 0–5 min ponta a ponta (aceite → travessia → 3 kills → 115 XP → Cometa liberado) |
 | **ProgressionService** (11) | cadência/pulso locked no spawn; grant comet idempotente e flag desconhecida recusa; leave limpa flags; kill do Estilhaço credita 25 e dummy não credita; retorno decrescente 6×25 → 6×12 → 0; decréscimo por âncora, não global; teto de 800 por sessão, valor negativo e jogador desconhecido; elite 80 com cooldown de 180 s por jogador; **consolidação** move tudo com recibo idempotente; **morte** segura 0 / PvE 10% / PvP 15%; **cap 200** em saldo grande |
 | **QuestService** (9) | aceite no Instrutor marca `quest_hunt_accepted` e abre o tracker; kill antes do aceite não conta; tracker forçado após 90 s e `tick` idempotente; 3º kill completa com +40 XP e `unlock_comet_shoulder`; kill após completo não repete prêmio e alvo fora do objetivo não conta; cadeia sequencial (elite só após a caça); kill do elite completa com +60 XP e `unlock_broken_cadence`; eco da Cadência completa `quest_flow` com +40 XP e `unlock_pulse_return`; roteiro 0–60 min ponta a ponta |
 | **SaveService** (7) | leave persiste flags/XP e rejoin restaura; autosave não duplica unlock; rejoin no mesmo servidor devolve a mesma sessão; lock concorrente recusa; falha no load não cria default por cima; anel de `recentOperations` limitado a 32; consolidação gera recibo no perfil |
@@ -108,7 +112,7 @@ A divisão é deliberada: matemática e decisão ficam em módulos puros (`Geome
 
 - **`tests/harness.luau`** simula o mínimo que o Lune não fornece: `_G.game`, `_G.Instance`, `_G.task` e resolução de `require(script.Parent.X)` no filesystem.
 - **`tests/run.luau`** contém os 241 casos e usa módulos reais de `src/`, com um miniframework de asserts.
-- **`tests/animation.luau`** contém 73 casos de apresentação procedural, VFX, áudio, juntas, defesa, dash, sinais de fronteira, iluminação do spawn e volume das skins.
+- **`tests/animation.luau`** contém 76 casos de apresentação procedural, VFX, áudio, juntas, defesa, dash, sinais de fronteira, iluminação do spawn, volume das skins e inventário visual (31 conceitos, paleta travada, vitrine unpublished).
 - **`tests/security_fuzz.luau`** executa 67 casos determinísticos de envelope, payload aninhado, replay de request e de sequência, rate limit por classe com janela de 1 s, hold de fronteira adulterado e combinações.
 - **`tests/combat_e2e.luau`** executa 19 casos que ligam servidor e cliente numa cadeia só: posição → aquisição em cone → resolução → `CombatEvent` → hit-stop, tremida, som, número de dano → `StateDelta`. Leve, pesado e Ombro Cometa cobrem miss longe, acerto perto e guarda. É a suíte que faltava: cada peça tinha teste próprio e a cadeia inteira nunca era exercida.
 - **`scripts/ci.sh`** reproduz a ordem de `.github/workflows/ci.yml` no Linux. **`avb-debug home`** imprime o atalho de três passos com o Studio fechado.

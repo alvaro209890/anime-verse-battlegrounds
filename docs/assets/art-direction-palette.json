@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "source": "docs/assets/asset-pack-art-direction-board.png",
+  "lanternAmberSource": "docs/assets/prop-amber-lantern-sconce.png",
+  "sampledAt": "2026-08-16",
+  "method": "Médias RGB de pixels reamostrados (320×180 no quadro-mãe; 256×256 na arandela). Famílias HSV, não paleta posterizada.",
+  "doNotRecolorRuntimeWithoutPlay": true,
+  "policy": "Tokens extraídos descrevem a arte conceitual. O runtime F0 permanece procedural com os RGB já travados por teste. Unificar as três variantes de UMBRAL_CORE exige Play, não este JSON.",
+  "extracted": [
+    {
+      "name": "void",
+      "rgb": [6, 4, 14],
+      "hex": "#06040E",
+      "role": "céu/fundo do quadro-mãe"
+    },
+    {
+      "name": "slate",
+      "rgb": [82, 81, 90],
+      "hex": "#52515A",
+      "role": "pedra dessaturada do bastião"
+    },
+    {
+      "name": "mist",
+      "rgb": [153, 150, 162],
+      "hex": "#9996A2",
+      "role": "pedra clara / núcleo pálido"
+    },
+    {
+      "name": "cyan_route",
+      "rgb": [52, 157, 221],
+      "hex": "#349DDD",
+      "role": "energia de rota, guarda e fronteira (pixels saturados do quadro-mãe)"
+    },
+    {
+      "name": "violet_domain",
+      "rgb": [79, 34, 134],
+      "hex": "#4F2286",
+      "role": "energia umbral / domínio (pixels saturados do quadro-mãe)"
+    },
+    {
+      "name": "sunset_warm",
+      "rgb": [175, 70, 60],
+      "hex": "#AF463C",
+      "role": "céu ao entardecer no quadro-mãe — não é o âmbar de serviço"
+    },
+    {
+      "name": "amber_service",
+      "rgb": [201, 113, 15],
+      "hex": "#C9710F",
+      "role": "luz de serviço extraída da arandela, não do céu"
+    }
+  ],
+  "runtimeTokens": [
+    {
+      "module": "AbilityVfx.luau",
+      "name": "UMBRAL_CORE",
+      "rgb": [214, 206, 232],
+      "hex": "#D6CEE8",
+      "alignsWithExtracted": "mist",
+      "note": "Núcleo pálido das técnicas F0. Mais claro que o violeta da arte, de propósito: precisa sobreviver a efeitos reduzidos."
+    },
+    {
+      "module": "AbilityVfx.luau",
+      "name": "UMBRAL_EDGE",
+      "rgb": [88, 60, 138],
+      "hex": "#583C8A",
+      "alignsWithExtracted": "violet_domain",
+      "note": "Borda violeta das técnicas. Família próxima do violeta extraído [79,34,134]."
+    },
+    {
+      "module": "AbilityVfx.luau",
+      "name": "RETURN_CORE",
+      "rgb": [236, 224, 196],
+      "hex": "#ECE0C4",
+      "alignsWithExtracted": "mist",
+      "note": "Contra do Pulso: âmbar frio para separar 'apanhei' de 'devolvi'."
+    },
+    {
+      "module": "AbilityVfx.luau",
+      "name": "RETURN_EDGE",
+      "rgb": [168, 116, 52],
+      "hex": "#A87434",
+      "alignsWithExtracted": "amber_service",
+      "note": "Família âmbar, mais terrosa que a arandela."
+    },
+    {
+      "module": "SceneryPresentation.luau",
+      "name": "wallColor",
+      "rgb": [74, 78, 88],
+      "hex": "#4A4E58",
+      "alignsWithExtracted": "slate",
+      "note": "Greybox do bastião. Próximo do slate extraído [82,81,90]."
+    },
+    {
+      "module": "SceneryPresentation.luau",
+      "name": "lightColor",
+      "rgb": [144, 216, 255],
+      "hex": "#90D8FF",
+      "alignsWithExtracted": "cyan_route",
+      "note": "Luz fria de chave. Mais pálida que o ciano saturado da arte para não estourar no greybox."
+    },
+    {
+      "module": "SceneryPresentation.luau",
+      "name": "fillLightColor",
+      "rgb": [184, 142, 255],
+      "hex": "#B88EFF",
+      "alignsWithExtracted": "violet_domain",
+      "note": "Preenchimento violeta do spawn."
+    },
+    {
+      "module": "WorldPresentation.luau",
+      "name": "UMBRAL_CORE",
+      "rgb": [226, 214, 250],
+      "hex": "#E2D6FA",
+      "alignsWithExtracted": "mist",
+      "note": "Núcleo das skins de ator. Drift consciente em relação a AbilityVfx [214,206,232]."
+    },
+    {
+      "module": "SpawnDecorations.luau",
+      "name": "UMBRAL_CORE",
+      "rgb": [206, 196, 224],
+      "hex": "#CEC4E0",
+      "alignsWithExtracted": "mist",
+      "note": "Cristais/neon do spawn. Terceira variante; não unificar sem Play."
+    }
+  ],
+  "knownDrift": [
+    "AbilityVfx.UMBRAL_CORE [214,206,232]",
+    "WorldPresentation.UMBRAL_CORE [226,214,250]",
+    "SpawnDecorations.UMBRAL_CORE [206,196,224]"
+  ]
+}

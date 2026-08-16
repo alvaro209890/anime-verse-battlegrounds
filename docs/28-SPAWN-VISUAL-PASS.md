@@ -42,6 +42,8 @@ A personagem `npc_threshold_instructor` mantém o rosto embutido `rbxasset://tex
 
 A skin é apresentação. Ela não muda `Npcs.luau`, `Interactions.luau`, `QuestService`, alcance, hold, recompensa ou qualquer decisão server-side.
 
+A próxima melhoria de silhueta **não** é MeshPart nem acessório de catálogo. Depois das capturas W1, a passada é S0 em `WorldPresentation.rigFor` (`docs/34-CODE-DRIVEN-SKINS.md`): primitivas, teto de peças, `gearClearsFace`. Textura CC0 no casaco só existe como S1 (`sourceFile` + `assetId` vazio até o upload por script).
+
 ## Validação headless
 
 A suíte adicionou cobertura para a paleta, orçamento de iluminação e densidade da skin. Os resultados desta rodada foram:
@@ -67,6 +69,7 @@ A revisão de qualidade deve também confirmar que as luzes são destruídas e r
 - [`docs/15-WORLD-PRESENTATION.md`](15-WORLD-PRESENTATION.md)
 - [`docs/26-VISUAL-VALIDATION-CHECKLIST.md`](26-VISUAL-VALIDATION-CHECKLIST.md)
 - [`docs/27-FUTURE-ABILITY-ASSET-CATALOG.md`](27-FUTURE-ABILITY-ASSET-CATALOG.md)
+- [`docs/34-CODE-DRIVEN-SKINS.md`](34-CODE-DRIVEN-SKINS.md) — como a skin da instrutora evolui sem Studio manual
 - [`src/shared/Data/SceneryPresentation.luau`](../src/shared/Data/SceneryPresentation.luau)
 - [`src/shared/Data/WorldPresentation.luau`](../src/shared/Data/WorldPresentation.luau)
 - [`src/server/Services/WorldService.luau`](../src/server/Services/WorldService.luau)

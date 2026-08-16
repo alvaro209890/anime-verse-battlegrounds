@@ -3,7 +3,7 @@
 > **Estado em 2026-08-15.** Este documento é o roteiro do dia em que o Studio
 > abrir. Ele **não** é evidência de runtime e não fecha gate nenhum: fechar um
 > gate exige a sessão executada e a captura anexada. O que existe hoje é
-> validação headless — 241 casos de domínio, 73 de animação/apresentação, 67 de
+> validação headless — 241 casos de domínio, 76 de animação/apresentação, 67 de
 > fuzz e 19 de simulação de combate ponta a ponta.
 
 O mesmo roteiro existe em forma executável:
@@ -87,6 +87,11 @@ aprovação em uma linha — ambíguo aqui vira discussão depois.
 | 5 | Saídas norte e oeste | sair e voltar pelos dois portões | vídeo curto, os cinco sinais, Output do `ZoneEvent` | nenhum buraco de piso nem snag; hold de 0,6 s exigido na primeira ida; faixa de PvP visível |
 | 6 | Morte e retorno | morrer na planície | Output da perda de XP, posição do respawn | respawn no Marco com a perda da zona aplicada **uma** vez |
 | 7 | Elite | ir à cratera, sobreviver a um combo e um slam | vídeo do telegraph de 700 ms, print da coroa | telegraph legível antes do golpe, ringue livre de decoração, coroa lê à distância |
+
+> **Skins (`docs/34`).** Os prints de perfil da Instrutora (passo 3), do dummy
+> no spawn (passo 2) e da coroa (passo 7) são a evidência que autoriza
+> acrescentar peça em `WorldPresentation`. Sem eles, a passada S0 não começa.
+> Não soldar roupa na viewport durante o W1.
 
 ### A1 — o golpe
 
@@ -189,6 +194,7 @@ mais, entra na lista com o número medido — não com um palpite.
 - [`docs/13-F0-SLICE.md`](13-F0-SLICE.md) §10 (roteiro de 20 min)
 - [`docs/14-ANIMATION-PLAN.md`](14-ANIMATION-PLAN.md) §4.7–4.9 e §8
 - [`docs/15-WORLD-PRESENTATION.md`](15-WORLD-PRESENTATION.md) (Gate W1)
+- [`docs/34-CODE-DRIVEN-SKINS.md`](34-CODE-DRIVEN-SKINS.md) (passada de skin só depois destas capturas)
 - [`docs/19-DEBUG-BRIDGE.md`](19-DEBUG-BRIDGE.md) §5 (receitas do bridge)
 - [`docs/26-VISUAL-VALIDATION-CHECKLIST.md`](26-VISUAL-VALIDATION-CHECKLIST.md) (ficha)
 - [`scripts/StudioEvidence.luau`](../scripts/StudioEvidence.luau) (roteiro como dado)

@@ -53,6 +53,7 @@ local InteractionController = require("../src/client/Controllers/InteractionCont
 local InteractionService = require("../src/server/Services/InteractionService")
 local Zones = require("../src/shared/Data/Zones")
 local fs = require("@lune/fs")
+local serde = require("@lune/serde")
 
 local CHAIN = PlayerCombatAnimator.LightChainLength
 
@@ -309,11 +310,12 @@ end)
 test("áudio: catálogo passa validação", function()
 	local ok, reason = CombatAudio.validate()
 	assertTrue(ok, reason)
+	assertEq(#CombatAudio.all(), 15, "15 deixas no catálogo")
 end)
 
 test("áudio: todo arquivo de origem existe no disco", function()
 	local files = CombatAudio.sourceFiles()
-	assertTrue(#files > 0, "catálogo referencia ao menos um arquivo")
+	assertEq(#files, 33, "33 ogg distintos a publicar")
 	for _, path in files do
 		assertTrue(fs.isFile(path), ("arquivo existe: %s"):format(path))
 	end
@@ -398,7 +400,7 @@ test("áudio: todo o catálogo aponta para um asset tocável", function()
 			("deixa %s sem assetId válido (%s)"):format(entry.id, entry.assetId)
 		)
 	end
-	assertTrue(count >= 15, "catálogo completo percorrido")
+	assertEq(count, 15, "catálogo completo percorrido")
 end)
 
 test("áudio: com assetId publicado, resolve com pitch dentro da faixa", function()
@@ -1135,6 +1137,7 @@ test("vfx: cada camada usa asset preparado conhecido e atlas existente", functio
 	assertEq(#assets, 5, "cinco assets preparados no catálogo")
 	for _, asset in assets do
 		assertTrue(fs.isFile(asset.preparedFile), "atlas preparado existe: " .. asset.preparedFile)
+		assertTrue(fs.isFile(asset.sourceFile), "fonte existe: " .. asset.sourceFile)
 		assertTrue(asset.assetId == nil, "IDs Roblox não são inventados antes da publicação")
 		assertTrue(asset.framerate > 0, "framerate positivo: " .. asset.key)
 	end
@@ -1503,6 +1506,63 @@ test("vfx inimigo: luz de ataque nunca excede a hitbox real do NPC (docs/17)", f
 	-- Fallback sem def: âncora (8) é o teto honesto; nunca 16/10 antigos.
 	assertEq(EnemyVfxPlayer.rangeFor(nil), 8, "fallback sem def usa o teto do ancorado")
 	assertEq(EnemyVfxPlayer.rangeFor({ attackRange = 4 }), 4, "errante usa 4")
+end)
+
+test("visual: inventário canônico cobre 31 conceitos e nada está ligado ao runtime", function()
+	assertTrue(fs.isFile("docs/assets/visual-inventory.json"), "inventário existe")
+	local inventory = serde.decode("json", fs.readFile("docs/assets/visual-inventory.json"))
+	assertEq(inventory.schemaVersion, 1, "schema do inventário")
+	assertEq(inventory.runtimeLinked, false, "inventário não marca runtime")
+	assertEq(#inventory.conceptImages, 31, "31 PNGs conceituais")
+	local f1Only = 0
+	local textureCandidates = 0
+	for _, image in inventory.conceptImages do
+		assertTrue(fs.isFile(image.path), "conceito no disco: " .. image.path)
+		assertEq(image.runtimeLinked, false, "conceito desligado: " .. image.path)
+		assertEq(#image.sha256, 64, "sha256 de " .. image.path)
+		assertTrue(image.verdict ~= nil and image.verdict ~= "", "veredito de " .. image.path)
+		if image.verdict == "f1_only" then
+			f1Only += 1
+		elseif image.verdict == "texture_candidate" then
+			textureCandidates += 1
+		end
+	end
+	assertEq(f1Only, 8, "oito habilidades futuras continuam F1-only")
+	assertEq(textureCandidates, 3, "três texturas candidatas")
+	assertEq(
+		inventory.kenneyParticlePack.path,
+		"docs/assets/open-candidates/kenney_particle-pack.zip",
+		"path canônico do zip Kenney"
+	)
+	assertTrue(fs.isFile(inventory.kenneyParticlePack.path), "zip Kenney no disco")
+	assertEq(inventory.kenneyParticlePack.pngCount, 193, "193 PNG no arquivo")
+	assertEq(inventory.kenneyNatureKit.meshCount, 0, "Nature Kit sem malha versionada")
+	assertEq(#inventory.vfxCatalog.files, 13, "cinco fontes + cinco atlas + três Kenney de inimigo")
+end)
+
+test("visual: paleta extraída não autoriza recolorir o runtime", function()
+	assertTrue(fs.isFile("docs/assets/art-direction-palette.json"), "paleta existe")
+	local palette = serde.decode("json", fs.readFile("docs/assets/art-direction-palette.json"))
+	assertEq(palette.doNotRecolorRuntimeWithoutPlay, true, "trava de recolor")
+	assertEq(#palette.knownDrift, 3, "três UMBRAL_CORE documentados")
+	assertEq(AbilityVfx.UmbralCoreRgb[1], 214, "núcleo umbral R")
+	assertEq(AbilityVfx.UmbralCoreRgb[2], 206, "núcleo umbral G")
+	assertEq(AbilityVfx.UmbralCoreRgb[3], 232, "núcleo umbral B")
+	assertEq(AbilityVfx.UmbralEdgeRgb[1], 88, "borda umbral R")
+	local style = SceneryPresentation.style()
+	assertEq(style.wallColor[1], 74, "parede greybox")
+	assertEq(style.lightColor[1], 144, "luz fria de chave")
+	assertEq(style.fillLightColor[1], 184, "preenchimento violeta")
+end)
+
+test("visual: thumbnail e ícone existem e continuam unpublished", function()
+	local store = serde.decode("json", fs.readFile("docs/assets/roblox-ready/store/store-art-manifest.json"))
+	assertEq(#store.assets, 2, "thumbnail e ícone")
+	for _, asset in store.assets do
+		assertEq(asset.published, false, asset.role .. " não publicado")
+		assertTrue(fs.isFile(asset.output), asset.output)
+	end
+	assertTrue(fs.isFile("docs/33-ASSET-USABILITY.md"), "matriz de usabilidade")
 end)
 
 for _, entry in tests do
