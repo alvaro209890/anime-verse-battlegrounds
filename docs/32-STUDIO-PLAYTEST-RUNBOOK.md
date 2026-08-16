@@ -3,18 +3,40 @@
 > **Estado em 2026-08-15.** Este documento é o roteiro do dia em que o Studio
 > abrir. Ele **não** é evidência de runtime e não fecha gate nenhum: fechar um
 > gate exige a sessão executada e a captura anexada. O que existe hoje é
-> validação headless — 239 casos de domínio, 73 de animação/apresentação, 67 de
-> fuzz e 14 de simulação de combate ponta a ponta.
+> validação headless — 241 casos de domínio, 73 de animação/apresentação, 67 de
+> fuzz e 19 de simulação de combate ponta a ponta.
 
 O mesmo roteiro existe em forma executável:
 
 ```bash
 lune run scripts/avb-debug.luau runbook            # todos os passos
 lune run scripts/avb-debug.luau runbook --gate W1  # só um gate
+lune run scripts/avb-debug.luau home               # atalho de 3 passos (Studio fechado)
 ```
 
 O catálogo vive em `scripts/StudioEvidence.luau` e é validado por teste. Mudou
 o roteiro? Mude lá e este documento junto, no mesmo commit.
+
+## 0. Quando chegar em casa
+
+Três passos. Uma janela do Studio. O único place é `anime-verse-battlegrounds.rbxl`.
+Isto **não** fecha W1/A1 — só tira o Play do artefato errado e chega perto o
+bastante para a camada de impacto existir.
+
+```powershell
+.\scripts\build-studio.ps1
+lune run scripts/avb-debug.luau sync    # exit 0 segue · exit 2 = reabra, não meça
+```
+
+Depois: Play, encostar no dummy (≤ 6 studs), acertar leve, pesado e Ombro Cometa
+(passo `a1_impact`). Com o Studio fechado, o mesmo atalho imprime em JSON:
+
+```bash
+lune run scripts/avb-debug.luau home
+```
+
+Lock órfão o `build-studio.ps1` remove; lock de Studio vivo aborta. Abrir outro
+`.rbxl` na raiz é o defeito de 14/08.
 
 ## 1. Regra zero: fora de sync, não se mede
 

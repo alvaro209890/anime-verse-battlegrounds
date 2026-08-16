@@ -12,6 +12,7 @@
 --   lune run scripts/avb-debug.luau sync
 --   lune run scripts/avb-debug.luau evidence          (folha de evidência W1/A1/W2)
 --   lune run scripts/avb-debug.luau runbook --gate W1 (só o roteiro, sem Studio)
+--   lune run scripts/avb-debug.luau home              (3 passos para quando chegar em casa)
 --
 -- Saída: JSON no stdout. Exit code 1 quando o comando falha; exit 2 quando o
 -- Studio está fora de sync (nada medido nesse estado vale — docs/32 §1).
@@ -351,6 +352,21 @@ local function cmdSync()
 	end
 end
 
+-- Atalho de três passos para o PC de casa. Roda com o Studio fechado, de
+-- propósito: é o que se cola no PowerShell antes de qualquer medição.
+local function cmdHome()
+	local ok, reason = StudioEvidence.validate()
+	if not ok then
+		fail("roteiro inválido: " .. tostring(reason))
+	end
+	emit({
+		ok = true,
+		steps = StudioEvidence.homePrep(),
+		note = "Uma janela do Studio. O único place é anime-verse-battlegrounds.rbxl. Isto não é evidência de Play.",
+		source = "docs/32-STUDIO-PLAYTEST-RUNBOOK.md",
+	})
+end
+
 -- Roteiro sem Studio: imprime os passos e os limites para preparar a sessão
 -- (ou revisar o runbook) sem abrir nada.
 local function cmdRunbook()
@@ -422,9 +438,10 @@ local function usage()
 		ok = false,
 		error = "informe um comando",
 		studioCommands = names,
-		localCommands = { "health", "logs", "errors", "tail", "sync", "runbook", "evidence" },
+		localCommands = { "health", "logs", "errors", "tail", "sync", "runbook", "evidence", "home" },
 		examples = {
 			"lune run scripts/avb-debug.luau ping",
+			"lune run scripts/avb-debug.luau home",
 			"lune run scripts/avb-debug.luau runbook --gate W1",
 			"lune run scripts/avb-debug.luau evidence",
 			"lune run scripts/avb-debug.luau tree Workspace.GreyboxF0 --depth 2",
@@ -452,6 +469,8 @@ elseif command == "sync" then
 	cmdSync()
 elseif command == "runbook" then
 	cmdRunbook()
+elseif command == "home" then
+	cmdHome()
 elseif command == "evidence" then
 	cmdEvidence()
 elseif STUDIO_COMMANDS[command] ~= nil then

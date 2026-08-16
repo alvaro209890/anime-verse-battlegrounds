@@ -260,6 +260,56 @@ local function walkTo(sim: Sim, distanceStuds: number): ()
 	assertTrue(distancia ~= nil and math.abs(distancia - distanceStuds) < 1e-6, "caminhada parou na distância pedida")
 end
 
+local function assertSilentImpact(sim: Sim, label: string)
+	assertEq(#sim.cues, 0, label .. ": sem deixa de impacto")
+	assertEq(#sim.numbers, 0, label .. ": sem número")
+	assertEq(sim.camera.trauma, 0, label .. ": câmera parada")
+	assertEq(sim.camera.fovPunch, 0, label .. ": sem punch de FOV")
+	assertFalse(PlayerCombatAnimator.hitStopActive(sim.now, sim.animator.hitStopUntil), label .. ": sem hit-stop")
+	assertEq(#sim.deltas, 0, label .. ": sem StateDelta")
+end
+
+-- Espelha o runner espacial de `AbilityService`: avança, e só emite CombatEvent
+-- se a cápsula pegar alguém. Avanço sem alvo é válido e mudo no cliente.
+local COMET_PARAMS = {
+	distance = 7,
+	hardCap = 8,
+	capsuleRadius = 2,
+	blockerRadius = 2,
+	blocks = function(): boolean
+		return false
+	end,
+}
+
+local function serverComet(sim: Sim): { [string]: any }?
+	local attacker = CombatService.getFighter(sim.attackerId)
+	assertTrue(attacker ~= nil, "atacante existe")
+	if not attacker then
+		return nil
+	end
+	local resolucao = SpatialService.resolveCometShoulder(sim.attackerId, COMET_PARAMS)
+	if resolucao.targetId == nil then
+		return nil
+	end
+	local target = CombatService.getFighter(resolucao.targetId)
+	if not target then
+		return nil
+	end
+	local resultado = CombatService.tryCometShoulder(attacker, target, sim.now, resolucao.facing :: any)
+	if not resultado.ok or resultado.iframe then
+		return nil
+	end
+	local event = {
+		targetId = resolucao.targetId,
+		abilityId = "comet_shoulder",
+		outcome = if resultado.stoppedOnGuard then "guard" else "hit",
+		damage = resultado.damage,
+	}
+	receiveCombatEvent(sim, event)
+	fireVitals(sim, target.id)
+	return event
+end
+
 -- ── 0. A simulação usa os números do jogo ───────────────────────────────────
 
 test("fonte: alcance e cone da simulação são os do handler real", function()
@@ -293,6 +343,19 @@ test("41 studs: o golpe erra e NENHUMA camada de impacto acende (docs/14 §4.8)"
 
 	-- E o alvo continua intacto: era isso que o Output dizia, uma linha por
 	-- golpe, e ninguém leu como "o problema é a distância".
+	local target = CombatService.getFighter(sim.targetId)
+	assertTrue(target ~= nil and target.health == 100, "alvo intacto")
+end)
+
+test("41 studs: o pesado também erra e nenhuma camada de impacto acende", function()
+	local sim = newSim(PLAYTEST_DISTANCE_STUDS)
+	local event = serverBasicAttack(sim, "heavy")
+
+	assertEq(event.outcome, "miss", "a 41,2 studs o pesado erra")
+	assertEq(event.abilityId, "heavy", "é o pesado que errou")
+	assertEq(event.damage, 0, "sem dano")
+	assertEq(event.targetId, nil, "nenhum alvo adquirido")
+	assertSilentImpact(sim, "pesado longe")
 	local target = CombatService.getFighter(sim.targetId)
 	assertTrue(target ~= nil and target.health == 100, "alvo intacto")
 end)
@@ -357,6 +420,27 @@ test("a distância é a única diferença entre o mudo e o completo", function()
 	assertEq(#perto.numbers, 1, "perto: tudo")
 	assertTrue(perto.camera.trauma > longe.camera.trauma, "só o perto treme")
 	assertTrue(#perto.cues > #longe.cues, "só o perto soa")
+end)
+
+test("pesado: a distância é a única diferença entre o mudo e o completo", function()
+	local longe = newSim(PLAYTEST_DISTANCE_STUDS)
+	serverBasicAttack(longe, "heavy")
+	local perto = newSim(PLAYTEST_DISTANCE_STUDS)
+	walkTo(perto, 6)
+	local evento = serverBasicAttack(perto, "heavy")
+
+	assertEq(evento.outcome, "hit", "pesado confirma a 6 studs")
+	assertTrue(evento.damage > 0, "dano positivo")
+	assertEq(#longe.numbers, 0, "longe: nada")
+	assertEq(#perto.numbers, 1, "perto: número")
+	assertTrue(perto.camera.trauma > longe.camera.trauma, "só o perto treme")
+	assertTrue(#perto.cues > #longe.cues, "só o perto soa")
+	assertTrue(PlayerCombatAnimator.hitStopActive(perto.now, perto.animator.hitStopUntil), "hit-stop do pesado")
+	assertEq(#perto.deltas, 1, "vida replicada")
+	-- Achado pinado: o pesado básico sacode igual ao leve. Não "corrigir" aqui.
+	local leve = newSim(6)
+	serverBasicAttack(leve, "light")
+	assertEq(perto.camera.trauma, leve.camera.trauma, "pesado básico sacode igual ao jab")
 end)
 
 test("borda do alcance: 9 studs conecta, 9,5 não (leve, degrau 1)", function()
@@ -453,6 +537,32 @@ test("alvo em guarda muda desfecho, cor e deixa — sem apagar a cadeia", functi
 	assertTrue(diferente, "cor do número distingue guarda")
 end)
 
+test("pesado na guarda: desfecho próprio, sem dano fantasma", function()
+	local sim = newSim(6)
+	local alvo = CombatService.getFighter(sim.targetId)
+	assertTrue(alvo ~= nil, "alvo existe")
+	if not alvo then
+		return
+	end
+	local vidaAntes = alvo.health
+	CombatService.setGuard(alvo, true, sim.now)
+
+	local event = serverBasicAttack(sim, "heavy")
+	assertEq(event.outcome, "guard", "desfecho de guarda")
+	assertEq(event.abilityId, "heavy", "é o pesado")
+	assertEq(sim.cues[1], "impact_guard", "deixa de guarda, não de impacto pesado")
+	assertEq(ClientState.feedback(sim.state), "hud.feedback_guard", "HUD lê guarda")
+	assertTrue(sim.camera.trauma > 0, "guarda do pesado também sacode")
+	local perda = vidaAntes - alvo.health
+	assertTrue(math.abs(perda - event.damage) < 1e-9, "vida perdida bate com o evento")
+	if event.damage > 0 then
+		assertEq(#sim.numbers, 1, "número só do dano real")
+		assertEq(sim.numbers[1].damage, event.damage, "número igual ao evento")
+	else
+		assertEq(#sim.numbers, 0, "sem dano, sem número")
+	end
+end)
+
 -- ── 5. Técnica: Ombro Cometa de ponta a ponta ───────────────────────────────
 
 test("Ombro Cometa: avança no servidor, confirma e só então acende contato", function()
@@ -517,6 +627,61 @@ test("Ombro Cometa: avança no servidor, confirma e só então acende contato", 
 	-- (e) honestidade: nenhuma camada passa do alcance da própria habilidade
 	for _, camada in receita.layers do
 		assertTrue(camada.radiusStuds <= receita.rangeStuds, ("camada %s passa do alcance"):format(camada.id))
+	end
+end)
+
+test("Ombro Cometa a 41 studs: a cápsula não pega o dummy e o cliente fica mudo", function()
+	local sim = newSim(PLAYTEST_DISTANCE_STUDS)
+	local antes = SpatialService.getPosition(sim.attackerId)
+	local event = serverComet(sim)
+	local depois = SpatialService.getPosition(sim.attackerId)
+
+	assertEq(event, nil, "sem CombatEvent — o runner não inventa alvo")
+	assertSilentImpact(sim, "cometa longe")
+	assertEq(sim.vfxConfirmed["comet_shoulder"], nil, "sem VFX de contato")
+	local alvo = CombatService.getFighter(sim.targetId)
+	assertTrue(alvo ~= nil and alvo.health == 100, "dummy intacto")
+	-- O avanço ainda acontece: custo já foi pago. Só o impacto que não existe.
+	assertTrue(antes ~= nil and depois ~= nil, "posições conhecidas")
+	if antes and depois then
+		assertTrue(math.abs(depois.z - antes.z) > 1e-6, "o servidor moveu mesmo sem alvo")
+	end
+end)
+
+test("Ombro Cometa na guarda: stoppedOnGuard, cadeia de guarda, sem hit", function()
+	local sim = newSim(6)
+	local alvo = CombatService.getFighter(sim.targetId)
+	assertTrue(alvo ~= nil, "alvo existe")
+	if not alvo then
+		return
+	end
+	local vidaAntes = alvo.health
+	CombatService.setGuard(alvo, true, sim.now)
+
+	local event = serverComet(sim)
+	assertTrue(event ~= nil, "evento publicado")
+	if not event then
+		return
+	end
+	assertEq(event.outcome, "guard", "desfecho de guarda")
+	assertEq(event.abilityId, "comet_shoulder", "é o Cometa")
+	assertEq(sim.cues[1], "impact_guard", "deixa de guarda, não de impacto pesado")
+	assertEq(ClientState.feedback(sim.state), "hud.feedback_guard", "HUD lê guarda")
+	assertTrue(sim.vfxConfirmed["comet_shoulder"] == true, "VFX confirma o contato de guarda")
+	assertTrue(sim.camera.trauma > 0, "guarda do Cometa sacode")
+	local perfilGuarda = CombatCameraController.profileFor("guard", "comet_shoulder")
+	local perfilHit = CombatCameraController.profileFor("hit", "comet_shoulder")
+	assertTrue(
+		perfilGuarda ~= nil and perfilHit ~= nil and perfilGuarda.trauma < perfilHit.trauma,
+		"guarda sacode menos que o acerto da técnica"
+	)
+	local perda = vidaAntes - alvo.health
+	assertTrue(math.abs(perda - event.damage) < 1e-9, "sem dano fantasma")
+	if event.damage > 0 then
+		assertEq(#sim.numbers, 1, "número do dano reduzido")
+		assertEq(sim.numbers[1].damage, event.damage, "número igual ao evento")
+	else
+		assertEq(#sim.numbers, 0, "sem dano, sem número")
 	end
 end)
 
