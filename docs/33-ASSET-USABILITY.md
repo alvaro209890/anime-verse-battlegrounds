@@ -2,7 +2,7 @@
 
 Este documento responde, com evidência de arquivo, o que as imagens geradas e os pacotes do repositório **podem** e **não podem** virar no Roblox. A fonte executável é [`docs/assets/visual-inventory.json`](assets/visual-inventory.json), gerada e conferida por [`scripts/audit_visual_assets.py`](../scripts/audit_visual_assets.py). A paleta extraída vs. o RGB já no código está em [`docs/assets/art-direction-palette.json`](assets/art-direction-palette.json).
 
-> **Regra desta rodada:** nada aqui liga PNG ao place, inventa `rbxassetid`, muda RGB de runtime, começa F1 ou substitui Play. Imagem gerada por IA é direção. Textura candidata ainda precisa de importação manual no Studio, Gate P1 se for pública, e W1/A1 se for jogável.
+> **Regra desta rodada:** nada aqui liga PNG ao place, inventa `rbxassetid`, muda RGB de runtime, começa F1 ou substitui Play. Imagem gerada por IA é direção. Textura candidata de **chão/muro** ainda precisa de importação (ou S1 mecânico) e W1. **Skin de NPC não entra nessa fila** — é receita Luau (`docs/34`).
 
 ## 1. Veredito em uma página
 
@@ -16,8 +16,9 @@ Este documento responde, com evidência de arquivo, o que as imagens geradas e o
 | Boards de animação | **Só pose R15** | Comparar no A1 com `PlayerCombatAnimator` | Catálogo de clipes de combate continua vazio de propósito |
 | Atlas de domínio | **Direção de mundo F0→F2** | W1 no Bastião/Planície | Distrito Lumen e ruínas são F1/F2 |
 | Habilidades futuras (8 PNGs) | **Não implementar agora** | Catálogo `docs/27` | Sem spec server-side; F0 não ganha habilidade nova |
-| Zip Kenney Particle Pack | **Arquivo + subconjunto já extraído** | slash/spark/scorch em `AVB-free-vfx-assets` | Zip não entra no Rojo; `assetId` continua `nil` |
-| Nature Kit | **Só licença** | README + License.txt | Malhas **não** foram versionadas |
+| Zip Kenney Particle Pack | **Arquivo + subconjunto já extraído** | slash/spark/scorch em `AVB-free-vfx-assets` | Zip não entra no Rojo; `assetId` continua `nil`; **não** é pele de NPC (`docs/34`) |
+| Nature Kit | **Só licença** | README + License.txt | Malhas **não** foram versionadas; reconstruir forma em Parts (S0), não importar |
+| Skins F0 (4 atores) | **Já usáveis por código** | `WorldPresentation.rigFor` / `shardGearFor` | Não importar PNG/mesh; Play só olha; ver `docs/34` |
 | Atlas de VFX gratuitos (energy ball, anel, raio, explosão) | **Candidato de upload** | `prepared/*` no catálogo `AbilityVfx` | PNG local ≠ `ParticleEmitter.Texture` |
 | Áudio Kenney CC0 (305 `.ogg`) | **Candidato de upload** | `CombatAudio.sourceFile` já aponta os arquivos | Runtime ainda usa placeholder do criador Roblox |
 
@@ -83,6 +84,7 @@ Previews JPEG novos cobrem domínio, combate e habilidades futuras, todos em `do
 3. **W1:** greybox atual vs. `domain-expansion-safe-plaza` e `border-gate`. Só então considerar um ColorMap de piso numa peça de **teste**, não no volume inteiro.
 4. **A1:** poses e VFX de guarda/dash/impacto contra os boards; upload de atlas `prepared/` e dos `.ogg` é independente e também exige ID real.
 5. Qualquer `assetId` preenchido precisa casar `rbxassetid://%d+` e o arquivo publicado. Caminho de Git não é `Texture`.
+6. **Skins de NPC não passam por esta fila de importação.** Roupa é S0 (primitivas) ou S1 (mesmo contrato do áudio). Plano: [`docs/34-CODE-DRIVEN-SKINS.md`](34-CODE-DRIVEN-SKINS.md).
 
 ## 7. O que esta rodada não faz
 

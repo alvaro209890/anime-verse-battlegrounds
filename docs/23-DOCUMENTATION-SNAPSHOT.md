@@ -8,9 +8,9 @@ Este arquivo é a referência única para o estado técnico atual do repositóri
 |---|---|
 | Branch publicado | `main` (esta rodada entra por PR) |
 | Commit-base do código de jogo | `2a713af` (`src/` inalterado nesta rodada) |
-| Estado deste documento | snapshot após validação total: docs alinhados ao catálogo, porteiro `scripts/audit_snapshot.py`, dummy fora do Heartbeat travado por teste |
+| Estado deste documento | snapshot após o plano de skins por código (`docs/34`); `src/` de jogo inalterado |
 | Data do commit | 2026-08-16 |
-| Última alteração | `scripts/audit_snapshot.py` + `docs/ci-snapshot.json`; docs/13 §6.1/§9, docs/16, README, docs/12 e docs/08 alinhados ao catálogo; teste do dummy usa dano 5; Heartbeat não chama `tryDummyAttack` |
+| Última alteração | plano `docs/34-CODE-DRIVEN-SKINS.md`: skins F0 por receita Luau + CC0; planos 15/21/28/31/33/32 apontam para esse loop |
 | Testes de domínio | 241 passaram, 0 falharam |
 | Testes de animação/apresentação | 76 passaram, 0 falharam |
 | Fuzz headless de segurança | 67 passaram, 0 falharam |
@@ -27,7 +27,7 @@ Este arquivo é a referência única para o estado técnico atual do repositóri
 
 ## O que está implementado
 
-O repositório contém a fatia de combate server-authoritative, as três habilidades F0, progressão e quests, inimigo comum e elite, VFX de jogador e inimigos, skins procedurais, defesa e dash com apresentação procedural em fases, receitas locais de impacto de chão, paredes decoradas, teto translúcido no spawn, terreno contínuo, rochas e grama procedurais, referências visuais originais, índice visual na raiz, checklist de validação em `docs/26`, catálogo de habilidades futuras em `docs/27`, reforma visual do spawn em `docs/28`, reforma do mundo aberto e das skins de inimigo em `docs/31`, runbook do playtest em `docs/32`, matriz de usabilidade dos assets em `docs/33`, inventário com hashes em `docs/assets/visual-inventory.json`, atalho de três passos para o PC de casa (`avb-debug home`) e o script `scripts/ci.sh` na ordem do GitHub Actions (incluindo a auditoria visual e o snapshot canônico). O pacote público Kenney está arquivado em `docs/assets/open-candidates/`; um subconjunto já extraído serve o VFX de inimigo com `assetId = nil`. Nenhuma imagem gerada está ligada ao place.
+O repositório contém a fatia de combate server-authoritative, as três habilidades F0, progressão e quests, inimigo comum e elite, VFX de jogador e inimigos, skins procedurais, defesa e dash com apresentação procedural em fases, receitas locais de impacto de chão, paredes decoradas, teto translúcido no spawn, terreno contínuo, rochas e grama procedurais, referências visuais originais, índice visual na raiz, checklist de validação em `docs/26`, catálogo de habilidades futuras em `docs/27`, reforma visual do spawn em `docs/28`, reforma do mundo aberto e das skins de inimigo em `docs/31`, runbook do playtest em `docs/32`, matriz de usabilidade dos assets em `docs/33`, plano de skins por código em `docs/34`, inventário com hashes em `docs/assets/visual-inventory.json`, atalho de três passos para o PC de casa (`avb-debug home`) e o script `scripts/ci.sh` na ordem do GitHub Actions (incluindo a auditoria visual e o snapshot canônico). O pacote público Kenney está arquivado em `docs/assets/open-candidates/`; um subconjunto já extraído serve o VFX de inimigo com `assetId = nil`. Nenhuma imagem gerada está ligada ao place.
 
 O build e os testes automatizados demonstram integridade de código, contratos puros, catálogos, geometria, segurança modelada, apresentação procedural e árvore Rojo. Eles não demonstram que Parts, joints, iluminação, prompts, física, câmera, replicação, DataStore ou dispositivos reais funcionam como esperado dentro do Roblox Studio.
 
@@ -51,4 +51,4 @@ Nesta rodada, o domínio passou com **241 casos**, a animação/apresentação c
 
 O achado da câmera do pesado básico (`abilityId = "heavy"` fora de `HEAVY_ABILITIES`) permanece pinado: o teste fixa o trauma igual ao jab. Só o Play decide se isso muda.
 
-A conclusão recomendada permanece: no PC, `lune run scripts/avb-debug.luau home`, abrir o place canônico, executar W1, registrar evidência de runtime, depois A1/R1/W2. Nenhuma dessas validações externas deve ser marcada como concluída apenas por estes testes.
+A conclusão recomendada permanece: no PC, `lune run scripts/avb-debug.luau home`, abrir o place canônico, executar W1, registrar evidência de runtime, depois A1/R1/W2. Nenhuma dessas validações externas deve ser marcada como concluída apenas por estes testes. Melhoria de skin de NPC depois do W1 segue `docs/34` (editar receita, não malha).

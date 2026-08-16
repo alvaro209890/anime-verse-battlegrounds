@@ -17,8 +17,8 @@ Preencher uma ficha por ação ou cenário validado.
 | Commit/hash do build | preencher antes da captura |
 | Arquivo `.rbxl` e SHA-256 | preencher antes da captura |
 | Referência visual | caminho exato do PNG e hash |
-| Documento de origem | `docs/25`, `docs/14`, `docs/15` ou `docs/24` |
-| Sistema observado | pose, VFX, HUD, mundo ou combinação |
+| Documento de origem | `docs/25`, `docs/14`, `docs/15`, `docs/24` ou `docs/34` |
+| Sistema observado | pose, VFX, HUD, mundo, skin de NPC ou combinação |
 | Plataforma | PC, Android ou gamepad |
 | Resolução e escala | preencher |
 | Preset gráfico | preencher |
@@ -82,7 +82,7 @@ Para previews de habilidade, tutorial ou loading screen, usar as referências ap
 |---|---|---|
 | A0 | Direção, originalidade e coerência visual | Review de referência e decisão de escopo |
 | A1 | Pose, fases, VFX e leitura do poder | Play no Studio, capturas, profiling e três câmeras |
-| W1 | Densidade, rotas, spawn, portões e cenário | Build aberto no Studio e checklist de navegação |
+| W1 | Densidade, rotas, spawn, portões, cenário e silhueta dos quatro NPCs | Build aberto no Studio, checklist de navegação e prints frente/perfil/¾ (`docs/34`) |
 | R1 | Separação entre feedback e autoridade | Dois clientes, latência, spam, rejeições e network ownership |
 | W2 | Performance e degradação por plataforma | PC/Android/gamepad, MicroProfiler e sessão sustentada |
 
@@ -92,7 +92,7 @@ Descrever divergências em termos observáveis: “o rastro termina 0,3 s depois
 
 ## Limites de licença e procedência
 
-PNG gerado por IA permanece conceito original do projeto e deve ser referenciado por hash. Assets externos abertos devem ter licença, URL, versão, data de acesso e localização documentados antes de integração. O protocolo visual não substitui revisão de licença, otimização ou aprovação de produção. A matriz de promoção (vitrine vs. PBR vs. F1-only vs. não importar) está em [`docs/33-ASSET-USABILITY.md`](33-ASSET-USABILITY.md); os hashes conferidos no CI estão em [`docs/assets/visual-inventory.json`](assets/visual-inventory.json).
+PNG gerado por IA permanece conceito original do projeto e deve ser referenciado por hash. Assets externos abertos devem ter licença, URL, versão, data de acesso e localização documentados antes de integração. O protocolo visual não substitui revisão de licença, otimização ou aprovação de produção. A matriz de promoção (vitrine vs. PBR vs. F1-only vs. não importar) está em [`docs/33-ASSET-USABILITY.md`](33-ASSET-USABILITY.md); skins de NPC não se importam — receitas em [`docs/34-CODE-DRIVEN-SKINS.md`](34-CODE-DRIVEN-SKINS.md); os hashes conferidos no CI estão em [`docs/assets/visual-inventory.json`](assets/visual-inventory.json).
 
 
 ## Habilidades futuras

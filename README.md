@@ -157,7 +157,7 @@ src/
   server/            services (domínio F0, save, rede, segurança e telemetria)
   client/            controllers (bootstrap de apresentação)
 tests/               harness Lune + 403 casos (241 run.luau + 76 animation.luau + 67 fuzz + 19 combat_e2e)
-docs/                produto, arquitetura, decisões, testes e planos (00 a 33)
+docs/                produto, arquitetura, decisões, testes e planos (00 a 34)
 lib/                 bibliotecas pinadas (ProfileStore)
 plugins/AvbDebug/    plugin de Studio: ponte de debug usada pelos agentes
 scripts/             CI Linux, build do snapshot, ponte de debug e CLI dos agentes
@@ -182,6 +182,7 @@ scripts/             CI Linux, build do snapshot, ponte de debug e CLI dos agent
 - [docs/19-DEBUG-BRIDGE.md](docs/19-DEBUG-BRIDGE.md) — plugin AvbDebug e ponte local: como qualquer agente debuga o Studio
 - [docs/32-STUDIO-PLAYTEST-RUNBOOK.md](docs/32-STUDIO-PLAYTEST-RUNBOOK.md) — ordem do dia no Studio (W1/A1/R1/W2)
 - [docs/33-ASSET-USABILITY.md](docs/33-ASSET-USABILITY.md) — o que as imagens geradas podem virar agora
+- [docs/34-CODE-DRIVEN-SKINS.md](docs/34-CODE-DRIVEN-SKINS.md) — skins F0 por receita Luau e CC0, sem clique no Studio
 
 `PROMPT_AnimeVerseBattlegrounds_v2.md` é o briefing histórico que originou o
 planejamento. Em conflito, os documentos canônicos em `docs/` prevalecem.

@@ -88,6 +88,11 @@ aprovação em uma linha — ambíguo aqui vira discussão depois.
 | 6 | Morte e retorno | morrer na planície | Output da perda de XP, posição do respawn | respawn no Marco com a perda da zona aplicada **uma** vez |
 | 7 | Elite | ir à cratera, sobreviver a um combo e um slam | vídeo do telegraph de 700 ms, print da coroa | telegraph legível antes do golpe, ringue livre de decoração, coroa lê à distância |
 
+> **Skins (`docs/34`).** Os prints de perfil da Instrutora (passo 3), do dummy
+> no spawn (passo 2) e da coroa (passo 7) são a evidência que autoriza
+> acrescentar peça em `WorldPresentation`. Sem eles, a passada S0 não começa.
+> Não soldar roupa na viewport durante o W1.
+
 ### A1 — o golpe
 
 | # | Passo | O que fazer | Capturar | Passa quando |
@@ -189,6 +194,7 @@ mais, entra na lista com o número medido — não com um palpite.
 - [`docs/13-F0-SLICE.md`](13-F0-SLICE.md) §10 (roteiro de 20 min)
 - [`docs/14-ANIMATION-PLAN.md`](14-ANIMATION-PLAN.md) §4.7–4.9 e §8
 - [`docs/15-WORLD-PRESENTATION.md`](15-WORLD-PRESENTATION.md) (Gate W1)
+- [`docs/34-CODE-DRIVEN-SKINS.md`](34-CODE-DRIVEN-SKINS.md) (passada de skin só depois destas capturas)
 - [`docs/19-DEBUG-BRIDGE.md`](19-DEBUG-BRIDGE.md) §5 (receitas do bridge)
 - [`docs/26-VISUAL-VALIDATION-CHECKLIST.md`](26-VISUAL-VALIDATION-CHECKLIST.md) (ficha)
 - [`scripts/StudioEvidence.luau`](../scripts/StudioEvidence.luau) (roteiro como dado)

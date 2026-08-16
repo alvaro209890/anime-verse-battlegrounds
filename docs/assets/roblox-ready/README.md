@@ -54,4 +54,4 @@ O script preserva os PNGs de origem, grava somente em `docs/assets/roblox-ready`
 
 ## Limites da conversão
 
-A conversão não cria meshes, decals, partículas, animações, IDs publicados, `SurfaceAppearance` dentro do place, materiais Roblox ou integração em `WorldService`. As imagens de props, VFX, animação, domínio e habilidades futuras permanecem previews de referência; transformá-las em runtime exigirá produção separada, otimização e validação no Studio. O veredito por arquivo está em [`docs/33-ASSET-USABILITY.md`](../../33-ASSET-USABILITY.md).
+A conversão não cria meshes, decals, partículas, animações, IDs publicados, `SurfaceAppearance` dentro do place, materiais Roblox ou integração em `WorldService`. As imagens de props, VFX, animação, domínio e habilidades futuras permanecem previews de referência. **Skin de NPC não se importa daqui:** ver [`docs/34-CODE-DRIVEN-SKINS.md`](../../34-CODE-DRIVEN-SKINS.md). O veredito por arquivo está em [`docs/33-ASSET-USABILITY.md`](../../33-ASSET-USABILITY.md).

@@ -54,7 +54,11 @@ Utilizamos o **Particle Pack** da Kenney, licenciado sob **Creative Commons CC0*
 2. **Combate Comum**: Observe a alternância entre o talho (Rend) e o salto (Pounce).
 3. **Boss**: Verifique o telegraph longo do Slam (luz laranja crescendo) vs o Combo rápido.
 4. **Limpeza**: Mate um inimigo e verifique se o VFX de habilidade é interrompido e limpo corretamente.
-5. **IDs Roblox**: Quando os assets Kenney forem publicados, preencha os IDs em `EnemyVfxAssets.luau` para substituir as partículas default.
+5. **IDs Roblox:** não preencher `EnemyVfxAssets` no Dashboard. O contrato é o de `docs/16` / `docs/34` §5: `sourceFile` no Git, `assetId` vazio = partículas default, upload por script quando houver conta. Sprite Kenney **não** vira pele do monstro.
+
+## Evolução das skins (não é malha)
+
+Corpo e roupa dos quatro atores F0 melhoram por receita em `WorldPresentation.luau` (`docs/34`). Particle Pack continua VFX. Nature Kit / OpenGameArt monster **não** entram como `.fbx`. Passada visual só depois das capturas W1.
 
 ## Referências de Assets Consultadas
 

@@ -23,7 +23,8 @@ Não entrega:
 
 - clipes R15 finais do jogador;
 - animações dedicadas de Ombro Cometa, Cadência Quebrada ou Retorno de Pulso;
-- concept art, roupa, cabelo, ícone, textura ou silhueta pública;
+- concept art, roupa, cabelo, ícone, textura ou silhueta **pública** (Gate P1);
+- malha `.fbx` / `.obj` / item do catálogo Roblox nos NPCs — a evolução da skin é receita Luau (`docs/34-CODE-DRIVEN-SKINS.md`);
 - VFX/áudio/câmera final;
 - prova de beleza, legibilidade ou desempenho em runtime;
 - autorização para avançar os 45 clipes planejados em `14-ANIMATION-PLAN.md`.
@@ -156,6 +157,15 @@ receitas: `Head` 1,253×1,292×1,255 @ +2,029 · `UpperTorso` 1,783×1,910×1,07
 0,981×1,416×1,069 @ ±1,382 · `LowerArm` 0,981×1,274×1,069 · `LowerLeg`
 0,920×1,591×0,966 @ −2,590. Altura total 6,282; topo da cabeça +2,675; **sola
 3,607 abaixo da HumanoidRootPart**.
+
+### 4.3 Como a skin evolui daqui (`docs/34`)
+
+Não se abre o rig no Studio para “melhorar a roupa”. O loop é editar
+`rigFor` / `shardGearFor`, correr `tests/animation.luau`, reconstruir o place e
+usar o Play só para olhar. Asset grátis entra de dois jeitos: reconstruído em
+primitivas (S0, zero upload) ou ligado como o áudio (`sourceFile` + `assetId`
+vazio = noop). Sprite Kenney e Nature Kit **não** substituem esta receita.
+Passada de peças novas só depois do W1 fotografar os quatro atores.
 
 **Assentamento (`WorldService.settleRigBodies`).** O R15 sai da criação com as
 pernas recolhidas e só estende no primeiro passo de física: medindo a sola
