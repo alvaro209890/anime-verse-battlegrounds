@@ -5,6 +5,8 @@ const topbar = document.querySelector('#topbar');
 const progressLine = document.querySelector('#progress-line');
 const heroBackdrop = document.querySelector('[data-parallax]');
 const revealItems = document.querySelectorAll('.reveal');
+const heroRevealItems = document.querySelectorAll('.hero .reveal');
+if (window.innerWidth <= 900) heroRevealItems.forEach((item) => item.classList.add('is-visible'));
 const menuToggle = document.querySelector('#menu-toggle');
 const mobileMenu = document.querySelector('#mobile-menu');
 const audioToggle = document.querySelector('#audio-toggle');
