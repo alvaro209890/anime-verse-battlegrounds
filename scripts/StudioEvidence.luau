@@ -33,6 +33,18 @@ export type Threshold = {
 
 export type PerfSample = { [string]: any }
 
+-- Atalho de três passos para quando o Studio abrir em outra máquina.
+-- NÃO entra na lista W1/A1: o primeiro passo de Play continua sendo `w1_sync`.
+export type HomePrepStep = {
+	id: string,
+	title: string,
+	-- Comando copiável. Vazio só no passo de Play (não há CLI que substitua).
+	command: string,
+	action: string,
+	pass: string,
+	play: boolean,
+}
+
 local StudioEvidence = {}
 
 -- Ordem do dia. É a sequência de `docs/13` §10 (roteiro de 20 min) cruzada com
@@ -132,6 +144,33 @@ local STEPS: { Step } = {
 	},
 }
 
+local HOME_PREP: { HomePrepStep } = {
+	{
+		id = "home_build",
+		title = "Gerar o place canônico",
+		command = ".\\scripts\\build-studio.ps1",
+		action = "No PowerShell, na raiz do repo. Fecha lock órfão; aborta se o Studio estiver vivo.",
+		pass = "Imprime tamanho, data e SHA-256 de anime-verse-battlegrounds.rbxl. Esse é o único place a abrir.",
+		play = false,
+	},
+	{
+		id = "home_sync",
+		title = "Conferir sincronia",
+		command = "lune run scripts/avb-debug.luau sync",
+		action = "Com o place aberto, o plugin AvbDebug instalado e a ponte local no ar.",
+		pass = "Exit 0 segue. Exit 2 encerra: reabra o place e não anote nada.",
+		play = false,
+	},
+	{
+		id = "home_impact",
+		title = "Impacto de verdade (passo a1_impact)",
+		command = "",
+		action = "Play, uma janela só. Andar até o dummy (≤ 6 studs) e acertar leve, pesado e Ombro Cometa.",
+		pass = "Os três conectam e a camada de impacto aparece: hit-stop, tremida, luz, som e número.",
+		play = true,
+	},
+}
+
 -- Limites de `docs/14` §8. São **F0-BASELINE**: número inicial para medir, não
 -- promessa de produto. Estourar não reprova sozinho — obriga a registrar o
 -- dispositivo, o cenário e a decisão.
@@ -162,6 +201,14 @@ end
 
 function StudioEvidence.thresholds(): { Threshold }
 	return THRESHOLDS
+end
+
+function StudioEvidence.homePrep(): { HomePrepStep }
+	local out: { HomePrepStep } = {}
+	for _, step in HOME_PREP do
+		table.insert(out, step)
+	end
+	return out
 end
 
 -- Porteiro da sessão. Recebe a resposta do comando `sync` e decide se vale
@@ -242,6 +289,27 @@ function StudioEvidence.validate(): (boolean, string?)
 		if threshold.max == nil and threshold.min == nil then
 			return false, "threshold sem limite: " .. threshold.field
 		end
+	end
+	if #HOME_PREP ~= 3 then
+		return false, "atalho de casa precisa ter exatamente três passos"
+	end
+	if HOME_PREP[1].id ~= "home_build" or HOME_PREP[2].id ~= "home_sync" or HOME_PREP[3].id ~= "home_impact" then
+		return false, "atalho de casa fora de ordem: build, sync, impacto"
+	end
+	for _, step in HOME_PREP do
+		if step.title == "" or step.action == "" or step.pass == "" then
+			return false, "passo de casa sem título, ação ou critério: " .. step.id
+		end
+		if step.play then
+			if step.command ~= "" then
+				return false, "passo de Play não leva comando de CLI: " .. step.id
+			end
+		elseif step.command == "" then
+			return false, "passo de casa sem comando: " .. step.id
+		end
+	end
+	if HOME_PREP[3].play ~= true then
+		return false, "o terceiro passo de casa é o Play no dummy"
 	end
 	return true, nil
 end

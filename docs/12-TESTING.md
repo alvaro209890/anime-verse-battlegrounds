@@ -1,16 +1,16 @@
 # 12 — Testes e evidências
 
-> **Snapshot de implementação:** 2026-08-15 (tarde), derivado de `b529c5e`. Quatro suítes Lune: `tests/run.luau` **239 casos de domínio**, `tests/animation.luau` **73 de animação/apresentação**, `tests/security_fuzz.luau` **67 de fuzz adversarial** e `tests/combat_e2e.luau` **14 de simulação de combate ponta a ponta** — total automatizado de **393 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada (`docs/32`): a cadeia de impacto passou a ser exercida de ponta a ponta em contrato, o fuzz saltou de 29 para 67 casos e o roteiro do Studio virou dado executável com porteiro de sincronia.
+> **Snapshot de implementação:** 2026-08-16, derivado desta rodada (`scripts/ci.sh`, e2e de pesado/Cometa, atalho `avb-debug home`). Quatro suítes Lune: `tests/run.luau` **241 casos de domínio**, `tests/animation.luau` **73 de animação/apresentação**, `tests/security_fuzz.luau` **67 de fuzz adversarial** e `tests/combat_e2e.luau` **19 de simulação de combate ponta a ponta** — total automatizado de **400 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada: o CI Linux cabe num script, a cadeia de impacto cobre pesado e Ombro Cometa nos desfechos miss/hit/guarda, e o atalho de casa imprime três passos com o Studio fechado.
 
 ## 1. Estado da execução
 
-No snapshot de implementação atual, a verificação automatizada registrou 239/239 em `tests/run.luau`, 73/73 em `tests/animation.luau`, 67/67 em `tests/security_fuzz.luau` e 14/14 em `tests/combat_e2e.luau`. Selene e StyLua continuam gates separados e foram executados neste release: Selene com 0 erros/0 warnings e StyLua com `--check` limpo em `src tests plugins scripts`. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
+No snapshot de implementação atual, a verificação automatizada registrou 241/241 em `tests/run.luau`, 73/73 em `tests/animation.luau`, 67/67 em `tests/security_fuzz.luau` e 19/19 em `tests/combat_e2e.luau`. Selene e StyLua continuam gates separados e foram executados neste release: Selene com 0 erros/0 warnings e StyLua com `--check` limpo em `src tests plugins scripts`. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
 
 **Registro histórico, não evidência do snapshot atual:** uma rodada anterior teve confirmação em Play pelo jogador, com `avb-debug sync` = 56/56, de que a animação de golpe movia o corpo e o personagem não girava sozinho. Essa evidência pertence ao estado anterior documentado em `docs/14` e não deve ser usada para declarar o commit `d7c44e8` validado em runtime. Neste snapshot, o Play atual continua pendente.
 
 Segue sem comprovação em Play: a camada de impacto (tremida, hit-stop, luz e som de acerto). Motivo registrado em `docs/14` §4.8: o jogador estava a 41,2 studs do único alvo do mundo e o alcance do golpe é 9, então nenhum acerto jamais aconteceu na sessão. Os valores novos são derivados de conta e travados por teste, não observados.
 
-Desde 15/08 essa cadeia é **exercida em contrato** por `tests/combat_e2e.luau`: o primeiro caso reproduz os 41,2 studs e prova que as cinco camadas ficam mudas; o segundo anda até 6 studs e liga todas de uma vez; o terceiro roda os dois lado a lado para mostrar que a distância era a única diferença. Isso não é Play — é a garantia de que, quando o Studio abrir, o que sobrar de erro é runtime e não fiação. O passo `a1_impact` do [`docs/32`](32-STUDIO-PLAYTEST-RUNBOOK.md) é onde isso vira evidência de verdade.
+Desde 15/08 essa cadeia é **exercida em contrato** por `tests/combat_e2e.luau`. Em 16/08 a suíte passou de 14 para 19 casos: o pesado e o Ombro Cometa repetem os desfechos miss (41,2 studs), acerto (≤ 6 studs) e guarda. O passo `a1_impact` do [`docs/32`](32-STUDIO-PLAYTEST-RUNBOOK.md) é onde isso vira evidência de verdade. O atalho `avb-debug home` só prepara essa sessão — não a substitui.
 
 O histórico abaixo é de 2026-08-13 e fica como registro da rodada anterior. O Play das 14:26 (`docs/18-ANALISE-VIDEO.md` §7) comprovou HUD, MENU, técnicas desbloqueadas e custo de UMBRAL sendo cobrado — e expôs o portão intransponível (prompt de travessia só no toque + recusa devolvendo a posição a cada Heartbeat).
 
@@ -31,6 +31,12 @@ No Linux/macOS (o que o CI roda, na mesma ordem):
 ```bash
 export PATH="$HOME/.aftman/bin:$HOME/.local/bin:$PATH"
 aftman install                 # 1ª vez neste PC: aftman install --no-trust-check
+./scripts/ci.sh                # StyLua, Selene, quatro suítes Lune, Wally, rojo build
+```
+
+Os comandos expandidos (iguais ao workflow e ao `ci.sh`):
+
+```bash
 stylua --check src tests plugins scripts
 selene src tests plugins scripts
 lune run tests/run.luau
@@ -38,7 +44,7 @@ lune run tests/animation.luau
 lune run tests/security_fuzz.luau
 lune run tests/combat_e2e.luau
 wally install && mkdir -p Packages
-rojo build -o build.rbxl
+rojo build -o /tmp/build.rbxl
 ```
 
 No Windows, com o snapshot canônico no fim:
@@ -69,7 +75,7 @@ O gate de tronco tem nome feio de propósito. Em 2026-08-14 o place canônico es
 
 Em checkout Windows com `core.autocrlf=true`, os arquivos de trabalho podem estar em CRLF enquanto `stylua.toml` exige `Unix`; nesse caso, o check direto acusa somente final de linha. Para reproduzir o CI, use uma cópia com bytes LF canônicos do Git (`git -c core.autocrlf=false archive ...`). `--line-endings Windows` só é equivalente quando todo o checkout está uniformemente em CRLF; ele não resolve uma árvore mista. Não reformatar código só para mascarar essa conversão do checkout.
 
-## 3. Cobertura existente: exatamente 239 testes de domínio
+## 3. Cobertura existente: exatamente 241 testes de domínio
 
 | Área | Cobertura |
 |---|---|
@@ -101,10 +107,11 @@ A divisão é deliberada: matemática e decisão ficam em módulos puros (`Geome
 ## 4. Arquitetura do harness
 
 - **`tests/harness.luau`** simula o mínimo que o Lune não fornece: `_G.game`, `_G.Instance`, `_G.task` e resolução de `require(script.Parent.X)` no filesystem.
-- **`tests/run.luau`** contém os 239 casos e usa módulos reais de `src/`, com um miniframework de asserts.
+- **`tests/run.luau`** contém os 241 casos e usa módulos reais de `src/`, com um miniframework de asserts.
 - **`tests/animation.luau`** contém 73 casos de apresentação procedural, VFX, áudio, juntas, defesa, dash, sinais de fronteira, iluminação do spawn e volume das skins.
 - **`tests/security_fuzz.luau`** executa 67 casos determinísticos de envelope, payload aninhado, replay de request e de sequência, rate limit por classe com janela de 1 s, hold de fronteira adulterado e combinações.
-- **`tests/combat_e2e.luau`** executa 14 casos que ligam servidor e cliente numa cadeia só: posição → aquisição em cone → resolução → `CombatEvent` → hit-stop, tremida, som, número de dano → `StateDelta`. É a suíte que faltava: cada peça tinha teste próprio e a cadeia inteira nunca era exercida.
+- **`tests/combat_e2e.luau`** executa 19 casos que ligam servidor e cliente numa cadeia só: posição → aquisição em cone → resolução → `CombatEvent` → hit-stop, tremida, som, número de dano → `StateDelta`. Leve, pesado e Ombro Cometa cobrem miss longe, acerto perto e guarda. É a suíte que faltava: cada peça tinha teste próprio e a cadeia inteira nunca era exercida.
+- **`scripts/ci.sh`** reproduz a ordem de `.github/workflows/ci.yml` no Linux. **`avb-debug home`** imprime o atalho de três passos com o Studio fechado.
 - **Services testáveis por injeção** recebem dependências em `init()`: `CatalogService`, `AbilityService`, `ResourceService`, `PlayerSessionService`, `ZoneService`, `ProgressionService`, `QuestService`, `SpatialService`, `EnemyService` e `SaveService` (adaptador de store mockado). O bootstrap Roblox monta o grafo real.
 - **`src/shared/TaskCompat.luau`** usa `task` nativo no Roblox e o polyfill somente no harness.
 
@@ -114,8 +121,8 @@ Os módulos de dados declaram tipos inline porque o Lune não resolve `script.Pa
 
 | Camada | O que demonstra | O que não demonstra |
 |---|---|---|
-| lint + 239 testes Lune | sintaxe, estilo e comportamento unitário coberto no ambiente simulado, incluindo isolamento headless de dois jogadores | física, replicação, UI renderizada, dispositivo ou serviços Roblox reais |
-| simulação de combate (14 casos) | a cadeia servidor→cliente reage ao desfecho autoritativo e só a ele; a distância certa liga a camada de impacto inteira | que alguma coisa apareça na tela, o feel do golpe, latência e input real |
+| lint + 241 testes Lune | sintaxe, estilo e comportamento unitário coberto no ambiente simulado, incluindo isolamento headless de dois jogadores | física, replicação, UI renderizada, dispositivo ou serviços Roblox reais |
+| simulação de combate (19 casos) | a cadeia servidor→cliente reage ao desfecho autoritativo e só a ele; leve, pesado e Cometa só ligam impacto na distância certa | que alguma coisa apareça na tela, o feel do golpe, latência e input real |
 | Wally + build Rojo | dependências resolvidas e árvore de projeto montável | que o place abre sem erro ou que um fluxo é jogável |
 | Studio | bootstrap, UI/input, câmera, física e replicação no cenário testado | DataStore/teleport/rede pública com fidelidade total |
 | publicado privado | serviços reais, múltiplos servidores, reconnect, teleport e condições reais de rede | cobertura de dispositivo que não foi executada |

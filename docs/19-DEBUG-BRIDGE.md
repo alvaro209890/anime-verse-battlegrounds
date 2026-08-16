@@ -61,6 +61,8 @@ lune run scripts/avb-debug.luau health          # a ponte está de pé? o Studio
 lune run scripts/avb-debug.luau ping            # place, modo (edit/play), F0Debug, greybox
 lune run scripts/avb-debug.luau errors          # só os erros do Output
 lune run scripts/avb-debug.luau sync            # o Studio está rodando o código do repo?
+lune run scripts/avb-debug.luau home            # 3 passos para o PC de casa (Studio fechado)
+lune run scripts/avb-debug.luau runbook         # roteiro W1/A1/W2, também sem Studio
 ```
 
 Toda saída é JSON no stdout. Exit code: `0` ok, `1` falha, `2` fora de sync.

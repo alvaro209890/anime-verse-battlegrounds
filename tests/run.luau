@@ -361,6 +361,7 @@ end)
 test("runbook: o CLI expõe roteiro e folha de evidência, e o roteiro roda sem bridge", function()
 	local source = fs.readFile("scripts/avb-debug.luau")
 	assertTrue(source:find('elseif command == "runbook" then', 1, true) ~= nil, "comando runbook no dispatch")
+	assertTrue(source:find('elseif command == "home" then', 1, true) ~= nil, "comando home no dispatch")
 	assertTrue(source:find('elseif command == "evidence" then', 1, true) ~= nil, "comando evidence no dispatch")
 	assertTrue(source:find("StudioEvidence.syncGate(sync)", 1, true) ~= nil, "a folha passa pelo porteiro")
 	-- Exit 2 fora de sync: é o contrato que o runbook promete.
@@ -369,6 +370,45 @@ test("runbook: o CLI expõe roteiro e folha de evidência, e o roteiro roda sem 
 	-- fechado, que é quando se prepara a sessão.
 	assertTrue(source:find("local function requireBridgeToken", 1, true) ~= nil, "token é exigido sob demanda")
 	assertTrue(source:find("local bridgeToken = readBridgeToken()", 1, true) == nil, "sem exigência no carregamento")
+end)
+
+test("runbook: o atalho de casa tem três passos e não entra no Play", function()
+	local ok, reason = StudioEvidence.validate()
+	assertTrue(ok, reason)
+
+	local home = StudioEvidence.homePrep()
+	assertEq(#home, 3, "build, sync, impacto")
+	assertEq(home[1].id, "home_build", "primeiro gera o place")
+	assertTrue(string.find(home[1].command, "build-studio.ps1", 1, true) ~= nil, "comando do snapshot")
+	assertEq(home[1].play, false, "build não é Play")
+	assertEq(home[2].id, "home_sync", "depois a sincronia")
+	assertTrue(string.find(home[2].command, "avb-debug.luau sync", 1, true) ~= nil, "comando do sync")
+	assertEq(home[3].id, "home_impact", "por último o dummy")
+	assertEq(home[3].play, true, "o terceiro passo é Play")
+	assertEq(home[3].command, "", "Play não tem CLI que substitua")
+
+	-- O atalho não empurra w1_sync para segundo: a lista de Play continua igual.
+	assertEq(StudioEvidence.steps()[1].id, "w1_sync", "Play ainda começa pela sincronia")
+	assertTrue(StudioEvidence.homePrep() ~= StudioEvidence.homePrep(), "cópia por chamada")
+end)
+
+test("ci: o script local reproduz a ordem do workflow", function()
+	local sh = fs.readFile("scripts/ci.sh")
+	local yml = fs.readFile(".github/workflows/ci.yml")
+	local passos = {
+		"stylua --check src tests plugins scripts",
+		"selene src tests plugins scripts",
+		"lune run tests/run.luau",
+		"lune run tests/animation.luau",
+		"lune run tests/security_fuzz.luau",
+		"lune run tests/combat_e2e.luau",
+		"wally install",
+		"rojo build -o /tmp/build.rbxl",
+	}
+	for _, passo in passos do
+		assertTrue(string.find(sh, passo, 1, true) ~= nil, "ci.sh tem " .. passo)
+		assertTrue(string.find(yml, passo, 1, true) ~= nil, "workflow tem " .. passo)
+	end
 end)
 
 test("apresentação: quatro atores e estilo do mundo passam validação", function()

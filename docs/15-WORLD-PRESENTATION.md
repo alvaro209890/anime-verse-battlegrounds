@@ -1,6 +1,6 @@
 # 15 — Fundação de mundo e apresentação F0
 
-> **Estado canônico em 2026-08-15 (mundo aberto `docs/31` + evidência headless `docs/32`):** implementado em código e validado por Selene, StyLua, 239 testes de domínio, 73 de animação/apresentação, 67 de fuzz, 14 de combate ponta a ponta e build Rojo. O artefato de verificação possui 318.988 bytes; isso prova somente a saída do build, não boot ou runtime. A expansão de cenário, os VFX, as skins (agora dirigidas por dados também para os Estilhaços), a reforma visual do spawn, a decoração da planície/rotas/cratera e os cinco sinais de fronteira estão implementados, mas **não houve Play atual no Studio neste snapshot**.
+> **Estado canônico em 2026-08-16:** implementado em código e validado por Selene, StyLua, 241 testes de domínio, 73 de animação/apresentação, 67 de fuzz, 19 de combate ponta a ponta e build Rojo. O artefato de verificação possui 318.988 bytes; isso prova somente a saída do build, não boot ou runtime. A expansão de cenário, os VFX, as skins (agora dirigidas por dados também para os Estilhaços), a reforma visual do spawn, a decoração da planície/rotas/cratera e os cinco sinais de fronteira estão implementados, mas **não houve Play atual no Studio neste snapshot**.
 
 ## 1. Objetivo e limite
 
@@ -321,7 +321,7 @@ Comprovado automaticamente:
 - unlock de sessão aparece para habilidade/HUD e fica fora do snapshot durável;
 - a planície, as duas rotas e a borda da cratera têm decoração dirigida por dados que não colide, não entra no ringue do elite e não encosta nas âncoras de spawn;
 - os cinco sinais da fronteira têm apresentação local, e travessia recusada não acende nada;
-- 239 testes de domínio, 73 de animação/apresentação, 67 de fuzz e 14 de combate ponta a ponta passam; Selene e StyLua passaram nesta rodada;
+- 241 testes de domínio, 73 de animação/apresentação, 67 de fuzz e 19 de combate ponta a ponta passam; Selene e StyLua passaram nesta rodada;
 - o Gate W1 tem roteiro executável: `docs/32-STUDIO-PLAYTEST-RUNBOOK.md` e `lune run scripts/avb-debug.luau runbook`;
 - o build Rojo atual foi concluído com 318.988 bytes no check reproduzido desta rodada.
 

@@ -21,10 +21,21 @@ As variantes técnicas para importação no Roblox estão em [`docs/assets/roblo
 | Produto | Q-001 a Q-030 decididas; `docs/09-OPEN-QUESTIONS.md` é o registro canônico |
 | Planejamento | visão, GDD, mundo, social, arquitetura, schemas, segurança, roster, roadmap, benchmark e plano de animação documentados |
 | Implementado | domínio F0, mundo greybox com rotas/marcos/modelos low-poly, animação procedural de NPCs e do jogador, interações semânticas com Instrutor/Marco, save/ProfileStore, cliente Input/HUD, envelope v2, `SecurityService` e `TelemetryService` mínimo |
-| Validado automaticamente | 239/239 em `tests/run.luau` + 73/73 em `tests/animation.luau` + 67/67 no fuzz de segurança + 14/14 na simulação de combate ponta a ponta, Selene limpo, StyLua canônico, Wally e build Rojo |
+| Validado automaticamente | 241/241 em `tests/run.luau` + 73/73 em `tests/animation.luau` + 67/67 no fuzz de segurança + 19/19 na simulação de combate ponta a ponta, Selene limpo, StyLua canônico, Wally e build Rojo |
 | Ainda não comprovado | roteiro Play no Studio, physics/collision groups, DataStore real, dois clientes, latência, mobile, gamepad, performance, UX visual e assets de animação |
 
 O CI em pushes para `main` valida contratos headless e a árvore Rojo; não substitui playtest. O snapshot e os links de evidência ficam em `docs/12-TESTING.md`.
+
+## Quando chegar em casa
+
+Aqui não há Studio. No PC, **uma janela só** e o único place é `anime-verse-battlegrounds.rbxl`:
+
+```powershell
+.\scripts\build-studio.ps1
+lune run scripts/avb-debug.luau sync    # exit 0 segue · exit 2 = reabra, não meça
+```
+
+Depois: Play, encostar no dummy (≤ 6 studs) e acertar leve, pesado e Ombro Cometa. O atalho executável (Studio fechado) é `lune run scripts/avb-debug.luau home`. Detalhe em [`docs/32-STUDIO-PLAYTEST-RUNBOOK.md`](docs/32-STUDIO-PLAYTEST-RUNBOOK.md).
 
 ## Stack
 
@@ -94,7 +105,11 @@ rojo build -o .rojo-tree-check.rbxl
 ```
 
 O CI (`.github/workflows/ci.yml`) roda lint + format + testes + build em todo push
-(`src`, `tests`, `plugins` e `scripts`).
+(`src`, `tests`, `plugins` e `scripts`). No Linux, a mesma ordem cabe num comando:
+
+```bash
+./scripts/ci.sh
+```
 
 ### Live sync: manter o Studio sempre com o código atual
 
@@ -126,6 +141,7 @@ consulta a árvore, as propriedades, o Output e o estado do playtest pelo CLI:
 lune run scripts/debug-bridge.luau      # terminal 1, deixa rodando
 lune run scripts/avb-debug.luau ping    # terminal 2
 lune run scripts/avb-debug.luau sync    # o Studio está com o código do repo?
+lune run scripts/avb-debug.luau home    # 3 passos para quando o Studio abrir (sem bridge)
 lune run scripts/avb-debug.luau errors  # erros do último playtest
 ```
 
@@ -139,11 +155,11 @@ src/
     Data/            catálogos dirigidos por dados (personagens, habilidades, famílias, NPCs, zonas, objetivos, locale)
   server/            services (domínio F0, save, rede, segurança e telemetria)
   client/            controllers (bootstrap de apresentação)
-tests/               harness Lune + 249 testes unitários (214 run.luau + 35 animation.luau)
-docs/                produto, arquitetura, decisões, testes e planos (00 a 19)
+tests/               harness Lune + 400 casos (241 run.luau + 73 animation.luau + 67 fuzz + 19 combat_e2e)
+docs/                produto, arquitetura, decisões, testes e planos (00 a 32)
 lib/                 bibliotecas pinadas (ProfileStore)
 plugins/AvbDebug/    plugin de Studio: ponte de debug usada pelos agentes
-scripts/             build do snapshot, ponte de debug e CLI dos agentes
+scripts/             CI Linux, build do snapshot, ponte de debug e CLI dos agentes
 ```
 
 ## Docs principais
