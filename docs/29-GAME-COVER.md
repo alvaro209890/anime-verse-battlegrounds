@@ -25,7 +25,7 @@ Os personagens, a arena e os efeitos foram gerados como conceito original para e
 | Uso não permitido sem nova validação | Runtime, decal, textura, thumbnail oficial publicada ou asset 3D |
 | Referência visual | `docs/assets/domain-expansion-concept.png` |
 
-A imagem foi gerada para este projeto e deve permanecer acompanhada desta documentação. Qualquer adaptação para thumbnail, loading screen ou publicação externa deve preservar a procedência e ser revisada separadamente para o meio de destino.
+A imagem foi gerada para este projeto e deve permanecer acompanhada desta documentação. Qualquer adaptação para thumbnail, loading screen ou publicação externa deve preservar a procedência e ser revisada separadamente para o meio de destino. A decisão de **usar agora como vitrine, não como runtime** está em [`docs/33-ASSET-USABILITY.md`](33-ASSET-USABILITY.md).
 
 ## Peças derivadas para a vitrine — 2026-08-15
 

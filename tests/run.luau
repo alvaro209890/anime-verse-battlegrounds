@@ -85,6 +85,8 @@ test("bootstrap: serviços são filhos do Script Server gerado pelo Rojo", funct
 	assertTrue(source:find("CombatService.basicCombatEvent", 1, true) ~= nil, "golpe básico emite dano")
 	assertTrue(source:find("StudioDebug.applySessionUnlocks", 1, true) ~= nil, "StudioDebug no join")
 	assertTrue(source:find('script:GetAttribute("F0Debug")', 1, true) ~= nil, "F0Debug no Script")
+	assertTrue(source:find("tryDummyAttack", 1, true) == nil, "Heartbeat não liga o ciclo do dummy")
+	assertTrue(source:find("EnemyService.tickElite", 1, true) ~= nil, "elite entra no Heartbeat")
 end)
 
 test("greybox: WorldService gera piso para cada volume canônico de zona", function()
@@ -398,6 +400,8 @@ test("ci: o script local reproduz a ordem do workflow", function()
 	local passos = {
 		"stylua --check src tests plugins scripts",
 		"selene src tests plugins scripts",
+		"python3 scripts/audit_visual_assets.py --check",
+		"python3 scripts/audit_snapshot.py --check",
 		"lune run tests/run.luau",
 		"lune run tests/animation.luau",
 		"lune run tests/security_fuzz.luau",
@@ -2070,20 +2074,49 @@ end)
 
 test("combate: dummy ataca a 8 studs e recusa longe", function()
 	CombatService.clear()
-	local dummy = CombatService.createFighter("npc_training_dummy", "npc", 10000, 0)
+	local dummyDef = Npcs.get("npc_training_dummy")
+	assertTrue(dummyDef ~= nil, "dummy no catálogo")
+	if not dummyDef then
+		return
+	end
+	local dummy = CombatService.createFighter(dummyDef.id, "npc", dummyDef.maxHealth, 0)
 	local player = CombatService.createFighter("p:a", "player", 100, 100)
-	local far = CombatService.tryDummyAttack(dummy, player, 1.0, 9, 2.5, 4, 8)
+	local far = CombatService.tryDummyAttack(
+		dummy,
+		player,
+		1.0,
+		9,
+		dummyDef.attackPeriodSeconds,
+		dummyDef.attackDamage,
+		dummyDef.attackRange
+	)
 	assertEq(far.ok, false, "fora de alcance")
-	local hit = CombatService.tryDummyAttack(dummy, player, 1.0, 8, 2.5, 4, 8)
+	local hit = CombatService.tryDummyAttack(
+		dummy,
+		player,
+		1.0,
+		8,
+		dummyDef.attackPeriodSeconds,
+		dummyDef.attackDamage,
+		dummyDef.attackRange
+	)
 	assertEq(hit.ok, true, "no alcance")
-	assertEq(hit.damage, 4, "dano do dummy")
-	assertEq(player.health, 96, "HP")
-	local wait = CombatService.tryDummyAttack(dummy, player, 2.0, 8, 2.5, 4, 8)
+	assertEq(hit.damage, dummyDef.attackDamage, "dano do catálogo")
+	assertEq(player.health, 100 - dummyDef.attackDamage, "HP")
+	local wait = CombatService.tryDummyAttack(
+		dummy,
+		player,
+		2.0,
+		8,
+		dummyDef.attackPeriodSeconds,
+		dummyDef.attackDamage,
+		dummyDef.attackRange
+	)
 	assertEq(wait.reason, "cooldown", "período 2,5 s")
-	assertEq(dummy.health, 10000, "dummy não morre no próprio ataque")
+	assertEq(dummy.health, dummyDef.maxHealth, "dummy não morre no próprio ataque")
 end)
 
-test("combate: estilhaço telegraph depois dano 6", function()
+test("combate: estilhaço telegraph depois dano 8", function()
 	CombatService.clear()
 	local shard = CombatService.createFighter("enemy_wandering_shard:1", "npc", 60, 0)
 	local player = CombatService.createFighter("p:a", "player", 100, 100)
@@ -2091,7 +2124,7 @@ test("combate: estilhaço telegraph depois dano 6", function()
 	assertEq(windup.phase, "telegraph", "telegraph")
 	assertEq(windup.damage, 0, "ainda sem dano")
 	assertEq(player.health, 100, "HP intacto")
-	local early = CombatService.tryShardCycle(shard, player, 1.2, 4, true, 6, 4, 0.4, 0.6)
+	local early = CombatService.tryShardCycle(shard, player, 1.2, 4, true, 8, 4, 0.4, 0.6)
 	assertEq(early.reason, "telegraph", "ainda no telegraph")
 	local hit = CombatService.tryShardCycle(shard, player, 1.4, 4, true, 8, 4, 0.4, 0.6)
 	assertEq(hit.ok, true, "acerto")
@@ -3019,7 +3052,7 @@ test("sessão: snapshot Ready na zona segura com dummy", function()
 	assertEq(CombatService.getFighter(CombatService.playerFighterId(80)), nil, "fighter removido")
 end)
 
-test("fatia: ready + comet locked no spawn; grant libera 9 HP no dummy", function()
+test("fatia: ready + comet locked no spawn; grant libera 14 HP no dummy", function()
 	CombatService.clear()
 	CooldownService.clear(100)
 	ProgressionService.init()

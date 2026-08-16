@@ -1,0 +1,93 @@
+{
+  "asOf": "2026-08-16",
+  "purpose": "Trava o que a validação total conferiu no código. Não é evidência de Play. Números de combate só mudam com evidência de Studio.",
+  "tests": {
+    "domain": 241,
+    "animation": 76,
+    "fuzz": 67,
+    "combatE2e": 19,
+    "total": 403
+  },
+  "npcs": {
+    "npc_training_dummy": {
+      "maxHealth": 10000,
+      "attackDamage": 5,
+      "attackRange": 8
+    },
+    "enemy_wandering_shard": {
+      "maxHealth": 60,
+      "attackDamage": 8,
+      "attackRange": 4
+    },
+    "enemy_anchored_shard": {
+      "maxHealth": 120,
+      "eliteSlamDamage": 14,
+      "eliteComboDamage": 6
+    }
+  },
+  "audio": {
+    "cues": 15,
+    "distinctSourceFiles": 33,
+    "kenneyOggOnDisk": 305,
+    "placeholderAssetIdsFilled": true
+  },
+  "combat": {
+    "pulseCounterDamage": 10,
+    "cadenceFirst": 7,
+    "cadenceSecond": 9,
+    "cadenceEcho": 6,
+    "cometOpenHp": 14,
+    "cometGuardHp": 14,
+    "cometBlockedHp": 6
+  },
+  "bootstrap": {
+    "heartbeatCallsTryDummyAttack": false
+  },
+  "docs": {
+    "docs/16-COMBAT-AUDIO.md": {
+      "forbidden": [
+        "Nenhum som toca ainda",
+        "13 deixas, 29 arquivos",
+        "396 arquivos"
+      ],
+      "required": [
+        "15 deixas",
+        "33 arquivos"
+      ]
+    },
+    "docs/13-F0-SLICE.md": {
+      "forbidden": [
+        "166 no total",
+        "aplica 6 depois",
+        "| Vida | 40 |",
+        "| Vida | 80 |",
+        "| Dano | 4 a cada 2,5 s"
+      ],
+      "required": [
+        "60 HP",
+        "dano 8",
+        "120 HP"
+      ]
+    },
+    "docs/12-TESTING.md": {
+      "forbidden": [
+        "dummy 10000 HP / dano 4",
+        "Estilhaço Errante 40/6/4",
+        "Cadência 5+6",
+        "dummy 9991 HP"
+      ],
+      "required": [
+        "241 casos de domínio",
+        "76 de animação"
+      ]
+    },
+    "README.md": {
+      "forbidden": [
+        "Status em 2026-08-13 (17h)"
+      ],
+      "required": [
+        "2026-08-16"
+      ]
+    }
+  }
+}

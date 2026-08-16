@@ -53,7 +53,7 @@ As imagens acima são **referências conceituais originais geradas por IA**. Ela
 | [ambientCG Ground 072](https://ambientcg.com/view?id=Ground072) | Terra, areia, folhas e gravetos, mapas 1K–8K | Creative Commons CC0 | Base de terreno e variações de solo no Distrito Lumen |
 | [Poly Haven](https://polyhaven.com/) | Biblioteca de texturas, HDRIs e modelos | CC0 | Materiais de cenário e iluminação de referência, sempre com registro do asset específico |
 
-Nenhuma fonte externa foi copiada para o place nesta rodada. O catálogo é uma lista auditável de candidatos; qualquer download futuro deverá registrar URL, nome exato, versão, hash do arquivo, licença e preparação realizada.
+Nenhuma fonte externa foi copiada para o place nesta rodada. O Particle Pack da Kenney está arquivado em `docs/assets/open-candidates/kenney_particle-pack.zip` (não em `assets/open-candidates/`). Um subconjunto já extraído (slash/spark/scorch) serve o VFX de inimigo com `assetId = nil`. O catálogo é uma lista auditável de candidatos; qualquer download futuro deverá registrar URL, nome exato, versão, hash do arquivo, licença e preparação realizada.
 
 ## 6. Limites de integração
 
@@ -79,7 +79,7 @@ O recorte está pronto para lint, testes de amostragem, validação de catálogo
 
 ## 8. Manifesto de integridade das referências
 
-Os hashes abaixo identificam exatamente os PNGs presentes neste commit. Eles servem para detectar substituição acidental antes de qualquer recorte, atlas ou upload futuro.
+Os hashes abaixo identificam exatamente os PNGs presentes neste commit. Eles servem para detectar substituição acidental antes de qualquer recorte, atlas ou upload futuro. A lista completa do repositório (31 conceitos + zip Kenney + atlas de VFX + PBR) é [`docs/assets/visual-inventory.json`](assets/visual-inventory.json); a usabilidade está em [`docs/33-ASSET-USABILITY.md`](33-ASSET-USABILITY.md).
 
 | Arquivo | Dimensão | SHA-256 |
 |---|---:|---|

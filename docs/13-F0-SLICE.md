@@ -24,7 +24,7 @@ P1 (revisão jurídica) continua obrigatório antes de concept art, áudio final
 
 ## 2. Divergências do código atual
 
-Itens 1–13 estão fechados em código/headless. O snapshot de implementação anterior era o commit `d7c44e8`, que inclui a integração de VFX, skins de monstros, expansão visual do cenário e teto/terreno. Após a rodada de 16/08 (`scripts/ci.sh`, e2e de pesado/Cometa, atalho de casa), as suítes atuais executam **241 testes de domínio** e **73 de animação/apresentação**; o fuzz determinístico adiciona **67 casos** e a simulação de combate ponta a ponta adiciona **19**, totalizando 400 casos automatizados. Esses resultados são validação automatizada; não equivalem a Play no Studio. O que **não** está comprovado é execução real em Play: o build atual não foi executado, e não há roteiro, Output ou captura dessa revisão. Ainda falta:
+Itens 1–13 estão fechados em código/headless. O snapshot de implementação anterior era o commit `d7c44e8`, que inclui a integração de VFX, skins de monstros, expansão visual do cenário e teto/terreno. Após a rodada de 16/08 (`scripts/ci.sh`, e2e de pesado/Cometa, atalho de casa), as suítes atuais executam **241 testes de domínio** e **76 de animação/apresentação**; o fuzz determinístico adiciona **67 casos** e a simulação de combate ponta a ponta adiciona **19**, totalizando 403 casos automatizados. Esses resultados são validação automatizada; não equivalem a Play no Studio. O que **não** está comprovado é execução real em Play: o build atual não foi executado, e não há roteiro, Output ou captura dessa revisão. Ainda falta:
 
 | Onde | Estado atual | Alvo desta spec |
 |---|---|---|
@@ -38,7 +38,7 @@ Itens 1–13 estão fechados em código/headless. O snapshot de implementação 
 | `WorldService` / `WorldPresentation` | constrói piso para cada volume canônico — inclusive transições norte/oeste e braço livre oeste —, rotas, praça, portões, cratera, marcos, iluminação, modelos low-poly, telegraph branco + símbolo e collision groups; em 15/08 a decoração da planície/rotas/cratera (`WildDecorations`), as skins de Estilhaço (`shardGearFor`) e as posições de luz do spawn (`spawnLights`) passaram a vir de dados validados | **código/headless/build feitos; aparência, colisão, legibilidade e performance não verificadas em Play** |
 | `src/shared/Data/Quests.luau` | `quest_hunt`: 3 Estilhaços, +40 XP, unlock Cometa, aceite forçado em 90 s | **itens 9/10 feitos**: `quest_elite` (1 Ancorado, +60 XP, unlock Cadência, aceite 900 s) e `quest_flow` (kind `flow_echo`, +40 XP, unlock Pulso, aceite 2700 s); cadeia sequencial caça → elite → timing |
 | `src/shared/Data/Locale.luau` | chaves §16 em PT-BR e EN; validado no boot contra os catálogos | copy final e P1 |
-| `CombatService` | cadeia leve, guarda, aparo, pesado, quebra, dash, dummy, comet, Estilhaço, `killed` na transição vivo → morto; alvo e lado do golpe agora vêm do `SpatialService` | **itens 8/10 feitos**: postura do Pulso (250 ms, 50%, contra 8, erro 600 ms) e ciclo do elite (combo/slam alternados, slam unblockable com guarda 30%) — Studio pendente |
+| `CombatService` | cadeia leve, guarda, aparo, pesado, quebra, dash, dummy, comet, Estilhaço, `killed` na transição vivo → morto; alvo e lado do golpe agora vêm do `SpatialService` | **itens 8/10 feitos**: postura do Pulso (250 ms, 50%, contra 10, erro 600 ms) e ciclo do elite (combo/slam alternados, slam unblockable com guarda 30%) — Studio pendente. `tryDummyAttack` existe e é testado; o Heartbeat **não** chama (dummy é alvo de treino até o Play) |
 | `AbilityService` | comet resolve o fighter do dummy; `CombatHit` no acerto; unlock via `ProgressionService` no bootstrap | **itens 8/10 feitos**: Cadência com janela de reentrada + eco agendado no tick; Pulso abre postura no FighterState; `onFlowEcho` credita `quest_flow` — Studio pendente |
 | `ProgressionService` | spawn sem técnicas; grant idempotente; XP não consolidado com retorno decrescente por âncora e teto de 800/sessão | **item 9 feito**: cooldown de XP por NPC (elite 180 s) — consolidação, perda na morte e persistência (item 11) |
 | `QuestService` | oferta → aceite (NPC ou 90 s) → progresso por kill → +40 XP e `unlock_comet_shoulder` no 3º | **itens 9/10 feitos**: cadeia sequencial (anterior precisa completar) e kind `flow_echo` via `creditFlowEcho` |
@@ -51,7 +51,7 @@ Itens 1–13 estão fechados em código/headless. O snapshot de implementação 
 | `StudioDebug` | exige `RunService:IsStudio()` + atributo `F0Debug = true`; concede as 3 técnicas como flags de sessão fora do save; sem remote de cheat | feito em código/headless; uso real no Studio pendente |
 | Mapa/HUD | greybox enriquecido, buracos norte/oeste cobertos a partir dos volumes, HUD mínimo, prompts localizados e telegraph acessível implementados por código | execução, layout, colisão, animação e feeling no Studio/dispositivos pendentes |
 
-Testes Lune no snapshot de implementação atual: 241 casos em `tests/run.luau`, 73 em `tests/animation.luau`, 67 em `tests/security_fuzz.luau` e 19 em `tests/combat_e2e.luau` (`docs/12-TESTING.md` e `docs/23-DOCUMENTATION-SNAPSHOT.md`). Isolamento de orçamento entre jogadores e sequência fora de ordem continuam cobertos headless; não substituem o R1 no Studio.
+Testes Lune no snapshot de implementação atual: 241 casos em `tests/run.luau`, 76 em `tests/animation.luau`, 67 em `tests/security_fuzz.luau` e 19 em `tests/combat_e2e.luau` (`docs/12-TESTING.md` e `docs/23-DOCUMENTATION-SNAPSHOT.md`). Isolamento de orçamento entre jogadores e sequência fora de ordem continuam cobertos headless; não substituem o R1 no Studio.
 
 **Comprovado neste recorte:** técnicas locked no spawn; Estilhaço Errante completo no domínio; XP e objetivo 1; geometria do greybox; hitbox e lunge; uma receita de piso por volume canônico; resposta procedural pura de leve, pesado, guarda e dash em fases, VFX locais de defesa/dash e impacto temporário de chão; reforma visual data-driven do spawn com piso, teto, iluminação e skin enriquecida da instrutora; decoração dirigida por dados da planície, das duas rotas e da borda da cratera, sem colisão e fora do ringue do elite; skin de Estilhaço/elite como receita pura com alcance travado contra o `attackRange` real; apresentação local dos cinco sinais da fronteira, que não acende em travessia recusada; catálogo fechado de interação; gate `ready`; alvo exclusivo; proximidade e hold de 1,5 s revalidados pelo servidor, sem recompensa declarada pelo cliente.
 
@@ -177,9 +177,9 @@ Capacidade usada: 3. Impacto usado: 6 (ultimate desligada; com ela seria 11). Ne
 | Custo / cooldown | 18 / 7 s |
 | Startup / active / recovery | 180 / 220 / 350 ms |
 | Deslocamento | 7 studs à frente; cap absoluto 8 |
-| Dano | 9 |
+| Dano | 14 |
 | Hitbox | cápsula 4×4×8 no trajeto |
-| Guarda | **para o avanço**; 9 de guarda; HP bloqueado 4 |
+| Guarda | **para o avanço**; 14 de guarda; HP bloqueado 6 |
 | Stagger | `stagger_lunge` 180 ms |
 | Contra | lateral e costas no recovery; não atravessa parede |
 | `serverRunnerId` | `comet_shoulder_runner` |
@@ -290,12 +290,15 @@ IDs persistidos, nunca CFrame cru: `anchor_bastion_spawn`, `anchor_bastion_retur
 
 Autoridade no servidor. Sem pathfinding complexo: estado idle → telegraph → ataque → recovery. Sem aggro através da fronteira.
 
+Números abaixo são o **baseline implementado** (`Npcs.luau` + cadeado do `CatalogService`). O F0-BASELINE original de 12/08 (dummy dano 4; Estilhaço 40 HP / dano 6; elite 80 HP / slam 12 / combo 5+5; Cometa dano 9) foi retunado em 13/08. Play pode mudar de novo; até lá a spec de execução segue o catálogo travado. Não recalibrar estes valores no escuro.
+
 ### 9.1 Boneco de Treino
 
 | Campo | Valor |
 |---|---|
 | Vida | 10 000 (não morre na prática) |
-| Dano | 4 a cada 2,5 s, telegraph 400 ms, só se o jogador estiver a 8 studs |
+| Dano de catálogo | 5, alcance 8 studs, período 2,5 s, telegraph 400 ms |
+| Ciclo no Play | **não ligado** — `CombatService.tryDummyAttack` existe e passa headless; o Heartbeat de `init.server.lua` não chama. O dummy é alvo. Ligar o ciclo (para ensinar guarda) exige evidência de Play |
 | XP / objetivo | nenhum |
 | Função | ensinar leve, guarda, dash em 60 s |
 
@@ -303,8 +306,8 @@ Autoridade no servidor. Sem pathfinding complexo: estado idle → telegraph → 
 
 | Campo | Valor |
 |---|---|
-| Vida | 40 |
-| Dano | 6, telegraph 400 ms, esfera 4 studs |
+| Vida | 60 |
+| Dano | 8, telegraph 400 ms, esfera 4 studs |
 | Velocidade | 12 studs/s |
 | Respawn | 45 s na mesma âncora, se ninguém em combate a 20 studs |
 | XP | 25 não consolidado; retorno decrescente após 6 kills da mesma âncora na sessão (12, depois 0) |
@@ -314,9 +317,9 @@ Autoridade no servidor. Sem pathfinding complexo: estado idle → telegraph → 
 
 | Campo | Valor |
 |---|---|
-| Vida | 80 |
-| Slam | telegraph 700 ms, dano 12, `unblockable` para Retorno de Pulso, guarda reduz 30% |
-| Combo leve | 5 + 5, telegraph 300 ms |
+| Vida | 120 |
+| Slam | telegraph 700 ms, dano 14, `unblockable` para Retorno de Pulso, guarda reduz 30% |
+| Combo leve | 6 + 6, telegraph 300 ms |
 | Respawn | 180 s |
 | XP | 80 não consolidado, uma vez por 3 min por jogador |
 | Função | breakpoint de 15–20 min |
@@ -527,13 +530,13 @@ Cheat de unlock: remote **inexistente** no cliente. O gate `StudioDebug` só con
 
 ## 19. Testes da mudança de catálogo
 
-Os casos abaixo estão em `tests/run.luau` (166 no total; fonte: chamadas `test(...)`):
+Os casos abaixo estão em `tests/run.luau` (241 no total; fonte: chamadas `test(...)`):
 
 - roster `eclipse_fist` com 3 skills enabled + 1 ultimate disabled
 - `comet_shoulder` custo 18, CD 7, runner registrado
 - ativação gasta 18, dano 14, recusa sem recurso / cooldown / morto
 - comet no fighter dummy: 14 HP aberto; guarda para o avanço (6 HP + 14 guarda); aparo e i-frame zeram
-- join Ready → comet gasta 18 e dummy fica em 9991 HP
+- join Ready → comet gasta 18 e dummy fica em 9986 HP
 - `broken_cadence` recusa reentrada fora da janela; Fluxo +6 no eco que acerta, respeita cap 1,5 s
 - `pulse_return` sem golpe → não aplica contra
 - `eclipse_beat` `enabled = false` → `disabled`
@@ -561,7 +564,7 @@ Unlock no spawn (recorte do item 7):
 - join → `comet_shoulder` / `broken_cadence` / `pulse_return` recusam `locked`; recurso intacto
 - `grantUnlock("unlock_comet_shoulder")` é idempotente; flag desconhecida recusa
 - leave limpa as flags (sem persistência ainda)
-- após grant, comet gasta 18 e dummy fica em 9991 HP; snapshot lista a flag
+- após grant, comet gasta 18 e dummy fica em 9986 HP; snapshot lista a flag
 
 Estilhaço Errante (recorte do item 7):
 
@@ -602,7 +605,7 @@ Camada espacial (greybox, hitbox, lunge e AI — 2026-08-12):
 - espaço: guarda inimiga trava o avanço antes dos 7 studs
 - espaço: avanço sem ninguém no trajeto é resultado válido (sem alvo, sem bloqueio)
 - inimigo: spawn até o teto de 4, id com a âncora embutida, sem duplicar na segunda chamada
-- inimigo: persegue, para no alcance, abre telegraph, não causa dano dentro dos 400 ms e aplica 6 depois
+- inimigo: persegue, para no alcance, abre telegraph, não causa dano dentro dos 400 ms e aplica 8 depois
 - inimigo: jogador na zona segura não gera aggro nem perseguição
 - inimigo: respawn de 45 s bloqueado com jogador a menos de 20 studs da âncora, liberado quando ele se afasta
 - inimigo: kill reporta âncora e autor para o crédito de XP
@@ -621,9 +624,9 @@ Ordem de implementação; cada item fecha com teste automatizado **ou** evidênc
 5. ~~Ombro Cometa~~ (feito 2026-08-12; lunge espacial de 7 studs com cap 8, parada na guarda e cápsula do trajeto entraram em 2026-08-12 via `SpatialService.resolveCometShoulder`)
 6. ~~Greybox + `ZoneService` + 5 sinais~~ (regras concluídas em 2026-08-12; fundação visual evoluída em 2026-08-13. O commit `108be31` passou a gerar piso para todos os volumes, cobrindo os buracos norte/oeste, moveu o soft target para os atores, acrescentou telegraph branco + símbolo e sincronizou duração/padrão de apresentação. Em 2026-08-15 os cinco sinais deixaram de ser só payload: `lighting_material` e `audio_haptic` ganharam apresentação local no `ZoneSignalPlayer`, e travessia recusada (`hold_required`, `combat_lockout`) não acende nada. **Sem execução em Studio**: Parts/Motor6D, pisos, sinais, iluminação, clipping, hold 0,6 s e playtest cego continuam pendentes)
 7. ~~Estilhaços + objetivo 1 + unlock Cometa~~ (completo 2026-08-12; 109 testes — Locale, `Quests.luau`, `QuestService`, XP com retorno decrescente e teto de sessão, unlock no 3º kill, `InteractionIntent` + `StateDelta`, e o `EnemyService` com spawn nas 6 âncoras, perseguição, telegraph e respawn. **Pendente**: persistência do XP/flags, que é o item 11, e execução em Studio)
-8. ~~Cadência + Fluxo~~ (completo 2026-08-12 — janela de reentrada abre 120 ms após o fim do active do golpe 2 (400 ms da ativação), clique prematuro não destrói a janela, reentrada agenda o eco para 350 ms depois (`AbilityService.tick` no Heartbeat), eco 4 com Fluxo +6, cap 1,5 s e bônus +3 a cada 8 s no `ResourceService`. **Pendente**: execução em Studio)
+8. ~~Cadência + Fluxo~~ (completo 2026-08-12 — janela de reentrada abre 120 ms após o fim do active do golpe 2 (400 ms da ativação; o servidor implementa 120 ms + até 80 ms de lag = janela de 200 ms), clique prematuro não destrói a janela, reentrada agenda o eco para 350 ms depois (`AbilityService.tick` no Heartbeat), golpes 7+9 e eco 6 com Fluxo +6, cap 1,5 s e bônus +3 a cada 8 s no `ResourceService`. **Pendente**: execução em Studio)
 9. ~~Elite + unlock Cadência~~ (completo 2026-08-12 — `enemy_anchored_shard` no catálogo com slam 14/700 ms unblockable (guarda corta 30%) e combo 6+6/300 ms alternados por ciclo; spawn único na `anchor_elite`; respawn 180 s; leeching ≥ 1% da vida ou 8 s no raio sem último golpe; XP 80 com cooldown de 180 s por jogador; `quest_elite` +60 XP e `unlock_broken_cadence`. **Pendente**: cratera e ciclo no Studio)
-10. ~~Pulso + objetivo 45–60 min~~ (completo 2026-08-12 — postura de 250 ms reduz 50% de UM golpe frontal; contra 8 + empurrão 8 studs espacial; erro vira recovery 600 ms; costas e slam do elite vencem a postura; `quest_flow` kind `flow_echo` creditado pelo eco da Cadência, +40 XP e `unlock_pulse_return`. **Pendente**: empurrão e feeling no Studio)
+10. ~~Pulso + objetivo 45–60 min~~ (completo 2026-08-12 — postura de 250 ms reduz 50% de UM golpe frontal; contra 10 + empurrão 8 studs espacial; erro vira recovery 600 ms; costas e slam do elite vencem a postura; `quest_flow` kind `flow_echo` creditado pelo eco da Cadência, +40 XP e `unlock_pulse_return`. **Pendente**: empurrão e feeling no Studio)
 11. ~~Consolidação + morte + ProfileStore~~ (completo 2026-08-12 — consolidação no Marco de Retorno move todo o não consolidado com recibo `operationId` idempotente e anel de 32 recibos; morte aplica perda por zona: segura 0, livre PvE 10%, PvP 15%, cap 200; `SaveService` com ProfileRoot v1, session lock, autosave 60–120 s com jitter e os 5 cenários de §11.2 cobertos por teste; `lib/ProfileStore.luau` entra no build via `ReplicatedStorage.Shared.vendor`. **Pendente**: DataStore real no place privado e respawn com proteção 8 s no Studio)
 12. ~~HUD/input mobile e gamepad~~ (implementado em código/headless 2026-08-13 — controllers na ordem §12.3, gate `SessionSnapshot.ready`, envelope v2, 8 intenções/s, teclado/mouse/toque/gamepad, soft lock 8°/25 studs apenas no ataque básico, HUD localizado e resposta procedural local. O recorte I1 adicionou `ProximityPrompt` contextual para PC/toque/gamepad. **Pendente**: qualquer playtest do build atual, toque/mobile e gamepad reais)
 13. ~~Telemetria + rejeição adversarial de remotes~~ (implementado em código/headless 2026-08-13 — `TelemetryService` aceita somente os sete eventos da §15 e remove campos arbitrários; `SecurityService` fecha schema de envelope/payload, bloqueia replay de `requestId`/sequência, NaN/vetor impossível/campo extra e aplica 8 intenções de combate/s com orçamento separado para interação. Rejeição é amostrada por contrato/motivo para não inundar logs. **Pendente**: fuzz/spam em Studio com dois clientes e sink operacional fora do log do servidor)

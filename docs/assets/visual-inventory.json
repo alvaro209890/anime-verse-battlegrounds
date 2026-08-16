@@ -1,0 +1,943 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "scripts/audit_visual_assets.py",
+  "policy": "Inventário de conceito, candidatos técnicos e arquivos de catálogo. Nenhum path daqui é rbxassetid. PNG local não é textura jogável. Não ligar automaticamente ao place.",
+  "canonicalUsabilityDoc": "docs/33-ASSET-USABILITY.md",
+  "palette": "docs/assets/asset-pack-art-direction-board.png",
+  "palettePath": "docs/assets/art-direction-palette.json",
+  "runtimeLinked": false,
+  "conceptImages": [
+    {
+      "path": "docs/assets/ability-future-area-domain.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 4942041,
+      "sha256": "69f2dc66f1929d824b6c753733f53a3e8848683458d2c765fda12c20fcbbb1d3",
+      "runtimeLinked": false,
+      "verdict": "f1_only",
+      "phase": "F1/F2",
+      "canonicalDoc": "docs/27-FUTURE-ABILITY-ASSET-CATALOG.md",
+      "useAs": "Direção de área/domínio temporário.",
+      "doNotUseAs": "Zona PvP.",
+      "nextStep": "Não implementar agora."
+    },
+    {
+      "path": "docs/assets/ability-future-barrier-parry.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 4375638,
+      "sha256": "ad0334d176c3204ce73b29eebfc2988d32ac0c09c73a907834124d44a3b002c0",
+      "runtimeLinked": false,
+      "verdict": "f1_only",
+      "phase": "F1/F2",
+      "canonicalDoc": "docs/27-FUTURE-ABILITY-ASSET-CATALOG.md",
+      "useAs": "Direção de barreira/parry futuro.",
+      "doNotUseAs": "Bloqueio confirmado.",
+      "nextStep": "Não implementar agora. A guarda F0 já tem receita."
+    },
+    {
+      "path": "docs/assets/ability-future-energy-projectile.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 3854446,
+      "sha256": "aaac4a581409d9e69647432d0aae93d69828ad1d9670926aa365ac08dadbbe11",
+      "runtimeLinked": false,
+      "verdict": "f1_only",
+      "phase": "F1/F2",
+      "canonicalDoc": "docs/27-FUTURE-ABILITY-ASSET-CATALOG.md",
+      "useAs": "Direção de projétil futuro (carga, trail, impacto).",
+      "doNotUseAs": "Habilidade F0 ou dano confirmado.",
+      "nextStep": "Não implementar agora. Spec server-side primeiro."
+    },
+    {
+      "path": "docs/assets/ability-future-environment-break.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 4367378,
+      "sha256": "ebb1e426b2bd3422a6788c3fcc3b68d68e353736468bdcccbe6e3df8ab3dd7e5",
+      "runtimeLinked": false,
+      "verdict": "f1_only",
+      "phase": "F1/F2",
+      "canonicalDoc": "docs/27-FUTURE-ABILITY-ASSET-CATALOG.md",
+      "useAs": "Direção de ruptura temporária de cenário.",
+      "doNotUseAs": "Alteração persistente de chão.",
+      "nextStep": "Não implementar agora."
+    },
+    {
+      "path": "docs/assets/ability-future-mobility-burst.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 4677703,
+      "sha256": "49ceea65f975d8f2aadc7e715f6696b63002821a170c9c4abd0420323a6f2f7c",
+      "runtimeLinked": false,
+      "verdict": "f1_only",
+      "phase": "F1/F2",
+      "canonicalDoc": "docs/27-FUTURE-ABILITY-ASSET-CATALOG.md",
+      "useAs": "Direção de burst de mobilidade avançada.",
+      "doNotUseAs": "Teleporte ou i-frame.",
+      "nextStep": "Não implementar agora."
+    },
+    {
+      "path": "docs/assets/ability-future-summon-construct.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 4650698,
+      "sha256": "a8fbe1a0916933325210dfde99fffac52c13e399c571fe48cf7fc8de455ca6ba",
+      "runtimeLinked": false,
+      "verdict": "f1_only",
+      "phase": "F1/F2",
+      "canonicalDoc": "docs/27-FUTURE-ABILITY-ASSET-CATALOG.md",
+      "useAs": "Silhueta de constructo temporário.",
+      "doNotUseAs": "NPC jogável.",
+      "nextStep": "Não implementar agora. Ownership e despawn primeiro."
+    },
+    {
+      "path": "docs/assets/ability-future-ultimate-composition.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 4545909,
+      "sha256": "df56f6713d7190c8f0b55f4019193e6a97ef8f9e11fd90364463d0834cd268ff",
+      "runtimeLinked": false,
+      "verdict": "f1_only",
+      "phase": "F1/F2",
+      "canonicalDoc": "docs/27-FUTURE-ABILITY-ASSET-CATALOG.md",
+      "useAs": "Direção cinematográfica de ultimate futura.",
+      "doNotUseAs": "Ultimate ligada (eclipse_beat continua enabled=false).",
+      "nextStep": "Não implementar agora."
+    },
+    {
+      "path": "docs/assets/ability-future-vfx-micro-library.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 4716467,
+      "sha256": "14d15739c011032933d80e5cdb076f92dd12ece5c4b810622017e1576f5aa90e",
+      "runtimeLinked": false,
+      "verdict": "f1_only",
+      "phase": "F1/F2",
+      "canonicalDoc": "docs/27-FUTURE-ABILITY-ASSET-CATALOG.md",
+      "useAs": "Motivos futuros (orbe, anel, spike, dome) nas quatro cores do projeto.",
+      "doNotUseAs": "Spritesheet de produção ou kit F0 novo.",
+      "nextStep": "Reuso seletivo nas receitas F0 existentes, sem habilidade nova."
+    },
+    {
+      "path": "docs/assets/animation-combat-poses-board.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 4275680,
+      "sha256": "0e046c68fca749329f2ad1d62af8a03bc346f76608d51b63b560e8e59354dcf0",
+      "runtimeLinked": false,
+      "verdict": "recipe_board",
+      "phase": "F0/A1",
+      "canonicalDoc": "docs/14-ANIMATION-PLAN.md",
+      "useAs": "Referência de pose R15 para defesa, dash e idle de combate.",
+      "doNotUseAs": "Clip publicado ou KeyframeSequence.",
+      "nextStep": "A1 no Studio contra PlayerCombatAnimator; catálogo de clipes continua vazio de propósito."
+    },
+    {
+      "path": "docs/assets/animation-heavy-strike-poses-board.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 4993440,
+      "sha256": "d241c3b8f7914fb6947d963539b4090820f9882519ea46395ec185cf24397842",
+      "runtimeLinked": false,
+      "verdict": "recipe_board",
+      "phase": "F0/A1",
+      "canonicalDoc": "docs/14-ANIMATION-PLAN.md",
+      "useAs": "Referência de peso: antecipação, avanço, impacto e recuperação do pesado.",
+      "doNotUseAs": "Clip final ou prova de câmera.",
+      "nextStep": "Play a1_impact; a câmera do pesado básico permanece pinada no headless."
+    },
+    {
+      "path": "docs/assets/anime-verse-battlegrounds-cover.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 5722563,
+      "sha256": "f8a3c4fb76db57a9cf4e117dca9a3a39caa3dc16ebf4fc1c956c131701f2db30",
+      "runtimeLinked": false,
+      "verdict": "store_candidate",
+      "phase": "F0",
+      "canonicalDoc": "docs/29-GAME-COVER.md",
+      "useAs": "Capa, README e fonte das peças de vitrine (thumbnail 16:9 e ícone 512).",
+      "doNotUseAs": "Mapa, decal, textura, mesh ou evidência de Play.",
+      "nextStep": "Gate P1 + teste de leitura em 150 px antes de publicar."
+    },
+    {
+      "path": "docs/assets/asset-pack-art-direction-board.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 5276183,
+      "sha256": "ce184de7ed23b3288019f1c94cf4ed3b85f249fe3467d47a21e9235dd932d7b1",
+      "runtimeLinked": false,
+      "verdict": "art_direction",
+      "phase": "F0",
+      "canonicalDoc": "docs/30-VISUAL-ASSET-PACK.md",
+      "useAs": "Quadro-mãe de paleta, materiais e consistência do pacote F0.",
+      "doNotUseAs": "Screenshot de runtime ou atlas importável.",
+      "nextStep": "Comparar qualquer produção nova com este quadro antes de converter."
+    },
+    {
+      "path": "docs/assets/combat-presentation-reference.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 4071970,
+      "sha256": "703ff24cb722725d8e38a859478266713c738c999f54aa95a3266f1dee2e4a6f",
+      "runtimeLinked": false,
+      "verdict": "recipe_board",
+      "phase": "F0/A0",
+      "canonicalDoc": "docs/25-COMBAT-PRESENTATION-PLAN.md",
+      "useAs": "Referência-mãe de defesa, dash, impacto, materiais e escala.",
+      "doNotUseAs": "Captura de runtime ou thumbnail oficial (a capa cobre a vitrine).",
+      "nextStep": "Checklist docs/26 nas três câmeras."
+    },
+    {
+      "path": "docs/assets/dash-run-presentation.png",
+      "format": "PNG",
+      "width": 2176,
+      "height": 1632,
+      "bytes": 4360016,
+      "sha256": "f3523f39ddcff2d40f681cb18071359a9dd6cb6a5ecb9267a47dfb535f8301d8",
+      "runtimeLinked": false,
+      "verdict": "recipe_board",
+      "phase": "F0/A1",
+      "canonicalDoc": "docs/25-COMBAT-PRESENTATION-PLAN.md",
+      "useAs": "Quatro fases do dash e afterimage.",
+      "doNotUseAs": "Animação publicada ou movimento server-side.",
+      "nextStep": "A1/R1: passada vs correção de rede."
+    },
+    {
+      "path": "docs/assets/defense-guard-presentation.png",
+      "format": "PNG",
+      "width": 2176,
+      "height": 1632,
+      "bytes": 4235897,
+      "sha256": "d869d34a51c445cd4a4a6e85991cf4b06fcb0c27a53ef8bfe6264f30f72bac0c",
+      "runtimeLinked": false,
+      "verdict": "recipe_board",
+      "phase": "F0/A1",
+      "canonicalDoc": "docs/25-COMBAT-PRESENTATION-PLAN.md",
+      "useAs": "Silhueta da defesa, casca ciano e faíscas de deflexão.",
+      "doNotUseAs": "Prova de bloqueio.",
+      "nextStep": "A1 + CombatEvent de guarda."
+    },
+    {
+      "path": "docs/assets/domain-expansion-border-gate.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 4689196,
+      "sha256": "c191eee6d00b560f589df594b4f0ffa6d3b17f4c319c56ba757c3ae06aa7e67b",
+      "runtimeLinked": false,
+      "verdict": "world_concept",
+      "phase": "F0",
+      "canonicalDoc": "docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md",
+      "useAs": "Leitura da fronteira segura/livre (forma + material + luz, não só cor).",
+      "doNotUseAs": "Contrato de dano ou regra de PvP.",
+      "nextStep": "W1/R1: telegraph redundante já existe em código."
+    },
+    {
+      "path": "docs/assets/domain-expansion-concept.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 4822842,
+      "sha256": "ba59353b26f865a9df3b368dfd5dfbb29294c63e5532843f18593ea98c740991",
+      "runtimeLinked": false,
+      "verdict": "world_concept",
+      "phase": "F0 → F2",
+      "canonicalDoc": "docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md",
+      "useAs": "Capa do atlas Bastião → Planície → Distrito Lumen.",
+      "doNotUseAs": "Mapa navegável ou textura de terreno.",
+      "nextStep": "W1 no Bastião/Planície; Distrito Lumen só depois da F0."
+    },
+    {
+      "path": "docs/assets/domain-expansion-district-lumen.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 5159637,
+      "sha256": "155b597b46872ca6596d2d5a40149f8041100e3bdba51554e94262a8adf51de3",
+      "runtimeLinked": false,
+      "verdict": "world_concept",
+      "phase": "F1/F2",
+      "canonicalDoc": "docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md",
+      "useAs": "Direção da primeira célula urbana.",
+      "doNotUseAs": "Cidade já implementada.",
+      "nextStep": "Uma célula densa após W1/W2 da F0 — não começar F1 agora."
+    },
+    {
+      "path": "docs/assets/domain-expansion-modular-ruins.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 4299386,
+      "sha256": "bb82c01d0048878ee749285bae5fae90eb101fc66de2e25872cd78f7773e2e60",
+      "runtimeLinked": false,
+      "verdict": "world_concept",
+      "phase": "F1/F2",
+      "canonicalDoc": "docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md",
+      "useAs": "Biblioteca conceitual de peças de ruína.",
+      "doNotUseAs": "Atlas Roblox ou malha importável.",
+      "nextStep": "Kit nativo depois da F0; cada peça com colisão própria."
+    },
+    {
+      "path": "docs/assets/domain-expansion-safe-plaza.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 4957568,
+      "sha256": "1e5d656dab5212e1beb4a303eb4ddf7b56cdc572dc9829a3b40768e50f8af0de",
+      "runtimeLinked": false,
+      "verdict": "world_concept",
+      "phase": "F0/F1",
+      "canonicalDoc": "docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md",
+      "useAs": "Praça coberta, spawn, treino e duas saídas.",
+      "doNotUseAs": "Layout de colisão autoritativo.",
+      "nextStep": "Comparar com o greybox no W1."
+    },
+    {
+      "path": "docs/assets/domain-expansion-vfx-moodboard.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 4277762,
+      "sha256": "679e2eea5808edac8894c1878aba9f53a07726649dc5df8e5b323344f08f8ed1",
+      "runtimeLinked": false,
+      "verdict": "recipe_board",
+      "phase": "F0 → F2",
+      "canonicalDoc": "docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md",
+      "useAs": "Hierarquia cromática: ciano rota, violeta domínio, âmbar serviço/alerta.",
+      "doNotUseAs": "Partículas prontas.",
+      "nextStep": "Manter a paleta de runtime; não copiar RGB da imagem sem Play."
+    },
+    {
+      "path": "docs/assets/ground-break-impact-presentation.png",
+      "format": "PNG",
+      "width": 2176,
+      "height": 1632,
+      "bytes": 4203437,
+      "sha256": "5528ddee28adcf057cfac5df42e52bdee18a500ac6ae3dbe72ca56154775f60a",
+      "runtimeLinked": false,
+      "verdict": "recipe_board",
+      "phase": "F0 → F1",
+      "canonicalDoc": "docs/25-COMBAT-PRESENTATION-PLAN.md",
+      "useAs": "Ordem temporal de crack, poeira e debris.",
+      "doNotUseAs": "Buraco no mapa.",
+      "nextStep": "A1/W1/W2 com pooling."
+    },
+    {
+      "path": "docs/assets/impact-vfx-micro-library.png",
+      "format": "PNG",
+      "width": 2560,
+      "height": 1440,
+      "bytes": 4692457,
+      "sha256": "64afdbef9cd9f36bb2199904f22cec030b62ba3c15223238edd1824ce8873f2c",
+      "runtimeLinked": false,
+      "verdict": "recipe_board",
+      "phase": "F0 → F2",
+      "canonicalDoc": "docs/25-COMBAT-PRESENTATION-PLAN.md",
+      "useAs": "Motivos reutilizáveis (anel, rastro, crack, debris) para AbilityVfx.",
+      "doNotUseAs": "Spritesheet de produção sem recorte.",
+      "nextStep": "Reuso nas receitas existentes; não criar habilidade nova."
+    },
+    {
+      "path": "docs/assets/prop-amber-lantern-sconce.png",
+      "format": "PNG",
+      "width": 1920,
+      "height": 1920,
+      "bytes": 3363005,
+      "sha256": "cf9e035b4ce83d0b22cf89efe6ecd907f48868bda467d49e560c1da739c7ca23",
+      "runtimeLinked": false,
+      "verdict": "prop_concept",
+      "phase": "F0",
+      "canonicalDoc": "docs/30-VISUAL-ASSET-PACK.md",
+      "useAs": "Silhueta de arandela âmbar para luz de serviço do Bastião.",
+      "doNotUseAs": "Fonte de iluminação final (o catálogo spawnLights já existe).",
+      "nextStep": "Prop nativo + PointLight âmbar, sem aumentar o orçamento de sombras."
+    },
+    {
+      "path": "docs/assets/prop-energy-crystal-beacon.png",
+      "format": "PNG",
+      "width": 1920,
+      "height": 1920,
+      "bytes": 4339016,
+      "sha256": "c6e05c4d8b1142ce6d5694fb5b22234f4302cb5d9e8e3311b4f746e6981e16b0",
+      "runtimeLinked": false,
+      "verdict": "prop_concept",
+      "phase": "F0/F1",
+      "canonicalDoc": "docs/30-VISUAL-ASSET-PACK.md",
+      "useAs": "Silhueta de beacon/marco para modelagem nativa (Part + Neon).",
+      "doNotUseAs": "Mesh publicável ou hitbox.",
+      "nextStep": "Reconstruir com peças Roblox; colisão e orçamento no W1."
+    },
+    {
+      "path": "docs/assets/texture-crystal-emissive-strip.png",
+      "format": "PNG",
+      "width": 2304,
+      "height": 1536,
+      "bytes": 3621472,
+      "sha256": "fb0553c9ca1037922311c287b7da6366c99b232c43dd48ffb6f34cc2e97b1a38",
+      "runtimeLinked": false,
+      "verdict": "texture_candidate",
+      "phase": "F0/F1",
+      "canonicalDoc": "docs/30-VISUAL-ASSET-PACK.md",
+      "useAs": "Trim/faixa emissiva e motivos de cristal; máscara derivada como referência.",
+      "doNotUseAs": "Atlas final de flipbook ou decal de chão.",
+      "nextStep": "Usar como trim em borda/marco depois de medir bloom no mobile."
+    },
+    {
+      "path": "docs/assets/texture-runed-stone-wall.png",
+      "format": "PNG",
+      "width": 1920,
+      "height": 1920,
+      "bytes": 6088739,
+      "sha256": "833a749f2217f0b4adb4bdb06814f7b24c4a293c251540e32e548e5d59ffe967",
+      "runtimeLinked": false,
+      "verdict": "texture_candidate",
+      "phase": "F0/F1",
+      "canonicalDoc": "docs/30-VISUAL-ASSET-PACK.md",
+      "useAs": "Briefing de muro modular com runas; ColorMap PBR 1024 já derivado.",
+      "doNotUseAs": "Atlas de parede ou colisão.",
+      "nextStep": "Importar em MeshPart de teste; não substituir wallColor procedural sem Play."
+    },
+    {
+      "path": "docs/assets/texture-slate-cracked-floor.png",
+      "format": "PNG",
+      "width": 1920,
+      "height": 1920,
+      "bytes": 6377451,
+      "sha256": "25e02020be21f93c5125659bc435eacb06861777db3e90a4769c4bdd80f11ef4",
+      "runtimeLinked": false,
+      "verdict": "texture_candidate",
+      "phase": "F0",
+      "canonicalDoc": "docs/30-VISUAL-ASSET-PACK.md",
+      "useAs": "Briefing de piso slate; ColorMap PBR 1024 já derivado em roblox-ready.",
+      "doNotUseAs": "Textura ligada automaticamente ao greybox.",
+      "nextStep": "Importar ColorMap no Studio, tiling, depois SurfaceAppearance completo no W1."
+    },
+    {
+      "path": "docs/assets/vfx-dash-afterimage-trail.png",
+      "format": "PNG",
+      "width": 2304,
+      "height": 1536,
+      "bytes": 4159903,
+      "sha256": "bb7771c715345b687219dd6745811234716cac629d9f882271fe63817c0a83ae",
+      "runtimeLinked": false,
+      "verdict": "recipe_board",
+      "phase": "F0/A1",
+      "canonicalDoc": "docs/25-COMBAT-PRESENTATION-PLAN.md",
+      "useAs": "Receita de dash: afterimages, esteira, faíscas de pé.",
+      "doNotUseAs": "Teleporte, i-frame visual ou deslocamento autoritativo.",
+      "nextStep": "Comparar com AbilityVfx.dash_run no Play."
+    },
+    {
+      "path": "docs/assets/vfx-ground-break-impact.png",
+      "format": "PNG",
+      "width": 1920,
+      "height": 1920,
+      "bytes": 5562278,
+      "sha256": "535b91fac0b34ab6edcf900d421c2c88ccd5ffc7ee3c180dfb6d740ea3e0238e",
+      "runtimeLinked": false,
+      "verdict": "recipe_board",
+      "phase": "F0/A1",
+      "canonicalDoc": "docs/25-COMBAT-PRESENTATION-PLAN.md",
+      "useAs": "Sequência contato → crack → poeira → debris → flash → dissipação.",
+      "doNotUseAs": "Alteração permanente de piso ou colisão.",
+      "nextStep": "VFX temporário com pooling; chão continua navegável."
+    },
+    {
+      "path": "docs/assets/vfx-guard-orbit-shell.png",
+      "format": "PNG",
+      "width": 1920,
+      "height": 1920,
+      "bytes": 5017825,
+      "sha256": "dfd3d133e0e25952d3f11c7146cb9c41c412570e6941d2b70d101c8269ff27c9",
+      "runtimeLinked": false,
+      "verdict": "recipe_board",
+      "phase": "F0/A1",
+      "canonicalDoc": "docs/25-COMBAT-PRESENTATION-PLAN.md",
+      "useAs": "Receita em camadas da guarda (casca, órbitas, motes, anel de base).",
+      "doNotUseAs": "Decal, bloqueio confirmado ou spritesheet.",
+      "nextStep": "Comparar com AbilityVfx.guard_raise no Play; não importar o PNG."
+    }
+  ],
+  "kenneyParticlePack": {
+    "path": "docs/assets/open-candidates/kenney_particle-pack.zip",
+    "verdict": "external_archive",
+    "license": "CC0",
+    "sourceUrl": "https://kenney.nl/assets/particle-pack",
+    "bytes": 15001764,
+    "sha256": "b631d4b07f7002549fdcf155f01141ad482f79f3440e4e301eed49ce5f1d8958",
+    "zipEntries": 200,
+    "pngCount": 193,
+    "hasLicenseTxt": true,
+    "runtimeLinked": false,
+    "note": "Arquivo canônico em docs/assets/open-candidates/. Um subconjunto (slash/spark/scorch) já está extraído em AVB-free-vfx-assets/assets/vfx/kenney/; o zip inteiro não entra no Rojo."
+  },
+  "kenneyNatureKit": {
+    "path": "AVB-free-vfx-assets/assets/scenery/kenney_nature_kit",
+    "files": [
+      "AVB-free-vfx-assets/assets/scenery/kenney_nature_kit/License.txt",
+      "AVB-free-vfx-assets/assets/scenery/kenney_nature_kit/README.md"
+    ],
+    "meshCount": 0,
+    "verdict": "license_only",
+    "note": "Só README e License.txt estão versionados. O greybox usa peças nativas; malhas do Nature Kit não foram baixadas e não devem ser inventadas."
+  },
+  "vfxCatalog": {
+    "abilityKeys": [
+      "energy_ball",
+      "power_ring",
+      "lightning_shock",
+      "explosion_0003",
+      "explosion_0005"
+    ],
+    "abilitySourceCount": 5,
+    "abilityPreparedCount": 5,
+    "enemySourceCount": 3,
+    "files": [
+      {
+        "path": "AVB-free-vfx-assets/assets/vfx/free_sources/energy_ball_ccby30.png",
+        "bytes": 55581,
+        "sha256": "66aed7de546201cf4945c63e32eb98f1b632d763482a7cf3309f6a905d19c6cd",
+        "assetId": null,
+        "runtimeLinked": false
+      },
+      {
+        "path": "AVB-free-vfx-assets/assets/vfx/free_sources/power_ring_cc0.png",
+        "bytes": 12059,
+        "sha256": "5d9c8624db47f735e053ebe1921ba9cfec685056db28db3f68268c97e925affb",
+        "assetId": null,
+        "runtimeLinked": false
+      },
+      {
+        "path": "AVB-free-vfx-assets/assets/vfx/free_sources/lightning_shock_ccby30.png",
+        "bytes": 115547,
+        "sha256": "996cf24518221186eb1c27f83cb2da4c7f3ee09165e0eb75a5fd2e5488bf499a",
+        "assetId": null,
+        "runtimeLinked": false
+      },
+      {
+        "path": "AVB-free-vfx-assets/assets/vfx/free_sources/explosion_0003_cc0.png",
+        "bytes": 2633575,
+        "sha256": "ac14ba20880877f37ad119294052c913d14cfd3eeec8dcd654a43ec7f6adbde4",
+        "assetId": null,
+        "runtimeLinked": false
+      },
+      {
+        "path": "AVB-free-vfx-assets/assets/vfx/free_sources/explosion_0005_cc0.png",
+        "bytes": 3592085,
+        "sha256": "d3e3f2b0e6e8bd9d0fc840f083d261bbc266e559a32b61d3ffee67d9d4f2de2f",
+        "assetId": null,
+        "runtimeLinked": false
+      },
+      {
+        "path": "AVB-free-vfx-assets/assets/vfx/prepared/energy_ball_4x4.png",
+        "bytes": 68273,
+        "sha256": "e090a0ff97a25c76dbfc8ca8bd82c8cbeb0fa0d81f2b2c0c97978dd5c39a51af",
+        "assetId": null,
+        "runtimeLinked": false
+      },
+      {
+        "path": "AVB-free-vfx-assets/assets/vfx/prepared/power_ring_2x2.png",
+        "bytes": 9582,
+        "sha256": "fe1ce418754cda3ff792a40e76fe06ef4c05b55136205fda6f52256496d5f9e8",
+        "assetId": null,
+        "runtimeLinked": false
+      },
+      {
+        "path": "AVB-free-vfx-assets/assets/vfx/prepared/lightning_shock_8x8.png",
+        "bytes": 79030,
+        "sha256": "316f45e0bc38227fcde9e942cb186b2aff9ea8b2423f73783599c11bc9ec730a",
+        "assetId": null,
+        "runtimeLinked": false
+      },
+      {
+        "path": "AVB-free-vfx-assets/assets/vfx/prepared/explosion_0003_cc0_1024px_8x8.png",
+        "bytes": 519559,
+        "sha256": "3929381b5b2b68227ad02d0294ae03fb548587fa942a252359d262d3ed66da53",
+        "assetId": null,
+        "runtimeLinked": false
+      },
+      {
+        "path": "AVB-free-vfx-assets/assets/vfx/prepared/explosion_0005_cc0_1024px_8x8.png",
+        "bytes": 717292,
+        "sha256": "12c1c95465df61e230e377ff6d4dff5ed88192e439c862636fcb455f48750033",
+        "assetId": null,
+        "runtimeLinked": false
+      },
+      {
+        "path": "AVB-free-vfx-assets/assets/vfx/kenney/slash_01.png",
+        "bytes": 25465,
+        "sha256": "cb4787978122bb863866a1681af22a7dec39a4566f08c400f233740eb1d3730c",
+        "assetId": null,
+        "runtimeLinked": false
+      },
+      {
+        "path": "AVB-free-vfx-assets/assets/vfx/kenney/spark_01.png",
+        "bytes": 95070,
+        "sha256": "5902da3a324cad0a4b5a88ce1e3c9cc18fee50922c358ce93d8c9f1ad7708f0a",
+        "assetId": null,
+        "runtimeLinked": false
+      },
+      {
+        "path": "AVB-free-vfx-assets/assets/vfx/kenney/scorch_01.png",
+        "bytes": 60598,
+        "sha256": "ea72697696638786ccd4795a346d177b1b6a904331b5536a7e85a7ed927b93a5",
+        "assetId": null,
+        "runtimeLinked": false
+      }
+    ]
+  },
+  "audio": {
+    "oggCount": 305,
+    "oggBytes": 8086355,
+    "packs": {
+      "impact-sounds": 130,
+      "rpg-audio": 51,
+      "sci-fi-sounds": 73,
+      "ui-audio": 51
+    },
+    "musicFiles": 91,
+    "runtime": "placeholder rbxassetid do criador Roblox até o upload; .ogg local não toca"
+  },
+  "robloxReady": {
+    "manifest": "docs/assets/roblox-ready/roblox-asset-manifest.json",
+    "schemaVersion": 2,
+    "assets": [
+      {
+        "path": "docs/assets/roblox-ready/textures/avb_slate_cracked_floor_color.png",
+        "kind": "color_map",
+        "sha256": "94cf5ff4656df0456bcfe5dcd46538855f737b9544c582d5daa7b2394d8d8c13",
+        "bytes": 1629186,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/textures/avb_slate_cracked_floor_normal.png",
+        "kind": "normal_map_candidate",
+        "sha256": "b98c675b2819d2cca1900be2f3312e8ea127ee71c23315a1d95385bd979a95c4",
+        "bytes": 2128483,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/textures/avb_slate_cracked_floor_roughness.png",
+        "kind": "roughness_map_candidate",
+        "sha256": "3b570f786116278134e51f6206f2f32f29776aa68c234893aada8a1dfec3f422",
+        "bytes": 74261,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/textures/avb_slate_cracked_floor_metalness.png",
+        "kind": "metalness_map_candidate",
+        "sha256": "1eb50a3ee3fcac0adc60c0e90baa6d051c642f3a930330ac9aec9dd92996f3f7",
+        "bytes": 1097,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/avb_slate_cracked_floor_emissive_mask.png",
+        "kind": "emissive_mask_reference",
+        "sha256": "7897562e2909db5e714cd1684273c573f8d5f7501fcec2a66ca120a7cd117093",
+        "bytes": 70278,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/textures/avb_runed_stone_wall_color.png",
+        "kind": "color_map",
+        "sha256": "a8a199ee7c24bcc59921f1ed4f8f9b37d284334406a9c00a4ca9bb26f5afa2dc",
+        "bytes": 1581515,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/textures/avb_runed_stone_wall_normal.png",
+        "kind": "normal_map_candidate",
+        "sha256": "d2c5babf0f317f6d0014cbcefb72e38025fb4db4198e68119d34165dc7275d12",
+        "bytes": 2098230,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/textures/avb_runed_stone_wall_roughness.png",
+        "kind": "roughness_map_candidate",
+        "sha256": "0a5c2b6e0210b064281244f4217c7275a5b2f23334649f8bc0be66c5e72dc115",
+        "bytes": 44889,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/textures/avb_runed_stone_wall_metalness.png",
+        "kind": "metalness_map_candidate",
+        "sha256": "1eb50a3ee3fcac0adc60c0e90baa6d051c642f3a930330ac9aec9dd92996f3f7",
+        "bytes": 1097,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/avb_runed_stone_wall_emissive_mask.png",
+        "kind": "emissive_mask_reference",
+        "sha256": "9fa471ab927d8991fe506c060ef812d64c36926c10e4e683870de4a69eeb0db8",
+        "bytes": 44047,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/textures/avb_crystal_emissive_strip_color.png",
+        "kind": "color_map",
+        "sha256": "1d61bef7982406f8e2553512112627a6432cb5dd8e22690fa2afdf8f391e6cfd",
+        "bytes": 771596,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/textures/avb_crystal_emissive_strip_normal.png",
+        "kind": "normal_map_candidate",
+        "sha256": "0c7b833a265a8fb9f739095313132634628b5c70db5946d302839b25cf4033de",
+        "bytes": 993754,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/textures/avb_crystal_emissive_strip_roughness.png",
+        "kind": "roughness_map_candidate",
+        "sha256": "272b0df085eceb8ee5122ecc70fd18f3f803b72a91b8c5e36747426529fb17f7",
+        "bytes": 50238,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/textures/avb_crystal_emissive_strip_metalness.png",
+        "kind": "metalness_map_candidate",
+        "sha256": "95fd314d99b1201a22f1a9f87547d72b488fa2f04ca6d7232326ed2d96d8569f",
+        "bytes": 758,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/avb_crystal_emissive_strip_emissive_mask.png",
+        "kind": "emissive_mask_reference",
+        "sha256": "ac10784fef685afbfca49d2789e266df6efda5490249c86411a820b49c43caac",
+        "bytes": 47065,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/asset-pack-art-direction-board_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "e8790ac29e94530e88c744305cb7bb539130b96c3063539c4bbe6573dfefb77d",
+        "bytes": 259902,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/anime-verse-battlegrounds-cover_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "19c8e092ed77462802c1a858d60af597b3643087936a5a7b76a8f6b75480af3e",
+        "bytes": 321419,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/prop-energy-crystal-beacon_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "fe7825788b8a13dbcf1bc09b56743a40a6325dbe2a5e5ee0277a1d904fa55d0f",
+        "bytes": 156363,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/prop-amber-lantern-sconce_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "6856985b0c4c9420ba3a4bb588a66ba6ca968c7ecb739dbc05b94c26a9b3c58a",
+        "bytes": 159019,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/vfx-guard-orbit-shell_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "5f8649e0dcaab7284f491316ecac159dbe87cbffddcd03d333019a1a840844be",
+        "bytes": 271325,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/vfx-dash-afterimage-trail_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "4aa43545a3989776f2d84c35df7c778dad4e91e9324526e57ae99c86c7a44de2",
+        "bytes": 189385,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/vfx-ground-break-impact_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "594312787a479106898b5dc42afce49982931ad9d964b07f4372dbb216172152",
+        "bytes": 343035,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/animation-combat-poses-board_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "c15ce342336b0811f3f89f564f7c1b320586e049ed44e07c8ec6be642a0752aa",
+        "bytes": 176573,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/animation-heavy-strike-poses-board_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "4d37b6e6851a7ffb2c115d735a503e01cfefe8b648f54d17b13ce8bbe77fad69",
+        "bytes": 212795,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/combat-presentation-reference_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "58407462aefecacc53ea687aecd431f7c2b62700ffbbbf905c863fdea627a236",
+        "bytes": 178388,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/defense-guard-presentation_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "5d9ac2572fd83e6c8f2af0e69f5916f9f5112e1adb560bad080de89aadc52ab5",
+        "bytes": 193987,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/dash-run-presentation_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "446b5c5d8babcb2caf401dc90db188cef48336f9ee74fcc5ebacaaa9a91b8c56",
+        "bytes": 212318,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/ground-break-impact-presentation_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "cf1299637c162cb6be808a1c8043aac75ced1477d6ce2e80cba8a9ccb6fea6f0",
+        "bytes": 200301,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/impact-vfx-micro-library_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "484f6522b4bb16db2d107f276e515602907ef50d7e1972a575d01f45808182a9",
+        "bytes": 160645,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/domain-expansion-concept_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "11ced9f0ef64357ccc429d823d4fe97cb88559b41fb21e58d84eb6c25d46131d",
+        "bytes": 233478,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/domain-expansion-district-lumen_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "89e78ae5b753898e7ec8b9aa38d0eb4c4e2e730a7bd9f2d7b59069e5d4c20581",
+        "bytes": 236050,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/domain-expansion-safe-plaza_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "33ed7bf5611e8a6fc651c6a5345d46f418084f1cca571171b9cc1ae8dd77e953",
+        "bytes": 231328,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/domain-expansion-border-gate_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "842d9617b6457e587ebd9802837b15b8d1ba49e38059324decf608a8d37fdf9d",
+        "bytes": 209663,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/domain-expansion-modular-ruins_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "da650cd467b5b77289b0829bb1f98b96599f105c94882dfb5d7009e9f82224d7",
+        "bytes": 155239,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/domain-expansion-vfx-moodboard_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "49d336b84499315a63dbd893cbf88c5363ded1ea3e2161a9a3da2ffe7b4e43c2",
+        "bytes": 136865,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/ability-future-energy-projectile_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "f2c4defe17c46e57e5a5775c25a921785fa0897dfad61bdede368606f6cfccdb",
+        "bytes": 103556,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/ability-future-area-domain_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "18664cd82042e2d123efe8457515375071bfe4d27ce983e3a22d35531a924671",
+        "bytes": 250108,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/ability-future-mobility-burst_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "75aba8e4ba2606e980547894550b77472498b2806cb6f3be51ec08787f0c829d",
+        "bytes": 182538,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/ability-future-summon-construct_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "d3193e575ceb11b4e27a43e20c48d970a71a5744fcf5ca6f9de6007a8863224e",
+        "bytes": 212736,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/ability-future-barrier-parry_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "55511bfd16dd2ef7761eb3ffae44a4b45223019299e9ae0e379da5a40f0b0169",
+        "bytes": 152036,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/ability-future-ultimate-composition_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "88f573b7680b9172735b34d320aac927819f23415d3941cdcea36215f5525cdf",
+        "bytes": 214897,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/ability-future-environment-break_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "39831802b196f8ce9882b6f637f1bedec42160657337145c655e88e7893632b3",
+        "bytes": 160900,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/references/ability-future-vfx-micro-library_preview.jpg",
+        "kind": "reference_preview",
+        "sha256": "40d225cdfac064d5163acb33709efb93d65545f127c499b67c9a56bd7ec93b9e",
+        "bytes": 152619,
+        "runtimeLinked": false
+      }
+    ]
+  },
+  "storeArt": {
+    "manifest": "docs/assets/roblox-ready/store/store-art-manifest.json",
+    "schemaVersion": 1,
+    "assets": [
+      {
+        "path": "docs/assets/roblox-ready/store/avb_thumbnail_1920x1080.jpg",
+        "kind": "thumbnail",
+        "sha256": "ba9767601f307d1e4c9bddcb20d5299c4cfcfa2e38aff4ba77676abfd56b8b19",
+        "bytes": 690048,
+        "runtimeLinked": false
+      },
+      {
+        "path": "docs/assets/roblox-ready/store/avb_icon_512.png",
+        "kind": "icon",
+        "sha256": "afd69ec0b052e22f6c8c18a063cc9a7927d9fb96ca8f7188177a440e72dd6f3b",
+        "bytes": 472779,
+        "runtimeLinked": false
+      }
+    ]
+  }
+}

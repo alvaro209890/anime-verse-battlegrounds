@@ -3,14 +3,14 @@
 RPG / Action RPG de mundo aberto no Roblox (Luau) — combate estilo battlegrounds com
 progressão persistente, loadout customizável e ressonância de famílias de energia.
 
-> **Status em 2026-08-13 (17h):** itens 1–13 do backlog F0 fechados em código/headless. **Skins do spawn:** Instrutor do Limiar com cabeça visível, rosto em peças, capuz, cabelo e casaco umbral; dummy de treino com cabeça, palha, alvo de três anéis e poste. As cabeças anteriores usavam um FileMesh que não carregava (NPCs sem cabeça) e nasciam de costas para a praça.
+> **Status em 2026-08-16:** itens 1–13 do backlog F0 fechados em código/headless. Validação total desta rodada: 241/76/67/19 (403 casos), auditoria visual, snapshot canônico (`docs/ci-snapshot.json`) e docs alinhados ao catálogo implementado. **Não é F0 pronta:** falta Play (W1/A1/R1/W2). Skins do spawn e dummy de treino continuam como na rodada visual; o dummy é alvo — o ciclo de ataque existe no domínio e **não** entra no Heartbeat.
 > **Runtime:** pare o Play e rode de novo para recarregar o `WorldService`. Correções da rodada anterior seguem valendo: chegue no vão do portão norte e **SEGURE E**.
 
 ![Capa conceitual do Anime Verse: Battlegrounds](docs/assets/anime-verse-battlegrounds-cover.png)
 
 > **Capa conceitual:** a imagem é uma referência original de direção de arte para a arena e a identidade do jogo; ela não é um asset de runtime. Consulte [`docs/29-GAME-COVER.md`](docs/29-GAME-COVER.md) para procedência e limites de uso.
 
-O pacote visual F0 de texturas, props, VFX e boards de animação está catalogado em [`docs/30-VISUAL-ASSET-PACK.md`](docs/30-VISUAL-ASSET-PACK.md). Todos os PNGs permanecem no estado **Conceito** até conversão, otimização e validação separadas.
+O pacote visual F0 de texturas, props, VFX e boards de animação está catalogado em [`docs/30-VISUAL-ASSET-PACK.md`](docs/30-VISUAL-ASSET-PACK.md). A matriz de **o que dá para usar agora** (vitrine, PBR candidato, receita, F1-only) está em [`docs/33-ASSET-USABILITY.md`](docs/33-ASSET-USABILITY.md). Todos os PNGs permanecem desligados do place até conversão, otimização, P1 quando público, e validação no Studio.
 
 As variantes técnicas para importação no Roblox estão em [`docs/assets/roblox-ready/`](docs/assets/roblox-ready/), com manifesto PBR, previews e scripts reproduzíveis. Elas continuam sem ligação automática ao runtime.
 
@@ -21,7 +21,7 @@ As variantes técnicas para importação no Roblox estão em [`docs/assets/roblo
 | Produto | Q-001 a Q-030 decididas; `docs/09-OPEN-QUESTIONS.md` é o registro canônico |
 | Planejamento | visão, GDD, mundo, social, arquitetura, schemas, segurança, roster, roadmap, benchmark e plano de animação documentados |
 | Implementado | domínio F0, mundo greybox com rotas/marcos/modelos low-poly, animação procedural de NPCs e do jogador, interações semânticas com Instrutor/Marco, save/ProfileStore, cliente Input/HUD, envelope v2, `SecurityService` e `TelemetryService` mínimo |
-| Validado automaticamente | 241/241 em `tests/run.luau` + 73/73 em `tests/animation.luau` + 67/67 no fuzz de segurança + 19/19 na simulação de combate ponta a ponta, Selene limpo, StyLua canônico, Wally e build Rojo |
+| Validado automaticamente | 241/241 em `tests/run.luau` + 76/76 em `tests/animation.luau` + 67/67 no fuzz de segurança + 19/19 na simulação de combate ponta a ponta, auditoria visual, Selene limpo, StyLua canônico, Wally e build Rojo |
 | Ainda não comprovado | roteiro Play no Studio, physics/collision groups, DataStore real, dois clientes, latência, mobile, gamepad, performance, UX visual e assets de animação |
 
 O CI em pushes para `main` valida contratos headless e a árvore Rojo; não substitui playtest. O snapshot e os links de evidência ficam em `docs/12-TESTING.md`.
@@ -69,10 +69,11 @@ Esse `.rbxl` é um artefato local ignorado pelo Git: atualizar ou baixar a branc
 Snapshot histórico gerado no Windows em 2026-08-14 13:53:05 -03: `275301` bytes,
 SHA256 `B90E9417A1CB59D3B372CFCEB2DD831FB5C58274971F716071AE379A1072C697`.
 
-O check headless de 2026-08-15 (`rojo build -o build.rbxl`, commit `86228ee`)
+O check headless de 2026-08-16 (`rojo build -o /tmp/build.rbxl`, `src/` inalterado desde `2a713af`)
 produziu `318988` bytes, SHA256
 `bc6b5056f238787ce2e857f835a1486b193f4f08db7a38bdccb4878d7f83bff4`. Esses
-dados comprovam a geração do arquivo, não a execução dele no Studio.
+dados comprovam a geração do arquivo, não a execução dele no Studio. O commit
+`86228ee` (15/08) é o registro histórico da mesma árvore de build, não o HEAD.
 
 **`anime-verse-battlegrounds.rbxl` é o único place que se abre.** Qualquer outro
 `.rbxl` na raiz é descartável e não recebe as mudanças do repositório — abrir um
@@ -155,8 +156,8 @@ src/
     Data/            catálogos dirigidos por dados (personagens, habilidades, famílias, NPCs, zonas, objetivos, locale)
   server/            services (domínio F0, save, rede, segurança e telemetria)
   client/            controllers (bootstrap de apresentação)
-tests/               harness Lune + 400 casos (241 run.luau + 73 animation.luau + 67 fuzz + 19 combat_e2e)
-docs/                produto, arquitetura, decisões, testes e planos (00 a 32)
+tests/               harness Lune + 403 casos (241 run.luau + 76 animation.luau + 67 fuzz + 19 combat_e2e)
+docs/                produto, arquitetura, decisões, testes e planos (00 a 33)
 lib/                 bibliotecas pinadas (ProfileStore)
 plugins/AvbDebug/    plugin de Studio: ponte de debug usada pelos agentes
 scripts/             CI Linux, build do snapshot, ponte de debug e CLI dos agentes
@@ -179,6 +180,8 @@ scripts/             CI Linux, build do snapshot, ponte de debug e CLI dos agent
 - [docs/17-COMBAT-FEEL.md](docs/17-COMBAT-FEEL.md) — game-feel: easing, follow-through, idle, wrist snap, hit-stop e câmera de impacto
 - [docs/18-ANALISE-VIDEO.md](docs/18-ANALISE-VIDEO.md) — playtest 13/08: golpes invisíveis, mira e overlay de comandos
 - [docs/19-DEBUG-BRIDGE.md](docs/19-DEBUG-BRIDGE.md) — plugin AvbDebug e ponte local: como qualquer agente debuga o Studio
+- [docs/32-STUDIO-PLAYTEST-RUNBOOK.md](docs/32-STUDIO-PLAYTEST-RUNBOOK.md) — ordem do dia no Studio (W1/A1/R1/W2)
+- [docs/33-ASSET-USABILITY.md](docs/33-ASSET-USABILITY.md) — o que as imagens geradas podem virar agora
 
 `PROMPT_AnimeVerseBattlegrounds_v2.md` é o briefing histórico que originou o
 planejamento. Em conflito, os documentos canônicos em `docs/` prevalecem.

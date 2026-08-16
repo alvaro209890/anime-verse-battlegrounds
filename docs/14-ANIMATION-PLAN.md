@@ -1,6 +1,6 @@
 # 14 — Plano de animação e apresentação de combate
 
-> **Status canônico em 2026-08-15 (`86228ee`):** existe uma fundação procedural para NPCs e para o personagem local em ataque leve, ataque pesado, guarda e dash. O ataque leve virou uma **cadeia de quatro golpes de silhueta distinta** (§4.3), com cotovelo e joelho articulados. Validação apenas por análise estática, build e testes headless. **Nenhum dos 45 clipes finais foi criado ou validado, nenhuma das três técnicas possui animação dedicada e não houve Play atual no Studio.** A F0 continua usando apresentação genérica até os gates W1, P1 e A1.
+> **Status canônico em 2026-08-16:** existe uma fundação procedural para NPCs e para o personagem local em ataque leve, ataque pesado, guarda e dash. O ataque leve virou uma **cadeia de quatro golpes de silhueta distinta** (§4.3), com cotovelo e joelho articulados. Validação apenas por análise estática, build e testes headless. O commit `86228ee` (15/08) é o registro histórico dessa fundação, não o HEAD. **Nenhum dos 45 clipes finais foi criado ou validado, nenhuma das três técnicas possui animação dedicada e não houve Play atual no Studio.** A F0 continua usando apresentação genérica até os gates W1, P1 e A1.
 >
 > **Antes de investigar qualquer "não anima", leia §4.7.** A série de correções de 14/08 terminou num defeito que nenhum teste headless pega: o rig R15 não existe no instante do `CharacterAdded`, o anexo capturava zero junta e nunca mais procurava. A receita de diagnóstico em seis passos está no fim daquela seção; a rotação do corpo no golpe está em §4.9.
 >
@@ -570,7 +570,7 @@ Para W1 passar, a evidência precisa mostrar, no mínimo:
 - percurso completo pelas duas saídas sem queda entre pisos;
 - prompt do Instrutor e hold de 1,5 s do Marco de Retorno funcionando com validação server-side.
 
-Até essa execução existir, W1 permanece **pendente**, mesmo com 241 testes de domínio, 73 de animação/apresentação, 67 de fuzz e 19 de simulação de combate verdes. O roteiro do dia está em [`docs/32-STUDIO-PLAYTEST-RUNBOOK.md`](32-STUDIO-PLAYTEST-RUNBOOK.md).
+Até essa execução existir, W1 permanece **pendente**, mesmo com 241 testes de domínio, 76 de animação/apresentação, 67 de fuzz e 19 de simulação de combate verdes. O roteiro do dia está em [`docs/32-STUDIO-PLAYTEST-RUNBOOK.md`](32-STUDIO-PLAYTEST-RUNBOOK.md).
 
 ### Gate A0 — direção e originalidade
 

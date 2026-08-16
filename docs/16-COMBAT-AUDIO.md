@@ -1,6 +1,6 @@
 # 16 — Áudio de combate
 
-> **Status em 2026-08-13:** catálogo, player e integração implementados e testados. **Nenhum som toca ainda**: os 29 arquivos `.ogg` precisam ser publicados no Roblox e ter seus IDs preenchidos. Enquanto isso, cada deixa é ignorada em silêncio — o jogo funciona normalmente, apenas mudo.
+> **Status em 2026-08-16:** catálogo, player e integração implementados e testados. O combate **não está mudo**: as 15 deixas apontam para áudios do criador Roblox (userId 1) — kit placeholder, qualquer experiência toca sem upload. Os **33 arquivos `.ogg` distintos** do Kenney CC0 continuam sendo o som final pretendido e **ainda não foram publicados** na conta/grupo. `assetId` vazio segue estado válido e silencioso.
 
 ## 1. A restrição que define todo o desenho
 
@@ -10,14 +10,14 @@ Isso divide o trabalho em duas metades com donos diferentes:
 
 | Metade | Quem faz | Estado |
 |---|---|---|
-| Catálogo, player, integração, testes | agente / código | **pronto** |
-| Upload dos `.ogg` e preenchimento de `assetId` | humano com acesso à conta/grupo | **pendente** |
+| Catálogo, player, integração, testes, placeholders tocáveis | agente / código | **pronto** |
+| Upload dos `.ogg` CC0 e troca dos `assetId` placeholder | humano com acesso à conta/grupo | **pendente** |
 
 O código foi escrito para que a segunda metade seja mecânica: `assetId` vazio é estado válido e silencioso, nunca erro.
 
 ## 2. Origem e licença dos arquivos
 
-396 arquivos de quatro packs do [Kenney.nl](https://kenney.nl/assets), todos em **CC0 (domínio público)** — uso comercial, modificação e redistribuição livres, atribuição não obrigatória. Detalhes e links originais em `assets/audio/README.md`; cada pack mantém seu `License.txt`.
+305 arquivos `.ogg` de quatro packs do [Kenney.nl](https://kenney.nl/assets), todos em **CC0 (domínio público)** — uso comercial, modificação e redistribuição livres, atribuição não obrigatória. Detalhes e links originais em `assets/audio/README.md`; cada pack mantém seu `License.txt`. Contagem do banco no disco: `ui-audio/` 51 + `impact-sounds/` 130 + `sci-fi-sounds/` 73 + `rpg-audio/` 51.
 
 CC0 é domínio público declarado, não material derivativo — está de acordo com o princípio de conteúdo original de `06-ROADMAP.md` §1. **Áudio CC0 não passa pelos gates P1–P3 de originalidade**, que existem para fantasia e identidade visual/sonora *autoral derivada de referência*. Um som de impacto genérico não carrega identidade de franquia.
 
@@ -66,7 +66,7 @@ Além disso, cada degrau da cadeia leve tem corte de ar próprio, com pitch decr
 
 ## 4. Mapa de deixas
 
-13 deixas, 29 arquivos distintos.
+15 deixas, 33 arquivos distintos.
 
 | Deixa | Momento | Origem |
 |---|---|---|
@@ -80,7 +80,9 @@ Além disso, cada degrau da cadeia leve tem corte de ar próprio, com pitch decr
 | `impact_guard` | golpe parado na guarda | `impact-sounds/impactPlate_*` (4) |
 | `ability_comet_shoulder` | Ombro Cometa (0,150 s) | `sci-fi-sounds/thrusterFire_*` |
 | `ability_broken_cadence` | Cadência Quebrada (0,080 s) | `sci-fi-sounds/laserSmall_*` |
+| `ability_cadence_echo` | eco da Cadência (autoritativo) | `sci-fi-sounds/laserSmall_*` |
 | `ability_pulse_return` | Retorno de Pulso (0,100 s) | `sci-fi-sounds/forceField_*` |
+| `ability_pulse_counter` | contra do Pulso (só após o servidor) | `sci-fi-sounds/lowFrequency_explosion_*` |
 | `dash` | dash, imediato | `sci-fi-sounds/spaceEngineSmall_*` |
 | `guard_raise` | entrada em guarda | `rpg-audio/cloth1` |
 
@@ -100,8 +102,8 @@ Lista cada deixa, seu status (`PENDENTE`/`publicado`) e os arquivos de origem, e
 
 Passos:
 
-1. Publicar os 29 `.ogg` no Roblox (Creator Dashboard → Audio, ou a Assets API do Open Cloud para automatizar em lote).
-2. Preencher `assetId` em `src/shared/Data/CombatAudio.luau` no formato `rbxassetid://<id>`.
+1. Publicar os 33 `.ogg` distintos no Roblox (Creator Dashboard → Audio, ou a Assets API do Open Cloud para automatizar em lote).
+2. Trocar os `assetId` placeholder em `src/shared/Data/CombatAudio.luau` pelos IDs publicados, no formato `rbxassetid://<id>`.
 3. Rodar `lune run tests/animation.luau` e o manifesto de novo.
 
 Áudio publicado no Roblox passa por moderação e pode levar minutos. Som CC0 do Kenney não costuma ter problema, mas a rejeição é possível — por isso `assetId` vazio é estado suportado e não bloqueia o build.
@@ -137,16 +139,17 @@ acerto e bloqueio — que era o que faltava para o combate ter peso.
 
 ## 6. Verificação
 
-`tests/animation.luau` — 19 testes, incluindo 9 de áudio:
+`tests/animation.luau` — 76 testes no snapshot, dos quais 11 de áudio:
 
-- catálogo passa `validate` (volume 0–1, pitch coerente, alcance positivo);
-- todo `sourceFile` referenciado existe no disco;
+- catálogo passa `validate` (volume 0–1, pitch coerente, alcance positivo) e declara **15 deixas**;
+- todo `sourceFile` referenciado existe no disco (**33 arquivos distintos**);
 - toda deixa emitida pelo animador existe no catálogo;
 - cada degrau da cadeia tem corte de ar próprio;
 - impacto depende do desfecho autoritativo — `nil`, `"miss"` e ausência de desfecho não soam como acerto;
 - deixa sem upload devolve `nil` sem erro;
+- todo o catálogo aponta para um `rbxassetid://` tocável (hoje o kit placeholder);
 - com `assetId` publicado, o pitch cai dentro da faixa declarada;
 - o animador agenda o corte de ar para o fim da antecipação e não repete;
 - animador sem `emitCue` continua animando em silêncio.
 
-Fica **fora** do que os testes cobrem: se o som é agradável, se o volume relativo está equilibrado e se a mixagem funciona no celular. Isso exige ouvir no Studio depois do upload.
+Fica **fora** do que os testes cobrem: se o som é agradável, se o volume relativo está equilibrado e se a mixagem funciona no celular. Isso exige ouvir no Studio — os placeholders bastam para timing; o CC0 é o mix final.

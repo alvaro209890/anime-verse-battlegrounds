@@ -113,13 +113,13 @@ Valores são **hipóteses de playtest**, medidos contra 100 de vida e os recurso
 
 **Eixo original:** alternar golpes em dois tempos; timing correto cria eco, mas não transforma todo acerto em crítico garantido.
 
-IDs estáveis e frame data de implementação: `docs/13-F0-SLICE.md` §6 (`comet_shoulder`, `broken_cadence`, `pulse_return`, `eclipse_beat` desligada).
+IDs estáveis e frame data de implementação: `docs/13-F0-SLICE.md` §6 (`comet_shoulder`, `broken_cadence`, `pulse_return`, `eclipse_beat` desligada). Os números da tabela abaixo do Punho do Eclipse são o **kit implementado** (retune 13/08); o restante do roster continua especulação de design.
 
 | Ação | ID | Cap/Imp | C / CD | Comportamento e contra-jogo |
 |---|---|---:|---:|---|
-| Ombro Cometa | `comet_shoulder` | 1/2 | 18 / 7 | Avanço de 7 studs e impacto de 9. Para na guarda e pode ser punido lateralmente. |
-| Cadência Quebrada | `broken_cadence` | 1/2 | 16 / 8 | Dois golpes de 5 + 6; reentrada numa janela de 120 ms cria eco atrasado de 4 e ativa Fluxo se acertar. |
-| Retorno de Pulso | `pulse_return` | 1/2 | 20 / 12 | Postura de 0,25 s reduz 50% de um golpe e responde com 8 e empurrão. Erro gera 0,6 s de recuperação; agarrão vence. |
+| Ombro Cometa | `comet_shoulder` | 1/2 | 18 / 7 | Avanço de 7 studs e impacto de 14. Para na guarda (14 de guarda, 6 HP bloqueado) e pode ser punido lateralmente. |
+| Cadência Quebrada | `broken_cadence` | 1/2 | 16 / 8 | Dois golpes de 7 + 9; reentrada numa janela de 120 ms (+ até 80 ms de lag no servidor) cria eco atrasado de 6 e ativa Fluxo se acertar. |
+| Retorno de Pulso | `pulse_return` | 1/2 | 20 / 12 | Postura de 0,25 s reduz 50% de um golpe e responde com 10 e empurrão. Erro gera 0,6 s de recuperação; agarrão vence. |
 | Ultimate — Batimento Eclipse | `eclipse_beat` | —/5 | 55 / 90 | Por 10 s, três timings corretos carregam finalizador sinalizado de até 26. Perder o ritmo não paralisa o usuário, mas zera a carga parcial. F0: `enabled = false`. |
 
 **Notas de balanceamento:** o kit inicial usa apenas 3 de capacidade e 11 de impacto, deixando espaço futuro sem exigir mistura. Timing precisa ser tolerante no mobile e validado pelo servidor. Não há dano de 100–0.

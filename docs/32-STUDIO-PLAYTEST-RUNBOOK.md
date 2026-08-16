@@ -3,7 +3,7 @@
 > **Estado em 2026-08-15.** Este documento é o roteiro do dia em que o Studio
 > abrir. Ele **não** é evidência de runtime e não fecha gate nenhum: fechar um
 > gate exige a sessão executada e a captura anexada. O que existe hoje é
-> validação headless — 241 casos de domínio, 73 de animação/apresentação, 67 de
+> validação headless — 241 casos de domínio, 76 de animação/apresentação, 67 de
 > fuzz e 19 de simulação de combate ponta a ponta.
 
 O mesmo roteiro existe em forma executável:
