@@ -179,9 +179,15 @@ resolve: o perfil de câmera é escolhido por **desfecho**, e a lista
 básico chega como `abilityId = "heavy"` e recebe **o mesmo trauma do jab**,
 apesar de causar o dobro de dano e ser a ferramenta de quebra de guarda.
 
-O teste fixa o comportamento atual em vez de mascarar. No passo 8, comparar
+O teste fixava o comportamento atual em vez de mascarar. No passo 8, comparar
 lado a lado o leve e o pesado e decidir com o olho: se o pesado precisar pesar
 mais, entra na lista com o número medido — não com um palpite.
+
+**✅ Resolvido em 17/08 (decisão do Álvaro no playtest W1/A1):** `heavy = true`
+entrou em `HEAVY_ABILITIES`, usando o multiplicador já existente da lista
+(trauma 0,5→0,8, FOV 2,6→3,64 no acerto). O Cometa continua sendo o golpe mais
+pesado do kit (trauma 0,85). O teste foi atualizado para exigir
+`pesado > jab` em vez de fixar a igualdade.
 
 ## Referências
 

@@ -37,11 +37,15 @@ local PROFILES: { [string]: ImpactProfile } = {
 	counter = { trauma = 0.7, fov = 4.0 },
 }
 
--- Técnicas de maior compromisso merecem um impacto mais pesado no acerto.
+-- Golpes de maior compromisso merecem um impacto mais pesado no acerto.
+-- O pesado básico entrou em 17/08 (decisão do playtest W1/A1): causava o dobro
+-- de dano e quebrava guarda, mas chegava como abilityId = "heavy" e sacudia
+-- igual ao jab. Usa o mesmo multiplicador das técnicas (docs/32 §6).
 local HEAVY_ABILITIES: { [string]: boolean } = {
 	comet_shoulder = true,
 	broken_cadence = true,
 	eclipse_beat = true,
+	heavy = true,
 }
 
 -- Baselines de docs/14 §6. Tetos continuam existindo para o shake nunca virar

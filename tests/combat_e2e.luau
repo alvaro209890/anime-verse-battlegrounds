@@ -437,10 +437,11 @@ test("pesado: a distância é a única diferença entre o mudo e o completo", fu
 	assertTrue(#perto.cues > #longe.cues, "só o perto soa")
 	assertTrue(PlayerCombatAnimator.hitStopActive(perto.now, perto.animator.hitStopUntil), "hit-stop do pesado")
 	assertEq(#perto.deltas, 1, "vida replicada")
-	-- Achado pinado: o pesado básico sacode igual ao leve. Não "corrigir" aqui.
+	-- ✅ Resolvido em 17/08 (decisão do playtest): o pesado entrou em
+	-- `HEAVY_ABILITIES` e agora sacode MAIS que o leve (trauma 0,8 vs 0,5).
 	local leve = newSim(6)
 	serverBasicAttack(leve, "light")
-	assertEq(perto.camera.trauma, leve.camera.trauma, "pesado básico sacode igual ao jab")
+	assertTrue(perto.camera.trauma > leve.camera.trauma, "pesado básico sacode mais que o jab")
 end)
 
 test("borda do alcance: 9 studs conecta, 9,5 não (leve, degrau 1)", function()
@@ -472,22 +473,21 @@ test("pesado confirmado bate mais forte, mas sacode IGUAL ao leve (achado)", fun
 	assertEq(eventoPesado.step, 0, "pesado não entra na cadeia leve")
 	assertTrue(pesado.camera.trauma > 0 and leve.camera.trauma > 0, "os dois sacodem")
 
-	-- ⚠️ Achado desta simulação, registrado em `docs/14` §4.8: o perfil de
-	-- câmera é escolhido por DESFECHO, e `HEAVY_ABILITIES` só lista técnicas
-	-- (`comet_shoulder`, `broken_cadence`, `eclipse_beat`). O pesado básico
-	-- chega como `abilityId = "heavy"` e recebe o mesmo trauma do jab, apesar
-	-- de causar o dobro de dano e ser a ferramenta de quebra de guarda.
-	-- O teste FIXA o comportamento atual em vez de mascarar: mudar o feel é
-	-- decisão que precisa de Play (W1/A1), não de um número escolhido no
-	-- escuro — a lição de §4.8 é exatamente essa.
-	assertEq(pesado.camera.trauma, leve.camera.trauma, "hoje o pesado básico sacode igual ao jab")
-	assertEq(
-		CombatCameraController.profileFor("hit", "heavy"),
-		CombatCameraController.profileFor("hit", "light"),
-		"mesmo perfil de impacto"
+	-- ✅ Resolvido em 17/08 (decisão do playtest W1/A1, docs/32 §6): o pesado
+	-- básico entrou em `HEAVY_ABILITIES` (`heavy = true`) e agora usa o mesmo
+	-- multiplicador das técnicas (trauma 0,5→0,8, FOV 2,6→3,64). A lição de
+	-- docs/14 §4.8 continua: o número veio do multiplicador já existente da
+	-- lista, não de um palpite — o Álvaro confirmou no Studio que o pesado
+	-- estava leve demais para o dobro de dano e a quebra de guarda.
+	assertTrue(pesado.camera.trauma > leve.camera.trauma, "pesado básico sacode mais que o jab")
+	local perfilPesado = CombatCameraController.profileFor("hit", "heavy")
+	local perfilLeve = CombatCameraController.profileFor("hit", "light")
+	assertTrue(
+		perfilPesado ~= nil and perfilLeve ~= nil and perfilPesado.trauma > perfilLeve.trauma,
+		"perfil do pesado é mais forte que o do jab"
 	)
-	-- A técnica, essa sim, tem perfil próprio — a diferença existe e é dirigida
-	-- por dados; só o pesado básico ficou de fora da lista.
+	-- A técnica, essa sim, tem perfil próprio — o Cometa continua sendo o
+	-- golpe mais pesado do kit (trauma 0,85 vs 0,8 do pesado básico).
 	local perfilTecnica = CombatCameraController.profileFor("hit", "comet_shoulder")
 	local perfilBasico = CombatCameraController.profileFor("hit", "heavy")
 	assertTrue(

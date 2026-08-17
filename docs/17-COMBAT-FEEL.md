@@ -106,8 +106,10 @@ Módulo de apresentação local:
 - **shake** com curva `trauma^1,4` (mantém a ordem entre desfechos sem zerar o
   degrau de baixo);
 - **FOV punch** curto que decai com o tempo;
-- perfis por desfecho (`hit`/`death`/`guard`/`counter`) e reforço para técnicas
-  pesadas (`comet_shoulder`, `broken_cadence`, `eclipse_beat`).
+- perfis por desfecho (`hit`/`death`/`guard`/`counter`) e reforço para golpes
+  pesados (`heavy` desde 17/08 — antes sacudia igual ao jab apesar do dobro de
+  dano e da quebra de guarda — e técnicas `comet_shoulder`, `broken_cadence`,
+  `eclipse_beat`).
 
 > A curva era **quadrática** e o resultado era invisível: com trauma 0,35, o
 > acerto comum — o golpe que o jogador mais dá — rendia 0,24° e 0,037 stud por

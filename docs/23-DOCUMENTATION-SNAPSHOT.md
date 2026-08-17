@@ -1,5 +1,26 @@
 # Snapshot Canônico da Documentação — 17/08/2026
 
+## Rodada de 17/08 (Hermes-server) — pesado básico agora sacode de verdade
+
+Achado em aberto do runbook (`docs/32` §6, simulação de 15/08): o perfil de
+câmera era escolhido por **desfecho** e `HEAVY_ABILITIES` só listava técnicas,
+então o pesado básico chegava como `abilityId = "heavy"` e recebia o mesmo
+trauma do jab, apesar de causar o dobro de dano (12 vs 6) e ser a ferramenta
+de quebra de guarda. O teste fixava a igualdade por decisão explícita (mudar
+feel sem Play era palpite — lição de `docs/14` §4.8).
+
+**Decisão do Álvaro no playtest W1/A1 de 17/08:** o pesado está leve demais.
+`heavy = true` entrou em `HEAVY_ABILITIES` (`src/client/Presentation/CombatCameraController.luau`),
+usando o multiplicador já existente da lista (1,6×/1,4×): trauma 0,5→**0,8**,
+FOV 2,6→**3,64** no acerto. O Cometa segue como o golpe mais pesado (trauma
+0,85, perfil próprio). Teste em `tests/combat_e2e.luau` atualizado para exigir
+`pesado > jab`. Docs 17 §2.6 e 32 §6 sincronizados no mesmo commit.
+
+**Gates headless:** domínio 243/243, animação 74/74, fuzz 67/67, e2e 19/19,
+Selene 0/0/0, StyLua limpo, Rojo build OK (valores conferidos na rodada).
+
+---
+
 ## Rodada de 17/08 (noite) — corrida no Shift (16 / 22)
 
 Implementação da corrida hold-to-run pedida no playtest: **Shift** (PC) e
