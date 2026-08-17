@@ -1,4 +1,49 @@
-# Snapshot Canônico da Documentação — 16/08/2026
+# Snapshot Canônico da Documentação — 17/08/2026
+
+## Rodada de 17/08 — primeira evidência de runtime da F0
+
+Esta rodada é a primeira do projeto com **medição dentro do Roblox Studio em
+Play**, não headless. O que mudou de estado:
+
+| Campo | Antes | Agora |
+|---|---|---|
+| Sincronia Studio × repo | não verificada | **63/63 arquivos com hash idêntico** |
+| Cadeia de impacto (`a1_impact`) | "nunca rodou uma vez sequer" | **executada e confirmada** |
+| Testes de animação/apresentação | 73 | **74** |
+| Testes de domínio | 241 (declarado) | **240 passam, 1 falha** (ver abaixo) |
+
+**`a1_impact` — o passo que estava travado desde 14/08.** Encostando no boneco
+(5,02 studs, com `aim` declarado para o alvo), os golpes conectaram e os números
+bateram com `docs/13` §6.1: leve `6/6/8/12` nos degraus 1-4, pesado `12`, Ombro
+Cometa `14`. Vida do boneco 10000 → 9930, soma exata. O Cometa fechou distância
+de 5,02 para 1,65 studs — o avanço curto existe. Zero linhas de `[Combat] errou`
+durante a bateria.
+
+O whiff que travava o passo **não era alcance nem fronteira**: os "5 recusados
+pela fronteira" são os 4 Estilhaços + o elite na zona livre (recusa correta), e
+o boneco nunca esteve entre eles. Era o **cone** — `CharacterController` declara
+a direção no payload (`o corpo NÃO gira`), então mirar é enviar o `aim` certo.
+
+**Guarda — sinal de eixo invertido.** Ver `docs/17` §2.3.1. A pose jogava os dois
+braços para trás e para fora porque `pitch` negativo leva o braço para trás no
+rig real. Os testes afirmavam `< -35`/`< -40`, ou seja, **travavam o defeito** —
+a suíte ficou verde meses com a guarda visivelmente errada.
+
+**Rede de segurança do anexo de junta.** Ver `docs/14` §4.7.1.
+
+**Falha conhecida em aberto:** `planície: nada colide, nada entra no ringue do
+elite e a luz tem teto` falha com `materialização existe`. Confirmado como
+**pré-existente** (reproduz com a árvore limpa), não introduzido nesta rodada.
+Por isso o domínio está em 240/1 e não nos 241 declarados abaixo.
+
+**Não validado nesta rodada:** a camada visual de impacto (hit-stop, tremida,
+luz, som, número flutuante) não foi confirmada a olho — `screen_capture` do MCP
+só funciona em Edit, e input sintético não chega ao jogo sem foco de janela. W1,
+dois clientes, latência, Android e gamepad seguem pendentes.
+
+---
+
+# Snapshot anterior — 16/08/2026
 
 Este arquivo é a referência única para o estado técnico atual do repositório. Os demais documentos preservam decisões e histórico de implementação, mas afirmações antigas sobre commits, contagens de testes ou artefatos devem ser interpretadas como registros históricos quando divergirem deste snapshot.
 

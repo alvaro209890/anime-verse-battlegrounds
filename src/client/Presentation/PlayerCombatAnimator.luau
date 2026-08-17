@@ -252,18 +252,37 @@ local GUARD = table.freeze(pose({
 	waistYawDegrees = 8,
 	neckPitchDegrees = -2,
 	neckYawDegrees = -4,
-	leftShoulderPitchDegrees = -52,
-	leftShoulderYawDegrees = -18,
-	leftShoulderRollDegrees = -12,
-	rightShoulderPitchDegrees = -48,
-	rightShoulderYawDegrees = 20,
-	rightShoulderRollDegrees = 14,
-	leftElbowPitchDegrees = -78,
-	rightElbowPitchDegrees = -82,
+	-- ⚠️ SINAL DOS EIXOS — medido no rig real em 2026-08-17, não deduzido.
+	-- Varredura no Studio (ombro esquerdo isolado, mão medida no referencial do
+	-- UpperTorso) deu o mapa abaixo, e ele contradiz o que esta pose assumia:
+	--
+	--   ombro X +60 -> frente +1.46  (braço À FRENTE)
+	--   ombro X -60 -> frente -1.55  (braço ATRÁS)
+	--   ombro Z +60 -> lado  +0.35   (fecha, cotovelo para dentro)
+	--   ombro Z -60 -> lado  -2.67   (abre, cotovelo para fora)
+	--
+	-- Até 17/08 a guarda usava pitch NEGATIVO (-52/-48) e roll de abertura
+	-- (-12/+14): ela jogava os dois braços para TRÁS e para FORA do corpo. Não
+	-- existia ajuste fino capaz de salvar isso — o sinal estava invertido. O
+	-- mesmo valia para o cotovelo (-78/-82), que dobrava o antebraço para baixo.
+	--
+	-- Os valores abaixo saíram de busca em grade contra um alvo geométrico
+	-- (punho na altura do rosto, à frente do peito, mãos juntas) e foram medidos:
+	-- altura +1.27 com a cabeça em +1.41, frente +1.02, largura 1.37 contra 2.80
+	-- de vão de ombro. Isso é guarda de boxe: punhos na bochecha, cotovelos
+	-- recolhidos protegendo o tronco.
+	leftShoulderPitchDegrees = 80,
+	leftShoulderYawDegrees = 0,
+	leftShoulderRollDegrees = 45,
+	rightShoulderPitchDegrees = 80,
+	rightShoulderYawDegrees = 0,
+	rightShoulderRollDegrees = -45,
+	leftElbowPitchDegrees = 75,
+	rightElbowPitchDegrees = 75,
 	leftWristPitchDegrees = -14,
 	rightWristPitchDegrees = -14,
-	leftKneePitchDegrees = -12,
-	rightKneePitchDegrees = -12,
+	leftKneePitchDegrees = -16,
+	rightKneePitchDegrees = -16,
 	leftAnklePitchDegrees = 5,
 	rightAnklePitchDegrees = -5,
 	leftHipPitchDegrees = -4,
@@ -1710,6 +1729,19 @@ function PlayerCombatAnimator.step(animator: Animator): ()
 	end
 	if not animator.character or not animator.character.Parent then
 		return
+	end
+
+	-- Rede de segurança: se a tabela de juntas está vazia com personagem vivo, o
+	-- overlay inteiro está morto e NENHUMA pose de combate aparece — guarda,
+	-- cadeia leve e técnicas, todas. É o defeito de corrida do rig (docs/14 §4.7)
+	-- reaparecendo por um caminho que `attachCharacter` não cobre: o anexo sai
+	-- cedo quando o personagem é o mesmo objeto, então uma varredura que pegou
+	-- zero junta nunca é refeita e o `DescendantAdded` já passou. Revarrer aqui
+	-- custa uma iteração só no estado quebrado e devolve a animação sozinho.
+	if next(animator.joints) == nil then
+		for _, descendant in animator.character:GetDescendants() do
+			adoptJoint(animator, descendant)
+		end
 	end
 
 	local action: CombatAction? = animator.action

@@ -506,7 +506,7 @@ test("apresentação: idle respira — o neutro não fica congelado entre açõe
 	-- Sem relógio (nil) a pose base permanece canônica: guarda não muda.
 	assertEq(PlayerCombatAnimator.sample(nil, 0, false).waistPitchDegrees, 0, "sem relógio não respira")
 	local guard = PlayerCombatAnimator.sample(nil, 0, true)
-	assertTrue(guard.leftShoulderPitchDegrees < -40, "guarda canônica preservada")
+	assertTrue(guard.leftShoulderPitchDegrees > 40, "guarda canônica preservada")
 end)
 
 test("cadeia: punho estala no impacto — soco flexiona, chute não", function()
@@ -1188,11 +1188,18 @@ test("apresentação: dash tem preparação, passada e recuperação distintas",
 	assertEq(neutral.rootForwardStuds, 0, "dash volta ao neutro")
 end)
 
+-- ⚠️ Este teste já afirmou `shoulderPitch < -35`, e com isso TRAVAVA o defeito:
+-- no rig real, pitch negativo joga o braço para TRÁS do corpo (medição em
+-- PlayerCombatAnimator, bloco da GUARD). A guarda ficou meses com os braços
+-- atrás e o teste passava. Agora o sinal é o medido: pitch POSITIVO = braço à
+-- frente, roll fecha para dentro (esquerdo +, direito −).
 test("apresentação: defesa fecha braços, joelhos e pulsos", function()
 	local guard = PlayerCombatAnimator.sample("GuardDown", 0.12, false)
-	assertTrue(guard.leftShoulderPitchDegrees < -35, "braço esquerdo fecha")
-	assertTrue(guard.rightShoulderPitchDegrees < -35, "braço direito fecha")
-	assertTrue(guard.leftElbowPitchDegrees < 0 and guard.rightElbowPitchDegrees < 0, "cotovelos sustentam a guarda")
+	assertTrue(guard.leftShoulderPitchDegrees > 35, "braço esquerdo sobe à frente")
+	assertTrue(guard.rightShoulderPitchDegrees > 35, "braço direito sobe à frente")
+	assertTrue(guard.leftShoulderRollDegrees > 0, "cotovelo esquerdo recolhe para dentro")
+	assertTrue(guard.rightShoulderRollDegrees < 0, "cotovelo direito recolhe para dentro")
+	assertTrue(guard.leftElbowPitchDegrees > 0 and guard.rightElbowPitchDegrees > 0, "antebraço aponta para cima")
 	assertTrue(guard.leftKneePitchDegrees < 0 and guard.rightKneePitchDegrees < 0, "joelhos absorvem a postura")
 	assertTrue(
 		guard.leftWristPitchDegrees ~= 0 or guard.rightWristPitchDegrees ~= 0,
@@ -1459,6 +1466,28 @@ test("juntas: rig que só aparece depois do personagem ainda entra na pose", fun
 	assertEq(total, #R15, "as 15 juntas do R15 entram mesmo chegando atrasadas")
 	assertTrue(joints.root ~= nil, "raiz é quem carrega o passo à frente")
 	assertTrue(joints.leftAnkle ~= nil and joints.rightAnkle ~= nil, "tornozelos tiram o pé colado")
+end)
+
+test("juntas: tabela vazia é revarrida, senão o combate fica sem pose", function()
+	-- Rede de segurança do step(): joints vazio com personagem vivo significa
+	-- overlay morto — guarda, cadeia e técnicas, nenhuma aparece. A varredura de
+	-- recuperação precisa aceitar exatamente as mesmas juntas da varredura
+	-- inicial; se alguém restringir uma das duas, este teste cai.
+	local vazio: { [string]: any } = {}
+	assertEq(next(vazio), nil, "tabela começa vazia")
+
+	local rig = {
+		{ classe = "AnimationConstraint", nome = "LeftShoulder", papel = "leftShoulder" },
+		{ classe = "AnimationConstraint", nome = "LeftElbow", papel = "leftElbow" },
+		{ classe = "Motor6D", nome = "RightShoulder", papel = "rightShoulder" },
+		{ classe = "AnimationConstraint", nome = "Waist", papel = "waist" },
+	}
+	for _, peca in rig do
+		local papel = PlayerCombatAnimator.jointSlotFor(vazio, peca.classe, peca.nome)
+		assertEq(papel, peca.papel, "revarredura adota " .. peca.nome)
+		vazio[papel :: string] = { nome = peca.nome }
+	end
+	assertTrue(next(vazio) ~= nil, "tabela deixa de estar vazia depois da revarredura")
 end)
 
 test("juntas: papel já ocupado não é roubado por junta que chega depois", function()

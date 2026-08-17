@@ -391,6 +391,25 @@ hipóteses em 14/08 e vale para qualquer camada de apresentação:
 > na closure original. Instrumentação que dá zero por esse caminho não prova
 > "não roda"; provar por efeito observável.
 
+#### 4.7.1 Rede de segurança de 17/08 — revarredura quando `joints` está vazio
+
+A adoção tardia de §4.7 cobre a corrida do `CharacterAdded`, mas não cobre um
+caso: `attachCharacter` **sai cedo quando o personagem é o mesmo objeto**
+(`animator.character == character`). Se a varredura inicial pegou zero junta e o
+`DescendantAdded` já passou, a tabela fica vazia para sempre e o overlay inteiro
+morre — guarda, cadeia leve e as três técnicas, todas ao mesmo tempo, sem erro
+no Output.
+
+`step()` agora revarre quando `next(animator.joints) == nil` com personagem
+vivo. Custa uma iteração só no estado quebrado e devolve a animação sozinho.
+Travado por teste (`juntas: tabela vazia é revarrida`).
+
+**Sintoma que leva direto aqui:** o input chega (`processed=false` no
+`InputBegan`, e o servidor responde ao golpe) mas nenhuma junta se move. Foi o
+que se mediu em 17/08 com a guarda: `F` recebido, cotovelo parado em 4-8° onde a
+pose pede 75°, enquanto um animator instanciado à mão no mesmo personagem
+adotava as 15 juntas e posava na hora.
+
 ### 4.8 Correção de 14/08 (noite) — impacto sem luz, sem tremida e sem acerto
 
 Reclamação: "não está tendo luzes, efeitos, tremidas". Três causas distintas,

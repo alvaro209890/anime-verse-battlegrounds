@@ -39,6 +39,48 @@ Quando não há ação em curso, o neutro/guarda recebem uma micro-respiração
 (`sin` de baixa frequência sobre tronco/ombros). Com relógio `nil`, a pose
 base permanece canônica — a guarda não muda de silhueta.
 
+A guarda **é sustentada, não é um flash**: `GuardDown` dura 0,16 s só como
+entrada; quando a ação expira em `step()`, `sample(nil, …, guarding = true)`
+mantém `GUARD` sob a respiração até o `GuardUp`.
+
+### 2.3.1 Guarda — o sinal do eixo estava invertido (17/08)
+
+A guarda ficou meses com **os dois braços atrás e para fora do corpo**, e
+nenhum ajuste de amplitude resolvia, porque o erro não era de amplitude: era de
+**sinal**. Medição no rig real (ombro esquerdo isolado, mão lida no referencial
+do `UpperTorso`):
+
+| Rotação | frente | altura | lado |
+|---|---:|---:|---:|
+| neutro | −0,05 | −1,21 | −1,40 |
+| ombro X **+60** | **+1,46** | −0,34 | −1,40 |
+| ombro X −60 | **−1,55** | −0,35 | −1,40 |
+| ombro Z +60 | −0,05 | −0,77 | **+0,35** |
+| ombro Z −60 | −0,05 | +0,09 | **−2,67** |
+
+Ou seja: **X positivo leva o braço à frente; X negativo leva atrás.** Z fecha
+(positivo) ou abre (negativo). A pose antiga usava `pitch -52/-48` e roll de
+abertura `-12/+14` — as duas coisas erradas ao mesmo tempo. O cotovelo tinha o
+mesmo problema (`-78/-82` dobrava o antebraço para baixo).
+
+Os valores atuais saíram de busca em grade contra um alvo geométrico (punho na
+altura do rosto, à frente do peito, mãos juntas), medidos no Studio:
+
+| Medida | Resultado | Referência |
+|---|---:|---|
+| altura das mãos | +1,27 | cabeça em +1,41 → punho na bochecha |
+| à frente do peito | +1,02 | um stud à frente |
+| largura entre mãos | 1,37 | vão de ombro é 2,80 |
+
+Pose final: ombro `pitch 80`, `roll ±45` (esquerdo +, direito −); cotovelo `+75`;
+joelhos `-16`.
+
+> **Os testes travavam o defeito.** `tests/animation.luau` e `tests/run.luau`
+> afirmavam `leftShoulderPitchDegrees < -35` / `< -40` — isto é, exigiam que o
+> braço fosse para trás. Por isso a suíte ficou verde o tempo todo com a guarda
+> visivelmente errada. As asserções agora exigem o sinal medido, e cobrem
+> também o roll (fecha para dentro) e o cotovelo (antebraço para cima).
+
 ### 2.4 Wrist snap
 
 O `PoseSample` ganhou `leftWristPitchDegrees`/`rightWristPitchDegrees`.

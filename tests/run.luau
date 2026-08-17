@@ -1284,7 +1284,10 @@ test("apresentação: jogador tem antecipação, impacto, guarda e recuperação
 		"pesado tem mais compromisso visual"
 	)
 	assertEq(recovered.rootYawDegrees, 0, "recupera para neutro")
-	assertTrue(guard.leftShoulderPitchDegrees < -40, "guarda fecha a silhueta")
+	-- Pitch POSITIVO = braço à frente no rig real (medição em PlayerCombatAnimator,
+	-- bloco da GUARD). A asserção anterior exigia negativo e por isso travava a
+	-- guarda com os braços atrás do corpo.
+	assertTrue(guard.leftShoulderPitchDegrees > 40, "guarda fecha a silhueta")
 end)
 
 test("apresentação: Ability1 comunica avanço e impacto sem posição autoritativa", function()
