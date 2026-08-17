@@ -76,18 +76,31 @@ local Zones: { [string]: ZoneDefinition } = {
 			box(-48, -5, -40, 5), -- Portão Oeste, 10 de largura
 		},
 	},
-	-- Planície 160 × 120 ao norte (§8.1) + o braço oeste que liga o Portão
-	-- Oeste à planície. §8.1 dimensiona a planície mas não diz onde o Portão
-	-- Oeste desemboca; sem o braço ele seria um portão para lugar nenhum.
-	-- Inferência de layout, F0-BASELINE — muda com o greybox no Studio.
+	-- Planície + o braço oeste que liga o Portão Oeste a ela. §8.1 dimensiona a
+	-- planície mas não diz onde o Portão Oeste desemboca; sem o braço ele seria
+	-- um portão para lugar nenhum.
+	--
+	-- **Ampliada em 17/08 de 160×120 para 480×400.** O tamanho anterior vinha do
+	-- F0-BASELINE e servia para provar a fatia; visto em Play, o mundo acabava
+	-- logo depois da cratera e lia como arena, não como mundo aberto — que é a
+	-- direção do VISION-DEC-013.
+	--
+	-- Custo de contagem de partes: ZERO. `buildFloors` cria UMA Part por volume,
+	-- então o piso só fica maior. O que a ampliação cobra é DECORAÇÃO: campo
+	-- vazio grande é pior que campo pequeno cheio, e é por isso que a vegetação
+	-- cresceu junto neste mesmo commit.
+	--
+	-- O que NÃO mudou de propósito: âncoras, cratera, rota e bastião. Mover
+	-- spawn de inimigo ou o ringue do elite junto com a expansão misturaria duas
+	-- mudanças e tornaria qualquer regressão difícil de atribuir.
 	zone_plain_free = {
 		id = "zone_plain_free",
 		displayNameKey = "zone.plain.name",
 		kind = "free",
 		pvp = true,
 		volumes = {
-			box(-80, -160, 80, -40),
-			box(-80, -40, -48, 8),
+			box(-240, -440, 240, -40),
+			box(-240, -40, -48, 8),
 		},
 	},
 }

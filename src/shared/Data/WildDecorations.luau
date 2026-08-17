@@ -271,34 +271,117 @@ do
 end
 
 -- ============================================================================
--- Vegetação (17/08). Até aqui a planície era 100% mineral — poste, cristal,
--- pilar e formação de estilhaço — e lia como pedreira, não como mundo. O jogador
--- pediu "árvores e vegetação"; isto é a primeira passada.
+-- Vegetação da planície (17/08, ampliada junto com a zona).
 --
--- A paleta NÃO é verde de floresta. O mundo é crepuscular e frio (§ SceneryPresentation),
--- então a folhagem puxa para o verde-azulado escuro e o tronco para o basalto:
--- a vegetação precisa parecer que cresceu NESTE mundo, não coladada de outro.
+-- Até 17/08 a planície era 100% mineral — poste, cristal, pilar, formação de
+-- estilhaço — e lia como pedreira. A primeira passada plantou 14 árvores em
+-- posições escolhidas à mão; com a zona indo de 160×120 para 480×400, escolher
+-- coordenada a coordenada deixou de escalar.
 --
--- As mesmas três regras da validação valem aqui, e é por isso que árvore fica
--- LONGE da rota, da cratera e das âncoras: nada colide, mas uma copa em cima da
--- rota tapa a leitura do caminho, e em cima da âncora esconde o inimigo nascendo.
+-- ⚠️ SORTEIO COM SEMENTE FIXA, NÃO `math.random`.
+-- O gerador abaixo é um LCG determinístico: a mesma semente produz sempre o
+-- mesmo bosque. Isso importa porque a validação é um TESTE — com sorteio real,
+-- uma árvore invadindo a rota reprovaria só às vezes, e "às vezes" é o pior
+-- estado possível para um gate. Determinístico, o bosque é dado como qualquer
+-- outro: revisável no diff e idêntico entre máquinas.
+--
+-- A paleta NÃO é verde de floresta. O mundo é crepuscular e frio
+-- (`SceneryPresentation`); a folhagem puxa para verde-azulado escuro e o tronco
+-- para basalto, senão a vegetação parece colada de outro jogo.
 local BARK: { number } = { 48, 42, 44 }
 local BARK_PALE: { number } = { 66, 60, 58 }
+local BARK_DEAD: { number } = { 82, 76, 70 }
 local FOLIAGE: { number } = { 44, 92, 84 }
 local FOLIAGE_DEEP: { number } = { 30, 66, 64 }
 local FOLIAGE_RIFT: { number } = { 58, 118, 116 }
+local FOLIAGE_DUSK: { number } = { 52, 80, 104 }
+local MOSS: { number } = { 38, 74, 62 }
 
--- Árvore em quatro peças: tronco, forquilha e duas massas de copa deslocadas.
--- Duas massas em vez de uma bola só é o que tira a cara de pirulito — a silhueta
--- fica irregular e lê como copa a qualquer distância.
-local function tree(prefix: string, x: number, z: number, height: number, spread: number, yaw: number): ()
+-- LCG de 32 bits. Números pequenos e sem biblioteca: o módulo é dado puro e
+-- precisa carregar no harness Lune sem DataModel.
+local seed = 20260817
+local function rnd(): number
+	seed = (seed * 1103515245 + 12345) % 2147483648
+	return seed / 2147483648
+end
+
+local function between(lo: number, hi: number): number
+	return lo + rnd() * (hi - lo)
+end
+
+-- Copa em camadas: massas deslocadas e de cor levemente diferente. Uma bola só
+-- vira pirulito; três camadas dão silhueta irregular, que é o que faz a árvore
+-- ler como árvore a 100 studs.
+local function canopy(prefix: string, x: number, y: number, z: number, spread: number, yaw: number, tint: { number })
+	push(
+		deco(
+			prefix .. "_CanopyA",
+			"Part",
+			"Ball",
+			{ x = spread, y = spread * 0.74, z = spread * 0.94 },
+			{ x = x - spread * 0.12, y = y + spread * 0.28, z = z + spread * 0.1 },
+			yaw,
+			tint,
+			"LeafyGrass",
+			0,
+			nil
+		)
+	)
+	push(
+		deco(
+			prefix .. "_CanopyB",
+			"Part",
+			"Ball",
+			{ x = spread * 0.8, y = spread * 0.62, z = spread * 0.76 },
+			{ x = x + spread * 0.24, y = y + spread * 0.62, z = z - spread * 0.16 },
+			yaw + 34,
+			FOLIAGE_DEEP,
+			"LeafyGrass",
+			0,
+			nil
+		)
+	)
+	push(
+		deco(
+			prefix .. "_CanopyC",
+			"Part",
+			"Ball",
+			{ x = spread * 0.62, y = spread * 0.5, z = spread * 0.66 },
+			{ x = x - spread * 0.2, y = y + spread * 0.74, z = z - spread * 0.24 },
+			yaw + 68,
+			tint,
+			"LeafyGrass",
+			0,
+			nil
+		)
+	)
+end
+
+-- Árvore frondosa: tronco, alargamento de base, forquilha inclinada e copa em
+-- três camadas. O alargamento é barato e resolve o defeito clássico de tronco
+-- primitivo, que é parecer um poste enfiado no chão.
+local function tree(prefix: string, x: number, z: number, height: number, spread: number, yaw: number, tint: { number })
 	local trunkTop = height * 0.62
+	push(
+		deco(
+			prefix .. "_Root",
+			"Part",
+			"Ball",
+			{ x = 2.1, y = 1.1, z = 2.1 },
+			{ x = x, y = 0.6, z = z },
+			yaw,
+			MOSS,
+			"Grass",
+			0,
+			nil
+		)
+	)
 	push(
 		deco(
 			prefix .. "_Trunk",
 			"Part",
 			"Block",
-			{ x = 0.85, y = trunkTop, z = 0.85 },
+			{ x = 0.9, y = trunkTop, z = 0.9 },
 			{ x = x, y = trunkTop / 2, z = z },
 			yaw,
 			BARK,
@@ -312,10 +395,68 @@ local function tree(prefix: string, x: number, z: number, height: number, spread
 			prefix .. "_Fork",
 			"Part",
 			"Block",
-			{ x = 0.55, y = height * 0.26, z = 0.55 },
-			{ x = x + spread * 0.18, y = trunkTop + height * 0.1, z = z - spread * 0.12 },
-			yaw + 18,
+			{ x = 0.55, y = height * 0.3, z = 0.55 },
+			{ x = x + spread * 0.16, y = trunkTop + height * 0.11, z = z - spread * 0.1 },
+			yaw + 20,
 			BARK_PALE,
+			"Slate",
+			0,
+			nil
+		)
+	)
+	canopy(prefix, x, trunkTop, z, spread, yaw, tint)
+end
+
+-- Conífera: silhueta cônica feita de três blocos girados. Existe para o bosque
+-- não ser feito de um molde só — variedade de SILHUETA lê de longe, variedade
+-- de cor não.
+local function conifer(prefix: string, x: number, z: number, height: number, spread: number, yaw: number)
+	push(
+		deco(
+			prefix .. "_Trunk",
+			"Part",
+			"Block",
+			{ x = 0.7, y = height * 0.5, z = 0.7 },
+			{ x = x, y = height * 0.25, z = z },
+			yaw,
+			BARK,
+			"Slate",
+			0,
+			nil
+		)
+	)
+	local tiers = { 0.42, 0.66, 0.86 }
+	local widths = { 1.0, 0.72, 0.44 }
+	for index, tier in tiers do
+		push(
+			deco(
+				("%s_Tier%d"):format(prefix, index),
+				"Part",
+				"Block",
+				{ x = spread * widths[index], y = height * 0.26, z = spread * widths[index] },
+				{ x = x, y = height * tier, z = z },
+				yaw + index * 22,
+				if index == 2 then FOLIAGE_DEEP else FOLIAGE,
+				"LeafyGrass",
+				0,
+				nil
+			)
+		)
+	end
+end
+
+-- Tronco morto: só haste e toco. Um bosque sem árvore morta parece cenário de
+-- catálogo; com ela, parece lugar com história.
+local function deadTree(prefix: string, x: number, z: number, height: number, yaw: number)
+	push(
+		deco(
+			prefix .. "_Snag",
+			"Part",
+			"Block",
+			{ x = 0.8, y = height, z = 0.8 },
+			{ x = x, y = height / 2, z = z },
+			yaw,
+			BARK_DEAD,
 			"Slate",
 			0,
 			nil
@@ -323,45 +464,28 @@ local function tree(prefix: string, x: number, z: number, height: number, spread
 	)
 	push(
 		deco(
-			prefix .. "_CanopyLow",
+			prefix .. "_Limb",
 			"Part",
-			"Ball",
-			{ x = spread, y = spread * 0.72, z = spread * 0.92 },
-			{ x = x - spread * 0.1, y = trunkTop + spread * 0.3, z = z + spread * 0.08 },
-			yaw,
-			FOLIAGE,
-			"LeafyGrass",
-			0,
-			nil
-		)
-	)
-	push(
-		deco(
-			prefix .. "_CanopyTop",
-			"Part",
-			"Ball",
-			{ x = spread * 0.78, y = spread * 0.6, z = spread * 0.74 },
-			{ x = x + spread * 0.2, y = trunkTop + spread * 0.66, z = z - spread * 0.14 },
-			yaw + 30,
-			FOLIAGE_DEEP,
-			"LeafyGrass",
+			"Block",
+			{ x = 0.45, y = height * 0.34, z = 0.45 },
+			{ x = x + 1.1, y = height * 0.72, z = z - 0.5 },
+			yaw + 52,
+			BARK_DEAD,
+			"Slate",
 			0,
 			nil
 		)
 	)
 end
 
--- Arbusto: uma massa baixa. Serve para quebrar o chão vazio entre as árvores
--- sem custar quatro peças cada.
-local function shrub(prefix: string, x: number, z: number, radius: number, rgb: { number }): ()
+local function shrub(prefix: string, x: number, z: number, radius: number, rgb: { number })
 	push(deco(
 		prefix,
 		"Part",
 		"Ball",
 		{ x = radius * 2, y = radius * 1.3, z = radius * 1.8 },
-		-- y é o CENTRO da peça: precisa ser ao menos a meia-altura (0.65×raio)
-		-- ou o arbusto nasce enterrado. A validação chama isso de "afunda no
-		-- chão" e pega os onze de uma vez.
+		-- y é o CENTRO da peça: precisa ser ao menos a meia-altura (0.65×raio) ou
+		-- a peça nasce enterrada. A validação chama isso de "afunda no chão".
 		{ x = x, y = radius * 0.68, z = z },
 		0,
 		rgb,
@@ -371,36 +495,97 @@ local function shrub(prefix: string, x: number, z: number, radius: number, rgb: 
 	))
 end
 
--- Bosques afastados da rota (|x| <= 5, z −100..−40), da cratera (raio 20 em
--- 0,−102) e das seis âncoras. As coordenadas são escolhidas, não sorteadas: a
--- validação recusa qualquer uma que invada, e sorteio tornaria a falha
--- intermitente entre execuções.
-tree("Grove_W1", -62, -52, 11.5, 6.4, 12)
-tree("Grove_W2", -70, -66, 9.5, 5.4, 48)
-tree("Grove_W3", -58, -78, 12.5, 7.0, 24)
-tree("Grove_W4", -72, -92, 10.0, 5.8, 66)
-tree("Grove_E1", 60, -50, 11.0, 6.2, 8)
-tree("Grove_E2", 70, -70, 12.5, 7.2, 40)
-tree("Grove_E3", 58, -86, 9.5, 5.6, 72)
-tree("Grove_E4", 68, -112, 11.5, 6.6, 30)
-tree("Grove_N1", -40, -130, 12.0, 6.8, 18)
-tree("Grove_N2", -24, -144, 10.5, 6.0, 54)
-tree("Grove_N3", 46, -130, 11.5, 6.6, 36)
-tree("Grove_N4", 44, -150, 9.5, 5.4, 60)
-tree("Grove_WArm1", -70, -20, 10.5, 6.0, 22)
-tree("Grove_WArm2", -60, -6, 12.0, 6.8, 50)
+-- Pedra musgosa: quebra o campo e amarra a vegetação ao chão mineral do mundo.
+local function boulder(prefix: string, x: number, z: number, radius: number, yaw: number)
+	push(
+		deco(
+			prefix,
+			"Part",
+			"Ball",
+			{ x = radius * 2.2, y = radius * 1.5, z = radius * 1.9 },
+			{ x = x, y = radius * 0.78, z = z },
+			yaw,
+			STONE_DARK,
+			"Basalt",
+			0,
+			nil
+		)
+	)
+end
 
-shrub("Shrub_W1", -58, -46, 1.9, FOLIAGE_DEEP)
-shrub("Shrub_W2", -66, -74, 2.2, FOLIAGE)
-shrub("Shrub_W3", -64, -100, 1.7, FOLIAGE_RIFT)
-shrub("Shrub_E1", 52, -58, 2.0, FOLIAGE)
-shrub("Shrub_E2", 64, -94, 1.8, FOLIAGE_DEEP)
-shrub("Shrub_E3", 74, -122, 2.1, FOLIAGE)
-shrub("Shrub_N1", -34, -138, 2.0, FOLIAGE_RIFT)
-shrub("Shrub_N2", 16, -150, 1.8, FOLIAGE_DEEP)
-shrub("Shrub_N3", 36, -126, 2.2, FOLIAGE)
-shrub("Shrub_WArm1", -64, -14, 1.9, FOLIAGE)
-shrub("Shrub_WArm2", -74, -30, 2.1, FOLIAGE_DEEP)
+-- ── Distribuição ────────────────────────────────────────────────────────────
+-- Zonas de exclusão, todas travadas pela validação (repetir aqui é o que evita
+-- gerar peça só para vê-la reprovada):
+--   rota da cratera  — |x| <= 9, z −104..−36
+--   cratera          — raio 26 em (0, −102)
+--   âncoras          — 8 studs de folga
+--   bastião/portões  — z > −46 no corredor central
+local ANCHOR_SPOTS = {
+	{ -50, -60 },
+	{ 30, -60 },
+	{ -30, -95 },
+	{ 55, -100 },
+	{ -60, -130 },
+	{ 25, -140 },
+	{ 0, -102 },
+}
+
+local function blocked(x: number, z: number): boolean
+	if math.abs(x) <= 9 and z <= -36 and z >= -104 then
+		return true
+	end
+	local cx, cz = x - 0, z + 102
+	if math.sqrt(cx * cx + cz * cz) <= 26 then
+		return true
+	end
+	for _, spot in ANCHOR_SPOTS do
+		local dx, dz = x - spot[1], z - spot[2]
+		if math.sqrt(dx * dx + dz * dz) <= 8 then
+			return true
+		end
+	end
+	-- Boca dos portões: nada planta na saída do Bastião.
+	if z > -46 and math.abs(x) < 14 then
+		return true
+	end
+	if z > -46 and x > -54 and x < -38 then
+		return true
+	end
+	return false
+end
+
+local TINTS = { FOLIAGE, FOLIAGE_RIFT, FOLIAGE_DUSK, FOLIAGE_DEEP }
+
+do
+	local planted = 0
+	local attempts = 0
+	-- Teto de tentativas: sem ele, uma regra de exclusão mais rígida no futuro
+	-- transformaria isto em laço infinito no carregamento do módulo.
+	while planted < 210 and attempts < 4000 do
+		attempts += 1
+		local x = between(-228, 228)
+		local z = between(-428, -50)
+		if not blocked(x, z) then
+			planted += 1
+			local roll = rnd()
+			local tint = TINTS[(planted % #TINTS) + 1]
+			local prefix = ("Wild_%03d"):format(planted)
+			if roll < 0.42 then
+				tree(prefix, x, z, between(9, 15), between(5.4, 8.2), between(0, 360), tint)
+			elseif roll < 0.66 then
+				conifer(prefix, x, z, between(11, 18), between(4.6, 7.0), between(0, 360))
+			elseif roll < 0.74 then
+				deadTree(prefix, x, z, between(7, 12), between(0, 360))
+			elseif roll < 0.90 then
+				shrub(prefix, x, z, between(1.6, 2.6), tint)
+			else
+				boulder(prefix, x, z, between(1.8, 3.4), between(0, 360))
+			end
+		end
+	end
+end
+
+-- ============================================================================
 
 function WildDecorations.all(): { WildDecoration }
 	return DECORATIONS

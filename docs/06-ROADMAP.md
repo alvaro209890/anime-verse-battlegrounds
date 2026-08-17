@@ -168,9 +168,13 @@ runtime**:
 | Fronteira de zona | ✅ | recusa correta de 5 fighters da livre estando na segura |
 | Guarda | ✅ | corrigida (sinal de eixo) e confirmada pelo jogador |
 | Greybox e decoração | ✅ | 474 partes materializadas, planície com 80+ |
+| Socos com peso | ✅ | recalibrados e aprovados pelo jogador |
+| Bots de missão | ✅ | Instrutora 61 peças, dummy 56, rig R15 + roupa — **aceitos como estão** |
+| Mundo aberto legível | ✅ | planície 160×120 → **480×400**, ~210 peças de vegetação |
 | Camada visual de impacto | ❌ | hit-stop/tremida/luz/som **não confirmados a olho** |
 | W1 completo | ❌ | prompts, marco, saídas e morte ainda não percorridos |
 | Dois clientes, latência, Android, gamepad | ❌ | intocados |
+| Desempenho da planície ampliada | ❌ | ~700 partes novas, **não medido** — é o risco aberto do W2 |
 
 **Correções que a rodada de runtime revelou** — todas eram invisíveis no
 headless, e duas estavam *travadas por teste*:

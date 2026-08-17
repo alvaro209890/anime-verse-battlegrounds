@@ -59,7 +59,19 @@ onze arbustos enterrados no chão.
 snapshot chamava de "pré-existente" era **falso negativo de CRLF no teste**, não
 defeito de produto.
 
-**Bots de missão.** Medido em runtime: a Instrutora tem 61 peças e o dummy 56,
+**Mundo ampliado (17/08, tarde).** `zone_plain_free` foi de 160×120 para
+**480×400**. Custo em contagem de partes da ampliação: zero — `buildFloors` faz
+uma Part por volume. A vegetação passou de 25 peças escolhidas à mão para ~210
+geradas por LCG de semente fixa, com cinco espécies (frondosa, conífera, tronco
+morto, arbusto, pedra musgosa). Âncoras, cratera, rota e bastião **não** foram
+movidos de propósito: misturar expansão com reposicionamento de spawn tornaria
+qualquer regressão difícil de atribuir.
+
+A validação pegou dois erros na geração — `boulder` e a raiz da árvore com `y`
+abaixo da meia-altura, 107 peças enterradas de uma vez.
+
+**Bots de missão — aceitos como estão (decisão do Álvaro, 17/08).** Medido em
+runtime: a Instrutora tem 61 peças e o dummy 56,
 ambos com o conjunto R15 completo (membros, torsos, mãos, pés) mais roupa
 detalhada — capuz, casaco, capa, cabelo, ombreiras. **Mas nenhum dos dois tem
 objeto `Humanoid`.** Vale decidir se é intencional (são cenário) ou se falta,

@@ -1,5 +1,30 @@
 # Expansão Visual do Cenário — 14/08/2026
 
+> **Ampliação de 17/08, e por que não há modelo de catálogo aqui.**
+>
+> A planície foi de 160×120 para **480×400** e ganhou ~210 peças de vegetação
+> (árvore frondosa, conífera, tronco morto, arbusto e pedra musgosa), geradas
+> por LCG de **semente fixa** — determinístico, revisável no diff e idêntico
+> entre máquinas. Sorteio real tornaria a validação intermitente, que é o pior
+> estado possível para um gate.
+>
+> Custo de contagem de partes da ampliação em si: **zero**. `buildFloors` cria
+> uma Part por volume de zona, então o piso apenas fica maior. O que a
+> ampliação cobra é decoração — campo vazio grande é pior que campo pequeno
+> cheio.
+>
+> **Modelo grátis do Toolbox não sobrevive neste projeto.** O place é BUILDADO a
+> partir do código (`rojo build`): qualquer coisa inserida à mão no Studio é
+> apagada no próximo `build-studio.ps1`. Não é política, é o pipeline — inserir
+> árvore do catálogo daria um mundo bonito que some no build seguinte.
+>
+> O caminho que funciona para asset externo é **referência por ID no código**:
+> `MeshPart` com `MeshId`/`TextureId`, declarado em `WildDecorations` como
+> qualquer outra receita. Hoje `deco()` só aceita `Part`/`WedgePart`; suportar
+> `MeshPart` é uma extensão pequena e é o próximo passo natural se a vegetação
+> primitiva não bastar. Referenciar só a MALHA (em vez de inserir o modelo
+> inteiro) também evita o vetor conhecido de script malicioso em modelo grátis.
+
 Esta atualização prepara o mundo existente para a próxima etapa de construção. A lógica de zonas, âncoras, portões, hitboxes e autoridade de combate permanece inalterada; a mudança atua na camada de materialização visual do `WorldService`.
 
 ## O que foi adicionado
