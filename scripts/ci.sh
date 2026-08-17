@@ -3,7 +3,8 @@
 # Uso: ./scripts/ci.sh
 # Não é Play: o `rojo build` só valida a árvore. O artefato vai para /tmp
 # de propósito — o place de trabalho continua sendo o gerado por
-# scripts/build-studio.ps1 (docs/12 §2).
+# scripts/build-studio.ps1 (docs/12 §2). A auditoria visual só confere
+# hashes/vereditos; não importa PNG nem publica ID.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -12,6 +13,7 @@ export PATH="${HOME}/.aftman/bin:${HOME}/.local/bin:${PATH}"
 
 stylua --check src tests plugins scripts
 selene src tests plugins scripts
+python3 scripts/audit_visual_assets.py --check
 lune run tests/run.luau
 lune run tests/animation.luau
 lune run tests/security_fuzz.luau

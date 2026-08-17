@@ -398,6 +398,7 @@ test("ci: o script local reproduz a ordem do workflow", function()
 	local passos = {
 		"stylua --check src tests plugins scripts",
 		"selene src tests plugins scripts",
+		"python3 scripts/audit_visual_assets.py --check",
 		"lune run tests/run.luau",
 		"lune run tests/animation.luau",
 		"lune run tests/security_fuzz.luau",

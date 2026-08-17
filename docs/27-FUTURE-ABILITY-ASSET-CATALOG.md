@@ -4,7 +4,7 @@
 
 Este catálogo prepara a produção de habilidades ainda não implementadas sem antecipar regras de combate. Ele conecta referências visuais, assets públicos candidatos, possíveis receitas de apresentação, locais de uso no jogo e gates necessários.
 
-> **Estado atual:** as imagens geradas são conceitos; o pacote Kenney é candidato externo arquivado; nenhuma habilidade desta página está integrada ao runtime ou autorizada a alterar dano, alcance, cooldown, custo, posição, colisão ou PvP.
+> **Estado atual:** as imagens geradas são conceitos **F1/F2**; o pacote Kenney é candidato externo arquivado em `docs/assets/open-candidates/`; nenhuma habilidade desta página está integrada ao runtime ou autorizada a alterar dano, alcance, cooldown, custo, posição, colisão ou PvP. Não implementar estas famílias enquanto a F0 não passar W1/A1/R1/W2.
 
 O índice geral está em [`VISUAL-REFERENCE-INDEX.md`](../VISUAL-REFERENCE-INDEX.md). O protocolo de captura está em [`26-VISUAL-VALIDATION-CHECKLIST.md`](26-VISUAL-VALIDATION-CHECKLIST.md).
 
@@ -70,11 +70,13 @@ O crack, debris e poeira são candidatos a VFX temporário. Alteração persiste
 | Fonte oficial | [Kenney Particle Pack](https://kenney.nl/assets/particle-pack) |
 | Licença | Creative Commons CC0 |
 | Escopo | 80 arquivos 2D/VFX, incluindo círculos, dirt, fire, flame e outros motivos |
-| Arquivo local | `assets/open-candidates/kenney_particle-pack.zip` |
+| Arquivo local | `docs/assets/open-candidates/kenney_particle-pack.zip` |
 | SHA-256 | `b631d4b07f7002549fdcf155f01141ad482f79f3440e4e301eed49ce5f1d8958` |
 | Tamanho local | 15.001.764 bytes |
+| Conteúdo inspecionado | 200 entradas no zip; 193 PNG (pastas Transparent e Black background, mais `Preview.png`); `License.txt` presente |
 | Uso planejado | Protótipos de anéis, poeira, trails e sparks após conversão/seleção |
-| Estado | Candidato externo; não integrado ao Rojo, não executado e não usado pelo runtime |
+| Já extraído no Git | Subconjunto `slash_01` / `spark_01` / `scorch_01` em `AVB-free-vfx-assets/assets/vfx/kenney/` para VFX de inimigo; `assetId` continua `nil` |
+| Estado | Candidato externo; o zip não entra no Rojo e não é usado pelo runtime |
 
 O repositório alternativo [Calinou/kenney-particle-pack](https://github.com/Calinou/kenney-particle-pack) foi registrado apenas como empacotamento auxiliar; a licença deve ser conferida no arquivo `LICENSE.txt` antes de redistribuir qualquer subconjunto.
 
@@ -111,19 +113,19 @@ Antes de criar uma habilidade futura, adicionar spec server-side, dados, contrat
 
 ## Manifesto de integridade
 
-Todos os oito PNGs foram gerados como referências originais em 2560×1440. O candidato externo foi baixado da URL oficial do Kenney e permanece arquivado sem execução ou integração.
+Todos os oito PNGs foram gerados como referências originais em 2560×1440. O candidato externo foi baixado da URL oficial do Kenney e permanece arquivado sem execução ou integração. Os hashes canônicos de **todos** os PNGs conceituais, do zip e dos atlas de VFX passam a viver em [`docs/assets/visual-inventory.json`](assets/visual-inventory.json); a usabilidade (o que promover, o que não implementar agora) está em [`docs/33-ASSET-USABILITY.md`](33-ASSET-USABILITY.md).
 
-| Arquivo | Dimensão/tamanho | SHA-256 |
+| Arquivo (raiz do repo) | Dimensão/tamanho | SHA-256 |
 |---|---:|---|
-| `assets/ability-future-area-domain.png` | 2560×1440 | `69f2dc66f1929d824b6c753733f53a3e8848683458d2c765fda12c20fcbbb1d3` |
-| `assets/ability-future-barrier-parry.png` | 2560×1440 | `ad0334d176c3204ce73b29eebfc2988d32ac0c09c73a907834124d44a3b002c0` |
-| `assets/ability-future-energy-projectile.png` | 2560×1440 | `aaac4a581409d9e69647432d0aae93d69828ad1d9670926aa365ac08dadbbe11` |
-| `assets/ability-future-environment-break.png` | 2560×1440 | `ebb1e426b2bd3422a6788c3fcc3b68d68e353736468bdcccbe6e3df8ab3dd7e5` |
-| `assets/ability-future-mobility-burst.png` | 2560×1440 | `49ceea65f975d8f2aadc7e715f6696b63002821a170c9c4abd0420323a6f2f7c` |
-| `assets/ability-future-summon-construct.png` | 2560×1440 | `a8fbe1a0916933325210dfde99fffac52c13e399c571fe48cf7fc8de455ca6ba` |
-| `assets/ability-future-ultimate-composition.png` | 2560×1440 | `df56f6713d7190c8f0b55f4019193e6a97ef8f9e11fd90364463d0834cd268ff` |
-| `assets/ability-future-vfx-micro-library.png` | 2560×1440 | `14d15739c011032933d80e5cdb076f92dd12ece5c4b810622017e1576f5aa90e` |
-| `assets/open-candidates/kenney_particle-pack.zip` | 15.001.764 bytes | `b631d4b07f7002549fdcf155f01141ad482f79f3440e4e301eed49ce5f1d8958` |
+| `docs/assets/ability-future-area-domain.png` | 2560×1440 | `69f2dc66f1929d824b6c753733f53a3e8848683458d2c765fda12c20fcbbb1d3` |
+| `docs/assets/ability-future-barrier-parry.png` | 2560×1440 | `ad0334d176c3204ce73b29eebfc2988d32ac0c09c73a907834124d44a3b002c0` |
+| `docs/assets/ability-future-energy-projectile.png` | 2560×1440 | `aaac4a581409d9e69647432d0aae93d69828ad1d9670926aa365ac08dadbbe11` |
+| `docs/assets/ability-future-environment-break.png` | 2560×1440 | `ebb1e426b2bd3422a6788c3fcc3b68d68e353736468bdcccbe6e3df8ab3dd7e5` |
+| `docs/assets/ability-future-mobility-burst.png` | 2560×1440 | `49ceea65f975d8f2aadc7e715f6696b63002821a170c9c4abd0420323a6f2f7c` |
+| `docs/assets/ability-future-summon-construct.png` | 2560×1440 | `a8fbe1a0916933325210dfde99fffac52c13e399c571fe48cf7fc8de455ca6ba` |
+| `docs/assets/ability-future-ultimate-composition.png` | 2560×1440 | `df56f6713d7190c8f0b55f4019193e6a97ef8f9e11fd90364463d0834cd268ff` |
+| `docs/assets/ability-future-vfx-micro-library.png` | 2560×1440 | `14d15739c011032933d80e5cdb076f92dd12ece5c4b810622017e1576f5aa90e` |
+| `docs/assets/open-candidates/kenney_particle-pack.zip` | 15.001.764 bytes | `b631d4b07f7002549fdcf155f01141ad482f79f3440e4e301eed49ce5f1d8958` |
 
 ## Referências verificadas
 

@@ -49,10 +49,10 @@ As imagens desta lista foram geradas para este projeto e devem ser tratadas como
 
 ## Navegação e validação
 
-O índice de uso está em `../../VISUAL-REFERENCE-INDEX.md`. O protocolo de captura e aprovação está em `../26-VISUAL-VALIDATION-CHECKLIST.md`. Esses documentos transformam as imagens em referências comparáveis para animações, VFX, HUD e mundo, mas não promovem nenhum PNG a asset de runtime.
+O índice de uso está em `../../VISUAL-REFERENCE-INDEX.md`. O protocolo de captura e aprovação está em `../26-VISUAL-VALIDATION-CHECKLIST.md`. A matriz honesta de **o que dá para usar agora** está em `../33-ASSET-USABILITY.md`. Hashes, dimensões e vereditos de todos os PNGs deste diretório (não só o pacote F0) estão em [`visual-inventory.json`](visual-inventory.json), conferidos no CI. Esses documentos transformam as imagens em referências comparáveis para animações, VFX, HUD e mundo, mas não promovem nenhum PNG a asset de runtime.
 
 ## Pipeline futuro
 
-Quando uma imagem for aprovada como referência, a produção deve separar: conceito, modelagem/peça Roblox, colisão, textura, iluminação, otimização mobile, integração por Rojo, adaptação para HUD/loading quando aplicável e teste de runtime. O catálogo de habilidades futuras está em `../27-FUTURE-ABILITY-ASSET-CATALOG.md`. O candidato público arquivado está em `open-candidates/kenney_particle-pack.zip`; ele é CC0 conforme a fonte oficial, mas permanece fora do runtime até conversão, seleção e validação.
+Quando uma imagem for aprovada como referência, a produção deve separar: conceito, modelagem/peça Roblox, colisão, textura, iluminação, otimização mobile, integração por Rojo, adaptação para HUD/loading quando aplicável e teste de runtime. O catálogo de habilidades futuras está em `../27-FUTURE-ABILITY-ASSET-CATALOG.md`. O candidato público arquivado está em `open-candidates/kenney_particle-pack.zip` (caminho canônico a partir da raiz: `docs/assets/open-candidates/kenney_particle-pack.zip`); ele é CC0 conforme a fonte oficial, mas permanece fora do runtime até conversão, seleção e validação. Um subconjunto (slash/spark/scorch) já foi extraído para `AVB-free-vfx-assets/assets/vfx/kenney/` com `assetId = nil`.
 
 Nenhuma imagem deste diretório deve ser ligada automaticamente ao place por nome de arquivo.

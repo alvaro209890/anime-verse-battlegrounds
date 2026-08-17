@@ -23,6 +23,9 @@ jobs:
       - name: Selene — lint
         run: selene src tests plugins scripts
 
+      - name: Inventário visual — hashes, vereditos e catálogos
+        run: python3 scripts/audit_visual_assets.py --check
+
       - name: Testes unitários (Lune)
         run: |
           lune run tests/run.luau

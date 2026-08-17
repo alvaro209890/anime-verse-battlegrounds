@@ -570,7 +570,7 @@ Para W1 passar, a evidência precisa mostrar, no mínimo:
 - percurso completo pelas duas saídas sem queda entre pisos;
 - prompt do Instrutor e hold de 1,5 s do Marco de Retorno funcionando com validação server-side.
 
-Até essa execução existir, W1 permanece **pendente**, mesmo com 241 testes de domínio, 73 de animação/apresentação, 67 de fuzz e 19 de simulação de combate verdes. O roteiro do dia está em [`docs/32-STUDIO-PLAYTEST-RUNBOOK.md`](32-STUDIO-PLAYTEST-RUNBOOK.md).
+Até essa execução existir, W1 permanece **pendente**, mesmo com 241 testes de domínio, 76 de animação/apresentação, 67 de fuzz e 19 de simulação de combate verdes. O roteiro do dia está em [`docs/32-STUDIO-PLAYTEST-RUNBOOK.md`](32-STUDIO-PLAYTEST-RUNBOOK.md).
 
 ### Gate A0 — direção e originalidade
 
