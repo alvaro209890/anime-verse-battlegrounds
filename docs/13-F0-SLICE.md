@@ -116,6 +116,12 @@ Codinomes internos de roster **não** entram em ID, asset, analytics visível, e
 
 Avatar de referência: vida 100, guarda 100, caminhada 16 studs/s, corrida 22 studs/s. Buffer de input: 150 ms PC/console, 220 ms mobile. O servidor não aceita timestamp do cliente como prova de janela.
 
+**Corrida (implementada 17/08):** hold **Shift** (PC) ou **L3** (gamepad) →
+`Humanoid.WalkSpeed` 22; soltar → 16. Catálogo em `src/shared/Data/Locomotion.luau`.
+O cliente aplica a velocidade; o servidor clampa o WalkSpeed lido no envelope de
+movimento a no máximo 22 (`Locomotion.clampAuthorizedSpeed`) para um exploit de
+speed não inflar o budget do `PlayerMotionGuard`. Não há remote de sprint.
+
 ### 5.1 Ataque leve
 
 Cadeia de 4 golpes: **5 + 5 + 6 + 10**. Janela para continuar: 0,65 s. O quarto golpe não gira 180° após o quadro de compromisso.

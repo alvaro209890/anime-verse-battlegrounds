@@ -57,6 +57,7 @@ local ProgressionService = require("../src/server/Services/ProgressionService")
 local QuestService = require("../src/server/Services/QuestService")
 local Quests = require("../src/shared/Data/Quests")
 local Locale = require("../src/shared/Data/Locale")
+local Locomotion = require("../src/shared/Data/Locomotion")
 local Geometry = require("../src/shared/Geometry")
 local SpatialService = require("../src/server/Services/SpatialService")
 local PlayerMotionGuard = require("../src/server/Services/PlayerMotionGuard")
@@ -920,6 +921,72 @@ test("cliente: CharacterController envia somente intenção sem alvo ou dano", f
 	assertEq(sent[3].payload.direction.z, -1, "direção unitária fallback")
 end)
 
+test("dados: Locomotion F0 é caminhada 16 / corrida 22 com teto no envelope", function()
+	local ok, reason = Locomotion.validate()
+	assertTrue(ok, reason or "validação")
+	assertEq(Locomotion.walkSpeed, 16, "caminhada F0-BASELINE")
+	assertEq(Locomotion.runSpeed, 22, "corrida F0-BASELINE")
+	assertEq(Locomotion.clampAuthorizedSpeed(16), 16, "caminhada passa")
+	assertEq(Locomotion.clampAuthorizedSpeed(22), 22, "corrida passa")
+	assertEq(Locomotion.clampAuthorizedSpeed(100), 22, "exploit de WalkSpeed cortado no teto")
+	assertEq(Locomotion.clampAuthorizedSpeed(-3), 16, "inválido vira caminhada")
+	assertEq(Locomotion.speedForSprinting(true), 22, "sprint on")
+	assertEq(Locomotion.speedForSprinting(false), 16, "sprint off")
+end)
+
+test("cliente: SprintDown/Up não vira remote e só mexe na velocidade local", function()
+	local state = ClientState.new(clockNow)
+	ClientState.applySnapshot(state, { ready = true })
+	local input = InputController.new(state, clockNow)
+	local sent: { any } = {}
+	local humanoid = {
+		WalkSpeed = 16,
+		MoveDirection = { Magnitude = 0 },
+	}
+	local controller = CharacterController.new({
+		state = state,
+		input = input,
+		inputSubscribe = InputController.subscribe,
+		send = function(remoteName: string, action: string, payload: { [string]: any })
+			table.insert(sent, { remoteName = remoteName, action = action, payload = payload })
+		end,
+		players = {
+			LocalPlayer = {
+				Character = {
+					FindFirstChildOfClass = function(_self: any, className: string)
+						return if className == "Humanoid" then humanoid else nil
+					end,
+					FindFirstChild = function(_self: any, _name: string)
+						return nil
+					end,
+				},
+			},
+		},
+		walkSpeed = Locomotion.walkSpeed,
+		runSpeed = Locomotion.runSpeed,
+	})
+
+	local okDown, reasonDown = InputController.dispatch(input, "SprintDown", {})
+	assertTrue(okDown, reasonDown or "SprintDown aceito")
+	assertEq(controller.sprinting, true, "estado de corrida")
+	assertEq(humanoid.WalkSpeed, 22, "WalkSpeed de corrida")
+	assertEq(#sent, 0, "corrida não manda remote")
+
+	-- Sprint é NON_COMBAT: esgota o teto de combate e ainda solta a corrida.
+	for _ = 1, 8 do
+		assertTrue(InputController.dispatch(input, "Dash", {}), "burst de dash")
+	end
+	assertEq(#sent, 8, "só os dashes viraram remote")
+	local ninth, ninthReason = InputController.dispatch(input, "Dash", {})
+	assertFalse(ninth, "9º dash rate limited")
+	assertEq(ninthReason, "rate_limited", "motivo do teto")
+	local sprintStillOk = InputController.dispatch(input, "SprintUp", {})
+	assertTrue(sprintStillOk, "SprintUp fora do teto de combate")
+	assertEq(controller.sprinting, false, "soltou a corrida")
+	assertEq(humanoid.WalkSpeed, 16, "volta a caminhar")
+	assertEq(#sent, 8, "SprintUp também não manda remote")
+end)
+
 test("cliente: nada no golpe gira o corpo do personagem", function()
 	-- Reclamação do jogador em 14/08: "quando eu bater ou soltar poder o
 	-- personagem vira sozinho e fica de costas para a câmera". A causa era o
@@ -1249,6 +1316,7 @@ test("cliente: Locale cobre todo texto do HUD F0 em PT-BR e EN", function()
 		"hud.help_light",
 		"hud.help_heavy",
 		"hud.help_guard",
+		"hud.help_sprint",
 		"hud.help_dash",
 		"hud.help_ability",
 		"hud.help_lock",

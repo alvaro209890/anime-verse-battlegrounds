@@ -15,6 +15,7 @@ local Workspace = game:GetService("Workspace")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Abilities = require(Shared.Data.Abilities)
 local Characters = require(Shared.Data.Characters)
+local Locomotion = require(Shared.Data.Locomotion)
 local Locale = require(Shared.Data.Locale)
 local Interactions = require(Shared.Data.Interactions)
 local WorldPresentation = require(Shared.Data.WorldPresentation)
@@ -111,6 +112,8 @@ local character = CharacterController.new({
 	workspace = Workspace,
 	players = Players,
 	runService = RunService,
+	walkSpeed = Locomotion.walkSpeed,
+	runSpeed = Locomotion.runSpeed,
 })
 local ability = AbilityController.new({
 	state = state,

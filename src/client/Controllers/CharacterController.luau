@@ -1,6 +1,8 @@
 --!strict
 -- Movimento/câmera e ações universais. Magnetismo só altera apresentação da
 -- mira: o cliente nunca envia alvo, acerto, dano ou distância final.
+-- Corrida (Shift/L3) só muda Humanoid.WalkSpeed local; o servidor limita o
+-- envelope pelo teto de Locomotion.runSpeed (docs/13 §5: 16 / 22).
 
 export type Controller = {
 	state: any,
@@ -10,6 +12,9 @@ export type Controller = {
 	players: any?,
 	runService: any?,
 	lockTarget: any?,
+	sprinting: boolean,
+	walkSpeed: number,
+	runSpeed: number,
 	connection: any?,
 	characterAddedConnection: any?,
 	now: () -> number,
@@ -17,6 +22,9 @@ export type Controller = {
 
 local SOFT_LOCK_DEGREES = 8
 local SOFT_LOCK_DISTANCE = 25
+-- Espelho F0-BASELINE se o bootstrap não injetar o catálogo (testes headless).
+local DEFAULT_WALK_SPEED = 16
+local DEFAULT_RUN_SPEED = 22
 
 local CharacterController = {}
 
@@ -28,6 +36,8 @@ function CharacterController.new(deps: {
 	workspace: any?,
 	players: any?,
 	runService: any?,
+	walkSpeed: number?,
+	runSpeed: number?,
 	now: (() -> number)?,
 }): Controller
 	local controller: Controller = {
@@ -38,6 +48,9 @@ function CharacterController.new(deps: {
 		players = deps.players,
 		runService = deps.runService,
 		lockTarget = nil,
+		sprinting = false,
+		walkSpeed = deps.walkSpeed or DEFAULT_WALK_SPEED,
+		runSpeed = deps.runSpeed or DEFAULT_RUN_SPEED,
 		connection = nil,
 		characterAddedConnection = nil,
 		now = deps.now or os.clock,
@@ -46,6 +59,29 @@ function CharacterController.new(deps: {
 		CharacterController.onAction(controller, action)
 	end)
 	return controller
+end
+
+local function localHumanoid(controller: Controller): any?
+	local players = controller.players
+	local player = if players then players.LocalPlayer else nil
+	local character = if player then player.Character else nil
+	if not character then
+		return nil
+	end
+	return character:FindFirstChildOfClass("Humanoid")
+end
+
+function CharacterController.applyLocomotionSpeed(controller: Controller): ()
+	local humanoid = localHumanoid(controller)
+	if not humanoid then
+		return
+	end
+	humanoid.WalkSpeed = if controller.sprinting then controller.runSpeed else controller.walkSpeed
+end
+
+function CharacterController.setSprinting(controller: Controller, sprinting: boolean): ()
+	controller.sprinting = sprinting == true
+	CharacterController.applyLocomotionSpeed(controller)
 end
 
 local function isCombatTarget(target: any?): boolean
@@ -164,6 +200,9 @@ local function reconcileCamera(controller: Controller, character: Model): ()
 			camera.CameraType = Enum.CameraType.Custom
 			camera.CameraSubject = humanoid
 		end
+		-- Respawns voltam na velocidade atual (caminhada ou corrida se Shift
+		-- ainda estiver segurado — o InputEnded solta se o teclado resetar).
+		humanoid.WalkSpeed = if controller.sprinting then controller.runSpeed else controller.walkSpeed
 	end
 
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
@@ -227,6 +266,10 @@ function CharacterController.onAction(controller: Controller, action: string): (
 		})
 	elseif action == "Dash" then
 		controller.send("DashIntent", "DashIntent", { direction = dashDirection(controller) })
+	elseif action == "SprintDown" then
+		CharacterController.setSprinting(controller, true)
+	elseif action == "SprintUp" then
+		CharacterController.setSprinting(controller, false)
 	elseif action == "ToggleLock" then
 		-- Segunda ativação sempre solta. A primeira só trava se houver alvo
 		-- de combate à frente; senão permanece livre (não "prende no vazio").

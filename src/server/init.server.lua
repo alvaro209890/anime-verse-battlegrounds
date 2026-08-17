@@ -48,6 +48,7 @@ local RemoteEnvelope = require(ReplicatedStorage.Shared.RemoteEnvelope)
 local WorldPresentation = require(ReplicatedStorage.Shared.Data.WorldPresentation)
 local SpawnDecorations = require(ReplicatedStorage.Shared.Data.SpawnDecorations)
 local WildDecorations = require(ReplicatedStorage.Shared.Data.WildDecorations)
+local Locomotion = require(ReplicatedStorage.Shared.Data.Locomotion)
 local SceneryPresentation = require(ReplicatedStorage.Shared.Data.SceneryPresentation)
 local Zones = require(ReplicatedStorage.Shared.Data.Zones)
 
@@ -63,6 +64,10 @@ CatalogService.init({
 })
 print("[Bootstrap] catálogo validado")
 
+local locomotionOk, locomotionReason = Locomotion.validate()
+if not locomotionOk then
+	error("catálogo de locomoção inválido: " .. (locomotionReason or "unknown"))
+end
 local presentationOk, presentationReason = WorldPresentation.validate()
 if not presentationOk then
 	error("catálogo de apresentação inválido: " .. (presentationReason or "unknown"))
@@ -1551,7 +1556,11 @@ RunService.Heartbeat:Connect(function()
 				local fighterId = CombatService.playerFighterId(userId)
 				local previous = SpatialService.getTransform(fighterId)
 				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-				local walkSpeed = if humanoid then humanoid.WalkSpeed else 16
+				-- Cliente controla WalkSpeed para caminhar/correr (16/22), mas o
+				-- envelope NUNCA aceita valor acima do teto de corrida — senão
+				-- um exploit de WalkSpeed inflaria o budget de movimento.
+				local claimedSpeed = if humanoid then humanoid.WalkSpeed else Locomotion.walkSpeed
+				local walkSpeed = Locomotion.clampAuthorizedSpeed(claimedSpeed)
 				local motionOk = select(1, PlayerMotionGuard.authorize(userId, physicalPosition, now, walkSpeed))
 				if not motionOk and previous then
 					applyPlayerSpatialPosition(userId, previous.position, now)

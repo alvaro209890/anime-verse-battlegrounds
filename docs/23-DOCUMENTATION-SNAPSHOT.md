@@ -1,5 +1,34 @@
 # Snapshot Canônico da Documentação — 17/08/2026
 
+## Rodada de 17/08 (noite) — corrida no Shift (16 / 22)
+
+Implementação da corrida hold-to-run pedida no playtest: **Shift** (PC) e
+**L3** (gamepad) elevam `Humanoid.WalkSpeed` de 16 para 22 studs/s — os números
+já eram F0-BASELINE em `docs/13` §5 e só faltavam no input.
+
+| Peça | Papel |
+|---|---|
+| `src/shared/Data/Locomotion.luau` | catálogo 16/22 + `clampAuthorizedSpeed` + `validate()` |
+| `InputController` | `SprintDown` / `SprintUp` (NON_COMBAT, não gasta rate limit) |
+| `CharacterController` | aplica WalkSpeed local; reaplicado no respawn |
+| `init.server` | envelope de movimento **nunca** usa WalkSpeed > 22 (anti-exploit) |
+| Locale / help | "Shift — correr" em PT-BR e EN |
+
+**Não manda remote.** É apresentação/física local do avatar, como a maioria dos
+jogos Roblox. O servidor só limita o budget de `PlayerMotionGuard` pelo teto de
+corrida — se o cliente mentir WalkSpeed=100, o clamp corta em 22 e o teleporte
+ainda é rejeitado.
+
+**Gates headless desta rodada:** domínio **243/243** (+2: catálogo Locomotion e
+SprintDown/Up), animação **74/74**, Selene 0/0/0. StyLua limpo nos arquivos
+tocados. MCP do Studio esteve offline nesta sessão de agent — a validação em
+Play (segurar Shift e ver 22 studs/s) fica como check humano no rebuild.
+
+**Controles F0 (PC):** clique = leve · botão direito = pesado · **Shift = correr**
+· F = guarda · Q = dash · 1/2/3 = técnicas · Tab = mira · E = interagir/portão · H = menu.
+
+---
+
 ## Rodada de 17/08 — primeira evidência de runtime da F0
 
 Esta rodada é a primeira do projeto com **medição dentro do Roblox Studio em

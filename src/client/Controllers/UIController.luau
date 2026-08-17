@@ -223,7 +223,7 @@ function UIController.new(deps: { [string]: any }): any
 
 	local helpButton = button("Help", gui, UDim2.fromOffset(88, 40), UDim2.new(1, -106, 0, 14))
 	helpButton.TextSize = 16
-	local helpPanel = frame("HelpPanel", gui, UDim2.fromOffset(460, 420), UDim2.new(0.5, -230, 0.5, -210))
+	local helpPanel = frame("HelpPanel", gui, UDim2.fromOffset(460, 470), UDim2.new(0.5, -230, 0.5, -235))
 	helpPanel.Visible = false
 	helpPanel.ZIndex = 20
 	local helpTitle = label("Title", helpPanel, UDim2.new(1, -16, 0, 28), UDim2.fromOffset(8, 8))
@@ -234,6 +234,7 @@ function UIController.new(deps: { [string]: any }): any
 		"hud.help_light",
 		"hud.help_heavy",
 		"hud.help_guard",
+		"hud.help_sprint",
 		"hud.help_dash",
 		"hud.help_ability",
 		"hud.help_lock",
@@ -249,11 +250,12 @@ function UIController.new(deps: { [string]: any }): any
 		line.ZIndex = 21
 		table.insert(helpLines, line)
 	end
-	local lockInPanel = button("LockInPanel", helpPanel, UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 236))
+	-- 10 linhas de ajuda × 24 px + título → botões a partir de y≈280.
+	local lockInPanel = button("LockInPanel", helpPanel, UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 284))
 	lockInPanel.ZIndex = 21
-	local shakeToggle = button("ShakeToggle", helpPanel, UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 280))
+	local shakeToggle = button("ShakeToggle", helpPanel, UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 328))
 	shakeToggle.ZIndex = 21
-	local closeButton = button("Close", helpPanel, UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 368))
+	local closeButton = button("Close", helpPanel, UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 416))
 	closeButton.ZIndex = 21
 
 	local controller = {

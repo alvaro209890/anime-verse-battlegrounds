@@ -8,6 +8,8 @@ export type SemanticAction =
 	| "GuardDown"
 	| "GuardUp"
 	| "Dash"
+	| "SprintDown"
+	| "SprintUp"
 	| "Ability1"
 	| "Ability2"
 	| "Ability3"
@@ -36,6 +38,8 @@ local NON_COMBAT: { [string]: boolean } = {
 	ZoneHoldDown = true,
 	ZoneHoldUp = true,
 	Interact = true,
+	SprintDown = true,
+	SprintUp = true,
 }
 
 local InputController = {}
@@ -203,6 +207,10 @@ function InputController.start(
 				dispatch("GuardDown")
 			elseif key == Enum.KeyCode.Q or (key == Enum.KeyCode.ButtonB and not controller.gamepadModifier) then
 				dispatch("Dash")
+			elseif key == Enum.KeyCode.LeftShift or key == Enum.KeyCode.RightShift or key == Enum.KeyCode.ButtonL3 then
+				-- Corrida hold-to-run: Shift (PC) e L3 (gamepad), padrão de
+				-- action games. Não é combate — não gasta o rate limit.
+				dispatch("SprintDown")
 			elseif key == Enum.KeyCode.One or (key == Enum.KeyCode.ButtonA and controller.gamepadModifier) then
 				dispatch("Ability1")
 			elseif key == Enum.KeyCode.Two or (key == Enum.KeyCode.ButtonB and controller.gamepadModifier) then
@@ -229,11 +237,13 @@ function InputController.start(
 		userInputService.InputEnded:Connect(function(input: any, processed: boolean)
 			local key = input.KeyCode
 			-- Uma ação que começou fora da UI precisa sempre poder terminar; caso
-			-- contrário guarda/modificador podem ficar presos se outra interface
-			-- consumir o release. E/Y é a exceção compartilhada com prompts: quando
-			-- processado, não deve emitir ZoneHoldUp colateral.
+			-- contrário guarda/modificador/sprint podem ficar presos se outra
+			-- interface consumir o release. E/Y é a exceção compartilhada com
+			-- prompts: quando processado, não deve emitir ZoneHoldUp colateral.
 			if key == Enum.KeyCode.F or key == Enum.KeyCode.ButtonL2 then
 				dispatch("GuardUp")
+			elseif key == Enum.KeyCode.LeftShift or key == Enum.KeyCode.RightShift or key == Enum.KeyCode.ButtonL3 then
+				dispatch("SprintUp")
 			elseif key == Enum.KeyCode.ButtonL1 then
 				controller.gamepadModifier = false
 			elseif not processed and (key == Enum.KeyCode.E or key == Enum.KeyCode.ButtonY) then

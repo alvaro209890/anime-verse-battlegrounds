@@ -21,7 +21,8 @@ As variantes técnicas para importação no Roblox estão em [`docs/assets/roblo
 | Produto | Q-001 a Q-030 decididas; `docs/09-OPEN-QUESTIONS.md` é o registro canônico |
 | Planejamento | visão, GDD, mundo, social, arquitetura, schemas, segurança, roster, roadmap, benchmark e plano de animação documentados |
 | Implementado | domínio F0, mundo greybox com rotas/marcos/modelos low-poly, animação procedural de NPCs e do jogador, interações semânticas com Instrutor/Marco, save/ProfileStore, cliente Input/HUD, envelope v2, `SecurityService` e `TelemetryService` mínimo |
-| Validado automaticamente | 241/241 em `tests/run.luau` + 73/73 em `tests/animation.luau` + 67/67 no fuzz de segurança + 19/19 na simulação de combate ponta a ponta, Selene limpo, StyLua canônico, Wally e build Rojo |
+| Validado automaticamente | 243/243 em `tests/run.luau` + 74/74 em `tests/animation.luau` + 67/67 no fuzz de segurança + 19/19 na simulação de combate ponta a ponta, Selene limpo, StyLua canônico, Wally e build Rojo |
+| Locomoção F0 | caminhada 16 / **corrida 22 no Shift** (L3 no gamepad); envelope server-side com teto 22 |
 | Ainda não comprovado | roteiro Play no Studio, physics/collision groups, DataStore real, dois clientes, latência, mobile, gamepad, performance, UX visual e assets de animação |
 
 O CI em pushes para `main` valida contratos headless e a árvore Rojo; não substitui playtest. O snapshot e os links de evidência ficam em `docs/12-TESTING.md`.

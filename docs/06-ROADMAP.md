@@ -175,6 +175,7 @@ runtime**:
 | W1 completo | ❌ | prompts, marco, saídas e morte ainda não percorridos |
 | Dois clientes, latência, Android, gamepad | ❌ | intocados |
 | Desempenho da planície ampliada | ❌ | ~700 partes novas, **não medido** — é o risco aberto do W2 |
+| Corrida hold-to-run (Shift / L3) | ✅ | 16→22 studs/s (`Locomotion`); envelope com teto 22; headless 243 |
 
 **Correções que a rodada de runtime revelou** — todas eram invisíveis no
 headless, e duas estavam *travadas por teste*:
