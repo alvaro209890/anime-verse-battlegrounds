@@ -2,7 +2,8 @@
 -- EnemyService (server) — F0 (docs/13-F0-SLICE.md §9)
 -- Spawn, perseguição, ciclo de ataque e respawn do Estilhaço Errante e do
 -- Estilhaço Ancorado (elite da cratera). Autoridade total no servidor; sem
--- pathfinding — perseguição em linha reta, como a spec pede.
+-- pathfinding — perseguição em linha reta, como a spec pede. Aggro/leash:
+-- 30 studs (Blox Fruits); fora do raio não puxa e volta à âncora.
 --
 -- Item 9 (2026-08-12): o elite entra como segundo NPC — spawn único na
 -- âncora `anchor_elite`, ciclo alternado combo/slam (`tryEliteCycle`),
@@ -47,6 +48,9 @@ export type EnemyRecord = {
 local SHARD_NPC_ID = "enemy_wandering_shard"
 local ELITE_NPC_ID = "enemy_anchored_shard"
 local ELITE_ANCHOR_ID = "anchor_elite"
+-- Padrão Blox Fruits: o NPC só puxa e só persegue dentro de ~30 studs.
+-- Um único raio para começar e largar — fora dele o bot volta pra âncora.
+local DEFAULT_AGGRO_RADIUS_STUDS = 30
 
 local EnemyService = {
 	deps = nil :: EnemyDeps?,
@@ -64,6 +68,22 @@ local EnemyService = {
 	-- de morte se o creditKill falhou ou o golpe não passou por reportKill).
 	deathPresented = {} :: { [string]: boolean },
 }
+
+EnemyService.DefaultAggroRadiusStuds = DEFAULT_AGGRO_RADIUS_STUDS
+
+function EnemyService.withinAggro(distance: number?, radius: number): boolean
+	return type(distance) == "number" and radius > 0 and distance <= radius
+end
+
+local function aggroRadiusFor(npcId: string): number
+	local deps = EnemyService.deps
+	local def = if deps then deps.getNpc(npcId) else nil
+	local declared = if def then def.aggroRadiusStuds else nil
+	if type(declared) == "number" and declared > 0 then
+		return declared
+	end
+	return DEFAULT_AGGRO_RADIUS_STUDS
+end
 
 function EnemyService.init(deps: EnemyDeps): ()
 	EnemyService.deps = deps
@@ -230,24 +250,47 @@ function EnemyService.isElite(fighterId: string): boolean
 end
 
 -- Alvo mais próximo elegível. Sem aggro através da fronteira (§9): um jogador
--- na zona segura ou na transição é invisível para o inimigo.
+-- na zona segura ou na transição é invisível para o inimigo. Fora do raio
+-- de aggro (30 studs, padrão Blox Fruits) também é invisível — não puxa e
+-- não continua a perseguição.
 local function nearestTarget(record: EnemyRecord, targets: { EnemyTarget }): (EnemyTarget?, number?)
 	local deps = EnemyService.deps
 	if not deps then
 		return nil, nil
 	end
+	local radius = aggroRadiusFor(record.npcId)
 	local best: EnemyTarget? = nil
 	local bestDistance: number? = nil
 	for _, target in targets do
 		if target.zoneId == record.zoneId then
 			local distance = deps.spatial.distanceBetween(record.fighterId, target.fighterId)
-			if distance and (bestDistance == nil or distance < bestDistance) then
-				best = target
-				bestDistance = distance
+			if type(distance) == "number" and EnemyService.withinAggro(distance, radius) then
+				if bestDistance == nil or distance < bestDistance then
+					best = target
+					bestDistance = distance
+				end
 			end
 		end
 	end
 	return best, bestDistance
+end
+
+local function returnToAnchor(record: EnemyRecord, def: any, deltaSeconds: number): ()
+	local deps = EnemyService.deps
+	if not deps then
+		return
+	end
+	local from = deps.spatial.getPosition(record.fighterId)
+	local anchor = deps.getAnchor(record.anchorId)
+	if not from or not anchor then
+		return
+	end
+	if deps.geometry.horizontalDistance(from, anchor.position) <= 0.25 then
+		return
+	end
+	local moved = deps.geometry.moveToward(from, anchor.position, def.moveSpeed or 12, deltaSeconds, 0)
+	local look = deps.geometry.normalize(deps.geometry.sub(anchor.position, moved))
+	deps.spatial.setTransform(record.fighterId, moved, look)
 end
 
 -- Alguém em combate perto da âncora bloqueia o respawn (§9.2).
@@ -376,7 +419,7 @@ function EnemyService.tick(now: number, deltaSeconds: number): number
 						end
 					end
 				else
-					-- Sem alvo elegível: encerra o compromisso e volta ao idle.
+					-- Sem alvo no raio: encerra o compromisso e volta à âncora.
 					deps.combat.tryShardCycle(
 						fighter,
 						fighter,
@@ -388,6 +431,9 @@ function EnemyService.tick(now: number, deltaSeconds: number): number
 						def.telegraphMs / 1000,
 						def.recoverySeconds or 0.6
 					)
+					if fighter.aiPhase == "idle" then
+						returnToAnchor(record, def, deltaSeconds)
+					end
 				end
 			end
 		end

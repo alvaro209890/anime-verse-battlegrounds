@@ -312,6 +312,7 @@ Autoridade no servidor. Sem pathfinding complexo: estado idle → telegraph → 
 | Vida | 40 |
 | Dano | 6, telegraph 400 ms, esfera 4 studs |
 | Velocidade | 12 studs/s |
+| Aggro / leash | **30 studs** (padrão Blox Fruits): fora do raio não inicia perseguição e larga a que já tinha, voltando à âncora |
 | Respawn | 45 s na mesma âncora, se ninguém em combate a 20 studs |
 | XP | 25 não consolidado; retorno decrescente após 6 kills da mesma âncora na sessão (12, depois 0) |
 | População | no máximo 4 vivos |
@@ -610,6 +611,7 @@ Camada espacial (greybox, hitbox, lunge e AI — 2026-08-12):
 - inimigo: spawn até o teto de 4, id com a âncora embutida, sem duplicar na segunda chamada
 - inimigo: persegue, para no alcance, abre telegraph, não causa dano dentro dos 400 ms e aplica 6 depois
 - inimigo: jogador na zona segura não gera aggro nem perseguição
+- inimigo: fora de 30 studs não puxa e larga a perseguição (volta à âncora)
 - inimigo: respawn de 45 s bloqueado com jogador a menos de 20 studs da âncora, liberado quando ele se afasta
 - inimigo: kill reporta âncora e autor para o crédito de XP
 - remote: `EnemyEvent` S→C (version 1) com telegraph no payload

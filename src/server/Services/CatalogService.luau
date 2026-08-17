@@ -108,6 +108,11 @@ function CatalogService.validate(): ()
 				if npc.maxAlive < 1 then
 					fail(("npc %s → maxAlive inválido"):format(npc.id))
 				end
+				if type(npc.aggroRadiusStuds) == "number" then
+					if npc.aggroRadiusStuds <= 0 or npc.aggroRadiusStuds < npc.attackRange then
+						fail(("npc %s → aggroRadiusStuds deve ser ≥ attackRange e > 0"):format(npc.id))
+					end
+				end
 			end
 			if npc.id == "npc_training_dummy" then
 				hasDummy = true
@@ -116,6 +121,9 @@ function CatalogService.validate(): ()
 				hasShard = true
 				if npc.maxHealth ~= 60 or npc.attackDamage ~= 8 or npc.attackRange ~= 4 then
 					fail("enemy_wandering_shard fora do baseline F0 (60 HP / dano 8 / alcance 4)")
+				end
+				if npc.aggroRadiusStuds ~= 30 then
+					fail("enemy_wandering_shard fora do raio de aggro F0 (30 studs)")
 				end
 				if npc.zoneId ~= "zone_plain_free" then
 					fail("enemy_wandering_shard deve viver em zone_plain_free")

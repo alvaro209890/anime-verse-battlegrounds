@@ -2016,6 +2016,7 @@ test("dados: estilhaço errante segue o baseline da fatia", function()
 		assertEq(shard.maxAlive, 4, "população")
 		assertEq(shard.zoneId, "zone_plain_free", "zona")
 		assertEq(shard.grantsXp, true, "concede XP")
+		assertEq(shard.aggroRadiusStuds, 30, "raio de aggro Blox Fruits")
 	end
 end)
 
@@ -4945,6 +4946,70 @@ test("inimigo: sem aggro através da fronteira", function()
 	if moved then
 		assertEq(moved.z, anchor.position.z, "nem persegue")
 	end
+end)
+
+test("inimigo: raio de aggro 30 studs — não puxa e larga a perseguição", function()
+	assertEq(EnemyService.DefaultAggroRadiusStuds, 30, "padrão Blox Fruits")
+	assertTrue(EnemyService.withinAggro(30, 30), "no limite puxa")
+	assertFalse(EnemyService.withinAggro(30.01, 30), "1 cm além não puxa")
+	assertFalse(EnemyService.withinAggro(nil, 30), "sem distância não puxa")
+	assertFalse(EnemyService.withinAggro(10, 0), "raio zero não puxa")
+
+	local playerId = "player:930"
+	local targets = { { fighterId = playerId, userId = 930, zoneId = "zone_plain_free" } }
+	makeEnemyWorld(targets)
+	EnemyService.spawnInitial()
+	local shardId = "enemy_wandering_shard@anchor_shard_1#1"
+	local anchor = Zones.getAnchor("anchor_shard_1")
+	assertTrue(anchor ~= nil, "âncora")
+	if not anchor then
+		return
+	end
+	CombatService.createFighter(playerId, "player", 100, 100)
+	-- 40 studs: dentro da planície, fora do raio. Não pode nem começar.
+	SpatialService.setTransform(
+		playerId,
+		vec(anchor.position.x, anchor.position.y, anchor.position.z - 40),
+		vec(0, 0, 1)
+	)
+	EnemyService.tick(7000, 0.5)
+	local stillHome = SpatialService.getPosition(shardId)
+	if stillHome then
+		assertEq(stillHome.z, anchor.position.z, "fora do raio não sai da âncora")
+	end
+	local shard = CombatService.getFighter(shardId)
+	assertTrue(shard ~= nil and shard.aiPhase == "idle", "fica em idle")
+
+	-- Entra no raio: 10 studs, persegue como antes.
+	SpatialService.setTransform(
+		playerId,
+		vec(anchor.position.x, anchor.position.y, anchor.position.z - 10),
+		vec(0, 0, 1)
+	)
+	EnemyService.tick(7001, 0.5)
+	local chased = SpatialService.getPosition(shardId)
+	assertTrue(chased ~= nil, "moveu")
+	if chased then
+		assertTrue(chased.z ~= anchor.position.z, "dentro do raio persegue")
+	end
+
+	-- Sai do raio: larga e começa a voltar pra âncora.
+	SpatialService.setTransform(
+		playerId,
+		vec(anchor.position.x, anchor.position.y, anchor.position.z - 80),
+		vec(0, 0, 1)
+	)
+	local beforeReturn = SpatialService.getPosition(shardId)
+	EnemyService.tick(7002, 0.5)
+	local afterDrop = SpatialService.getPosition(shardId)
+	assertTrue(beforeReturn ~= nil and afterDrop ~= nil, "posições")
+	if beforeReturn and afterDrop and anchor then
+		local beforeHome = Geometry.horizontalDistance(beforeReturn, anchor.position)
+		local afterHome = Geometry.horizontalDistance(afterDrop, anchor.position)
+		assertTrue(afterHome < beforeHome - 1e-6, "volta pra âncora ao largar")
+	end
+	local afterShard = CombatService.getFighter(shardId)
+	assertTrue(afterShard ~= nil and afterShard.aiPhase == "idle", "soltou o ciclo")
 end)
 
 test("inimigo: respawn de 45 s bloqueia com jogador perto da âncora", function()

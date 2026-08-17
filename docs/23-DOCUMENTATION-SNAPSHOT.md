@@ -1,5 +1,15 @@
 # Snapshot Canônico da Documentação — 17/08/2026
 
+## Rodada de 17/08 (Grok) — raio de aggro 30 studs nos bots
+
+Os Estilhaços perseguiam o jogador por toda a planície (480×400). Agora há um
+único raio de **30 studs** (padrão Blox Fruits) em `Npcs.aggroRadiusStuds`:
+fora dele o bot **não inicia** perseguição e **larga** a que já tinha, voltando
+à âncora. Fronteira PvP continua recusando aggro. Elite continua ancorado
+(só ataca a 8); o raio só impede de considerar alguém do outro lado do mapa.
+
+---
+
 ## Rodada de 17/08 (Grok) — contato local, HP no servidor (R1)
 
 Playtest de dois clientes: o soco de um no outro (e no monstro) chegava

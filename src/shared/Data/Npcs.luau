@@ -27,6 +27,10 @@ export type NpcDefinition = {
 	maxAlive: number?,
 	zoneId: string?,
 	combatClearRadius: number?,
+	-- Raio de aggro/leash no plano do chão (docs/13 §9.2). Fora dele o
+	-- inimigo não inicia perseguição e larga a que já tinha. Ausente = 30
+	-- (padrão Blox Fruits). Dummy e instrutor não usam.
+	aggroRadiusStuds: number?,
 	-- Elite (docs/13 §9.3 — Estilhaço Ancorado). Campos opcionais; só o elite
 	-- os preenche. `elitePattern` alterna slam/combo no CombatService.
 	attackPattern: string?,
@@ -94,6 +98,7 @@ local Npcs: { [string]: NpcDefinition } = {
 		maxAlive = 4,
 		zoneId = "zone_plain_free",
 		combatClearRadius = 20,
+		aggroRadiusStuds = 30,
 	},
 	-- Estilhaço Ancorado — elite da cratera (docs/13 §9.3). Fica na âncora
 	-- `anchor_elite` (não persegue: moveSpeed ausente), alterna slam (dano 14,
@@ -128,6 +133,7 @@ local Npcs: { [string]: NpcDefinition } = {
 		maxAlive = 1,
 		zoneId = "zone_plain_free",
 		combatClearRadius = 20,
+		aggroRadiusStuds = 30,
 	},
 }
 
