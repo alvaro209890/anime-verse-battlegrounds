@@ -110,6 +110,9 @@ aprovação em uma linha — ambíguo aqui vira discussão depois.
 
 ### W2 — desempenho
 
+> Guia operacional passo a passo (onde clicar, o que anotar, ordem de corte):
+> **[`docs/33-W2-PERF-PLAYTEST.md`](33-W2-PERF-PLAYTEST.md)** (criado 17/08).
+
 Repetir o roteiro com 4 Estilhaços vivos e o elite, medindo com o
 MicroProfiler separado em `stepAnimation`, script e render.
 

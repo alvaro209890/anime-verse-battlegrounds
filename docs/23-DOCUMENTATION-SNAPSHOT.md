@@ -1,5 +1,15 @@
 # Snapshot Canônico da Documentação — 17/08/2026
 
+## Rodada de 17/08 (Hermes-server) — guia do W2 no Studio (docs/33)
+
+O gate W2 ganhou um guia operacional passo a passo: **`docs/33-W2-PERF-PLAYTEST.md`**
+(preparo PowerShell → sync → boot limpo → cena de estresse com 4 Estilhaços +
+elite → MicroProfiler em stepAnimation/script/render → `avb-debug evidence` →
+registro dos 4 tetos → ficha docs/26 → fechamento docs/12/docs/23). Referenciado
+do `docs/32` §W2. Nada de código mudou — só documentação de sessão.
+
+---
+
 ## Rodada de 17/08 (Hermes-server) — honestidade visual: glow contido + auditoria W2
 
 1. **Alerta de 14/08 fechado — a luz não passa mais do alcance** (`AbilityVfx`):
