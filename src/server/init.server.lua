@@ -835,11 +835,13 @@ local function grantKillCredit(player: Player, fighterId: string, now: number): 
 	return award.granted
 end
 
--- Kill direto (BasicAttackIntent): reporta o died e credita. O elite NÃO
--- passa por aqui — a morte dele resolve o leeching no tick.
-local function creditKill(player: Player, fighterId: string, now: number): ()
+-- Kill direto (BasicAttackIntent): reporta o died. O crédito (XP + objetivo)
+-- vem do `onKill` amarrado no EnemyService.init — o mesmo caminho usado pelo
+-- leeching do elite. Chamar `grantKillCredit` aqui de novo duplicava XP e
+-- progresso de quest a cada kill (bug do tracker preso/adiantado). O elite
+-- NÃO passa por aqui — a morte dele resolve o leeching no tick.
+local function creditKill(player: Player, fighterId: string, _now: number): ()
 	EnemyService.reportKill(player.UserId, fighterId)
-	grantKillCredit(player, fighterId, now)
 end
 
 -- userId → diedAt já penalizado (evita aplicar a perda duas vezes na mesma
