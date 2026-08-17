@@ -1,10 +1,10 @@
 # 12 — Testes e evidências
 
-> **Snapshot de implementação:** 2026-08-16, derivado de `0b96d82`. Quatro suítes Lune: `tests/run.luau` **241 casos de domínio**, `tests/animation.luau` **73 de animação/apresentação**, `tests/security_fuzz.luau` **67 de fuzz adversarial** e `tests/combat_e2e.luau` **19 de simulação de combate ponta a ponta** — total automatizado de **400 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada: o CI Linux cabe num script, a cadeia de impacto cobre pesado e Ombro Cometa nos desfechos miss/hit/guarda, e o atalho de casa imprime três passos com o Studio fechado.
+> **Snapshot de implementação:** 2026-08-17, derivado de `5fcbe4c`. Quatro suítes Lune: `tests/run.luau` **247 casos de domínio**, `tests/animation.luau` **78 de animação/apresentação**, `tests/security_fuzz.luau` **67 de fuzz adversarial** e `tests/combat_e2e.luau` **19 de simulação de combate ponta a ponta** — total automatizado de **411 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada: a folga da âncora passou a valer para os pilares-marco (que viviam fora do alcance dos testes), a escada de valor da paleta virou gate, e as fixtures de âncora deixaram de transcrever coordenada à mão.
 
 ## 1. Estado da execução
 
-No snapshot de implementação atual, a verificação automatizada registrou 241/241 em `tests/run.luau`, 73/73 em `tests/animation.luau`, 67/67 em `tests/security_fuzz.luau` e 19/19 em `tests/combat_e2e.luau`. Selene e StyLua continuam gates separados e foram executados neste release: Selene com 0 erros/0 warnings e StyLua com `--check` limpo em `src tests plugins scripts`. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
+No snapshot de implementação atual, a verificação automatizada registrou 247/247 em `tests/run.luau`, 78/78 em `tests/animation.luau`, 67/67 em `tests/security_fuzz.luau` e 19/19 em `tests/combat_e2e.luau`. Selene e StyLua continuam gates separados e foram executados neste release: Selene com 0 erros/0 warnings e StyLua com `--check` limpo em `src tests plugins scripts`. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
 
 **Registro histórico, não evidência do snapshot atual:** uma rodada anterior teve confirmação em Play pelo jogador, com `avb-debug sync` = 56/56, de que a animação de golpe movia o corpo e o personagem não girava sozinho. Essa evidência pertence ao estado anterior documentado em `docs/14` e não deve ser usada para declarar o commit `d7c44e8` validado em runtime. Neste snapshot, o Play atual continua pendente.
 
@@ -75,7 +75,7 @@ O gate de tronco tem nome feio de propósito. Em 2026-08-14 o place canônico es
 
 Em checkout Windows com `core.autocrlf=true`, os arquivos de trabalho podem estar em CRLF enquanto `stylua.toml` exige `Unix`; nesse caso, o check direto acusa somente final de linha. Para reproduzir o CI, use uma cópia com bytes LF canônicos do Git (`git -c core.autocrlf=false archive ...`). `--line-endings Windows` só é equivalente quando todo o checkout está uniformemente em CRLF; ele não resolve uma árvore mista. Não reformatar código só para mascarar essa conversão do checkout.
 
-## 3. Cobertura existente: exatamente 241 testes de domínio
+## 3. Cobertura existente: exatamente 247 testes de domínio
 
 | Área | Cobertura |
 |---|---|
@@ -107,7 +107,7 @@ A divisão é deliberada: matemática e decisão ficam em módulos puros (`Geome
 ## 4. Arquitetura do harness
 
 - **`tests/harness.luau`** simula o mínimo que o Lune não fornece: `_G.game`, `_G.Instance`, `_G.task` e resolução de `require(script.Parent.X)` no filesystem.
-- **`tests/run.luau`** contém os 241 casos e usa módulos reais de `src/`, com um miniframework de asserts.
+- **`tests/run.luau`** contém os 247 casos e usa módulos reais de `src/`, com um miniframework de asserts.
 - **`tests/animation.luau`** contém 73 casos de apresentação procedural, VFX, áudio, juntas, defesa, dash, sinais de fronteira, iluminação do spawn e volume das skins.
 - **`tests/security_fuzz.luau`** executa 67 casos determinísticos de envelope, payload aninhado, replay de request e de sequência, rate limit por classe com janela de 1 s, hold de fronteira adulterado e combinações.
 - **`tests/combat_e2e.luau`** executa 19 casos que ligam servidor e cliente numa cadeia só: posição → aquisição em cone → resolução → `CombatEvent` → hit-stop, tremida, som, número de dano → `StateDelta`. Leve, pesado e Ombro Cometa cobrem miss longe, acerto perto e guarda. É a suíte que faltava: cada peça tinha teste próprio e a cadeia inteira nunca era exercida.
@@ -121,7 +121,7 @@ Os módulos de dados declaram tipos inline porque o Lune não resolve `script.Pa
 
 | Camada | O que demonstra | O que não demonstra |
 |---|---|---|
-| lint + 241 testes Lune | sintaxe, estilo e comportamento unitário coberto no ambiente simulado, incluindo isolamento headless de dois jogadores | física, replicação, UI renderizada, dispositivo ou serviços Roblox reais |
+| lint + 247 testes Lune | sintaxe, estilo e comportamento unitário coberto no ambiente simulado, incluindo isolamento headless de dois jogadores | física, replicação, UI renderizada, dispositivo ou serviços Roblox reais |
 | simulação de combate (19 casos) | a cadeia servidor→cliente reage ao desfecho autoritativo e só a ele; leve, pesado e Cometa só ligam impacto na distância certa | que alguma coisa apareça na tela, o feel do golpe, latência e input real |
 | Wally + build Rojo | dependências resolvidas e árvore de projeto montável | que o place abre sem erro ou que um fluxo é jogável |
 | Studio | bootstrap, UI/input, câmera, física e replicação no cenário testado | DataStore/teleport/rede pública com fidelidade total |
@@ -214,12 +214,16 @@ rg -n '`[A-Za-z]+\.[a-zA-Z]+\(' docs | sed 's/.*`\([A-Za-z]*\.[a-zA-Z]*\)(.*/\1/
 - `task.wait` real em teste cria loop infinito se o polyfill síncrono for usado no `spawn`; o harness injeta `spawn = noop` para o loop de regen. `ZoneService` usa relógio injetado (`fakeNow`), nunca `task.wait`, para as janelas de 5 s e 15 s.
 - Busy-wait curto com `os.clock` substitui `task.wait` nos testes de expiração de cooldown.
 - Selene permite `global_usage` e `empty_loop` no `selene.toml` porque o harness usa `_G` e busy-waits deliberadamente.
-- Contar casos pelo resumo pode mascarar erro: a fonte é a quantidade real de chamadas `test(...)` em `tests/run.luau`; nesta versão são 235.
+- Contar casos pelo resumo pode mascarar erro: a fonte é a quantidade real de chamadas `test(...)` em `tests/run.luau`; nesta versão são 247.
 - Lua patterns não têm alternação (`a|b` é literal): validar IDs de sinal por pertencimento a uma tabela, não com regex no teste.
 - Quirk do Lune/MLua: closure auto-referente (`local x = { fn = function() ... x ... end }`) vê `x` como nil dentro da função. Declarar a variável antes (`local x; x = { ... }`) ou o mock do SaveService quebra com "attempt to index nil".
 - **Forward reference quebra o Selene no CI.** Chamar uma `local function` antes da linha em que ela é definida passa em Lua e é erro de lint. Aconteceu em 13/08 com `buildSpawnDecorations`: mover a função para antes de quem a chama (e passar dependência por parâmetro) é o conserto.
 - **`selene ... | tail -1` esconde o erro.** O resumo final ("Results:") sai depois dos diagnósticos, então cortar a saída mostra "0 errors" de uma execução que falhou. Ler as últimas ~5 linhas, ou nenhuma.
 - **Teste headless não pega defeito de anexo.** Toda a classe de bug de `docs/14` §4.7 (rig R15 ausente no `CharacterAdded`, cache de junta congelado vazio, `Trail` nulo permanente) tem função pura verde: o que faltava era alguém aplicar a pose. Verificação dessa camada sai da parte materializada em Play, nunca do dado que alimenta a pose.
+- **Número que mora na camada de Instances escapa de toda regra.** Em 17/08 a Instrutora estava nascendo dentro de um pilar. A regra "nada sólido a menos de 2 studs de uma âncora" já existia em `SpawnDecorations.validate` desde sempre — mas os quatro pilares-marco eram uma tabela `local` dentro do `buildWalls`, e o que o teste não enxerga, a regra não protege. O conserto não foi mexer no validador: foi mover as posições para dado (`SpawnDecorations.bastionPillars`) e deixar o `WorldService` só materializar. Antes de escrever coordenada em função de build, perguntar qual regra deixa de valer sobre ela.
+- **Teste que copia o dado à mão para de testar o dado.** Os dois casos de âncora do spawn traziam `{ x = 20, z = -14 }` escrito na fixture embora o nome dissesse "com os dados reais do Zones". Mover a âncora no catálogo não movia o teste: ele seguia verde conferindo um número fóssil. Fixture de dado canônico lê do módulo (`Zones.getAnchor`), não transcreve.
+- **Silhueta não é só geometria: valor é requisito.** A skin feminina da Instrutora entrou completa e o playtest relatou "não mudou nada" — corretamente, porque cabelo, saia e casaco tinham luminância 30, 27 e 41. Peça modelada e pintada com o mesmo valor da vizinha não existe na tela, e nenhum teste de densidade ou de contagem de peças pega isso. `Presentation.validatePalette` trava a escada de valor; ver `docs/28` §"Escada de valor".
+- **`stylua --check` reprova o repo inteiro neste Windows.** `stylua.toml` fixa `line_endings = "Unix"` e o git local está com `core.autocrlf = true`: a working tree fica CRLF e todo arquivo aparece como diff completo, inclusive os que ninguém tocou. Não é regressão — o CI roda em Linux com checkout LF e passa. Saídas: `git config core.autocrlf false` seguido de recheckout, ou conferir a formatação numa cópia com LF antes de confiar no resultado local.
 
 
 ## 10. Protocolo visual baseado em referências

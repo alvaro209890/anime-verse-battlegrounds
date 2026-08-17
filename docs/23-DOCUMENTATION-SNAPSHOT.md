@@ -1,5 +1,52 @@
 # Snapshot Canônico da Documentação — 17/08/2026
 
+## Rodada de 17/08 (Claude-windows) — a Instrutora sai do pilar e a skin aparece
+
+Rodada de conserto: a silhueta feminina da Instrutora tinha entrado em `54836f9`
+e o playtest respondeu "a skin não mudou nada, e está bugada dentro da parede".
+As duas queixas estavam certas, por causas independentes — e nenhuma delas era a
+modelagem, que estava completa (81 peças, tamanhos corretos, medidos no Studio).
+
+1. **Ela nascia dentro do pilar.** `anchor_instructor` era `(20, 0, −14)`; o
+   pilar-marco `(20, −16)` tem 4 studs de lado e ocupa `z −18..−14`. Capa e rabo
+   de cabelo ficavam dentro da pedra. A regra que pega isso — *nada sólido a
+   menos de 2 studs de uma âncora* — **já existia** em
+   `SpawnDecorations.validate` desde 13/08. O que faltava era o pilar estar
+   sujeito a ela: os quatro eram uma tabela `local` dentro do `buildWalls`,
+   camada de Instances, invisível para os testes. Viraram dado
+   (`SpawnDecorations.bastionPillars`), o `WorldService` só materializa, e a
+   regra foi extraída para `anchorClearanceErrors`, compartilhada pelos dois
+   conjuntos. Âncora movida para `(20, 0, −11)` — que também a põe sob a
+   luz-chave dela, já em `z −12,5`. Medido em Play depois: pilar fora da caixa
+   de colisão, folga de **2,22 studs**.
+2. **A skin era invisível, não ausente.** Cabelo, saia e casaco tinham
+   luminância relativa **30, 27 e 41** numa escala 0–255 — degraus de 3 a 14
+   pontos, no Bastião à noite. Colapsava numa mancha preta e só o neon lia. A
+   paleta agora sobe em degraus de no mínimo 24, travados por
+   `Presentation.validatePalette` dentro de `validateRigs`. Cabelo vs saia:
+   **3 → 130 pontos**. Detalhe e tabela de tons em `docs/28`.
+3. **Fixture que transcrevia o dado.** Os dois casos de âncora do spawn traziam
+   `{ x = 20, z = -14 }` escrito à mão, embora o nome dissesse "com os dados
+   reais do Zones": mover a âncora não movia o teste. Agora leem de
+   `Zones.getAnchor`. Casos novos: folga dos pilares e a contraprova de que a
+   posição antiga é reprovada.
+4. **`build-studio.ps1` abortava no Wally** — stderr de executável nativo virando
+   erro terminante sob `$ErrorActionPreference = "Stop"`, com exit code 0. Ver
+   `docs/32` §2.
+
+Suítes: **247** (`run`) + **78** (`animation`) + 67 (fuzz) + 19 (e2e) = **411**.
+Selene 0/0, Rojo build ok, CI verde em `5fcbe4c`. Pitfalls de toolchain desta
+rodada (incluindo `stylua --check` reprovando o repo inteiro neste Windows por
+CRLF) registrados em `docs/12` §9.
+
+**Em aberto:** o torso ainda é a parte fraca. `CoatChest` está em RGB(74,70,104)
+mas renderiza bem mais escuro que o valor nominal porque o material `Fabric` tem
+textura escura e ruidosa — a escada de valor governa a cor, não o material.
+Candidatos: trocar os painéis grandes do casaco para `Leather`/`SmoothPlastic`
+ou subir mais o `COAT`.
+
+---
+
 ## Rodada de 17/08 (Hermes-server) — guia do W2 no Studio (docs/33)
 
 O gate W2 ganhou um guia operacional passo a passo: **`docs/33-W2-PERF-PLAYTEST.md`**

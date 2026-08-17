@@ -71,6 +71,22 @@ seguidos. Por isso:
 Registre no topo da ficha: commit, SHA-256 do `.rbxl`, plataforma, resolução,
 preset gráfico e se o atributo `F0Debug` está ligado.
 
+> **17/08 — `build-studio.ps1` abortava no passo do Wally.** O script confere o
+> sucesso pelo exit code, mas nunca chegava lá: sob `$ErrorActionPreference =
+> "Stop"`, o PowerShell 5 promove stderr de executável nativo a erro terminante,
+> e o `wally` loga `[INFO ] Updating package index` justamente em stderr — com
+> exit code 0. `Invoke-ProjectTool` agora baixa a preferência para `Continue` só
+> em volta da chamada nativa e mantém o exit code como único critério de falha.
+> O sintoma era enganoso: parecia dependência quebrada, era ruído de log.
+
+> **O place não tem Rojo live-sync.** Editar o `src/` não muda o place aberto:
+> ele carrega o que estava no `.rbxl` no momento em que foi aberto. Em 17/08
+> isso custou uma rodada inteira de diagnóstico — o Studio mostrava a paleta
+> antiga (`HAIR = { 32, 28, 48 }`) enquanto o disco já tinha a nova. Confirmar
+> com `script_grep` numa constante que mudou **antes** de concluir qualquer
+> coisa sobre o visual; é a mesma regra zero da §1, aplicada à fonte e não só
+> ao `.rbxl`.
+
 ## 3. Ordem de execução no Play
 
 A ordem é a do roteiro de 20 min (`docs/13` §10). Cada passo tem critério de

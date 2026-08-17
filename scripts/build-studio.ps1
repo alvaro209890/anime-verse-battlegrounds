@@ -77,7 +77,18 @@ function Invoke-ProjectTool {
 		[Parameter(Mandatory = $true)][string[]] $Arguments
 	)
 
-	& $Tool @Arguments
+	# Ferramenta nativa que escreve em stderr vira NativeCommandError terminante
+	# sob $ErrorActionPreference = "Stop", mesmo devolvendo exit code 0 - e o
+	# wally loga "[INFO ] Updating package index" justamente em stderr. Isso
+	# derrubava o build antes de chegar na checagem de verdade, que e o exit
+	# code. A preferencia volta a "Continue" so em volta da chamada nativa.
+	$preferenciaAnterior = $ErrorActionPreference
+	$ErrorActionPreference = "Continue"
+	try {
+		& $Tool @Arguments
+	} finally {
+		$ErrorActionPreference = $preferenciaAnterior
+	}
 	if ($LASTEXITCODE -ne 0) {
 		throw "Comando '$Tool $($Arguments -join ' ')' falhou com exit code $LASTEXITCODE."
 	}
