@@ -52,7 +52,9 @@ local CombatAnimations = {}
 -- Duração de cada ação no cliente (espelha PlayerCombatAnimator.Durations e a
 -- cadeia leve). Um teste garante que os dois lados não divergem.
 local ACTION_SECONDS: { [string]: number } = {
-	BasicHeavy = 0.52,
+	-- Pesado e cadeia leve recalibrados em 17/08 (docs/17 §2.10): mais carga e
+	-- mais recuperação para o soco ler como soco.
+	BasicHeavy = 0.68,
 	Ability1 = 0.75,
 	Ability2 = 0.68,
 	Ability3 = 0.73,
@@ -60,7 +62,7 @@ local ACTION_SECONDS: { [string]: number } = {
 	Ability3Counter = 0.44,
 }
 
-local LIGHT_CHAIN_SECONDS: { number } = { 0.240, 0.300, 0.380, 0.480 }
+local LIGHT_CHAIN_SECONDS: { number } = { 0.330, 0.400, 0.500, 0.620 }
 
 local function clip(values: {
 	action: string,

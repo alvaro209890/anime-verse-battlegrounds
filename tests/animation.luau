@@ -448,12 +448,17 @@ test("áudio: animador agenda o corte de ar para o fim da antecipação", functi
 		end,
 	})
 
+	-- Os instantes vêm da própria tabela de timing, não de literais: calibrar a
+	-- cadeia (17/08) quebrava este teste por escrever 0.065 à mão, quando o que
+	-- ele afirma é "o som sai NO FIM DA ANTECIPAÇÃO", qualquer que ela seja.
+	local antecipaJab = PlayerCombatAnimator.lightChainAnticipation(1)
+	local antecipaDireto = PlayerCombatAnimator.lightChainAnticipation(2)
+
 	PlayerCombatAnimator.play(animator, "BasicLight")
-	-- Antes do fim da antecipação (0.065 s do jab) nada soa.
-	assertEq(PlayerCombatAnimator.flushCue(animator, 0.03), nil, "não soa durante a antecipação")
+	assertEq(PlayerCombatAnimator.flushCue(animator, antecipaJab / 2), nil, "não soa durante a antecipação")
 	assertEq(#emitted, 0, "nenhuma deixa emitida ainda")
 	-- Ao alcançar a antecipação, o corte de ar sai uma única vez.
-	assertEq(PlayerCombatAnimator.flushCue(animator, 0.065), "swing_light_1", "jab soa no fim da antecipação")
+	assertEq(PlayerCombatAnimator.flushCue(animator, antecipaJab), "swing_light_1", "jab soa no fim da antecipação")
 	assertEq(PlayerCombatAnimator.flushCue(animator, 0.20), nil, "não repete a mesma deixa")
 	assertEq(#emitted, 1, "emitiu exatamente uma vez")
 
@@ -461,7 +466,11 @@ test("áudio: animador agenda o corte de ar para o fim da antecipação", functi
 	clock = 0.3
 	PlayerCombatAnimator.play(animator, "BasicLight")
 	assertEq(animator.comboStep, 2, "encadeou para o direto")
-	assertEq(PlayerCombatAnimator.flushCue(animator, 0.3 + 0.07), "swing_light_2", "direto tem deixa própria")
+	assertEq(
+		PlayerCombatAnimator.flushCue(animator, 0.3 + antecipaDireto),
+		"swing_light_2",
+		"direto tem deixa própria"
+	)
 end)
 
 test("áudio: animador sem emitCue continua funcionando em silêncio", function()

@@ -1272,9 +1272,11 @@ test("cliente: Locale cobre todo texto do HUD F0 em PT-BR e EN", function()
 end)
 
 test("apresentação: jogador tem antecipação, impacto, guarda e recuperação puramente visuais", function()
-	local lightWindup = PlayerCombatAnimator.sample("BasicLight", 0.065, false)
-	local lightStrike = PlayerCombatAnimator.sample("BasicLight", 0.135, false)
-	local heavyStrike = PlayerCombatAnimator.sample("BasicHeavy", 0.285, false)
+	-- Instantes lidos da tabela de timing, não escritos à mão: o que este teste
+	-- afirma é "antecipa, depois cruza", e isso vale em qualquer calibração.
+	local lightWindup = PlayerCombatAnimator.sample("BasicLight", PlayerCombatAnimator.lightChainAnticipation(1), false)
+	local lightStrike = PlayerCombatAnimator.sample("BasicLight", PlayerCombatAnimator.lightChainImpact(1), false)
+	local heavyStrike = PlayerCombatAnimator.sample("BasicHeavy", PlayerCombatAnimator.HeavyBeats.strikeEnd, false)
 	local recovered = PlayerCombatAnimator.sample("BasicHeavy", PlayerCombatAnimator.Durations.BasicHeavy, false)
 	local guard = PlayerCombatAnimator.sample(nil, 0, true)
 	assertTrue(lightWindup.rootYawDegrees < 0, "leve antecipa para um lado")

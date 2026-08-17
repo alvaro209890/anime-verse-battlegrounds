@@ -184,6 +184,50 @@ foi compensada na vida dos inimigos para manter o tempo de kill parecido, com
 mais peso por golpe. Baselines do `CatalogService` e testes atualizados.
 
 
+### 2.10 Peso dos socos — recalibração de 17/08
+
+Com a guarda consertada (§2.3.1) e a cadeia de impacto finalmente confirmada em
+runtime, ficou visível que os socos eram **rápidos demais para o olho**. A
+antecipação do jab durava 0,065 s — cerca de **4 quadros a 60 fps**. Nesse
+tempo o braço já aparecia estendido: o golpe lia como teleporte da extremidade,
+sem carga e sem peso.
+
+A calibração aumenta a antecipação e a recuperação, e **preserva a velocidade do
+trecho carga → impacto**, que é o que lê como potência. Golpe lento no meio do
+soco vira empurrão; o que dá peso é a carga antes e o assentamento depois.
+
+| Degrau | Antecipação | Duração | Carga → impacto |
+|---|---|---|---|
+| 1 jab | 0,065 → **0,090** (+38%) | 0,240 → **0,330** | 0,050 → 0,075 |
+| 2 direto | 0,070 → **0,100** (+43%) | 0,300 → **0,400** | 0,080 → 0,110 |
+| 3 gancho | 0,110 → **0,145** (+32%) | 0,380 → **0,500** | 0,105 → 0,145 |
+| 4 finalizador | 0,135 → **0,175** (+30%) | 0,480 → **0,620** | 0,130 → 0,175 |
+
+Pesado: `0,52 → 0,68`, com antecipação `0,17 → 0,26` e impacto `0,285 → 0,40`.
+Ele é a ferramenta de quebra de guarda e precisa ler como tal **antes** de
+conectar.
+
+**Teto que não pode ser rompido:** `LIGHT_WINDOW` do `CombatService` é 0,65 s.
+Todos os quatro degraus ficam abaixo disso (0,330 / 0,400 / 0,500 / 0,620) — se
+uma duração passar a janela, o jogador precisa interromper a própria animação
+para encadear, e a cadeia deixa de ser jogável.
+
+**Onde o mesmo número vive** (mudou um, mude todos):
+
+1. `PlayerCombatAnimator.LIGHT_CHAIN` — a fonte;
+2. `PlayerCombatAnimator.HeavyBeats` — fases do pesado, agora constante nomeada
+   porque pose, som e teste precisam do mesmo valor;
+3. `CombatAnimations.ACTION_SECONDS` e `LIGHT_CHAIN_SECONDS` — espelho travado
+   por teste;
+4. o corte de ar do leve lê `LIGHT_CHAIN[i][1]` sozinho, e o do pesado passou a
+   ler `HeavyBeats.windupEnd` em vez de um literal.
+
+> **Testes passaram a derivar os instantes da tabela.** Antes eles amostravam
+> `0.065`, `0.135` e `0.285` escritos à mão, e qualquer calibração os quebrava
+> por motivo errado — o que eles afirmam é "antecipa, depois cruza" e "o som sai
+> no fim da antecipação", não um número. Agora leem
+> `lightChainAnticipation(n)`, `lightChainImpact(n)` e `HeavyBeats`.
+
 ## 3. Regra de autoridade preservada
 
 | Camada | Dispara com | Nunca |

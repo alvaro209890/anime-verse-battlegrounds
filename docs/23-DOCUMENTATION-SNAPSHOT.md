@@ -29,7 +29,13 @@ braços para trás e para fora porque `pitch` negativo leva o braço para trás 
 rig real. Os testes afirmavam `< -35`/`< -40`, ou seja, **travavam o defeito** —
 a suíte ficou verde meses com a guarda visivelmente errada.
 
-**Rede de segurança do anexo de junta.** Ver `docs/14` §4.7.1.
+**Rede de segurança do anexo de junta.** Ver `docs/14` §4.7.1. **Confirmada em
+runtime pelo Álvaro:** com ela, a guarda passou a levantar os punhos ao apertar
+`F`. Era a causa do "aperto F e não muda nada" — não os números da pose.
+
+**Peso dos socos.** Ver `docs/17` §2.10. Antecipação e recuperação ~30-40%
+maiores, velocidade do trecho carga→impacto preservada, todos os degraus ainda
+abaixo da janela de 0,65 s do `CombatService`.
 
 **Falha conhecida em aberto:** `planície: nada colide, nada entra no ringue do
 elite e a luz tem teto` falha com `materialização existe`. Confirmado como

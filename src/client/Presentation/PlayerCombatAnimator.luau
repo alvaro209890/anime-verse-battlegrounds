@@ -117,7 +117,10 @@ local PlayerCombatAnimator = {}
 -- e o jogador lia "acabou" antes de acabar. Um teste trava essa igualdade.
 local DURATIONS: { [string]: number } = {
 	BasicLight = 0.28,
-	BasicHeavy = 0.52,
+	-- Pesado recalibrado em 17/08 junto com a cadeia leve (ver LIGHT_CHAIN): a
+	-- carga é o dobro da do leve porque é a ferramenta de quebra de guarda, e
+	-- precisa ler como tal antes de conectar.
+	BasicHeavy = 0.68,
 	GuardDown = 0.16,
 	GuardUp = 0.18,
 	Dash = 0.32,
@@ -151,6 +154,15 @@ PlayerCombatAnimator.Durations = table.freeze({
 -- dois impactos da Cadência em +140 ms e +320 ms da ativação (AbilityService)
 -- e a postura do Pulso dura 250 ms (CombatService.PULSE_STANCE_MS). A pose
 -- precisa cravar nesses instantes, senão o hit-stop chega fora do golpe.
+-- Fases do pesado. Existem como constante porque três lugares precisam do MESMO
+-- número: a pose, o atraso do corte de ar e os testes. Quando isto era literal
+-- em cada ponto, mudar o timing exigia lembrar dos três — e o som saía fora do
+-- golpe se alguém esquecesse um.
+PlayerCombatAnimator.HeavyBeats = table.freeze({
+	windupEnd = 0.26,
+	strikeEnd = 0.40,
+})
+
 PlayerCombatAnimator.AuthoritativeBeats = table.freeze({
 	cadenceFirstHit = 0.14,
 	cadenceSecondHit = 0.32,
@@ -1170,13 +1182,27 @@ end
 
 -- Timing por degrau da cadeia: {antecipação, impacto, fim da pausa, duração}.
 -- O golpe fica progressivamente mais lento e mais punível — o 4 é compromisso.
+--
+-- Recalibrado em 17/08 para leitura de soco real. Os tempos anteriores
+-- (jab 0.065/0.115/0.155/0.240) vinham de uma cadeia rápida demais para o olho:
+-- a antecipação durava ~4 quadros a 60 fps, então o braço aparecia já estendido
+-- e o golpe lia como teleporte da extremidade, sem carga.
+--
+-- O que mudou, e por quê:
+--  · **antecipação ~40% maior** — é ela que mostra o corpo carregando o golpe;
+--    sem carga visível não existe leitura de "vem força aí";
+--  · **impacto continua rápido depois da carga** — a velocidade do trecho
+--    antecipação→impacto é o que lê como potência, e ela foi preservada;
+--  · **pausa e recuperação maiores** — o peso vem do que acontece DEPOIS do
+--    contato; cortar a recuperação é o que fazia o golpe "atravessar" o alvo.
+--
+-- Teto: a duração de cada degrau fica abaixo de LIGHT_WINDOW (0,65 s), senão o
+-- jogador precisaria interromper a própria animação para encadear.
 local LIGHT_CHAIN: { { number } } = {
-	-- O jab mantém a antecipação em 0.065 s: é o contrato de leitura que os
-	-- testes de apresentação de run.luau já fixam para o golpe leve.
-	{ 0.065, 0.115, 0.155, 0.240 },
-	{ 0.070, 0.150, 0.200, 0.300 },
-	{ 0.110, 0.215, 0.275, 0.380 },
-	{ 0.135, 0.265, 0.335, 0.480 },
+	{ 0.090, 0.165, 0.215, 0.330 },
+	{ 0.100, 0.210, 0.270, 0.400 },
+	{ 0.145, 0.290, 0.365, 0.500 },
+	{ 0.175, 0.350, 0.450, 0.620 },
 }
 -- Quadro do meio de cada degrau: o instante em que o quadril já virou e a
 -- extremidade ainda está a caminho. É ele que dá corpo ao golpe — sem esse
@@ -1216,6 +1242,13 @@ end
 -- inspecionar: é onde a silhueta do golpe existe.
 function PlayerCombatAnimator.lightChainImpact(step: number): number
 	return chainTiming(step)[2]
+end
+
+-- Fim da antecipação do degrau — o instante em que o corpo para de carregar e
+-- a extremidade acelera. É quando o corte de ar soa. Público para que teste e
+-- calibração leiam a MESMA fonte em vez de repetir o número à mão.
+function PlayerCombatAnimator.lightChainAnticipation(step: number): number
+	return chainTiming(step)[1]
 end
 
 -- Trilhas montadas uma vez no load: `chainPose` roda todo quadro e não pode
@@ -1340,7 +1373,14 @@ function PlayerCombatAnimator.sample(
 	elseif action == "BasicLight" then
 		return chainPose(comboStep or 1, safeElapsed)
 	elseif action == "BasicHeavy" then
-		return attackPose(safeElapsed, 0.17, 0.285, DURATIONS.BasicHeavy, HEAVY_WINDUP, HEAVY_STRIKE)
+		return attackPose(
+			safeElapsed,
+			PlayerCombatAnimator.HeavyBeats.windupEnd,
+			PlayerCombatAnimator.HeavyBeats.strikeEnd,
+			DURATIONS.BasicHeavy,
+			HEAVY_WINDUP,
+			HEAVY_STRIKE
+		)
 	elseif action == "Dash" then
 		if safeElapsed <= 0.06 then
 			return blend(NEUTRAL, DASH_PREP, smooth(safeElapsed / 0.06))
@@ -1603,7 +1643,7 @@ end
 -- não requer o catálogo (é apresentação pura e precisa carregar em teste sem
 -- DataModel). Um teste garante que nenhum id aqui saia do catálogo.
 local ACTION_CUE: { [string]: { id: string, delaySeconds: number } } = {
-	BasicHeavy = { id = "swing_heavy", delaySeconds = 0.17 },
+	BasicHeavy = { id = "swing_heavy", delaySeconds = PlayerCombatAnimator.HeavyBeats.windupEnd },
 	Dash = { id = "dash", delaySeconds = 0 },
 	GuardDown = { id = "guard_raise", delaySeconds = 0 },
 	-- O atraso é o fim da antecipação de cada técnica, não o instante do input:
