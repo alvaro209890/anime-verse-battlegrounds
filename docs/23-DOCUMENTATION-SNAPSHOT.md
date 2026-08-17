@@ -46,6 +46,25 @@ declaravam `assetKey` estavam todas caindo no fallback procedural por falta de
 chave), e o teste que antes exigia `assetId == nil` passou a exigir que todo ID
 conste nesse registro — inventar um número reprova.
 
+**Vegetação na planície (17/08).** A planície era 100% mineral — poste, cristal,
+pilar, formação de estilhaço — e lia como pedreira. Entraram 14 árvores (tronco,
+forquilha e duas massas de copa, para a silhueta não virar pirulito) e 11
+arbustos, em paleta verde-azulada escura que pertence ao mundo crepuscular em vez
+de verde de floresta. Posições escolhidas, não sorteadas: a validação recusa
+invasão de rota, cratera e âncora, e sorteio tornaria a falha intermitente. Ela
+pegou dois erros reais na primeira tentativa — árvore colada numa âncora e os
+onze arbustos enterrados no chão.
+
+**Suíte 100% verde pela primeira vez: 241/241 de domínio.** A falha que este
+snapshot chamava de "pré-existente" era **falso negativo de CRLF no teste**, não
+defeito de produto.
+
+**Bots de missão.** Medido em runtime: a Instrutora tem 61 peças e o dummy 56,
+ambos com o conjunto R15 completo (membros, torsos, mãos, pés) mais roupa
+detalhada — capuz, casaco, capa, cabelo, ombreiras. **Mas nenhum dos dois tem
+objeto `Humanoid`.** Vale decidir se é intencional (são cenário) ou se falta,
+porque sem `Humanoid` não há `Animator` e eles não podem receber clipe algum.
+
 **Sobre "a skin do outro agente não aparece":** verificado em runtime que as
 skins do `main` **estão corretas** — os Estilhaços materializam 15 peças (25 no
 elite) com as cores certas (ciano 104,220,238 no Halo/RiftRing/CoreGlow). A

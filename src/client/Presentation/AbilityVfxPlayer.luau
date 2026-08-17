@@ -37,6 +37,10 @@ export type Player = {
 	-- junto com o personagem para não deixar instâncias órfãs.
 	attachments: { [string]: Attachment },
 	assetWarnings: { [string]: boolean },
+	-- chave do asset → a textura publicada realmente carregou? `nil` = ainda não
+	-- sondado, `false` = sondando ou falhou. Só `true` autoriza usar o ID.
+	assetProbes: { [string]: boolean },
+	assetProbeGui: any?,
 	active: { ActiveTechnique },
 	folder: Folder?,
 	connection: any?,
@@ -74,6 +78,46 @@ local FLIPBOOK_MODES = {
 	PingPong = Enum.ParticleFlipbookMode.PingPong,
 }
 
+-- ⚠️ ID publicado NÃO é o mesmo que textura utilizável.
+--
+-- Em 17/08 os oito atlas foram publicados e os IDs entraram no catálogo. O
+-- resultado em Play foi PIOR que antes: um asset recém-enviado fica pendente de
+-- moderação no Roblox e não resolve, então o emissor ficava apontando para uma
+-- textura vazia — partícula invisível, onde antes havia o fallback procedural
+-- funcionando. Medido: `IsLoaded=false` nos cinco atlas cinco segundos depois de
+-- criados.
+--
+-- Por isso o ID sozinho não autoriza uso. Cada asset é sondado uma vez, e só é
+-- adotado depois de carregar de verdade. Enquanto não carregar — moderação
+-- pendente, asset removido, jogador offline — vale o fallback. Quando a
+-- moderação liberar, passa a valer sem precisar de novo build.
+local ASSET_PROBE_TIMEOUT = 10
+
+local function probeAsset(vfx: Player, key: string, assetId: string): ()
+	if vfx.assetProbes[key] ~= nil then
+		return
+	end
+	vfx.assetProbes[key] = false
+	task.spawn(function()
+		local holder = Instance.new("ImageLabel")
+		holder.Image = assetId
+		holder.Size = UDim2.fromOffset(1, 1)
+		holder.BackgroundTransparency = 1
+		holder.Visible = false
+		holder.Parent = vfx.assetProbeGui
+		local prazo = os.clock() + ASSET_PROBE_TIMEOUT
+		while os.clock() < prazo and not holder.IsLoaded do
+			task.wait(0.5)
+		end
+		vfx.assetProbes[key] = holder.IsLoaded
+		if not holder.IsLoaded and not vfx.assetWarnings[key] then
+			vfx.assetWarnings[key] = true
+			warn(("[AbilityVfxPlayer] asset %s não carregou (moderação pendente?) — usando fallback"):format(key))
+		end
+		holder:Destroy()
+	end)
+end
+
 local function publishedAssetId(vfx: Player, entry: any): (string?, any?)
 	if not vfx.recipes.assetFor then
 		return nil, nil
@@ -88,6 +132,13 @@ local function publishedAssetId(vfx: Player, entry: any): (string?, any?)
 			warn(("[AbilityVfxPlayer] asset %s ignorado: ID inválido"):format(entry.assetKey or entry.id))
 		end
 		return nil, spec
+	end
+	local key = entry.assetKey or entry.id
+	if vfx.assetProbeGui then
+		probeAsset(vfx, key, spec.assetId)
+		if vfx.assetProbes[key] ~= true then
+			return nil, spec
+		end
 	end
 	return spec.assetId, spec
 end
@@ -351,6 +402,11 @@ function AbilityVfxPlayer.new(deps: {
 		fired = {},
 		attachments = {},
 		assetWarnings = {},
+		assetProbes = {},
+		-- A sonda precisa de um pai para o ImageLabel existir e o motor buscar a
+		-- imagem. Sem PlayerGui (teste headless, servidor) a sonda não roda e o
+		-- fallback vale — que é o comportamento seguro.
+		assetProbeGui = deps.assetProbeGui,
 		active = {},
 		folder = deps.folder,
 		connection = nil,

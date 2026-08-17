@@ -153,6 +153,40 @@ Curva inicial de aceite: primeiro combate em até 60 segundos; objetivo de progr
 
 Os percentuais definitivos devem ser calibrados com amostra e analytics; os valores acima são gates de protótipo, não metas públicas de produto.
 
+### Estado real medido em runtime — 2026-08-17
+
+Esta é a primeira atualização do roadmap escrita **com o jogo rodando**, não a
+partir de teste headless. O que saiu de "não validado" para **validado em
+runtime**:
+
+| Item | Estado | Evidência |
+|---|---|---|
+| Sincronia Studio × repo | ✅ | 63/63 arquivos com hash idêntico |
+| Boot do servidor | ✅ | bootstrap completo, sem erro Luau do jogo |
+| Cadeia de impacto (`a1_impact`) | ✅ | leve 6/6/8/12, pesado 12, Cometa 14; vida 10000→9930 |
+| Avanço do Ombro Cometa | ✅ | fechou de 5,02 para 1,65 studs |
+| Fronteira de zona | ✅ | recusa correta de 5 fighters da livre estando na segura |
+| Guarda | ✅ | corrigida (sinal de eixo) e confirmada pelo jogador |
+| Greybox e decoração | ✅ | 474 partes materializadas, planície com 80+ |
+| Camada visual de impacto | ❌ | hit-stop/tremida/luz/som **não confirmados a olho** |
+| W1 completo | ❌ | prompts, marco, saídas e morte ainda não percorridos |
+| Dois clientes, latência, Android, gamepad | ❌ | intocados |
+
+**Correções que a rodada de runtime revelou** — todas eram invisíveis no
+headless, e duas estavam *travadas por teste*:
+
+1. **Guarda com o sinal do eixo invertido** (`docs/17` §2.3.1). Pitch negativo
+   joga o braço para trás no rig real; os testes exigiam `< -35`, ou seja,
+   exigiam o defeito.
+2. **Overlay podia nascer sem juntas** (`docs/14` §4.7.1). Sem isso, nenhuma
+   pose de combate aparecia — e era a causa do "aperto F e não muda nada".
+3. **Teste da planície com falso negativo de CRLF.** Lia o arquivo cru e casava
+   `\nend\n`; passava no CI Linux e falhava no Windows. Ficou dias sendo tratado
+   como defeito de mundo, quando a materialização sempre existiu.
+4. **Asset publicado ≠ asset utilizável.** Os oito atlas foram publicados, mas
+   ficam pendentes de moderação e não resolvem — o emissor apontava para textura
+   vazia, pior que o fallback. Agora há sonda de carregamento.
+
 ### Próximo recorte executivo — atualizado em 2026-08-14
 
 O item 1 desta lista era "reabrir o snapshot do commit `108be31` e confirmar que

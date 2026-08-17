@@ -212,7 +212,11 @@ test("planície: nada colide, nada entra no ringue do elite e a luz tem teto", f
 	end
 	-- Colisão é decisão do WorldService e é uma só: nenhuma peça da planície
 	-- pode virar parede invisível em cima de perseguição, dash ou Cometa.
-	local source = fs.readFile("src/server/Services/WorldService.luau")
+	-- Normaliza fim de linha antes de casar: o repo é CRLF no Windows e o regex
+	-- procura "\nend\n". Sem isto o teste passava no CI Linux e falhava na
+	-- máquina de quem desenvolve — falso negativo que ficou dias sendo tratado
+	-- como defeito de mundo, quando a materialização sempre existiu.
+	local source = string.gsub(fs.readFile("src/server/Services/WorldService.luau"), "\r\n", "\n")
 	local build = source:match("local function buildWildDecorations.-\nend\n")
 	assertTrue(build ~= nil, "materialização existe")
 	if build then

@@ -270,6 +270,138 @@ do
 	end
 end
 
+-- ============================================================================
+-- Vegetação (17/08). Até aqui a planície era 100% mineral — poste, cristal,
+-- pilar e formação de estilhaço — e lia como pedreira, não como mundo. O jogador
+-- pediu "árvores e vegetação"; isto é a primeira passada.
+--
+-- A paleta NÃO é verde de floresta. O mundo é crepuscular e frio (§ SceneryPresentation),
+-- então a folhagem puxa para o verde-azulado escuro e o tronco para o basalto:
+-- a vegetação precisa parecer que cresceu NESTE mundo, não coladada de outro.
+--
+-- As mesmas três regras da validação valem aqui, e é por isso que árvore fica
+-- LONGE da rota, da cratera e das âncoras: nada colide, mas uma copa em cima da
+-- rota tapa a leitura do caminho, e em cima da âncora esconde o inimigo nascendo.
+local BARK: { number } = { 48, 42, 44 }
+local BARK_PALE: { number } = { 66, 60, 58 }
+local FOLIAGE: { number } = { 44, 92, 84 }
+local FOLIAGE_DEEP: { number } = { 30, 66, 64 }
+local FOLIAGE_RIFT: { number } = { 58, 118, 116 }
+
+-- Árvore em quatro peças: tronco, forquilha e duas massas de copa deslocadas.
+-- Duas massas em vez de uma bola só é o que tira a cara de pirulito — a silhueta
+-- fica irregular e lê como copa a qualquer distância.
+local function tree(prefix: string, x: number, z: number, height: number, spread: number, yaw: number): ()
+	local trunkTop = height * 0.62
+	push(
+		deco(
+			prefix .. "_Trunk",
+			"Part",
+			"Block",
+			{ x = 0.85, y = trunkTop, z = 0.85 },
+			{ x = x, y = trunkTop / 2, z = z },
+			yaw,
+			BARK,
+			"Slate",
+			0,
+			nil
+		)
+	)
+	push(
+		deco(
+			prefix .. "_Fork",
+			"Part",
+			"Block",
+			{ x = 0.55, y = height * 0.26, z = 0.55 },
+			{ x = x + spread * 0.18, y = trunkTop + height * 0.1, z = z - spread * 0.12 },
+			yaw + 18,
+			BARK_PALE,
+			"Slate",
+			0,
+			nil
+		)
+	)
+	push(
+		deco(
+			prefix .. "_CanopyLow",
+			"Part",
+			"Ball",
+			{ x = spread, y = spread * 0.72, z = spread * 0.92 },
+			{ x = x - spread * 0.1, y = trunkTop + spread * 0.3, z = z + spread * 0.08 },
+			yaw,
+			FOLIAGE,
+			"LeafyGrass",
+			0,
+			nil
+		)
+	)
+	push(
+		deco(
+			prefix .. "_CanopyTop",
+			"Part",
+			"Ball",
+			{ x = spread * 0.78, y = spread * 0.6, z = spread * 0.74 },
+			{ x = x + spread * 0.2, y = trunkTop + spread * 0.66, z = z - spread * 0.14 },
+			yaw + 30,
+			FOLIAGE_DEEP,
+			"LeafyGrass",
+			0,
+			nil
+		)
+	)
+end
+
+-- Arbusto: uma massa baixa. Serve para quebrar o chão vazio entre as árvores
+-- sem custar quatro peças cada.
+local function shrub(prefix: string, x: number, z: number, radius: number, rgb: { number }): ()
+	push(deco(
+		prefix,
+		"Part",
+		"Ball",
+		{ x = radius * 2, y = radius * 1.3, z = radius * 1.8 },
+		-- y é o CENTRO da peça: precisa ser ao menos a meia-altura (0.65×raio)
+		-- ou o arbusto nasce enterrado. A validação chama isso de "afunda no
+		-- chão" e pega os onze de uma vez.
+		{ x = x, y = radius * 0.68, z = z },
+		0,
+		rgb,
+		"LeafyGrass",
+		0,
+		nil
+	))
+end
+
+-- Bosques afastados da rota (|x| <= 5, z −100..−40), da cratera (raio 20 em
+-- 0,−102) e das seis âncoras. As coordenadas são escolhidas, não sorteadas: a
+-- validação recusa qualquer uma que invada, e sorteio tornaria a falha
+-- intermitente entre execuções.
+tree("Grove_W1", -62, -52, 11.5, 6.4, 12)
+tree("Grove_W2", -70, -66, 9.5, 5.4, 48)
+tree("Grove_W3", -58, -78, 12.5, 7.0, 24)
+tree("Grove_W4", -72, -92, 10.0, 5.8, 66)
+tree("Grove_E1", 60, -50, 11.0, 6.2, 8)
+tree("Grove_E2", 70, -70, 12.5, 7.2, 40)
+tree("Grove_E3", 58, -86, 9.5, 5.6, 72)
+tree("Grove_E4", 68, -112, 11.5, 6.6, 30)
+tree("Grove_N1", -40, -130, 12.0, 6.8, 18)
+tree("Grove_N2", -24, -144, 10.5, 6.0, 54)
+tree("Grove_N3", 46, -130, 11.5, 6.6, 36)
+tree("Grove_N4", 44, -150, 9.5, 5.4, 60)
+tree("Grove_WArm1", -70, -20, 10.5, 6.0, 22)
+tree("Grove_WArm2", -60, -6, 12.0, 6.8, 50)
+
+shrub("Shrub_W1", -58, -46, 1.9, FOLIAGE_DEEP)
+shrub("Shrub_W2", -66, -74, 2.2, FOLIAGE)
+shrub("Shrub_W3", -64, -100, 1.7, FOLIAGE_RIFT)
+shrub("Shrub_E1", 52, -58, 2.0, FOLIAGE)
+shrub("Shrub_E2", 64, -94, 1.8, FOLIAGE_DEEP)
+shrub("Shrub_E3", 74, -122, 2.1, FOLIAGE)
+shrub("Shrub_N1", -34, -138, 2.0, FOLIAGE_RIFT)
+shrub("Shrub_N2", 16, -150, 1.8, FOLIAGE_DEEP)
+shrub("Shrub_N3", 36, -126, 2.2, FOLIAGE)
+shrub("Shrub_WArm1", -64, -14, 1.9, FOLIAGE)
+shrub("Shrub_WArm2", -74, -30, 2.1, FOLIAGE_DEEP)
+
 function WildDecorations.all(): { WildDecoration }
 	return DECORATIONS
 end

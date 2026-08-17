@@ -183,12 +183,23 @@ characterAnimation = CharacterAnimationPlayer.new({
 	catalog = CombatAnimations,
 	now = os.clock,
 })
+-- Container da sonda de asset: o VFX só adota uma textura publicada depois de
+-- confirmar que ela carrega (asset em moderação não resolve e deixaria a
+-- partícula invisível). Fica oculto e vazio; é só o pai que o motor exige para
+-- buscar a imagem.
+local assetProbeGui = Instance.new("ScreenGui")
+assetProbeGui.Name = "AvbAssetProbe"
+assetProbeGui.Enabled = false
+assetProbeGui.ResetOnSpawn = false
+assetProbeGui.Parent = player:WaitForChild("PlayerGui")
+
 abilityVfx = AbilityVfxPlayer.new({
 	player = player,
 	runService = RunService,
 	workspace = Workspace,
 	recipes = AbilityVfx,
 	now = os.clock,
+	assetProbeGui = assetProbeGui,
 })
 InputController.subscribe(input, function(action: string, _payload: { [string]: any })
 	if string.match(action, "^Ability%d$") == nil then
