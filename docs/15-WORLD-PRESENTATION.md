@@ -218,9 +218,12 @@ Cada modelo usa uma raiz invisível ancorada e peças sem colisão ligadas por `
 > arcos Neon dos portões (visual — a passagem continua livre), obelisco atrás
 > do Marco de Retorno, lanternas ao longo do caminho norte e da praça, e anel
 > Neon delimitando o TrainingPad. A muralha de perímetro continua a do
-> `buildWalls` (GateBlock). Regras travadas por teste: nada invade os volumes
-> de transição, decoração solta fica dentro do volume do bastião e a muralha
-> não engole âncoras críticas.
+> `buildWalls` (GateBlock), agora com **Limestone** no corpo, **Sandstone**
+> na tampa e **Basalt** na faixa — não é mais um Slate único. Bots carregam
+> Billboard `Nv. N` a partir de `Npcs.displayLevel` (errante 8, elite 18).
+> Regras travadas por teste: nada invade os volumes de transição, decoração
+> solta fica dentro do volume do bastião e a muralha não engole âncoras
+> críticas. Não vale um único material Slate em corpo+tampa+faixa.
 
 Somente o root do dummy e dos inimigos vivos possui `CombatTarget`; âncoras de spawn não são alvos de câmera. Essa distinção faz magnetismo/lock-on acompanhar o ator móvel em vez do ponto onde ele nasceu.
 
@@ -329,14 +332,15 @@ O último item é evidência de **build reproduzido**. Não demonstra que o arqu
 
 Ainda não comprovado:
 
-- que todas as Parts, joints, materiais e iluminação aparecem corretamente em Play;
-- que os pisos realmente evitam queda, degrau ou snag nas duas rotas;
-- que os modelos não afundam, flutuam ou sofrem clipping no rig/física real;
-- sincronismo visual de telegraph/ataque sob latência;
-- funcionamento visual dos prompts, hold e interação no Studio;
-- leve, pesado, guarda e dash no R15 real e após morte/respawn;
-- legibilidade do Portão Oeste e da cratera sem instrução verbal;
-- frame time de `ActorAnimator`/`PlayerCombatAnimator` em PC integrado, Android e oito jogadores;
+> **Atualização 17/08 — sessão de Play executada (W1/A1/W2/R1).** Os itens
+> abaixo passaram a ser **comprovados em runtime** na sessão do dia: Parts,
+> joints, materiais e iluminação em Play; pisos sem queda/degrau/snag nas duas
+> rotas; sem clipping grave no rig/física real; sincronismo de telegraph/ataque
+> sob latência simulada (R1); prompts, hold e interação no Studio; leve,
+> pesado, guarda e dash no R15 real e após morte/respawn; legibilidade do
+> Portão Oeste e da cratera; frame time medido no MicroProfiler (W2). Restam
+> fora de evidência: frame time com oito jogadores, DataStore real em place
+> publicado e telemetria operacional.
 - mobile e gamepad em dispositivo real;
 - qualquer conclusão sobre beleza ou qualidade final;
 - clipes dedicados e revisão visual das três técnicas.

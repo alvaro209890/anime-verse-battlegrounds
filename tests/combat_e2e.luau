@@ -7,7 +7,7 @@
 -- `docs/14` §4.8 e o item 1 do recorte executivo de `docs/06` §5 registram o
 -- mesmo buraco: a camada de impacto — hit-stop, tremida de câmera, luz, som e
 -- número de dano — **nunca rodou uma vez sequer**. Não por defeito: o jogador
--- estava a 41,2 studs do único alvo vivo e o alcance do golpe leve é 9, então
+-- estava a 41,2 studs do único alvo vivo e o alcance do golpe leve é 11, então
 -- nenhum `CombatEvent` de acerto jamais chegou ao cliente. Todo aquele código
 -- estava certo e mudo, e nenhuma suíte reclamava, porque cada peça era testada
 -- sozinha.
@@ -84,7 +84,7 @@ end
 -- forem os do jogo, então o primeiro teste confere a fonte: mexeu lá e esqueceu
 -- aqui, a suíte quebra em vez de simular um combate que não existe.
 local BASIC_RANGE_STUDS = 6
-local BODY_ALLOWANCE_STUDS = 3
+local BODY_ALLOWANCE_STUDS = 5
 local LIGHT_REACH: { number } = {
 	BASIC_RANGE_STUDS + BODY_ALLOWANCE_STUDS,
 	BASIC_RANGE_STUDS + BODY_ALLOWANCE_STUDS,
@@ -92,8 +92,8 @@ local LIGHT_REACH: { number } = {
 	BASIC_RANGE_STUDS + BODY_ALLOWANCE_STUDS + 1,
 }
 local HEAVY_REACH = BASIC_RANGE_STUDS + BODY_ALLOWANCE_STUDS + 0.5
-local LIGHT_HALF_ANGLE = 65
-local HEAVY_HALF_ANGLE = 50
+local LIGHT_HALF_ANGLE = 78
+local HEAVY_HALF_ANGLE = 68
 -- A distância histórica do playtest de 14/08, que é o caso que abre a suíte.
 local PLAYTEST_DISTANCE_STUDS = 41.2
 
@@ -342,11 +342,11 @@ end
 test("fonte: alcance e cone da simulação são os do handler real", function()
 	local source = fs.readFile("src/server/init.server.lua")
 	assertTrue(source:find("local BASIC_RANGE_STUDS = 6", 1, true) ~= nil, "alcance base do golpe")
-	assertTrue(source:find("local BODY_ALLOWANCE_STUDS = 3", 1, true) ~= nil, "folga de corpo")
-	assertTrue(source:find("local BASIC_LIGHT_HALF_ANGLE_DEGREES = 65", 1, true) ~= nil, "cone leve")
-	assertTrue(source:find("local BASIC_HEAVY_HALF_ANGLE_DEGREES = 50", 1, true) ~= nil, "cone pesado")
-	assertEq(LIGHT_REACH[1], 9, "alcance leve efetivo")
-	assertEq(HEAVY_REACH, 9.5, "alcance pesado efetivo")
+	assertTrue(source:find("local BODY_ALLOWANCE_STUDS = 5", 1, true) ~= nil, "folga de corpo")
+	assertTrue(source:find("local BASIC_LIGHT_HALF_ANGLE_DEGREES = 78", 1, true) ~= nil, "cone leve")
+	assertTrue(source:find("local BASIC_HEAVY_HALF_ANGLE_DEGREES = 68", 1, true) ~= nil, "cone pesado")
+	assertEq(LIGHT_REACH[1], 11, "alcance leve efetivo")
+	assertEq(HEAVY_REACH, 11.5, "alcance pesado efetivo")
 end)
 
 -- ── 1. O caso histórico: longe demais, cadeia inteira muda ──────────────────
@@ -471,16 +471,16 @@ test("pesado: a distância é a única diferença entre o mudo e o completo", fu
 	assertTrue(perto.camera.trauma > leve.camera.trauma, "pesado básico sacode mais que o jab")
 end)
 
-test("borda do alcance: 9 studs conecta, 9,5 não (leve, degrau 1)", function()
-	local dentro = newSim(8.9)
+test("borda do alcance: 11 studs conecta, 11,6 não (leve, degrau 1)", function()
+	local dentro = newSim(10.9)
 	assertEq(serverBasicAttack(dentro, "light").outcome, "hit", "dentro do alcance")
-	local fora = newSim(9.6)
+	local fora = newSim(11.7)
 	assertEq(serverBasicAttack(fora, "light").outcome, "miss", "fora do alcance")
 end)
 
 test("fora do cone: alvo às costas não é adquirido mesmo colado", function()
 	local sim = newSim(4)
-	-- Alvo atrás: o cone de 65° não alcança, mesmo a 4 studs.
+	-- Alvo atrás: o cone não alcança, mesmo a 4 studs.
 	SpatialService.setTransform(sim.targetId, vec(0, 0, 4), vec(0, 0, -1))
 	local event = serverBasicAttack(sim, "light")
 	assertEq(event.outcome, "miss", "cone recusa o alvo às costas")
@@ -804,7 +804,7 @@ end)
 test("12 studs com pista: o cone autoritativo erra e a folga de latência recupera o hit", function()
 	local semPista = newSim(12, "player")
 	local miss = serverBasicAttack(semPista, "light")
-	assertEq(miss.outcome, "miss", "sem pista, 12 studs passam do alcance 9")
+	assertEq(miss.outcome, "miss", "sem pista, 12 studs passam do alcance 11")
 	assertSilentImpact(semPista, "sem pista")
 
 	local comPista = newSim(12, "player")

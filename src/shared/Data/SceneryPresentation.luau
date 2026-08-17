@@ -31,6 +31,9 @@ export type SceneryStyle = {
 	fillLightColor: { number },
 	roofTransparency: number,
 	wallCapHeight: number,
+	wallMaterial: string,
+	wallCapMaterial: string,
+	wallBandMaterial: string,
 	spawnLightBrightness: number,
 	spawnLightRange: number,
 	spawnLightCount: number,
@@ -39,9 +42,9 @@ export type SceneryStyle = {
 }
 
 local STYLE: SceneryStyle = {
-	wallColor = { 74, 78, 88 },
-	wallAccent = { 121, 86, 166 },
-	wallCap = { 105, 109, 122 },
+	wallColor = { 118, 104, 90 },
+	wallAccent = { 138, 96, 196 },
+	wallCap = { 176, 164, 142 },
 	terrainColor = { 92, 82, 70 },
 	terrainAccent = { 117, 103, 82 },
 	roofColor = { 32, 38, 54 },
@@ -51,7 +54,10 @@ local STYLE: SceneryStyle = {
 	lightColor = { 144, 216, 255 },
 	fillLightColor = { 184, 142, 255 },
 	roofTransparency = 0.18,
-	wallCapHeight = 0.7,
+	wallCapHeight = 0.85,
+	wallMaterial = "Limestone",
+	wallCapMaterial = "Sandstone",
+	wallBandMaterial = "Basalt",
 	spawnLightBrightness = 1.35,
 	spawnLightRange = 18,
 	spawnLightCount = 8,
@@ -138,6 +144,12 @@ function SceneryPresentation.validate(): (boolean, string?)
 	end
 	if STYLE.wallCapHeight <= 0 or STYLE.wallCapHeight > 4 then
 		return false, "altura da tampa de parede fora do orçamento"
+	end
+	if STYLE.wallMaterial == "Slate" and STYLE.wallCapMaterial == "Slate" then
+		return false, "muralha não pode ser só Slate uniforme"
+	end
+	if STYLE.wallMaterial == STYLE.wallCapMaterial and STYLE.wallCapMaterial == STYLE.wallBandMaterial then
+		return false, "muralha precisa de ao menos dois materiais"
 	end
 	if
 		STYLE.spawnLightBrightness <= 0

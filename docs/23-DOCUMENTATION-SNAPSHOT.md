@@ -1,5 +1,17 @@
 # Snapshot Canônico da Documentação — 17/08/2026
 
+## Rodada de 17/08 (Grok) — carreira, missões extras, nível dos bots, muralha, hitbox
+
+1. **Placar de carreira (J):** monstros, chefes, dano, tempo de jogo, quedas,
+   técnicas, consolidações, missões. Persistido. Dummy não conta.
+2. **Missões** `quest_grove` / `quest_remnant` e identidade **Tecelão de Ecos**.
+3. **Nível do bot** no Billboard (`Nv. 8` / `Nv. 18`).
+4. **Muralha** Limestone + Sandstone + Basalt (não Slate único).
+5. **Golpe:** folga de corpo 3→5 (alcance 11) e cone 78°/68° — o “colado”
+   a ~11 studs passa a conectar.
+
+---
+
 ## Rodada de 17/08 (Grok) — XP visível, flash de nível e mochila
 
 1. **XP do kill** flutua no monstro (`+25 XP` / `+80 XP`), igual o número de dano.

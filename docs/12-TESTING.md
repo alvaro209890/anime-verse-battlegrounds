@@ -1,14 +1,14 @@
 # 12 — Testes e evidências
 
-> **Snapshot de implementação:** 2026-08-17. Quatro suítes Lune: `tests/run.luau` **261 casos de domínio**, `tests/animation.luau` **79 de animação/apresentação**, `tests/security_fuzz.luau` **71 de fuzz adversarial** e `tests/combat_e2e.luau` **23 de simulação de combate ponta a ponta** — total automatizado de **434 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada: XP flutuante no kill, XP da task no tracker, flash de level-up e mochila de materiais.
+> **Snapshot de implementação:** 2026-08-17. Quatro suítes Lune: `tests/run.luau` **267 casos de domínio**, `tests/animation.luau` **79 de animação/apresentação**, `tests/security_fuzz.luau` **71 de fuzz adversarial** e `tests/combat_e2e.luau` **23 de simulação de combate ponta a ponta** — total automatizado de **440 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada: placar de carreira persistido, muralha com materiais distintos, nível nos bots, missões extras, Tecelão de Ecos no catálogo e alcance de golpe 11 (folga de corpo 5).
 
 ## 1. Estado da execução
 
-No snapshot de implementação atual, a verificação automatizada registrou 261/261 em `tests/run.luau`, 79/79 em `tests/animation.luau`, 71/71 em `tests/security_fuzz.luau` e 23/23 em `tests/combat_e2e.luau`. Selene e StyLua continuam gates separados e foram executados neste release: Selene com 0 erros/0 warnings e StyLua com `--check` limpo em `src tests plugins scripts`. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
+No snapshot de implementação atual, a verificação automatizada registrou 267/267 em `tests/run.luau`, 79/79 em `tests/animation.luau`, 71/71 em `tests/security_fuzz.luau` e 23/23 em `tests/combat_e2e.luau`. Selene e StyLua continuam gates separados e foram executados neste release: Selene com 0 erros/0 warnings e StyLua com `--check` limpo em `src tests plugins scripts`. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
 
 **Registro histórico, não evidência do snapshot atual:** uma rodada anterior teve confirmação em Play pelo jogador, com `avb-debug sync` = 56/56, de que a animação de golpe movia o corpo e o personagem não girava sozinho. Essa evidência pertence ao estado anterior documentado em `docs/14` e não deve ser usada para declarar o commit `d7c44e8` validado em runtime. Neste snapshot, o Play atual continua pendente.
 
-Segue sem comprovação em Play: a camada de impacto (tremida, hit-stop, luz e som de acerto). Motivo registrado em `docs/14` §4.8: o jogador estava a 41,2 studs do único alvo do mundo e o alcance do golpe é 9, então nenhum acerto jamais aconteceu na sessão. Os valores novos são derivados de conta e travados por teste, não observados.
+Segue sem comprovação em Play deste snapshot: a camada de impacto no Studio com o place novo. Motivo histórico em `docs/14` §4.8: o jogador estava a 41,2 studs do único alvo. O alcance leve efetivo agora é 11 studs (6 + folga de corpo 5, cone 78°/68°); a suíte e2e trava 11 conecta / 11,6 erra. Isso não substitui Play.
 
 Desde 15/08 essa cadeia é **exercida em contrato** por `tests/combat_e2e.luau`. Em 16/08 a suíte passou de 14 para 19 casos: o pesado e o Ombro Cometa repetem os desfechos miss (41,2 studs), acerto (≤ 6 studs) e guarda. O passo `a1_impact` do [`docs/32`](32-STUDIO-PLAYTEST-RUNBOOK.md) é onde isso vira evidência de verdade. O atalho `avb-debug home` só prepara essa sessão — não a substitui.
 

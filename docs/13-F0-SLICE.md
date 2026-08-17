@@ -36,7 +36,7 @@ Itens 1–13 estão fechados em código/headless. O snapshot de implementação 
 | `SpatialService` | registro de posição/olhar; hitbox à frente, cápsula do trajeto, `resolveCometShoulder` | feito no domínio; leitura do `HumanoidRootPart` só roda no Studio |
 | `EnemyService` | spawn nas 6 âncoras, perseguição 12 studs/s, ciclo de ataque, respawn 45 s, teto 4 | feito no domínio; nunca rodou em Studio |
 | `WorldService` / `WorldPresentation` | constrói piso para cada volume canônico — inclusive transições norte/oeste e braço livre oeste —, rotas, praça, portões, cratera, marcos, iluminação, modelos low-poly, telegraph branco + símbolo e collision groups; em 15/08 a decoração da planície/rotas/cratera (`WildDecorations`), as skins de Estilhaço (`shardGearFor`) e as posições de luz do spawn (`spawnLights`) passaram a vir de dados validados | **código/headless/build feitos; aparência, colisão, legibilidade e performance não verificadas em Play** |
-| `src/shared/Data/Quests.luau` | `quest_hunt`: 3 Estilhaços, +40 XP, unlock Cometa, aceite forçado em 90 s | **itens 9/10 feitos**: `quest_elite` (1 Ancorado, +60 XP, unlock Cadência, aceite 900 s) e `quest_flow` (kind `flow_echo`, +40 XP, unlock Pulso, aceite 2700 s); cadeia sequencial caça → elite → timing |
+| `src/shared/Data/Quests.luau` | `quest_hunt`: 3 Estilhaços, +40 XP, unlock Cometa, aceite forçado em 90 s | **itens 9/10 feitos** + extras: `quest_elite`, `quest_flow`, `quest_grove` (6 errantes, +50 XP, unlock Tecelão) e `quest_remnant` (elite de novo, +80 XP); cadeia de 5 |
 | `src/shared/Data/Locale.luau` | chaves §16 em PT-BR e EN; validado no boot contra os catálogos | copy final e P1 |
 | `CombatService` | cadeia leve, guarda, aparo, pesado, quebra, dash, dummy, comet, Estilhaço, `killed` na transição vivo → morto; alvo e lado do golpe agora vêm do `SpatialService` | **itens 8/10 feitos**: postura do Pulso (250 ms, 50%, contra 8, erro 600 ms) e ciclo do elite (combo/slam alternados, slam unblockable com guarda 30%) — Studio pendente |
 | `AbilityService` | comet resolve o fighter do dummy; `CombatHit` no acerto; unlock via `ProgressionService` no bootstrap | **itens 8/10 feitos**: Cadência com janela de reentrada + eco agendado no tick; Pulso abre postura no FighterState; `onFlowEcho` credita `quest_flow` — Studio pendente |
@@ -134,6 +134,8 @@ Cadeia de 4 golpes: **5 + 5 + 6 + 10**. Janela para continuar: 0,65 s. O quarto 
 | 4 | 260 ms | 120 ms | 550 ms | cápsula 5×4×6 | `stagger_light` 220 ms |
 
 Leve contra guarda: 40% do HP passa; guarda perde o dano cheio. Costas ignoram guarda.
+
+Aquisição autoritativa (centro-a-centro): alcance 6 + folga de corpo **5** = **11 studs** no degrau 1 (cone 78° leve / 68° pesado). Playtest: colado a ~11 studs não conectava com folga 3. Dummy de treino não concede XP nem kill de carreira.
 
 ### 5.2 Ataque pesado
 
@@ -421,6 +423,7 @@ F0 mostra **três** botões de técnica. Slot vazio/bloqueado: ícone cadeado, s
 | Nível | barra de XP no topo; **STATUS** / tecla **K** abre as 5 trilhas; flash dourado no level-up | pontos só gastam via remote; cliente não calcula curva |
 | XP do kill | número dourado flutuante no monstro, como o dano | só com `xpPopup.amount > 0` do servidor |
 | Mochila | **MOCHILA** / tecla **B** — técnicas e materiais | itens F0 sem poder de combate |
+| Carreira | **CARREIRA** / tecla **J** — kills, chefes, dano, tempo | réplica do servidor; dummy não conta |
 | Menu | botão **MENU** / tecla **H**; controles, mira e tremor da câmera | não envia remote |
 | Combate | botões **ATACAR / GUARDA / DASH** (PC e toque); clique esquerdo no mundo | HUD chrome não descarta o golpe (`processed`) |
 | Mira | botão **SOLTAR MIRA** no centro enquanto travada | só apresentação local; `clearLock` não procura outro alvo |

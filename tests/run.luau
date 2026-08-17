@@ -46,6 +46,7 @@ local BiomeDecorations = require("../src/shared/Data/BiomeDecorations")
 local ProgressionCatalog = require("../src/shared/Data/ProgressionCatalog")
 local Items = require("../src/shared/Data/Items")
 local InventoryService = require("../src/server/Services/InventoryService")
+local CareerService = require("../src/server/Services/CareerService")
 local LevelUpPlayer = require("../src/client/Presentation/LevelUpPlayer")
 local StudioEvidence = require("../scripts/StudioEvidence")
 local Remotes = require("../src/shared/Remotes")
@@ -827,6 +828,11 @@ test("dados: Punho do Eclipse tem 3 skills ligadas e 1 ultimate desligada", func
 		return
 	end
 	assertEq(#char.abilityIds, 4, "quantidade de habilidades")
+	local weaver = Characters.get("echo_weaver")
+	assertTrue(weaver ~= nil and weaver.enabled, "segunda identidade no catálogo")
+	if weaver then
+		assertEq(weaver.energyFamilyId, "vital_flow", "Fluxo Vital")
+	end
 	assertEq(char.energyFamilyId, "umbral_aether", "família")
 	local enabled = 0
 	local disabled = 0
@@ -3128,7 +3134,8 @@ test("catálogo: dados reais passam na validação", function()
 	assertEq(CatalogService.getItem("shard_fragment") ~= nil, true, "item na mochila")
 	assertEq(CatalogService.getQuest("quest_elite") ~= nil, true, "objetivo 2 no catálogo")
 	assertEq(CatalogService.getQuest("quest_flow") ~= nil, true, "objetivo 3 no catálogo")
-	assertEq(#CatalogService.questChain(), 3, "cadeia com os 3 objetivos")
+	assertEq(#CatalogService.questChain(), 5, "cadeia com as 5 missões")
+	assertEq(CatalogService.getCharacter("echo_weaver") ~= nil, true, "segunda identidade")
 	assertEq(CatalogService.getNpc("npc_threshold_instructor") ~= nil, true, "instrutor no catálogo")
 	assertEq(CatalogService.getAbility("comet_shoulder") ~= nil, true, "habilidade acessível")
 	assertEq(CatalogService.getAbility("eclipse_beat") ~= nil, true, "ultimate no catálogo")
@@ -4677,13 +4684,13 @@ test("espaço: mira inválida é recusada e o cone volta para o corpo", function
 end)
 
 test("contato: alcance do módulo bate com o handler e o cone pega o mais próximo", function()
-	assertEq(HitContact.LightReachStuds[1], 9, "leve 1")
-	assertEq(HitContact.HeavyReachStuds, 9.5, "pesado")
-	assertEq(HitContact.LightHalfAngleDegrees, 65, "cone leve")
-	assertEq(HitContact.HeavyHalfAngleDegrees, 50, "cone pesado")
+	assertEq(HitContact.LightReachStuds[1], 11, "leve 1")
+	assertEq(HitContact.HeavyReachStuds, 11.5, "pesado")
+	assertEq(HitContact.LightHalfAngleDegrees, 78, "cone leve")
+	assertEq(HitContact.HeavyHalfAngleDegrees, 68, "cone pesado")
 	local source = fs.readFile("src/server/init.server.lua")
 	assertTrue(source:find("local BASIC_RANGE_STUDS = 6", 1, true) ~= nil, "handler ainda declara 6")
-	assertTrue(source:find("local BODY_ALLOWANCE_STUDS = 3", 1, true) ~= nil, "handler ainda declara folga 3")
+	assertTrue(source:find("local BODY_ALLOWANCE_STUDS = 5", 1, true) ~= nil, "handler ainda declara folga 5")
 
 	local origin = { x = 0, y = 0, z = 0 }
 	local look = { x = 0, y = 0, z = -1 }
@@ -4742,6 +4749,32 @@ test("contato: claimed só entra na folga de latência, nunca longe ou pelas cos
 		HitContact.resolveTarget(nil, "player:777", origin, look, { x = 0, y = 0, z = -20 }, 9, 65),
 		nil,
 		"pista longe demais continua miss"
+	)
+end)
+
+test("contato: frontal no alcance 11 resolve; 11,6 erra no caminho real", function()
+	local origin = { x = 0, y = 0, z = 0 }
+	local look = { x = 0, y = 0, z = -1 }
+	local reach = HitContact.LightReachStuds[1]
+	local angle = HitContact.LightHalfAngleDegrees
+	assertEq(reach, 11, "módulo no alcance 11")
+	local inside = HitContact.acquire(origin, look, {
+		{ id = "perto", position = { x = 0, y = 0, z = -10.9 } },
+	}, reach, angle)
+	assertEq(inside, "perto", "10,9 studs conecta")
+	local outside = HitContact.acquire(origin, look, {
+		{ id = "longe", position = { x = 0, y = 0, z = -11.6 } },
+	}, reach, angle)
+	assertEq(outside, nil, "11,6 studs erra")
+	assertEq(
+		HitContact.resolveTarget(inside, nil, origin, look, nil, reach, angle),
+		"perto",
+		"resolveTarget confirma o cone"
+	)
+	assertEq(
+		HitContact.resolveTarget(outside, nil, origin, look, nil, reach, angle),
+		nil,
+		"resolveTarget preserva o miss"
 	)
 end)
 
@@ -5736,7 +5769,13 @@ local function makeSaveDeps(store: any): any
 		end,
 		now = clockNow,
 		getSnapshot = function(userId: number)
-			return ProgressionService.snapshotForSave(userId)
+			local snapshot = ProgressionService.snapshotForSave(userId)
+			if snapshot then
+				local payload = snapshot :: any
+				payload.career = CareerService.snapshot(userId, clockNow())
+				return payload
+			end
+			return snapshot
 		end,
 		applySnapshot = function(userId: number, snapshot: any)
 			ProgressionService.restoreFromSave(userId, snapshot)
@@ -6037,6 +6076,117 @@ print("")
 print("== Testes F0 — Anime Verse Battlegrounds ==")
 print("")
 
+test("carreira: totais autoritativos persistem no snapshot", function()
+	CareerService.init()
+	CareerService.registerPlayer(1600, 100)
+	CareerService.creditKill(1600, "enemy_wandering_shard", false)
+	CareerService.creditKill(1600, "enemy_anchored_shard", true)
+	CareerService.creditKill(1600, "npc_training_dummy", false)
+	CareerService.creditDamage(1600, 14)
+	CareerService.creditDamage(1600, 6)
+	CareerService.creditDeath(1600)
+	CareerService.creditTechnique(1600)
+	CareerService.creditConsolidation(1600)
+	CareerService.creditQuest(1600)
+	local live = CareerService.viewFor(1600, 160)
+	assertTrue(live ~= nil, "view")
+	if live then
+		assertEq(live.monsterKills, 1, "dummy não conta")
+		assertEq(live.bossKills, 1, "elite")
+		assertEq(live.damageDealt, 20, "dano")
+		assertEq(live.playTimeSeconds, 60, "sessão 60 s")
+		assertEq(live.deaths, 1, "queda")
+		assertEq(live.techniquesUsed, 1, "técnica")
+		assertEq(live.consolidations, 1, "marco")
+		assertEq(live.questsCompleted, 1, "missão")
+	end
+	local snap = CareerService.snapshot(1600, 160)
+	CareerService.unregisterPlayer(1600, 160)
+	CareerService.registerPlayer(1600, 200)
+	CareerService.restore(1600, snap, 200)
+	local restored = CareerService.viewFor(1600, 200)
+	assertTrue(restored ~= nil, "restore")
+	if restored and snap then
+		assertEq(restored.monsterKills, snap.monsterKills, "monstros")
+		assertEq(restored.bossKills, snap.bossKills, "chefes")
+		assertEq(restored.damageDealt, snap.damageDealt, "dano")
+		assertEq(restored.playTimeSeconds, snap.playTimeSeconds, "tempo persistido")
+	end
+	assertEq(CareerService.formatPlayTime(75), "1m 15s", "formato")
+	CareerService.unregisterPlayer(1600, 200)
+end)
+
+test("save: carreira entra no ProfileRoot e volta no rejoin", function()
+	fakeNow = 68000
+	ProgressionService.init()
+	ProgressionService.setNow(clockNow)
+	CareerService.init()
+	CareerService.registerPlayer(1610, fakeNow)
+	CareerService.creditKill(1610, "enemy_wandering_shard", false)
+	CareerService.creditKill(1610, "enemy_anchored_shard", true)
+	CareerService.creditDamage(1610, 42)
+	local store = makeMockStore()
+	SaveService.init(makeSaveDeps(store))
+	ProgressionService.registerPlayer(1610)
+	local profile = SaveService.loadProfile(1610)
+	assertTrue(profile ~= nil, "perfil")
+	SaveService.markDirty(1610)
+	SaveService.releaseProfile(1610)
+	CareerService.unregisterPlayer(1610, fakeNow)
+	ProgressionService.unregisterPlayer(1610)
+	ProgressionService.registerPlayer(1610)
+	CareerService.registerPlayer(1610, fakeNow + 10)
+	local restored = SaveService.loadProfile(1610)
+	assertTrue(restored ~= nil and type(restored.career) == "table", "career no save")
+	if restored then
+		CareerService.restore(1610, restored.career, fakeNow + 10)
+	end
+	local view = CareerService.viewFor(1610, fakeNow + 10)
+	assertTrue(view ~= nil, "view")
+	if view then
+		assertEq(view.monsterKills, 1, "errante persistiu")
+		assertEq(view.bossKills, 1, "elite persistiu")
+		assertEq(view.damageDealt, 42, "dano persistiu")
+	end
+	SaveService.releaseProfile(1610)
+	CareerService.unregisterPlayer(1610, fakeNow + 10)
+	ProgressionService.setNow(nil)
+	ProgressionService.unregisterPlayer(1610)
+end)
+
+test("bots: nível vem do catálogo e não é string vazia", function()
+	local shard = Npcs.get("enemy_wandering_shard")
+	local elite = Npcs.get("enemy_anchored_shard")
+	assertEq(Npcs.levelLabel(shard), "Nv. 8", "errante")
+	assertEq(Npcs.levelLabel(elite), "Nv. 18", "elite")
+	assertTrue(Npcs.levelLabel(shard) ~= "", "rótulo")
+end)
+
+test("muralha: paleta usa mais de um material, não Slate único", function()
+	local style = require("../src/shared/Data/SceneryPresentation").style()
+	assertTrue(style.wallMaterial ~= "Slate", "corpo não é Slate")
+	assertTrue(style.wallMaterial ~= style.wallCapMaterial, "tampa distinta")
+end)
+
+test("técnicas F0: as três existem, têm VFX e desbloqueiam no caminho real", function()
+	local AbilityVfx = require("../src/shared/Data/AbilityVfx")
+	ProgressionService.init()
+	ProgressionService.registerPlayer(1601)
+	for _, abilityId in { "comet_shoulder", "broken_cadence", "pulse_return" } do
+		local ab = Abilities.get(abilityId)
+		assertTrue(ab ~= nil and ab.enabled, abilityId .. " no catálogo")
+		assertTrue(AbilityVfx.get(abilityId) ~= nil, abilityId .. " tem VFX")
+		assertFalse(ProgressionService.isAbilityUnlocked(1601, abilityId), abilityId .. " começa locked")
+	end
+	assertTrue(ProgressionService.grantUnlock(1601, "unlock_comet_shoulder"), "grant cometa")
+	assertTrue(ProgressionService.grantUnlock(1601, "unlock_broken_cadence"), "grant cadência")
+	assertTrue(ProgressionService.grantUnlock(1601, "unlock_pulse_return"), "grant pulso")
+	assertTrue(ProgressionService.isAbilityUnlocked(1601, "comet_shoulder"), "cometa unlock")
+	assertTrue(ProgressionService.isAbilityUnlocked(1601, "broken_cadence"), "cadência unlock")
+	assertTrue(ProgressionService.isAbilityUnlocked(1601, "pulse_return"), "pulso unlock")
+	ProgressionService.unregisterPlayer(1601)
+end)
+
 test("HUD: XP flutuante só com valor positivo do servidor", function()
 	assertTrue(CombatHudController.shouldShowXp({ amount = 25, targetId = "e1" }), "kill mostra XP")
 	assertFalse(CombatHudController.shouldShowXp({ amount = 0 }), "zero some")
@@ -6110,15 +6260,28 @@ test("cliente: snapshot e delta carregam nível e pontos", function()
 			unspentPoints = 6,
 			pendingLevels = 1,
 			spent = { vitality = 2, umbral = 0, impact = 0, guard = 0, resonance = 0 },
+			career = { monsterKills = 3, bossKills = 1, damageDealt = 40, playTimeSeconds = 75 },
 		}),
 		"snapshot aceito"
 	)
 	assertEq(state.accountLevel, 4, "nível")
 	assertEq(state.unspentPoints, 6, "pontos")
 	assertEq(state.spent.vitality, 2, "trilha")
-	ClientState.applyDelta(state, { unspentPoints = 5, feedbackKey = "hud.feedback_spent" })
+	assertTrue(state.career ~= nil, "carreira no snapshot")
+	if state.career then
+		assertEq(state.career.monsterKills, 3, "kills na réplica")
+		assertEq(state.career.playTimeSeconds, 75, "tempo na réplica")
+	end
+	ClientState.applyDelta(state, {
+		unspentPoints = 5,
+		feedbackKey = "hud.feedback_spent",
+		career = { monsterKills = 4, bossKills = 1, damageDealt = 46, playTimeSeconds = 80 },
+	})
 	assertEq(state.unspentPoints, 5, "gasto chegou")
 	assertEq(ClientState.feedback(state), "hud.feedback_spent", "feedback do gasto")
+	if state.career then
+		assertEq(state.career.monsterKills, 4, "delta atualiza carreira")
+	end
 end)
 
 test("combate: impacto escala o pesado e respeita o teto de 6%", function()

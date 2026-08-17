@@ -31,6 +31,20 @@ local Characters: { [string]: CharacterDefinition } = {
 		abilityIds = { "comet_shoulder", "broken_cadence", "pulse_return", "eclipse_beat" },
 		enabled = true,
 	},
+
+	-- F1-early: Tecelão de Ecos (docs/08). Mesmas três técnicas do F0
+	-- (importáveis) + família Fluxo Vital. Desbloqueio in-world (quest_grove).
+	echo_weaver = {
+		id = "echo_weaver",
+		contentVersion = 1,
+		displayNameKey = "character.echo_weaver.name",
+		descriptionKey = "character.echo_weaver.desc",
+		energyFamilyId = "vital_flow",
+		combatArchetype = "pressure_echo",
+		baseHealth = 120,
+		abilityIds = { "comet_shoulder", "broken_cadence", "pulse_return", "eclipse_beat" },
+		enabled = true,
+	},
 }
 
 local CharacterCatalog = {}

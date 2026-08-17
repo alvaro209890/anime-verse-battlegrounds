@@ -173,6 +173,8 @@ IDs estáveis e frame data de implementação: `docs/13-F0-SLICE.md` §6 (`comet
 
 ### 6.7 Tecelão de Ecos
 
+**F0 (catálogo):** identidade `echo_weaver` existe e destrava por `quest_grove` (`unlock_echo_weaver`). Usa Fluxo Vital e as três técnicas do Punho — não há remote de troca de personagem nem o kit próprio desta seção nesta fatia.
+
 **Eixo original:** gravar ações próprias e repeti-las com atraso reduzido; ecos não são aliados autônomos.
 
 | Ação | Cap/Imp | C / CD | Comportamento e contra-jogo |

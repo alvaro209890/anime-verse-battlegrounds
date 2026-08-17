@@ -249,8 +249,12 @@ continua dono de HP, número e morte.
 
 `claimedTargetId` no `BasicAttackIntent` é pista, não alvo. O cone do servidor
 vence quando acerta; a pista só entra no miss espacial, e só se a posição
-conhecida ainda cabe em `alcance + 5 studs` e no cone alargado em 15°. 20
+conhecida ainda cabe em `alcance + 7 studs` e no cone alargado em 15°. 20
 studs continuam miss. A fronteira PvP e a vida ≤ 0 recusam a pista.
+
+O cone autoritativo do golpe leve usa alcance efetivo **11 studs** (6 + folga
+de corpo 5) e meio-ângulo 78°; o pesado 11,5 / 68°. Folga 3 deixava o jogador
+colado (centro-a-centro ~11) fora do hit.
 
 O `CombatEvent` agora carrega `view`: `dealt` para quem bateu, `taken` para o
 outro jogador. Quem apanha sente câmera/som/hit-stop no mesmo frame em que o

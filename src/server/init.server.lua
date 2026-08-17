@@ -47,6 +47,7 @@ local Npcs = require(ReplicatedStorage.Shared.Data.Npcs)
 local Quests = require(ReplicatedStorage.Shared.Data.Quests)
 local Items = require(ReplicatedStorage.Shared.Data.Items)
 local InventoryService = require(Services.InventoryService)
+local CareerService = require(Services.CareerService)
 local RemoteEnvelope = require(ReplicatedStorage.Shared.RemoteEnvelope)
 local WorldPresentation = require(ReplicatedStorage.Shared.Data.WorldPresentation)
 local SpawnDecorations = require(ReplicatedStorage.Shared.Data.SpawnDecorations)
@@ -72,6 +73,7 @@ InventoryService.init({
 	getItem = CatalogService.getItem,
 	capacity = Items.CAPACITY,
 })
+CareerService.init()
 print("[Bootstrap] catálogo validado")
 
 local locomotionOk, locomotionReason = Locomotion.validate()
@@ -138,6 +140,7 @@ WorldService.init({
 	spawnDecorations = SpawnDecorations,
 	wildDecorations = WildDecorations,
 	biomeDecorations = BiomeDecorations,
+	npcs = Npcs,
 	dayNight = DayNightCycle,
 })
 -- Ciclo dia/noite: sample puro → Lighting no Heartbeat (~10 Hz interno).
@@ -154,7 +157,7 @@ SpatialService.init({ geometry = Geometry })
 -- raio dos dois: ~1,5 stud do jogador + ~1,5 stud do alvo (torso 2,2 × escala
 -- 0,9 do Estilhaço). Sem essa folga, encostar no inimigo ainda media mais que
 -- o alcance e o golpe passava reto — foi o que o playtest das 15h mostrou.
-local BODY_ALLOWANCE_STUDS = 3
+local BODY_ALLOWANCE_STUDS = 5
 local BASIC_RANGE_STUDS = 6
 -- Cresce com o degrau da cadeia, como a amplitude da pose.
 local BASIC_LIGHT_REACH_STUDS: { number } = {
@@ -167,8 +170,8 @@ local BASIC_HEAVY_REACH_STUDS = BASIC_RANGE_STUDS + BODY_ALLOWANCE_STUDS + 0.5
 -- Cadência Quebrada declara range 6 no catálogo: mesma folga de corpo.
 local CADENCE_REACH_STUDS = BASIC_RANGE_STUDS + BODY_ALLOWANCE_STUDS
 -- Abertura horizontal (meio-ângulo). O pesado é mais preciso que a cadeia.
-local BASIC_LIGHT_HALF_ANGLE_DEGREES = 65
-local BASIC_HEAVY_HALF_ANGLE_DEGREES = 50
+local BASIC_LIGHT_HALF_ANGLE_DEGREES = 78
+local BASIC_HEAVY_HALF_ANGLE_DEGREES = 68
 -- Intervalo mínimo do servidor entre golpes básicos (alerta 14/08): alinhado
 -- ao LIGHT_WINDOW do CombatService (0,65 s). A cadeia leve continua dentro da
 -- janela; uma NOVA cadeia (ou um pesado) só sai depois da pausa. Sem isto, um
@@ -235,7 +238,9 @@ SaveService.init({
 	getSnapshot = function(userId: number)
 		local snapshot = ProgressionService.snapshotForSave(userId)
 		if snapshot then
-			(snapshot :: any).inventory = InventoryService.snapshot(userId)
+			local payload = snapshot :: any
+			payload.inventory = InventoryService.snapshot(userId)
+			payload.career = CareerService.snapshot(userId, os.clock())
 		end
 		return snapshot
 	end,
@@ -309,6 +314,7 @@ QuestService.init({
 		end
 		if event.state == "completed" then
 			InventoryService.grant(userId, "umbral_dust", 1)
+			CareerService.creditQuest(userId)
 		end
 		local view = ProgressionService.viewFor(userId)
 		local payload: { [string]: any } = {
@@ -801,6 +807,7 @@ PlayerSessionService.init({
 	getFighter = CombatService.getFighter,
 	playerFighterId = CombatService.playerFighterId,
 	onSnapshot = function(player: Player, snapshot: { any })
+		snapshot.career = CareerService.viewFor(player.UserId, os.clock())
 		RemoteGateway.fireClient(player, Remotes.Names.SessionSnapshot, snapshot)
 	end,
 	getPlayerZone = ZoneService.getPlayerZone,
@@ -831,6 +838,7 @@ local function progressionPayload(userId: number): { [string]: any }
 		spent = view.spent,
 		vitals = view.vitals,
 		inventory = if InventoryService.snapshot(userId) then InventoryService.snapshot(userId).stackables else {},
+		career = CareerService.viewFor(userId, os.clock()),
 	}
 end
 
@@ -972,6 +980,7 @@ local function grantKillCredit(player: Player, fighterId: string, now: number): 
 	for _, drop in Items.lootForNpc(npcId) do
 		InventoryService.grant(player.UserId, drop.itemId, drop.amount)
 	end
+	CareerService.creditKill(player.UserId, npcId, npcDef.attackPattern == "elite")
 	-- Item 11: XP/flags mudaram — o autosave precisa persistir.
 	SaveService.markDirty(player.UserId)
 	-- Sempre empurra o popup de XP do kill. Se o objetivo também avançou,
@@ -1009,6 +1018,7 @@ local function applyDeathPenalty(userId: number, pvp: boolean): ()
 		return
 	end
 	deathPenalized[userId] = fighter.diedAt
+	CareerService.creditDeath(userId)
 	local zoneId = ZoneService.getPlayerZone(userId)
 	local zone = CatalogService.getZone(zoneId)
 	local zoneKind = if zone then zone.kind else "safe"
@@ -1208,6 +1218,9 @@ RemoteGateway.onClientIntent(Remotes.Names.AbilityIntent, function(player: Playe
 		latencyMs = math.floor((os.clock() - resolveStartedAt) * 1000),
 		flowGranted = 0,
 	})
+	if ok then
+		CareerService.creditTechnique(player.UserId)
+	end
 	if not ok then
 		RemoteGateway.fireClient(player, Remotes.Names.AbilityRejected, {
 			abilityId = abilityId,
@@ -1341,6 +1354,9 @@ RemoteGateway.onClientIntent(Remotes.Names.BasicAttackIntent, function(player: P
 		if result.pulseCounter then
 			applyPulseCounterToPlayer(player.UserId, target, now)
 		end
+		if result.damage and result.damage > 0 then
+			CareerService.creditDamage(player.UserId, result.damage)
+		end
 		if not result.iframe then
 			fireDealtAndTaken(
 				player,
@@ -1407,6 +1423,9 @@ InteractionService.init({
 		})
 		SaveService.markDirty(userId)
 		local extra: { [string]: any } = {}
+		if receipt.consolidated > 0 then
+			CareerService.creditConsolidation(userId)
+		end
 		if (receipt.levelsGained or 0) > 0 then
 			extra.levelsGained = receipt.levelsGained
 			extra.pointsGranted = receipt.pointsGranted
@@ -1594,6 +1613,10 @@ game.Players.PlayerAdded:Connect(function(player: Player)
 	if profile and type(profile.inventory) == "table" then
 		InventoryService.restore(player.UserId, profile.inventory)
 	end
+	CareerService.registerPlayer(player.UserId, os.clock())
+	if profile and type(profile.career) == "table" then
+		CareerService.restore(player.UserId, profile.career, os.clock())
+	end
 	if InventoryService.count(player.UserId, "traveler_wrap") <= 0 then
 		if InventoryService.grant(player.UserId, "traveler_wrap", 1).granted > 0 then
 			SaveService.markDirty(player.UserId)
@@ -1637,7 +1660,9 @@ game.Players.PlayerAdded:Connect(function(player: Player)
 		end
 		local snapshot = PlayerSessionService.buildSnapshot(player.UserId, "eclipse_fist", "umbral_aether")
 		if snapshot then
-			RemoteGateway.fireClient(player, Remotes.Names.SessionSnapshot, snapshot)
+			local payload = snapshot :: any
+			payload.career = CareerService.viewFor(player.UserId, os.clock())
+			RemoteGateway.fireClient(player, Remotes.Names.SessionSnapshot, payload)
 		end
 	end
 	local function setupCharacter(character: Model)
@@ -1716,6 +1741,7 @@ game.Players.PlayerRemoving:Connect(function(player: Player)
 	-- Item 11: libera o lock do perfil (salva se sujo) — §11.2 item 1.
 	SaveService.releaseProfile(player.UserId)
 	InventoryService.unregisterPlayer(player.UserId)
+	CareerService.unregisterPlayer(player.UserId, os.clock())
 end)
 
 -- Aceite forçado do objetivo após 90 s (docs/13 §10). Heartbeat barato: o
@@ -1727,6 +1753,10 @@ task.spawn(function()
 		for _, player in game.Players:GetPlayers() do
 			if PlayerSessionService.isReady(player.UserId) then
 				QuestService.tick(player.UserId, now)
+				local career = CareerService.viewFor(player.UserId, now)
+				if career then
+					RemoteGateway.fireClient(player, Remotes.Names.StateDelta, { career = career })
+				end
 			end
 		end
 	end

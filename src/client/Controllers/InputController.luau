@@ -20,6 +20,7 @@ export type SemanticAction =
 	| "ToggleHelp"
 	| "ToggleProgression"
 	| "ToggleBag"
+	| "ToggleCareer"
 
 export type Controller = {
 	state: any,
@@ -45,6 +46,7 @@ local NON_COMBAT: { [string]: boolean } = {
 	ToggleHelp = true,
 	ToggleProgression = true,
 	ToggleBag = true,
+	ToggleCareer = true,
 	ZoneHoldDown = true,
 	ZoneHoldUp = true,
 	Interact = true,
@@ -268,6 +270,8 @@ function InputController.start(
 				dispatch("ToggleProgression")
 			elseif key == Enum.KeyCode.B or key == Enum.KeyCode.DPadDown then
 				dispatch("ToggleBag")
+			elseif key == Enum.KeyCode.J or key == Enum.KeyCode.DPadLeft then
+				dispatch("ToggleCareer")
 			end
 		end)
 	)

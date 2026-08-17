@@ -316,6 +316,10 @@ Na tela: o kill mostra `+N XP` flutuante (mesmo ancoradouro do dano). O tracker 
 
 A **mochila** (tecla B) guarda técnicas desbloqueadas e materiais empilháveis (`shard_fragment`, `void_splinter`, `umbral_dust`, `traveler_wrap`). Nenhum item da fatia concede dano, vida, guarda ou recurso.
 
+O **placar de carreira** (tecla J) replica totais autoritativos: monstros e chefes abatidos, dano causado, tempo de jogo, quedas, técnicas usadas, consolidações e missões concluídas. Dummy de treino não conta como monstro. O cliente só mostra o que o servidor enviou.
+
+Identidades extras (Tecelão de Ecos) entram por missão, não por compra. Bots mostram o nível do catálogo (`Nv. 8` / `Nv. 18`) acima da cabeça.
+
 ### 7.2 Maestria de técnica
 
 Cada técnica possui níveis 1–10. XP para passar do nível `n` ao `n + 1` é:

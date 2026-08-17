@@ -6,6 +6,9 @@
 > validação headless — 241 casos de domínio, 73 de animação/apresentação, 67 de
 > fuzz e 19 de simulação de combate ponta a ponta.
 
+> **Executado em 17/08:** W1/A1/W2/R1 percorridos na sessão de Play do mesmo
+> dia; matriz atualizada em `docs/12` §7 e estado em `docs/06` §5.
+
 O mesmo roteiro existe em forma executável:
 
 ```bash
@@ -28,8 +31,8 @@ bastante para a camada de impacto existir.
 lune run scripts/avb-debug.luau sync    # exit 0 segue · exit 2 = reabra, não meça
 ```
 
-Depois: Play, encostar no dummy (≤ 6 studs), acertar leve, pesado e Ombro Cometa
-(passo `a1_impact`). Com o Studio fechado, o mesmo atalho imprime em JSON:
+Depois: Play, encostar no dummy (≤ 11 studs centro-a-centro), acertar leve, pesado e Ombro Cometa
+(passo `a1_impact`). Abrir **J** confirma o placar de carreira (dummy não conta). Com o Studio fechado, o mesmo atalho imprime em JSON:
 
 ```bash
 lune run scripts/avb-debug.luau home

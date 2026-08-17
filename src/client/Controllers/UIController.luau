@@ -246,6 +246,33 @@ function UIController.new(deps: { [string]: any }): any
 	debugKit.TextColor3 = MUTED
 	debugKit.Visible = false
 
+	local careerButton = button("Career", gui, UDim2.fromOffset(88, 40), UDim2.new(1, -388, 0, 14))
+	careerButton.TextSize = 13
+	local careerPanel = frame("CareerPanel", gui, UDim2.fromOffset(360, 320), UDim2.new(0.5, -180, 0.5, -160))
+	careerPanel.Visible = false
+	careerPanel.ZIndex = 18
+	local careerTitle = label("Title", careerPanel, UDim2.new(1, -16, 0, 26), UDim2.fromOffset(8, 8))
+	careerTitle.TextXAlignment = Enum.TextXAlignment.Center
+	careerTitle.ZIndex = 19
+	local CAREER_KEYS = {
+		{ key = "monsterKills", locale = "hud.career.monsters" },
+		{ key = "bossKills", locale = "hud.career.bosses" },
+		{ key = "damageDealt", locale = "hud.career.damage" },
+		{ key = "playTimeSeconds", locale = "hud.career.time" },
+		{ key = "deaths", locale = "hud.career.deaths" },
+		{ key = "techniquesUsed", locale = "hud.career.techniques" },
+		{ key = "consolidations", locale = "hud.career.consolidations" },
+		{ key = "questsCompleted", locale = "hud.career.quests" },
+	}
+	local careerLines: { TextLabel } = {}
+	for index, _ in CAREER_KEYS do
+		local line =
+			label("C" .. index, careerPanel, UDim2.new(1, -24, 0, 22), UDim2.fromOffset(12, 38 + (index - 1) * 24))
+		line.ZIndex = 19
+		table.insert(careerLines, line)
+	end
+	local careerClose = button("CloseCareer", careerPanel, UDim2.new(1, -24, 0, 28), UDim2.fromOffset(12, 280))
+	careerClose.ZIndex = 19
 	local bagButton = button("Bag", gui, UDim2.fromOffset(88, 40), UDim2.new(1, -294, 0, 14))
 	bagButton.TextSize = 14
 	local statusButton = button("Status", gui, UDim2.fromOffset(88, 40), UDim2.new(1, -200, 0, 14))
@@ -369,6 +396,7 @@ function UIController.new(deps: { [string]: any }): any
 		"hud.help_gate",
 		"hud.help_status",
 		"hud.help_bag",
+		"hud.help_career",
 		"hud.settings_where",
 	}
 	local helpLines: { TextLabel } = {}
@@ -415,6 +443,13 @@ function UIController.new(deps: { [string]: any }): any
 		hint = hint,
 		unlockAim = unlockAim,
 		debugKit = debugKit,
+		careerButton = careerButton,
+		careerPanel = careerPanel,
+		careerTitle = careerTitle,
+		careerLines = careerLines,
+		careerKeys = CAREER_KEYS,
+		careerClose = careerClose,
+		careerVisible = false,
 		bagButton = bagButton,
 		bagPanel = bagPanel,
 		bagTitle = bagTitle,
@@ -469,6 +504,15 @@ function UIController.new(deps: { [string]: any }): any
 		if controller.bagVisible then
 			controller.helpVisible = false
 			controller.statusVisible = false
+			controller.careerVisible = false
+		end
+	end
+	local function toggleCareer()
+		controller.careerVisible = not controller.careerVisible
+		if controller.careerVisible then
+			controller.helpVisible = false
+			controller.statusVisible = false
+			controller.bagVisible = false
 		end
 	end
 	local function releaseAim()
@@ -503,6 +547,10 @@ function UIController.new(deps: { [string]: any }): any
 		controller.statusVisible = false
 	end)
 	bagButton.Activated:Connect(toggleBag)
+	careerButton.Activated:Connect(toggleCareer)
+	careerClose.Activated:Connect(function()
+		controller.careerVisible = false
+	end)
 	bagClose.Activated:Connect(function()
 		controller.bagVisible = false
 	end)
@@ -514,6 +562,8 @@ function UIController.new(deps: { [string]: any }): any
 				toggleStatus()
 			elseif action == "ToggleBag" then
 				toggleBag()
+			elseif action == "ToggleCareer" then
+				toggleCareer()
 			elseif action == "BasicLight" or action == "BasicHeavy" or action == "Dash" then
 				controller.helpVisible = false
 			end
@@ -624,6 +674,28 @@ function UIController.render(controller: any, elapsed: number): ()
 		controller.objective.Visible = true
 	else
 		controller.objective.Visible = false
+	end
+	controller.careerButton.Text = controller.locale.get("hud.career_button", localeId)
+	controller.careerPanel.Visible = controller.careerVisible == true
+	if controller.careerVisible then
+		controller.careerTitle.Text = controller.locale.get("hud.career_title", localeId)
+		controller.careerClose.Text = controller.locale.get("hud.settings_close", localeId)
+		local career = state.career or {}
+		for index, spec in controller.careerKeys do
+			local value = career[spec.key] or 0
+			local shown = tostring(value)
+			if spec.key == "playTimeSeconds" then
+				local total = math.max(0, math.floor(value))
+				local hours = math.floor(total / 3600)
+				local minutes = math.floor((total % 3600) / 60)
+				local secs = total % 60
+				shown = if hours > 0
+					then ("%dh %02dm"):format(hours, minutes)
+					elseif minutes > 0 then ("%dm %02ds"):format(minutes, secs)
+					else ("%ds"):format(secs)
+			end
+			controller.careerLines[index].Text = controller.locale.get(spec.locale, localeId) .. "  " .. shown
+		end
 	end
 	controller.bagButton.Text = controller.locale.get("hud.bag_button", localeId)
 	controller.bagPanel.Visible = controller.bagVisible == true

@@ -75,10 +75,40 @@ local Quests: { [string]: QuestDefinition } = {
 		acceptFlag = "quest_flow_accepted",
 		enabled = true,
 	},
+
+	-- Depois da cadeia F0: caça maior no campo, destrava o Tecelão de Ecos.
+	quest_grove = {
+		id = "quest_grove",
+		trackerKey = "quest.grove.tracker",
+		kind = "kill",
+		targetId = "enemy_wandering_shard",
+		requiredCount = 6,
+		giverNpcId = "npc_threshold_instructor",
+		autoAcceptAfterSeconds = 2800,
+		xpReward = 50,
+		unlockFlag = "unlock_echo_weaver",
+		acceptFlag = "quest_grove_accepted",
+		enabled = true,
+	},
+
+	-- Retorno à cratera: outro crédito no elite (cooldown de XP do NPC segue).
+	quest_remnant = {
+		id = "quest_remnant",
+		trackerKey = "quest.remnant.tracker",
+		kind = "kill",
+		targetId = "enemy_anchored_shard",
+		requiredCount = 1,
+		giverNpcId = "npc_threshold_instructor",
+		autoAcceptAfterSeconds = 3200,
+		xpReward = 80,
+		unlockFlag = nil,
+		acceptFlag = "quest_remnant_accepted",
+		enabled = true,
+	},
 }
 
--- Ordem de oferta na fatia: caça → elite → timing (docs/13 §10).
-local CHAIN: { string } = { "quest_hunt", "quest_elite", "quest_flow" }
+-- Ordem: cadeia F0 e depois as missões extras.
+local CHAIN: { string } = { "quest_hunt", "quest_elite", "quest_flow", "quest_grove", "quest_remnant" }
 
 local QuestCatalog = {}
 

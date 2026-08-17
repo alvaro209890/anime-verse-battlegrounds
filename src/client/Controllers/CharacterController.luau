@@ -328,7 +328,7 @@ function CharacterController.claimTarget(controller: Controller, isHeavy: boolea
 	if not origin or not look then
 		return nil
 	end
-	local reach = if isHeavy then hitContact.HeavyReachStuds else hitContact.LightReachStuds[1]
+	local reach = if isHeavy then hitContact.HeavyReachStuds else hitContact.LightReachStuds[4]
 	local halfAngle = if isHeavy then hitContact.HeavyHalfAngleDegrees else hitContact.LightHalfAngleDegrees
 	return hitContact.acquire(
 		origin,

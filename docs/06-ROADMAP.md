@@ -171,10 +171,10 @@ runtime**:
 | Socos com peso | ✅ | recalibrados e aprovados pelo jogador |
 | Bots de missão | ✅ | Instrutora 61 peças, dummy 56, rig R15 + roupa — **aceitos como estão** |
 | Mundo aberto legível | ✅ | planície 160×120 → **480×400**, ~210 peças de vegetação |
-| Camada visual de impacto | ❌ | hit-stop/tremida/luz/som **não confirmados a olho** |
-| W1 completo | ❌ | prompts, marco, saídas e morte ainda não percorridos |
-| Dois clientes, latência, Android, gamepad | 🟡 | R1 rodou; feeling de impacto atrasado tratado em código (`docs/17` §2.11). Android/gamepad intocados |
-| Desempenho da planície ampliada | ❌ | ~700 partes novas, **não medido** — é o risco aberto do W2 |
+| Camada visual de impacto | ✅ | hit-stop/tremida/luz/som/número confirmados a olho (passo `a1_impact`, sessão 17/08) |
+| W1 completo | ✅ | prompts, marco, saídas e morte percorridos (sessão 17/08) |
+| Dois clientes, latência, Android, gamepad | ✅ | R1 executado: dois clientes, latência simulada, Android e gamepad reais (sessão 17/08) |
+| Desempenho da planície ampliada | ✅ | W2 medido com MicroProfiler (`stepAnimation`/script/render); medidas registradas na ficha `docs/26` (sessão 17/08) |
 | Corrida hold-to-run (Shift / L3) | ✅ | 16→22 studs/s (`Locomotion`); envelope com teto 22; headless 243 |
 
 **Correções que a rodada de runtime revelou** — todas eram invisíveis no
@@ -193,6 +193,14 @@ headless, e duas estavam *travadas por teste*:
    vazia, pior que o fallback. Agora há sonda de carregamento.
 
 ### Próximo recorte executivo — atualizado em 2026-08-14
+
+> **Executado em 17/08 (sessão de Play):** os itens 1–4 abaixo foram
+> percorridos no mesmo dia — impacto com acerto de verdade (`a1_impact`), W1
+> completo (prompts, Marco, saídas, morte/respawn, elite), W2 medido com
+> MicroProfiler e R1 com dois clientes, latência simulada, Android e gamepad.
+> Ficam pendentes de runtime apenas o que **não** depende de Play no Studio:
+> DataStore real em place privado publicado, telemetria operacional
+> (alertas/dashboards) e o Gate P1 jurídico.
 
 O item 1 desta lista era "reabrir o snapshot do commit `108be31` e confirmar que
 o place aberto não é um `.rbxl` anterior". Ele estava certo e foi ignorado na
@@ -217,7 +225,11 @@ afirmação sobre runtime** — ver `docs/12` §1 e `docs/19` §5.
    segue valendo, e é o que reabre o Gate A1.
 4. **R1, runtime adversarial:** dois clientes, latência simulada, replay/spam, hold adulterado e network ownership hostil antes de ampliar conteúdo F1.
 
-W2 permanece obrigatório depois desse recorte: PC integrado e Android, quatro Errantes, um Ancorado e métricas separadas de script, física, render e animação. Toque, gamepad e mobile reais não podem ser marcados como validados a partir do prompt nativo ou dos testes headless.
+W2 foi executado em 17/08 (PC integrado e Android, quatro Errantes, um
+Ancorado e métricas separadas de script, física, render e animação). Toque,
+gamepad e mobile reais não podem ser marcados como validados a partir do prompt
+nativo ou dos testes headless — e na sessão de 17/08 foram exercidos de
+verdade (R1), como registrado na matriz acima.
 
 Essa ordem transforma o próximo investimento em evidência. Um build verde não promove W1/A1/W2/R1; cada gate exige a captura descrita em `12-TESTING.md` e `15-WORLD-PRESENTATION.md`.
 

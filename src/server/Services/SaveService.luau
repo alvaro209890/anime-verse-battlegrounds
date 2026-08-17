@@ -111,6 +111,16 @@ local function newTemplate(userId: number, sessionId: string): { any }
 			stackables = {},
 			revision = 0,
 		},
+		career = {
+			monsterKills = 0,
+			bossKills = 0,
+			damageDealt = 0,
+			playTimeSeconds = 0,
+			deaths = 0,
+			techniquesUsed = 0,
+			consolidations = 0,
+			questsCompleted = 0,
+		},
 		characters = {},
 		abilities = {},
 		settings = {
@@ -223,6 +233,9 @@ function SaveService.saveProfile(userId: number): boolean
 				}
 			if type(snapshot.inventory) == "table" then
 				profile.data.inventory = snapshot.inventory
+			end
+			if type(snapshot.career) == "table" then
+				profile.data.career = snapshot.career
 			end
 			-- abilities.{id}.unlockedAt — sem masteryXp na fatia (docs/13 §11).
 			local abilities = profile.data.abilities

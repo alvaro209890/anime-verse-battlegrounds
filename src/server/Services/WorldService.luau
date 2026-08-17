@@ -37,6 +37,7 @@ export type WorldDeps = {
 	spawnDecorations: any,
 	wildDecorations: any,
 	biomeDecorations: any?,
+	npcs: any?,
 	-- Catálogo puro do ciclo dia/noite (`DayNightCycle`). Opcional só para
 	-- chamadas legadas de teste; o bootstrap da F0 sempre injeta.
 	dayNight: any?,
@@ -858,6 +859,30 @@ local function buildShardBody(visualRoot: BasePart, recipe: any, shardGear: { an
 	end
 end
 
+local function attachLevelBillboard(model: Model, levelLabel: string): ()
+	local root = model.PrimaryPart or model:FindFirstChild("HumanoidRootPart")
+	if not root or not root:IsA("BasePart") or levelLabel == "" then
+		return
+	end
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "AvbLevel"
+	gui.Adornee = root
+	gui.AlwaysOnTop = true
+	gui.Size = UDim2.fromOffset(80, 18)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, 4.6, 0)
+	gui.MaxDistance = 90
+	gui.Parent = model
+	local label = Instance.new("TextLabel")
+	label.BackgroundTransparency = 1
+	label.Size = UDim2.fromScale(1, 1)
+	label.Font = Enum.Font.GothamBold
+	label.Text = levelLabel
+	label.TextColor3 = Color3.fromRGB(255, 224, 140)
+	label.TextStrokeTransparency = 0.2
+	label.TextScaled = true
+	label.Parent = gui
+end
+
 local function createActorModel(
 	name: string,
 	actorId: string,
@@ -872,6 +897,15 @@ local function createActorModel(
 	model:SetAttribute("PresentationActor", true)
 	model:SetAttribute("ActorId", actorId)
 	model:SetAttribute("NpcId", npcId)
+	local levelLabel = ""
+	local npcCatalog = WorldService.deps and WorldService.deps.npcs
+	if npcCatalog and type(npcCatalog.get) == "function" then
+		local def = npcCatalog.get(npcId)
+		if def and type(def.displayLevel) == "number" and def.displayLevel >= 1 then
+			levelLabel = ("Nv. %d"):format(math.floor(def.displayLevel))
+		end
+	end
+	model:SetAttribute("DisplayLevel", levelLabel)
 	model:SetAttribute("SkinId", recipe.skinNameKey or npcId)
 	model:SetAttribute("PoseKind", "spawn")
 	model:SetAttribute("Moving", false)
@@ -888,6 +922,9 @@ local function createActorModel(
 	end
 	root.Parent = model
 	model.PrimaryPart = root
+	if levelLabel ~= "" then
+		attachLevelBillboard(model, levelLabel)
+	end
 
 	local bodyColor = toColor(recipe.bodyRgb)
 	local accentColor = toColor(recipe.accentRgb)
@@ -1228,7 +1265,7 @@ local function buildWalls(root: Folder, greybox: any, scenery: any, spawnDecorat
 
 	local function wall(name: string, size: Vector3, position: Vector3): ()
 		local part = makePart(name, size, position, wallColor, "GateBlock", true)
-		part.Material = Enum.Material.Slate
+		part.Material = (Enum.Material :: any)[sceneryStyle.wallMaterial or "Limestone"] or Enum.Material.Limestone
 		part.Parent = folder
 		local cap = makePart(
 			name .. "_Cap",
@@ -1238,9 +1275,22 @@ local function buildWalls(root: Folder, greybox: any, scenery: any, spawnDecorat
 			"Safe",
 			false
 		)
-		cap.Material = Enum.Material.Slate
+		cap.Material = (Enum.Material :: any)[sceneryStyle.wallCapMaterial or "Sandstone"] or Enum.Material.Sandstone
 		cap.Transparency = 0
 		cap.Parent = folder
+		local bandSize = if size.X > size.Z
+			then Vector3.new(size.X + 0.2, 1.1, size.Z + 0.28)
+			else Vector3.new(size.X + 0.28, 1.1, size.Z + 0.2)
+		local band = makePart(
+			name .. "_Band",
+			bandSize,
+			Vector3.new(position.X, height * 0.42, position.Z),
+			toColor(sceneryStyle.terrainAccent),
+			"Safe",
+			false
+		)
+		band.Material = (Enum.Material :: any)[sceneryStyle.wallBandMaterial or "Basalt"] or Enum.Material.Basalt
+		band.Parent = folder
 		local accentSize = if size.X > size.Z
 			then Vector3.new(0.35, height - 1, 0.18)
 			else Vector3.new(0.18, height - 1, 0.35)

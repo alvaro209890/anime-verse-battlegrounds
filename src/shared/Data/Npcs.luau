@@ -31,6 +31,8 @@ export type NpcDefinition = {
 	-- inimigo não inicia perseguição e larga a que já tinha. Ausente = 30
 	-- (padrão Blox Fruits). Dummy e instrutor não usam.
 	aggroRadiusStuds: number?,
+	-- Nível exibido acima da cabeça (Billboard). Dado de catálogo, não inventado no cliente.
+	displayLevel: number?,
 	-- Elite (docs/13 §9.3 — Estilhaço Ancorado). Campos opcionais; só o elite
 	-- os preenche. `elitePattern` alterna slam/combo no CombatService.
 	attackPattern: string?,
@@ -62,11 +64,13 @@ local Npcs: { [string]: NpcDefinition } = {
 		grantsXp = false,
 		enabled = true,
 		zoneId = "zone_bastion_safe",
+		displayLevel = 1,
 	},
 	npc_training_dummy = {
 		id = "npc_training_dummy",
 		displayNameKey = "npc.training_dummy.name",
 		kind = "dummy",
+		displayLevel = 1,
 		maxHealth = 10000,
 		maxGuard = 0,
 		attackDamage = 5,
@@ -80,6 +84,7 @@ local Npcs: { [string]: NpcDefinition } = {
 		id = "enemy_wandering_shard",
 		displayNameKey = "enemy.wandering_shard.name",
 		kind = "enemy",
+		displayLevel = 8,
 		maxHealth = 60,
 		maxGuard = 0,
 		attackDamage = 8,
@@ -110,6 +115,7 @@ local Npcs: { [string]: NpcDefinition } = {
 		id = "enemy_anchored_shard",
 		displayNameKey = "enemy.anchored_shard.name",
 		kind = "enemy",
+		displayLevel = 18,
 		maxHealth = 120,
 		maxGuard = 0,
 		attackDamage = 14,
@@ -141,6 +147,17 @@ local NpcCatalog = {}
 
 function NpcCatalog.get(npcId: string): NpcDefinition?
 	return Npcs[npcId]
+end
+
+function NpcCatalog.levelLabel(def: NpcDefinition?): string
+	if not def then
+		return ""
+	end
+	local level = def.displayLevel
+	if type(level) ~= "number" or level < 1 then
+		return ""
+	end
+	return ("Nv. %d"):format(math.floor(level))
 end
 
 function NpcCatalog.all(): { NpcDefinition }

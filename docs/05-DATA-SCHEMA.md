@@ -83,6 +83,7 @@ Em F0/v1 existem envelope, progressão mínima, personagens/habilidades da fatia
 | `wallet` | Wallet | F2 | Moeda e materiais; inteiros com caps |
 | `familyMastery` | mapa família → MasteryProgress | F2 | Somente IDs das quatro famílias aprovadas |
 | `inventory` / `equipment` | estados versionados | F0 mínimo (stackables); equipment F2 | Mochila de materiais/cosmético sem poder; equipment entra em F2 |
+| `career` | CareerTotals | F0 | Kills, chefes, dano, tempo; só o servidor incrementa |
 | `inFlightOperations` | mapa operationId → PendingOperation | F2 | Somente operações econômicas interrompíveis |
 | `quests` | QuestState | F3 | Ativas, concluídas e flags compactas; o objetivo único F0 usa `tutorialFlags` + receipt, sem antecipar o agregado completo |
 | `reputation` | ReputationState | F4 | Valor, estado e cooldowns de recuperação |
@@ -90,7 +91,7 @@ Em F0/v1 existem envelope, progressão mínima, personagens/habilidades da fatia
 | `ranked` | mapa seasonId → PlayerSeasonState | F6 | Histórico limitado às temporadas retidas |
 | `entitlements` | EntitlementState | Hardening/soft launch | Cosméticos, emotes e +3 presets; nenhum poder ou inventário funcional pago |
 
-Não guardar display name, chat, lista completa de kills ou telemetria bruta no perfil. Históricos sem uso transacional têm retenção externa e limitada.
+Não guardar display name, chat, lista completa de kills ou telemetria bruta no perfil. Históricos sem uso transacional têm retenção externa e limitada. `career` guarda **totais agregados** (não a lista de mortes): `monsterKills`, `bossKills`, `damageDealt`, `playTimeSeconds`, `deaths`, `techniquesUsed`, `consolidations`, `questsCompleted`. Dummy e instrutor não incrementam kill. Só o servidor escreve; o cliente só replica.
 
 ### 4.1 PlayerProgression
 

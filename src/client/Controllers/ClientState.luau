@@ -34,6 +34,7 @@ export type Model = {
 	inventory: { [string]: number },
 	levelUpUntil: number,
 	xpPopup: { [string]: any }?,
+	career: { [string]: number }?,
 	cooldowns: { [string]: { startedAt: number, duration: number } },
 	feedbackKey: string?,
 	feedbackUntil: number,
@@ -92,6 +93,7 @@ function ClientState.new(now: (() -> number)?): Model
 		inventory = {},
 		levelUpUntil = 0,
 		xpPopup = nil,
+		career = nil,
 		cooldowns = {},
 		feedbackKey = nil,
 		feedbackUntil = 0,
@@ -210,6 +212,15 @@ function ClientState.applyProgression(model: Model, payload: { [string]: any }):
 	end
 	if type(payload.xpPopup) == "table" then
 		model.xpPopup = payload.xpPopup
+	end
+	if type(payload.career) == "table" then
+		local career: { [string]: number } = {}
+		for key, value in payload.career do
+			if type(key) == "string" and type(value) == "number" then
+				career[key] = value
+			end
+		end
+		model.career = career
 	end
 end
 

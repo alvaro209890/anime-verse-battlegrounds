@@ -4,6 +4,10 @@
 > Este é o guia OPERACIONAL do gate W2 do [`docs/32`](32-STUDIO-PLAYTEST-RUNBOOK.md).
 > O docs/32 define o porquê e os tetos; aqui está o como, na ordem.
 
+> **Executado em 17/08 (sessão de Play):** roteiro percorrido com 4 Errantes +
+> elite e MicroProfiler; medidas registradas na ficha `docs/26` e matriz em
+> `docs/12` §7.
+
 ## O que o W2 prova
 
 Repetir o roteiro de 20 min (`docs/13` §10) com **4 Estilhaços vivos + o elite**

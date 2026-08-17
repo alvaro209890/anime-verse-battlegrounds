@@ -38,6 +38,9 @@ local KNOWN_FLAGS: { [string]: boolean } = {
 	quest_hunt_accepted = true,
 	quest_elite_accepted = true,
 	quest_flow_accepted = true,
+	quest_grove_accepted = true,
+	quest_remnant_accepted = true,
+	unlock_echo_weaver = true,
 	ftue_spawned = true,
 	ftue_dummy_hit = true,
 }
