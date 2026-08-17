@@ -8,8 +8,13 @@
 -- (x −40..40, z −32..32). Portões (volumes de transição):
 --   norte — x −6..6 em z −32
 --   oeste — z −5..5 em x −40
--- Âncoras críticas: spawn (0,0,20), marco (0,0,12), instrutor (20,0,−14),
+-- Âncoras críticas: spawn (0,0,20), marco (0,0,12), instrutor (20,0,−11),
 -- treino (28,0,−20), portões (0,0,−32) e (−40,0,0).
+--
+-- 17/08: os quatro pilares-marco do bastião passaram a morar aqui
+-- (`bastionPillars`). Antes eram uma tabela solta dentro do `buildWalls`, e por
+-- isso escapavam da regra de folga da âncora — o pilar (20, −16) ocupava
+-- z −18..−14 com a Instrutora plantada em z −14, ou seja, DENTRO dele.
 
 export type Decoration = {
 	name: string,
@@ -58,6 +63,33 @@ local WALL_Y = 16
 local function pillar(name: string, position: { x: number, y: number, z: number })
 	return deco(name, "Part", { x = 2.2, y = WALL_Y, z = 2.2 }, position, DARK, "Slate", true, 0)
 end
+
+-- Pilares-marco do bastião (§8.1): os quatro de 20 studs que dão a silhueta
+-- vista da planície. O `buildWalls` só materializa — a posição é dado, e dado
+-- passa por `anchorClearanceErrors`.
+export type MarkerPillar = {
+	name: string,
+	size: { x: number, y: number, z: number },
+	position: { x: number, y: number, z: number },
+}
+
+local PILLAR_MARK_HEIGHT = 20
+local PILLAR_MARK_SIDE = 4
+
+local function markerPillar(name: string, x: number, z: number): MarkerPillar
+	return {
+		name = name,
+		size = { x = PILLAR_MARK_SIDE, y = PILLAR_MARK_HEIGHT, z = PILLAR_MARK_SIDE },
+		position = { x = x, y = PILLAR_MARK_HEIGHT / 2, z = z },
+	}
+end
+
+local MARKER_PILLARS: { MarkerPillar } = {
+	markerPillar("Pillar1", -20, -16),
+	markerPillar("Pillar2", 20, -16),
+	markerPillar("Pillar3", -20, 16),
+	markerPillar("Pillar4", 20, 16),
+}
 
 local function crystal(name: string, position: { x: number, y: number, z: number })
 	return deco(name, "Part", { x = 1.4, y = 1.4, z = 1.4 }, position, UMBRAL_CORE, "Neon", false, 0)
@@ -209,6 +241,39 @@ function SpawnDecorations.all(): { Decoration }
 	return DECORATIONS
 end
 
+function SpawnDecorations.bastionPillars(): { MarkerPillar }
+	return MARKER_PILLARS
+end
+
+-- Folga da âncora: nada sólido pode encostar num ponto onde o jogo planta ator
+-- ou manda o jogador ir parar (margem de 2 studs no plano XZ). Vale para
+-- decoração colidível E para os pilares-marco — é a MESMA regra, e ficar em
+-- função separada é o que permite aplicá-la aos dois conjuntos sem duplicar.
+local ANCHOR_MARGIN = 2
+
+function SpawnDecorations.anchorClearanceErrors(
+	pieces: {
+		{
+			name: string,
+			size: { x: number, y: number, z: number },
+			position: { x: number, y: number, z: number },
+		}
+	},
+	anchors: { { x: number, y: number, z: number } }
+): { string }
+	local errors: { string } = {}
+	for _, piece in pieces do
+		for _, a in anchors do
+			local distX = math.max(math.abs(piece.position.x - a.x) - piece.size.x / 2, 0)
+			local distZ = math.max(math.abs(piece.position.z - a.z) - piece.size.z / 2, 0)
+			if distX <= ANCHOR_MARGIN and distZ <= ANCHOR_MARGIN then
+				table.insert(errors, ("%s colado na âncora (%.0f, %.0f)"):format(piece.name, a.x, a.z))
+			end
+		end
+	end
+	return errors
+end
+
 -- Validação pura (testes): retorna lista de erros; vazia = ok.
 -- 1. Nenhuma peça invade os volumes de transição (portões continuam livres).
 -- 2. Peças sem colisão ficam dentro do volume do bastião.
@@ -268,14 +333,10 @@ function SpawnDecorations.validate(
 			end
 		end
 
-		-- 3. Muralha não engole âncora (margem de 2 studs).
+		-- 3. Muralha não engole âncora (mesma regra dos pilares-marco).
 		if d.canCollide then
-			for _, a in anchors do
-				local distX = math.max(math.abs(d.position.x - a.x) - d.size.x / 2, 0)
-				local distZ = math.max(math.abs(d.position.z - a.z) - d.size.z / 2, 0)
-				if distX <= 2 and distZ <= 2 then
-					table.insert(errors, ("%s colado na âncora (%.0f, %.0f)"):format(d.name, a.x, a.z))
-				end
+			for _, err in SpawnDecorations.anchorClearanceErrors({ d }, anchors) do
+				table.insert(errors, err)
 			end
 		end
 	end

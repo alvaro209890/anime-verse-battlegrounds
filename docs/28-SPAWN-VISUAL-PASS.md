@@ -44,6 +44,29 @@ A personagem `npc_threshold_instructor` (quest giver) mantém o rosto embutido `
 
 A skin é apresentação. Ela não muda `Npcs.luau`, `Interactions.luau`, `QuestService`, alcance, hold, recompensa ou qualquer decisão server-side. Inventário de assets: sem mesh humanoide candidata — ver artefato de assets da epic.
 
+### Escada de valor (17/08) — por que a silhueta não aparecia
+
+A silhueta acima entrou no commit `54836f9` e o playtest seguinte relatou "a skin não mudou nada". O relato estava certo, e a causa não era a modelagem: era a **paleta**. Cabelo, saia e casaco tinham luminância relativa 30, 27 e 41 numa escala 0–255 — degraus de 3 a 14 pontos. No Bastião à noite (`ClockTime` ~3,4, `Brightness` 0,79) isso colapsa numa mancha preta e só o neon umbral lê: a leitura era "vulto escuro com listras rosa", não "instrutora". Volume modelado sem separação de valor não chega ao jogador.
+
+A paleta agora sobe em degraus de no mínimo **24 pontos** de luminância:
+
+| Tom | RGB | Luminância |
+|---|---|---|
+| `COAT_DARK` (saia, cinto, botas) | 44, 42, 66 | 44 |
+| `COAT` (casaco, capuz) | 74, 70, 104 | 73 |
+| `COAT_LINING` (forro, faixa) | 126, 88, 172 | 102 |
+| `HAIR_DEEP` (mechas longas) | 138, 120, 180 | 128 |
+| `HAIR` (cabelo, rabo, franja) | 186, 166, 226 | 175 |
+| `HAIR_SHEEN` (brilho) | 238, 230, 255 | 234 |
+
+Cabelo claro contra casaco médio é o que dá a leitura de anime à distância; o neon umbral continua **só nas bordas**. `Presentation.validatePalette` trava os degraus e a distância entre cabelo e tom de pele (senão o rosto some no cabelo), e roda dentro de `validateRigs` — mudar um tom sem manter a escada reprova a suíte.
+
+### Âncora: a instrutora estava dentro do pilar
+
+No mesmo playtest ela aparecia enfiada na pedra. `anchor_instructor` era `(20, 0, −14)` e o pilar-marco `(20, −16)` tem 4 studs de lado, ocupando `z −18..−14`: capa e rabo de cabelo nasciam dentro dele. A âncora passou para `(20, 0, −11)`, o que também a deixa sob a luz-chave dela (já em `z −12,5`).
+
+A regra que pega isso (`nada sólido a menos de 2 studs de uma âncora`) existia desde sempre em `SpawnDecorations.validate`, mas os quatro pilares-marco moravam numa tabela solta dentro do `buildWalls` — camada de Instances, fora do alcance dos testes — e nunca passavam por ela. Agora são dado (`SpawnDecorations.bastionPillars`), o `buildWalls` só materializa, e a regra vale para os dois conjuntos através de `anchorClearanceErrors`. Os testes leem as âncoras do `Zones` em vez da lista copiada à mão que existia antes.
+
 ## Validação headless
 
 A suíte adicionou cobertura para a paleta, orçamento de iluminação e densidade da skin. Os resultados desta rodada foram:

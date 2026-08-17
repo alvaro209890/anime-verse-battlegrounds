@@ -1053,6 +1053,51 @@ test("npc: instrutora tem silhueta visual enriquecida e rosto validado", functio
 	assertTrue(ok, reason or "rigs válidos")
 end)
 
+-- 17/08: a silhueta feminina já estava toda modelada e mesmo assim o relato do
+-- playtest foi "a skin não mudou nada". Estava certo: cabelo, saia e casaco
+-- tinham luminância 30, 27 e 41 — degraus de 3 pontos. No Bastião à noite isso
+-- é uma mancha preta com neon em volta. Silhueta sem separação de valor não
+-- chega ao jogador, e é isso que este teste protege.
+test("npc: a paleta da instrutora tem escada de valor legível", function()
+	local Presentation = require("../src/shared/Data/WorldPresentation")
+	local ok, reason = Presentation.validatePalette()
+	assertTrue(ok, reason or "paleta com degraus suficientes")
+
+	local rig = Presentation.rigFor("npc_threshold_instructor")
+	assertTrue(rig ~= nil, "rig da instrutora existe")
+	if not rig then
+		return
+	end
+
+	local function luminance(rgb: { number }): number
+		return 0.2126 * rgb[1] + 0.7152 * rgb[2] + 0.0722 * rgb[3]
+	end
+
+	local function tone(pieceName: string): number?
+		for _, piece in rig.gear do
+			if piece.name == pieceName then
+				return luminance(piece.rgb)
+			end
+		end
+		return nil
+	end
+
+	-- As duas peças que o jogador vê primeiro de longe: o rabo de cabelo contra
+	-- a saia. Eram 30 contra 27.
+	local hair = tone("HairTail")
+	local skirt = tone("OverSkirt")
+	assertTrue(hair ~= nil and skirt ~= nil, "rabo e saia existem na receita")
+	if hair and skirt then
+		assertTrue(
+			math.abs(hair - skirt) >= 24,
+			("cabelo (%.0f) e saia (%.0f) precisam de contraste"):format(hair, skirt)
+		)
+	end
+
+	-- O corpo do rig não pode voltar ao quase-preto: é a maior área da tela.
+	assertTrue(luminance(rig.bodyRgb) >= 60, "casaco escuro demais para ler no Bastião à noite")
+end)
+
 test("npc: os dois bots têm volume de perfil, de costas e nas pernas", function()
 	local Presentation = require("../src/shared/Data/WorldPresentation")
 	for _, rig in Presentation.allRigs() do

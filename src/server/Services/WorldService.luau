@@ -1205,7 +1205,7 @@ end
 -- Muros do Bastião com as aberturas dos dois portões. O muro em L do Portão
 -- Oeste quebra a linha de visão (§8.1) e o pilar central é a silhueta visível
 -- da planície (§8.1).
-local function buildWalls(root: Folder, greybox: any, scenery: any): ()
+local function buildWalls(root: Folder, greybox: any, scenery: any, spawnDecorations: any): ()
 	local folder = Instance.new("Folder")
 	folder.Name = "Walls"
 	folder.Parent = root
@@ -1277,15 +1277,19 @@ local function buildWalls(root: Folder, greybox: any, scenery: any): ()
 	-- Muro em L que quebra a LOS de quem sai pelo Portão Oeste.
 	wall("WallWestBaffle", Vector3.new(16, height, 2), Vector3.new(-halfX - 8, height / 2, -gateWestHalf - 1))
 
-	-- Quatro pilares de 20 de altura como marco (§8.1).
-	local pillarPositions = {
-		Vector3.new(-20, 10, -16),
-		Vector3.new(20, 10, -16),
-		Vector3.new(-20, 10, 16),
-		Vector3.new(20, 10, 16),
-	}
-	for index, position in pillarPositions do
-		local pillar = makePart(("Pillar%d"):format(index), Vector3.new(4, 20, 4), position, COLORS.wall, "Safe", true)
+	-- Quatro pilares de 20 de altura como marco (§8.1). As posições são DADO
+	-- (`SpawnDecorations.bastionPillars`) e não uma tabela local: enquanto
+	-- viveram aqui, escaparam da regra de folga da âncora e um deles engoliu a
+	-- Instrutora por dias.
+	for _, marker in spawnDecorations.bastionPillars() do
+		local pillar = makePart(
+			marker.name,
+			Vector3.new(marker.size.x, marker.size.y, marker.size.z),
+			Vector3.new(marker.position.x, marker.position.y, marker.position.z),
+			COLORS.wall,
+			"Safe",
+			true
+		)
 		pillar.Parent = folder
 	end
 end
@@ -1837,7 +1841,7 @@ function WorldService.init(deps: WorldDeps): ()
 	local style = deps.presentation.style()
 
 	buildFloors(root, greybox, style, deps.zones, deps.scenery)
-	buildWalls(root, greybox, deps.scenery)
+	buildWalls(root, greybox, deps.scenery, deps.spawnDecorations)
 	buildSpawnRoof(root, deps.scenery)
 	buildLandmarks(root, greybox, style)
 	buildSpawnDecorations(root, deps.spawnDecorations)

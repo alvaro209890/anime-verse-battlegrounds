@@ -122,7 +122,7 @@ local Actors: { [string]: ActorRecipe } = {
 		-- Instrutora do Limiar (quest giver): casaco umbral, cabelo longo,
 		-- energia só nas bordas e rosto legível — silhueta feminina de anime,
 		-- não guarda andrógino de armadura.
-		bodyRgb = { 38, 40, 48 },
+		bodyRgb = { 74, 70, 104 },
 		accentRgb = { 118, 84, 158 },
 		coreRgb = { 206, 196, 224 },
 		skinNameKey = "skin.threshold_warden",
@@ -174,15 +174,25 @@ local Actors: { [string]: ActorRecipe } = {
 	},
 }
 
-local HAIR: Rgb = { 32, 28, 48 }
-local HAIR_DEEP: Rgb = { 22, 18, 34 }
-local HAIR_SHEEN: Rgb = { 72, 58, 110 }
+-- ⚠️ ESCADA DE VALOR (17/08). A silhueta feminina da Instrutora existia desde
+-- 54836f9 e não aparecia na tela: cabelo (luminância 30), saia (27) e casaco
+-- (41) estavam a menos de 15 pontos um do outro, num cenário noturno escuro.
+-- Volume modelado e pintado tudo da mesma cor colapsa numa mancha preta — só o
+-- neon lia, e a leitura era "boneco escuro com listras rosa". Modelar sem
+-- separar valor é trabalho que não chega ao jogador.
+--
+-- Agora os tons sobem em degraus de no mínimo `PALETTE_MIN_STEP`, travado por
+-- `Presentation.validatePalette`. Cabelo claro contra casaco médio é o que dá a
+-- leitura de anime; o neon umbral continua SÓ nas bordas (docs/28).
+local HAIR: Rgb = { 186, 166, 226 }
+local HAIR_DEEP: Rgb = { 138, 120, 180 }
+local HAIR_SHEEN: Rgb = { 238, 230, 255 }
 local UMBRAL: Rgb = { 138, 96, 196 }
 local UMBRAL_CORE: Rgb = { 226, 214, 250 }
 local UMBRAL_SOFT: Rgb = { 168, 132, 214 }
-local COAT: Rgb = { 42, 40, 56 }
-local COAT_DARK: Rgb = { 28, 26, 38 }
-local COAT_LINING: Rgb = { 58, 44, 82 }
+local COAT: Rgb = { 74, 70, 104 }
+local COAT_DARK: Rgb = { 44, 42, 66 }
+local COAT_LINING: Rgb = { 126, 88, 172 }
 local SKIN_TONE: Rgb = { 232, 208, 198 }
 local BURLAP: Rgb = { 186, 156, 108 }
 local BURLAP_DARK: Rgb = { 148, 120, 80 }
@@ -1030,7 +1040,59 @@ end
 -- corpo greybox de Parts e o jogador vê de novo a caixa com esfera na cabeça.
 local RIG_REQUIRED: { string } = { "npc_threshold_instructor", "npc_training_dummy" }
 
+-- Luminância relativa (Rec. 709) na escala 0..255. É o número que decide se
+-- duas peças vizinhas leem como duas peças ou como uma mancha só: matiz
+-- diferente com o MESMO valor some, principalmente à noite.
+local function luminance(rgb: Rgb): number
+	return 0.2126 * rgb[1] + 0.7152 * rgb[2] + 0.0722 * rgb[3]
+end
+
+-- Degrau mínimo entre tons vizinhos da escada. 24 é o que separa a saia do
+-- cabelo na cena noturna do Bastião; a paleta antiga tinha degraus de 3.
+local PALETTE_MIN_STEP = 24
+
+-- Ordem crescente de valor. Peça que muda de cor tem de continuar cabendo
+-- entre a de baixo e a de cima, senão a silhueta volta a colapsar.
+local INSTRUCTOR_LADDER: { { string | Rgb } } = {
+	{ "COAT_DARK", COAT_DARK },
+	{ "COAT", COAT },
+	{ "COAT_LINING", COAT_LINING },
+	{ "HAIR_DEEP", HAIR_DEEP },
+	{ "HAIR", HAIR },
+	{ "HAIR_SHEEN", HAIR_SHEEN },
+}
+
+function Presentation.validatePalette(): (boolean, string?)
+	for index = 2, #INSTRUCTOR_LADDER do
+		local lowerName = INSTRUCTOR_LADDER[index - 1][1] :: string
+		local upperName = INSTRUCTOR_LADDER[index][1] :: string
+		local lower = luminance(INSTRUCTOR_LADDER[index - 1][2] :: Rgb)
+		local upper = luminance(INSTRUCTOR_LADDER[index][2] :: Rgb)
+		local step = upper - lower
+		if step < PALETTE_MIN_STEP then
+			return false,
+				("palette_flat:%s→%s (degrau %.1f, mínimo %.0f)"):format(
+					lowerName,
+					upperName,
+					step,
+					PALETTE_MIN_STEP
+				)
+		end
+	end
+	-- Cabelo colado no tom de pele apaga o rosto, que é justamente o que a
+	-- textura embutida existe para mostrar.
+	local hairVsSkin = math.abs(luminance(HAIR) - luminance(SKIN_TONE))
+	if hairVsSkin < PALETTE_MIN_STEP then
+		return false, ("palette_hair_vs_skin:%.1f (mínimo %.0f)"):format(hairVsSkin, PALETTE_MIN_STEP)
+	end
+	return true, nil
+end
+
 function Presentation.validateRigs(): (boolean, string?)
+	local paletteOk, paletteReason = Presentation.validatePalette()
+	if not paletteOk then
+		return false, paletteReason
+	end
 	for _, npcId in RIG_REQUIRED do
 		if not Rigs[npcId] then
 			return false, "missing_rig:" .. npcId

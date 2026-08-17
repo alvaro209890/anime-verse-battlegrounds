@@ -121,10 +121,14 @@ local Anchors: { [string]: AnchorDefinition } = {
 		zoneId = "zone_bastion_safe",
 		position = { x = 28, y = 0, z = -20 },
 	},
+	-- 17/08: z −14 → −11. O pilar-marco (20, −16) tem 4 studs de lado e ocupa
+	-- z −18..−14: a Instrutora nascia com capa e rabo de cabelo DENTRO da
+	-- pedra. Puxando 3 studs para a praça ela sai do pilar e ainda fica sob a
+	-- luz-chave dela, que já estava em z −12,5 (SceneryPresentation).
 	anchor_instructor = {
 		id = "anchor_instructor",
 		zoneId = "zone_bastion_safe",
-		position = { x = 20, y = 0, z = -14 },
+		position = { x = 20, y = 0, z = -11 },
 	},
 	anchor_gate_north = {
 		id = "anchor_gate_north",

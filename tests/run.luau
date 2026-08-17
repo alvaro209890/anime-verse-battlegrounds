@@ -98,6 +98,29 @@ test("greybox: WorldService gera piso para cada volume canônico de zona", funct
 	assertTrue(source:find("buildSpawnDecorations(root", 1, true) ~= nil, "decoração do spawn entra no bootstrap")
 end)
 
+-- Âncoras críticas LIDAS DO CATÁLOGO. Até 17/08 esta lista era copiada à mão
+-- aqui dentro: mover a âncora no `Zones` não mexia no teste, e a validação que
+-- se dizia "com os dados reais do Zones" conferia números fósseis.
+local CRITICAL_ANCHOR_IDS: { string } = {
+	"anchor_bastion_spawn",
+	"anchor_bastion_return",
+	"anchor_instructor",
+	"anchor_training",
+	"anchor_gate_north",
+	"anchor_gate_west",
+}
+
+local function criticalAnchors(): { { x: number, y: number, z: number } }
+	local anchors = {}
+	for _, anchorId in CRITICAL_ANCHOR_IDS do
+		local anchor = Zones.getAnchor(anchorId)
+		if anchor then
+			table.insert(anchors, anchor.position)
+		end
+	end
+	return anchors
+end
+
 test("greybox: decoração do spawn valida com os dados reais do Zones", function()
 	local bastion = Zones.get("zone_bastion_safe")
 	local transition = Zones.get("zone_threshold_transition")
@@ -105,16 +128,35 @@ test("greybox: decoração do spawn valida com os dados reais do Zones", functio
 	if not bastion or not transition then
 		return
 	end
-	local anchors = {
-		{ x = 0, y = 0, z = 20 }, -- spawn
-		{ x = 0, y = 0, z = 12 }, -- marco de retorno
-		{ x = 20, y = 0, z = -14 }, -- instrutor
-		{ x = 28, y = 0, z = -20 }, -- treino
-		{ x = 0, y = 0, z = -32 }, -- portão norte
-		{ x = -40, y = 0, z = 0 }, -- portão oeste
-	}
+	local anchors = criticalAnchors()
+	assertEq(#anchors, #CRITICAL_ANCHOR_IDS, "toda âncora crítica existe no catálogo")
 	local errors = SpawnDecorations.validate(SpawnDecorations.all(), bastion.volumes[1], transition.volumes, anchors)
 	assertEq(#errors, 0, table.concat(errors, "; "))
+end)
+
+-- 17/08: o pilar-marco (20, −16) ocupava z −18..−14 e a Instrutora estava
+-- plantada em z −14 — ela nascia com capa e cabelo dentro da pedra. A regra de
+-- folga existia desde sempre, mas os pilares moravam numa tabela solta dentro
+-- do `buildWalls` e nunca passavam por ela. Agora são dado e passam.
+test("greybox: pilar-marco não engole nenhuma âncora", function()
+	local pillars = SpawnDecorations.bastionPillars()
+	assertEq(#pillars, 4, "os quatro pilares do bastião")
+	local errors = SpawnDecorations.anchorClearanceErrors(pillars, criticalAnchors())
+	assertEq(#errors, 0, table.concat(errors, "; "))
+end)
+
+test("greybox: a regra de folga da âncora realmente reprova o pilar antigo", function()
+	-- Sem esta contraprova, um erro na aritmética da folga deixaria o teste
+	-- acima passar por acidente e o bug voltaria calado.
+	local fossil = {
+		{
+			name = "Pillar2_fossil",
+			size = { x = 4, y = 20, z = 4 },
+			position = { x = 20, y = 10, z = -16 },
+		},
+	}
+	local errors = SpawnDecorations.anchorClearanceErrors(fossil, { { x = 20, y = 0, z = -14 } })
+	assertEq(#errors, 1, "a posição antiga tem de ser reprovada")
 end)
 
 test("greybox: decoração do spawn deixa os portões livres e fica no volume", function()
@@ -155,15 +197,8 @@ test("greybox: decoração do spawn não bloqueia o treino nem o spawn", functio
 	if not bastion or not transition then
 		return
 	end
-	local anchors = {
-		{ x = 0, y = 0, z = 20 },
-		{ x = 0, y = 0, z = 12 },
-		{ x = 20, y = 0, z = -14 },
-		{ x = 28, y = 0, z = -20 },
-		{ x = 0, y = 0, z = -32 },
-		{ x = -40, y = 0, z = 0 },
-	}
-	local errors = SpawnDecorations.validate(SpawnDecorations.all(), bastion.volumes[1], transition.volumes, anchors)
+	local errors =
+		SpawnDecorations.validate(SpawnDecorations.all(), bastion.volumes[1], transition.volumes, criticalAnchors())
 	assertEq(#errors, 0, "nenhum erro com as âncoras críticas")
 end)
 
