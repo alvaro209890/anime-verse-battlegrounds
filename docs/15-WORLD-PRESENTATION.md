@@ -73,7 +73,7 @@ Workspace
 | Cratera | delimita o elite sem virar uma parede maciça | bacia baixa e 16 segmentos com passagens |
 | Estilhas de marco | orientam o jogador na planície | sete silhuetas neutras, sem reproduzir referência externa |
 
-A iluminação usa crepúsculo controlado, luzes locais alternadas ciano/umbral, sombras globais e atmosfera de baixa densidade. Os valores agora são uma direção visual data-driven do spawn, ainda pendente de aprovação no Studio.
+A iluminação deixa de ser um crepúsculo fixo (`ClockTime 18.25`) e passa a um **ciclo dia/noite** data-driven (`docs/34-DAY-NIGHT-CYCLE.md`): keyframes em `DayNightCycle.luau`, materialização no `WorldService` (Atmosphere, Bloom, Sky, ColorCorrection e reescala das PointLights do spawn/tochas). O crepúsculo clássico continua no arco como fase `dusk`. Validação headless do catálogo e wiring feita; leitura a olho no Studio ainda pendente.
 
 ## 4. Modelos procedurais
 

@@ -50,6 +50,7 @@ local SpawnDecorations = require(ReplicatedStorage.Shared.Data.SpawnDecorations)
 local WildDecorations = require(ReplicatedStorage.Shared.Data.WildDecorations)
 local Locomotion = require(ReplicatedStorage.Shared.Data.Locomotion)
 local SceneryPresentation = require(ReplicatedStorage.Shared.Data.SceneryPresentation)
+local DayNightCycle = require(ReplicatedStorage.Shared.Data.DayNightCycle)
 local Zones = require(ReplicatedStorage.Shared.Data.Zones)
 
 -- 1. Catálogo — validação em fail-fast
@@ -80,6 +81,10 @@ local sceneryOk, sceneryReason = SceneryPresentation.validate()
 if not sceneryOk then
 	error("catálogo de cenário inválido: " .. (sceneryReason or "unknown"))
 end
+local dayNightOk, dayNightReason = DayNightCycle.validate()
+if not dayNightOk then
+	error("catálogo de ciclo dia/noite inválido: " .. (dayNightReason or "unknown"))
+end
 -- Honestidade visual (docs/17): aqui os dois catálogos existem, então a skin do
 -- inimigo é conferida contra o alcance REAL do golpe dele. Uma lâmina que passa
 -- do `attackRange` ensina o jogador a recuar de menos.
@@ -99,8 +104,11 @@ WorldService.init({
 	scenery = SceneryPresentation,
 	spawnDecorations = SpawnDecorations,
 	wildDecorations = WildDecorations,
+	dayNight = DayNightCycle,
 })
-print("[Bootstrap] greybox construído")
+-- Ciclo dia/noite: sample puro → Lighting no Heartbeat (~10 Hz interno).
+WorldService.startDayNight(RunService)
+print("[Bootstrap] greybox construído + ciclo dia/noite")
 
 -- 1.2. Espaço — produz distância, costas e hitbox para o combate.
 SpatialService.init({ geometry = Geometry })

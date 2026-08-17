@@ -36,6 +36,9 @@ export type WorldDeps = {
 	scenery: any,
 	spawnDecorations: any,
 	wildDecorations: any,
+	-- Catálogo puro do ciclo dia/noite (`DayNightCycle`). Opcional só para
+	-- chamadas legadas de teste; o bootstrap da F0 sempre injeta.
+	dayNight: any?,
 }
 
 export type ActorVisual = {
@@ -50,6 +53,10 @@ local WorldService = {
 	deps = nil :: WorldDeps?,
 	root = nil :: Folder?,
 	actors = {} :: { [string]: ActorVisual },
+	-- Ciclo dia/noite: tempo real do boot e conexão de Heartbeat.
+	dayNightStartedAt = 0 :: number,
+	dayNightConnection = nil :: RBXScriptConnection?,
+	dayNightLastApplyAt = -1 :: number,
 }
 
 local GROUND_Y = 0
@@ -70,6 +77,11 @@ local COLORS = {
 
 local function toColor(rgb: { number }): Color3
 	return Color3.fromRGB(rgb[1], rgb[2], rgb[3])
+end
+
+-- Lerp de RGB do ciclo produz floats; fromRGB trunca e cria degraus no céu.
+local function toColorSmooth(rgb: { number }): Color3
+	return Color3.new(math.clamp(rgb[1] / 255, 0, 1), math.clamp(rgb[2] / 255, 0, 1), math.clamp(rgb[3] / 255, 0, 1))
 end
 
 local function registerCollisionGroups(groups: { string }): ()
@@ -1556,29 +1568,114 @@ local function buildAnchors(root: Folder, zones: any): ()
 	end
 end
 
-local function buildLighting(scenery: any): ()
+-- Atributo gravado nas PointLights artificiais para o ciclo poder reescalar
+-- o brilho sem perder o valor base do catálogo.
+local ATTR_BASE_BRIGHTNESS = "AvbBaseBrightness"
+
+local function ensureNamedChild(className: string, name: string): Instance
+	local existing = Lighting:FindFirstChild(name)
+	if existing then
+		if existing.ClassName == className then
+			return existing
+		end
+		existing:Destroy()
+	end
+	local created = Instance.new(className)
+	created.Name = name
+	created.Parent = Lighting
+	return created
+end
+
+-- Aplica um sample puro do DayNightCycle em Lighting + luzes artificiais.
+-- Idempotente e barato o bastante para rodar a ~10 Hz no Heartbeat.
+local function applyLightingSample(sample: any, scenery: any): ()
 	local style = scenery.style()
-	Lighting.Brightness = 2.0
-	Lighting.ClockTime = 18.25
+	Lighting.Brightness = sample.brightness
+	Lighting.ClockTime = sample.clockTime
+	Lighting.Ambient = toColorSmooth(sample.ambientRgb)
+	Lighting.OutdoorAmbient = toColorSmooth(sample.outdoorAmbientRgb)
+	Lighting.ColorShift_Top = toColorSmooth(sample.colorShiftTopRgb)
+	Lighting.ColorShift_Bottom = toColorSmooth(sample.colorShiftBottomRgb)
 	Lighting.EnvironmentDiffuseScale = 0.42
 	Lighting.EnvironmentSpecularScale = 0.28
 	Lighting.GlobalShadows = true
-	Lighting.OutdoorAmbient = toColor(style.ceilingColor)
-	Lighting.ColorShift_Top = toColor(style.lightColor)
-	Lighting.ColorShift_Bottom = toColor(style.fillLightColor)
+	Lighting.GeographicLatitude = if WorldService.deps and WorldService.deps.dayNight
+		then WorldService.deps.dayNight.config().geographicLatitude
+		else 18
+	pcall(function()
+		Lighting.ExposureCompensation = sample.exposureCompensation
+	end)
 
-	local oldAtmosphere = Lighting:FindFirstChild("F0Atmosphere")
-	if oldAtmosphere then
-		oldAtmosphere:Destroy()
+	local atmosphere = ensureNamedChild("Atmosphere", "F0Atmosphere") :: Atmosphere
+	atmosphere.Color = toColorSmooth(sample.atmosphereColorRgb)
+	atmosphere.Decay = toColorSmooth(sample.atmosphereDecayRgb)
+	atmosphere.Density = sample.atmosphereDensity
+	atmosphere.Glare = sample.atmosphereGlare
+	atmosphere.Haze = sample.atmosphereHaze
+
+	local bloom = ensureNamedChild("BloomEffect", "F0Bloom") :: BloomEffect
+	bloom.Enabled = true
+	bloom.Intensity = sample.bloomIntensity
+	bloom.Size = sample.bloomSize
+	bloom.Threshold = sample.bloomThreshold
+
+	-- ColorCorrection global do ciclo (F0DayNightCC). O pulso de zona
+	-- (`F0ZoneSignal`) é outro efeito e continua independente.
+	local cc = ensureNamedChild("ColorCorrectionEffect", "F0DayNightCC") :: ColorCorrectionEffect
+	cc.Enabled = true
+	cc.Brightness = sample.ccBrightness
+	cc.Contrast = sample.ccContrast
+	cc.Saturation = sample.ccSaturation
+	cc.TintColor = toColorSmooth(sample.ccTintRgb)
+
+	local sky = ensureNamedChild("Sky", "F0Sky") :: Sky
+	sky.StarCount = sample.starCount
+	sky.SunAngularSize = sample.sunAngularSize
+	sky.MoonAngularSize = sample.moonAngularSize
+	sky.CelestialBodiesShown = true
+
+	-- Luzes do spawn: brilho base × escala do sample (sobe à noite, some de dia).
+	local lightFolder = Workspace:FindFirstChild("F0SpawnLighting")
+	if lightFolder then
+		for _, emitter in lightFolder:GetChildren() do
+			if not emitter:IsA("BasePart") then
+				continue
+			end
+			local point = emitter:FindFirstChild("SoftFill")
+			if point and point:IsA("PointLight") then
+				local base = point:GetAttribute(ATTR_BASE_BRIGHTNESS)
+				if type(base) ~= "number" then
+					base = style.spawnLightBrightness
+					point:SetAttribute(ATTR_BASE_BRIGHTNESS, base)
+				end
+				point.Brightness = base * sample.artificialLightScale
+			end
+		end
 	end
-	local atmosphere = Instance.new("Atmosphere")
-	atmosphere.Name = "F0Atmosphere"
-	atmosphere.Color = toColor(style.lightColor)
-	atmosphere.Decay = toColor(style.ceilingColor)
-	atmosphere.Density = 0.18
-	atmosphere.Glare = 0.12
-	atmosphere.Haze = 0.9
-	atmosphere.Parent = Lighting
+
+	-- Tochas da planície (WildDecorations) seguem o mesmo arco.
+	local greybox = Workspace:FindFirstChild("GreyboxF0")
+	local wild = if greybox then greybox:FindFirstChild("WildDecorations") else nil
+	if wild then
+		for _, part in wild:GetChildren() do
+			if not part:IsA("BasePart") then
+				continue
+			end
+			local torch = part:FindFirstChild("TorchLight")
+			if torch and torch:IsA("PointLight") then
+				local base = torch:GetAttribute(ATTR_BASE_BRIGHTNESS)
+				if type(base) ~= "number" then
+					base = torch.Brightness
+					torch:SetAttribute(ATTR_BASE_BRIGHTNESS, base)
+				end
+				torch.Brightness = base * sample.artificialLightScale
+			end
+		end
+	end
+end
+
+local function buildLighting(scenery: any, dayNight: any?): ()
+	local style = scenery.style()
 
 	local oldSpawnLights = Workspace:FindFirstChild("F0SpawnLighting")
 	if oldSpawnLights then
@@ -1589,7 +1686,8 @@ local function buildLighting(scenery: any): ()
 	lightFolder.Parent = Workspace
 	-- Posição, tom e sombra vêm de `SceneryPresentation.spawnLights()`: onde a
 	-- luz cai é decisão de apresentação e mora nos dados, como o resto do
-	-- cenário. Aqui só se instancia.
+	-- cenário. Aqui só se instancia. O brilho base fica no atributo para o
+	-- ciclo dia/noite reescalar sem perder o catálogo.
 	for _, light in scenery.spawnLights() do
 		local emitter = Instance.new("Part")
 		emitter.Name = ("SpawnLight_%s"):format(light.name)
@@ -1604,11 +1702,47 @@ local function buildLighting(scenery: any): ()
 		local point = Instance.new("PointLight")
 		point.Name = "SoftFill"
 		point.Brightness = style.spawnLightBrightness
+		point:SetAttribute(ATTR_BASE_BRIGHTNESS, style.spawnLightBrightness)
 		point.Range = style.spawnLightRange
 		point.Color = if light.tone == "fill" then toColor(style.fillLightColor) else toColor(style.lightColor)
 		point.Shadows = light.shadows
 		point.Parent = emitter
 	end
+
+	-- Sample inicial: se o catálogo de ciclo existe, usa startHour; senão cai
+	-- no crepúsculo clássico 18.25 (compat com o look fixo antigo).
+	local sample: any
+	if dayNight and type(dayNight.sampleAt) == "function" then
+		local cfg = dayNight.config()
+		sample = dayNight.sampleAt(cfg.startHour)
+	else
+		sample = {
+			clockTime = 18.25,
+			brightness = 2.0,
+			ambientRgb = style.ceilingColor,
+			outdoorAmbientRgb = style.ceilingColor,
+			colorShiftTopRgb = style.lightColor,
+			colorShiftBottomRgb = style.fillLightColor,
+			atmosphereColorRgb = style.lightColor,
+			atmosphereDecayRgb = style.ceilingColor,
+			atmosphereDensity = 0.18,
+			atmosphereGlare = 0.12,
+			atmosphereHaze = 0.9,
+			bloomIntensity = 0.35,
+			bloomSize = 22,
+			bloomThreshold = 0.84,
+			ccBrightness = 0,
+			ccContrast = 0.04,
+			ccSaturation = 0.1,
+			ccTintRgb = { 235, 235, 255 },
+			starCount = 400,
+			sunAngularSize = 16,
+			moonAngularSize = 10,
+			exposureCompensation = -0.05,
+			artificialLightScale = 0.85,
+		}
+	end
+	applyLightingSample(sample, scenery)
 end
 
 -- Decoração da área de spawn a partir das receitas puras de
@@ -1675,6 +1809,7 @@ local function buildWildDecorations(root: Folder, wildDecorations: any): ()
 			local light = Instance.new("PointLight")
 			light.Name = "TorchLight"
 			light.Brightness = decoration.light.brightness
+			light:SetAttribute(ATTR_BASE_BRIGHTNESS, decoration.light.brightness)
 			light.Range = decoration.light.rangeStuds
 			light.Color = toColor(decoration.light.rgb)
 			light.Shadows = decoration.light.shadows
@@ -1711,15 +1846,61 @@ function WorldService.init(deps: WorldDeps): ()
 	buildStaticActors(root, deps.presentation, deps.zones)
 	verifyNpcInteractionBinding(root, "ThresholdInstructor", "npc_threshold_instructor")
 	buildAnchors(root, deps.zones)
-	buildLighting(deps.scenery)
+	-- Tochas da planície precisam existir antes do sample reescalar o brilho.
+	buildLighting(deps.scenery, deps.dayNight)
 
 	root.Parent = Workspace
 	WorldService.root = root
 	verifyWorldBootstrap(root)
+	-- Reaplica o sample agora que GreyboxF0 (e as tochas da planície) já
+	-- estão no Workspace — o buildLighting roda antes do Parent e não
+	-- enxergava WildDecorations na primeira passagem.
+	if deps.dayNight and deps.scenery then
+		local cfg = deps.dayNight.config()
+		applyLightingSample(deps.dayNight.sampleAt(cfg.startHour), deps.scenery)
+	end
 	-- Em thread própria: `settleRigBodies` espera um passo de física, e o
 	-- bootstrap não pode ceder o thread no meio — um jogador que entrasse
 	-- nesse frame ainda não teria `PlayerAdded` conectado.
 	task.spawn(WorldService.settleRigBodies)
+end
+
+-- Avança o ciclo dia/noite. Chamado pelo Heartbeat do bootstrap (~10 Hz).
+-- Puro em relação a regra de jogo: só pinta Lighting a partir do catálogo.
+function WorldService.stepDayNight(now: number?): ()
+	local deps = WorldService.deps
+	if not deps or not deps.dayNight or not deps.scenery then
+		return
+	end
+	local dayNight = deps.dayNight
+	local t = now or os.clock()
+	if WorldService.dayNightStartedAt <= 0 then
+		WorldService.dayNightStartedAt = t
+	end
+	-- Throttle: lighting não precisa de 60 Hz; 10 Hz basta e poupa mobile.
+	if WorldService.dayNightLastApplyAt >= 0 and (t - WorldService.dayNightLastApplyAt) < 0.1 then
+		return
+	end
+	WorldService.dayNightLastApplyAt = t
+	local elapsed = t - WorldService.dayNightStartedAt
+	local sample = dayNight.sampleElapsed(elapsed)
+	applyLightingSample(sample, deps.scenery)
+end
+
+-- Liga o Heartbeat do ciclo. Idempotente: reconectar não empilha listeners.
+function WorldService.startDayNight(runService: any): ()
+	if WorldService.dayNightConnection then
+		WorldService.dayNightConnection:Disconnect()
+		WorldService.dayNightConnection = nil
+	end
+	WorldService.dayNightStartedAt = os.clock()
+	WorldService.dayNightLastApplyAt = -1
+	WorldService.stepDayNight(WorldService.dayNightStartedAt)
+	if runService and runService.Heartbeat then
+		WorldService.dayNightConnection = runService.Heartbeat:Connect(function()
+			WorldService.stepDayNight()
+		end)
+	end
 end
 
 -- Assenta os corpos de rig no chão.

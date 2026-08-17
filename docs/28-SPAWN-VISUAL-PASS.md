@@ -17,7 +17,7 @@ A sala agora usa uma base de **ardósia azul-grafite**, caminhos e praça em tom
 | Caminhos | RGB `{96, 102, 122}`, `Slate` | Conectam spawn, treino e portões sem minimapa |
 | Paredes | Paleta existente com cap e acento umbral | Fecham a sala e preservam a silhueta dos portões |
 | Teto | RGB `{32, 38, 54}`, `Glass`, transparência `0.18` | Mantém cobertura visual sem matar a leitura do espaço |
-| Atmosfera | `ClockTime 18.25`, haze `0.9`, density `0.18` | Contraste de crepúsculo controlado |
+| Atmosfera | ciclo dia/noite (`docs/34`); crepúsculo `18.25` é a fase `dusk` | Arco contínuo; haze/density variam por sample |
 | Luzes | 6 PointLights, range 18, brilho 1.35 | Preenchimento alternado ciano/âmbar-umbral, com sombras apenas nas quatro primeiras |
 
 > **Atualização 15/08/2026 (`docs/31`):** as posições saíram do `WorldService` e

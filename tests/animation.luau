@@ -46,6 +46,7 @@ local EnemyVfxPlayer = require("../src/client/Presentation/EnemyVfxPlayer")
 local ZoneSignalPlayer = require("../src/client/Presentation/ZoneSignalPlayer")
 local Npcs = require("../src/shared/Data/Npcs")
 local SceneryPresentation = require("../src/shared/Data/SceneryPresentation")
+local DayNightCycle = require("../src/shared/Data/DayNightCycle")
 local InteractionBinding = require("../src/shared/InteractionBinding")
 local WorldBootstrapContract = require("../src/shared/WorldBootstrapContract")
 local Interactions = require("../src/shared/Data/Interactions")
@@ -966,6 +967,60 @@ test("cenário: as fontes de luz do spawn são dados, ficam na sala e cobrem o r
 	local source = fs.readFile("src/server/Services/WorldService.luau")
 	assertTrue(source:find("scenery.spawnLights()", 1, true) ~= nil, "buildLighting lê o catálogo")
 	assertTrue(source:find("local lightPositions", 1, true) == nil, "sem lista de posições no WorldService")
+end)
+
+test("ciclo dia/noite: catálogo válido e arco claro→escuro com luz artificial", function()
+	local ok, reason = DayNightCycle.validate()
+	assertTrue(ok, reason or "catálogo de ciclo válido")
+
+	local cfg = DayNightCycle.config()
+	assertTrue(cfg.cycleSeconds >= 120 and cfg.cycleSeconds <= 3600, "duração real no orçamento")
+	assertTrue(#DayNightCycle.keyframes() >= 4, "arco com fases suficientes")
+
+	local noon = DayNightCycle.sampleAt(12)
+	local midnight = DayNightCycle.sampleAt(0)
+	local dusk = DayNightCycle.sampleAt(18.25)
+	local dawn = DayNightCycle.sampleAt(6.4)
+
+	assertTrue(noon.brightness > midnight.brightness, "meio-dia mais claro que meia-noite")
+	assertTrue(midnight.artificialLightScale > noon.artificialLightScale, "noite acentua luz artificial")
+	assertTrue(midnight.starCount > noon.starCount, "estrelas à noite")
+	assertTrue(math.abs(dusk.clockTime - 18.25) < 0.05, "crepúsculo clássico no arco")
+	assertTrue(dawn.colorShiftTopRgb[1] > dawn.colorShiftTopRgb[3], "amanhecer puxa para o quente")
+
+	-- hourAt fecha o ciclo e começa em startHour.
+	assertTrue(math.abs(DayNightCycle.hourAt(0) - cfg.startHour) < 1e-6, "t=0 é startHour")
+	assertTrue(math.abs(DayNightCycle.hourAt(cfg.cycleSeconds) - cfg.startHour) < 1e-3, "ciclo fecha")
+
+	-- Lerp de brilho artificial é monótono no intervalo noite→dia.
+	local nightScale = DayNightCycle.sampleAt(21.5).artificialLightScale
+	local dayScale = DayNightCycle.sampleAt(12).artificialLightScale
+	assertTrue(DayNightCycle.scaledBrightness(1.35, DayNightCycle.sampleAt(0)) > 1.35, "meia-noite amplifica")
+	assertTrue(DayNightCycle.scaledBrightness(1.35, noon) < 1.35, "meio-dia atenua")
+	assertTrue(nightScale > dayScale, "escala noturna > diurna")
+
+	-- Fases nomeadas batem com keyframes conhecidos.
+	assertEq(DayNightCycle.phaseIdAt(12), "noon", "fase noon")
+	assertEq(DayNightCycle.phaseIdAt(0), "midnight", "fase midnight")
+	assertEq(DayNightCycle.phaseIdAt(18.25), "dusk", "fase dusk")
+end)
+
+test("ciclo dia/noite: WorldService materializa sample e heartbeat, sem posições manuais", function()
+	local source = fs.readFile("src/server/Services/WorldService.luau")
+	assertTrue(source:find("applyLightingSample", 1, true) ~= nil, "aplica sample puro")
+	assertTrue(source:find("startDayNight", 1, true) ~= nil, "expõe startDayNight")
+	assertTrue(source:find("stepDayNight", 1, true) ~= nil, "expõe stepDayNight")
+	assertTrue(source:find("F0Bloom", 1, true) ~= nil, "bloom do ciclo")
+	assertTrue(source:find("F0Sky", 1, true) ~= nil, "céu/estrelas do ciclo")
+	assertTrue(source:find("F0DayNightCC", 1, true) ~= nil, "color correction do ciclo")
+	assertTrue(source:find("AvbBaseBrightness", 1, true) ~= nil, "brilho base reescalável")
+	assertTrue(source:find("artificialLightScale", 1, true) ~= nil, "escala luz artificial")
+
+	local boot = fs.readFile("src/server/init.server.lua")
+	assertTrue(boot:find("DayNightCycle", 1, true) ~= nil, "bootstrap requer DayNightCycle")
+	assertTrue(boot:find("dayNight = DayNightCycle", 1, true) ~= nil, "injeta no WorldService")
+	assertTrue(boot:find("WorldService.startDayNight(RunService)", 1, true) ~= nil, "liga heartbeat")
+	assertTrue(boot:find("DayNightCycle.validate()", 1, true) ~= nil, "fail-fast no boot")
 end)
 
 test("npc: instrutora tem silhueta visual enriquecida e rosto validado", function()
