@@ -42,6 +42,7 @@ local Npcs = require("../src/shared/Data/Npcs")
 local WorldPresentation = require("../src/shared/Data/WorldPresentation")
 local SpawnDecorations = require("../src/shared/Data/SpawnDecorations")
 local WildDecorations = require("../src/shared/Data/WildDecorations")
+local BiomeDecorations = require("../src/shared/Data/BiomeDecorations")
 local StudioEvidence = require("../scripts/StudioEvidence")
 local Remotes = require("../src/shared/Remotes")
 local RemoteEnvelope = require("../src/shared/RemoteEnvelope")
@@ -237,6 +238,34 @@ test("planície: decoração externa valida contra zonas, cratera e âncoras rea
 	local errors = WildDecorations.validate(WildDecorations.all(), free.volumes, transition.volumes, anchors, crater)
 	assertEq(#errors, 0, table.concat(errors, "; "))
 	assertTrue(#WildDecorations.all() >= 60, "planície decorada de verdade")
+end)
+
+test("bioma: células têm chão, nomes e decoração sem colisão", function()
+	assertTrue(Zones.get("zone_lumen_safe") ~= nil, "Lumen")
+	assertTrue(Zones.get("zone_echo_woods") ~= nil, "Bosque")
+	assertTrue(Zones.get("zone_iron_port") ~= nil, "Porto")
+	assertTrue(Zones.get("zone_grey_sector") ~= nil, "Cinza")
+	assertTrue(Zones.get("zone_academy_safe") ~= nil, "Academia")
+	assertEq(Locale.get("zone.lumen.name"), "Distrito Lumen", "nome Lumen")
+	assertEq(Locale.get("zone.woods.name", "en"), "Echo Woods", "nome bosque EN")
+	local volumes = {}
+	for _, zoneId in { "zone_lumen_safe", "zone_echo_woods", "zone_iron_port", "zone_grey_sector", "zone_academy_safe" } do
+		local zone = Zones.get(zoneId)
+		assertTrue(zone ~= nil, zoneId)
+		if zone then
+			for _, volume in zone.volumes do
+				table.insert(volumes, volume)
+			end
+		end
+	end
+	local _, _, anchors, crater = wildFixture()
+	local errors = BiomeDecorations.validate(BiomeDecorations.all(), volumes, anchors, crater)
+	assertEq(#errors, 0, table.concat(errors, "; "))
+	assertTrue(#BiomeDecorations.all() >= 40, "biomas com marcos visíveis")
+	assertTrue(BiomeDecorations.lightCount() <= 16, "teto de luz de bioma")
+	for _, item in BiomeDecorations.all() do
+		assertFalse(item.canCollide, item.name .. " não pode colidir")
+	end
 end)
 
 test("planície: nada colide, nada entra no ringue do elite e a luz tem teto", function()
@@ -3317,14 +3346,14 @@ local function makeZoneDeps(events: { any }?)
 	}
 end
 
-test("dados: 3 zonas, PvP só na livre, âncoras da spec, spawn no bastião", function()
-	assertEq(#Zones.all(), 3, "3 zonas")
+test("dados: malha de zonas, PvP só em kind=free, âncoras da spec, spawn no bastião", function()
+	assertTrue(#Zones.all() >= 8, "Bastião + transição + planície + 5 células de bioma")
 	for _, zone in Zones.all() do
 		if zone.pvp then
-			assertEq(zone.id, "zone_plain_free", "PvP só na planície")
+			assertEq(zone.kind, "free", "PvP só em zona livre")
 		end
 	end
-	-- 7 âncoras persistidas de §8.3 + os 6 pontos de Estilhaço de §8.1.
+	-- 7 âncoras persistidas de §8.3 + os 6 pontos de Estilhaço de §8.1 + 5 marcos.
 	local required = {
 		"anchor_bastion_spawn",
 		"anchor_bastion_return",
@@ -3337,7 +3366,11 @@ test("dados: 3 zonas, PvP só na livre, âncoras da spec, spawn no bastião", fu
 	for _, anchorId in required do
 		assertTrue(Zones.getAnchor(anchorId) ~= nil, "âncora obrigatória " .. anchorId)
 	end
-	assertEq(#Zones.allAnchors(), #required + #Zones.shardAnchors(), "âncoras persistidas + pontos de Estilhaço")
+	assertEq(
+		#Zones.allAnchors(),
+		#required + #Zones.shardAnchors() + 5,
+		"âncoras persistidas + Estilhaço + marcos de bioma"
+	)
 	local spawn = Zones.getAnchor("anchor_bastion_spawn")
 	assertTrue(spawn ~= nil, "anchor_bastion_spawn existe")
 	if spawn then
@@ -3537,6 +3570,12 @@ test("zona: com hold entra em transição 5 s e canPvp false", function()
 	fakeNow = 7011
 	assertEq(ZoneService.canPvpBetween(220, 221), true, "ambos na livre: PvP")
 	assertEq(#events, 4, "um evento por travessia")
+	-- Planície → bosque: duas livres, PvP segue.
+	assertTrue(ZoneService.tryEnterZone(221, "zone_echo_woods", fakeNow + 2, {}).ok, "entra no bosque")
+	assertEq(ZoneService.canPvp(221), true, "bosque é PvP")
+	-- Bastião → academia: duas seguras, sem hold.
+	assertTrue(ZoneService.tryEnterZone(220, "zone_academy_safe", fakeNow + 2, {}).ok, "entra na academia")
+	assertEq(ZoneService.canPvp(220), false, "academia é segura")
 end)
 
 test("zona: ação hostil na transição encerra a proteção na hora", function()
@@ -4404,6 +4443,16 @@ test("greybox: volumes resolvem a zona de cada âncora", function()
 	-- A transição vence a borda compartilhada: no plano do portão o jogador
 	-- já está na fronteira, não mais na zona segura.
 	assertEq(Zones.zoneAtPosition(vec(0, 0, -32)), "zone_threshold_transition", "plano exato do portão")
+	-- Aventais: ao lado do vão havia void. Agora é chão da planície.
+	assertEq(Zones.zoneAtPosition(vec(20, 0, -36)), "zone_plain_free", "avental norte leste")
+	assertEq(Zones.zoneAtPosition(vec(-20, 0, -36)), "zone_plain_free", "avental norte oeste")
+	assertEq(Zones.zoneAtPosition(vec(-44, 0, 16)), "zone_plain_free", "avental oeste sul")
+	assertEq(Zones.zoneAtPosition(vec(0, 0, -580)), "zone_lumen_safe", "praça Lumen")
+	assertEq(Zones.zoneAtPosition(vec(380, 0, -260)), "zone_echo_woods", "bosque")
+	assertEq(Zones.zoneAtPosition(vec(-390, 0, -70)), "zone_iron_port", "porto")
+	assertEq(Zones.zoneAtPosition(vec(320, 0, -570)), "zone_grey_sector", "setor cinza")
+	assertEq(Zones.zoneAtPosition(vec(50, 0, 140)), "zone_academy_safe", "academia")
+	assertEq(Zones.zoneAtPosition(vec(0, 0, -450)), "zone_threshold_transition", "faixa Lumen")
 end)
 
 test("greybox: 6 pontos de Estilhaço, 24 studs entre si e 20 do portão", function()

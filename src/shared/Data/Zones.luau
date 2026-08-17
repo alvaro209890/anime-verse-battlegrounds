@@ -20,6 +20,9 @@ export type ZoneDefinition = {
 	-- O WorldService constrói as parts a partir daqui; `zoneAtPosition`
 	-- resolve a zona de um ponto com os mesmos números. Uma fonte só.
 	volumes: { Box },
+	-- Apresentação do piso. Ausente = fallback do kind (pedra/areia).
+	floorRgb: { number }?,
+	floorMaterial: string?,
 }
 
 export type AnchorDefinition = {
@@ -63,9 +66,16 @@ local Zones: { [string]: ZoneDefinition } = {
 		displayNameKey = "zone.bastion.name",
 		kind = "safe",
 		pvp = false,
-		volumes = { box(-40, -32, 40, 32) },
+		volumes = {
+			box(-40, -32, 40, 32),
+			-- Plinto leste/sul: a caixa deixa de ter void colado no muro.
+			box(40, -32, 56, 32),
+			box(-56, 32, 56, 48),
+		},
 	},
 	-- Um volume de 8 de profundidade em cada portão (§8.1).
+	-- 17/08: faixa Lumen (norte da planície) para o aviso de risco antes da
+	-- primeira cidade, sem pular segura↔livre.
 	zone_threshold_transition = {
 		id = "zone_threshold_transition",
 		displayNameKey = "", -- spec: sem nome público; só aviso de fronteira
@@ -74,6 +84,7 @@ local Zones: { [string]: ZoneDefinition } = {
 		volumes = {
 			box(-6, -40, 6, -32), -- Portão Norte, 12 de largura
 			box(-48, -5, -40, 5), -- Portão Oeste, 10 de largura
+			box(-24, -460, 24, -440), -- Acesso ao Distrito Lumen
 		},
 	},
 	-- Planície + o braço oeste que liga o Portão Oeste a ela. §8.1 dimensiona a
@@ -101,7 +112,68 @@ local Zones: { [string]: ZoneDefinition } = {
 		volumes = {
 			box(-240, -440, 240, -40),
 			box(-240, -40, -48, 8),
+			-- Aventais dos portões: o vão é estreito (12 / 10 studs) e o muro
+			-- do Bastião continua. Sem piso colado na face de fora, sair pelo
+			-- portão e desviar 1 passo caía no void. São a MESMA zona livre —
+			-- o aviso já aconteceu no vão.
+			box(-40, -40, -6, -32), -- norte, lado oeste do vão
+			box(6, -40, 40, -32), -- norte, lado leste do vão
+			box(-48, -32, -40, -5), -- oeste, lado norte do vão
+			box(-48, 5, -40, 32), -- oeste, lado sul do vão
+			-- Canto nordeste por fora: liga o avental norte ao colar leste.
+			box(40, -40, 56, -32),
 		},
+	},
+	-- Distrito Lumen — primeira célula urbana (docs/02 §3.4, docs/24).
+	-- Segura: rua, praça e marco neon. PvP só na borda da planície.
+	zone_lumen_safe = {
+		id = "zone_lumen_safe",
+		displayNameKey = "zone.lumen.name",
+		kind = "safe",
+		pvp = false,
+		floorRgb = { 28, 24, 42 },
+		floorMaterial = "Asphalt",
+		volumes = { box(-160, -700, 160, -460) },
+	},
+	-- Bosque dos Ecos — leste da planície (docs/02 §3.2). Livre.
+	zone_echo_woods = {
+		id = "zone_echo_woods",
+		displayNameKey = "zone.woods.name",
+		kind = "free",
+		pvp = true,
+		floorRgb = { 48, 78, 52 },
+		floorMaterial = "Grass",
+		volumes = { box(240, -440, 520, -80) },
+	},
+	-- Porto Ferro — oeste do braço (docs/02 §3.4). Livre, docas.
+	zone_iron_port = {
+		id = "zone_iron_port",
+		displayNameKey = "zone.port.name",
+		kind = "free",
+		pvp = true,
+		floorRgb = { 92, 78, 68 },
+		floorMaterial = "Concrete",
+		volumes = { box(-540, -220, -240, 80) },
+	},
+	-- Setor Cinza — nordeste, indústria (docs/02 §3.4). Livre.
+	zone_grey_sector = {
+		id = "zone_grey_sector",
+		displayNameKey = "zone.grey.name",
+		kind = "free",
+		pvp = true,
+		floorRgb = { 62, 64, 70 },
+		floorMaterial = "Basalt",
+		volumes = { box(160, -700, 480, -440) },
+	},
+	-- Academia Alvorada — sudeste do Bastião, campus seguro.
+	zone_academy_safe = {
+		id = "zone_academy_safe",
+		displayNameKey = "zone.academy.name",
+		kind = "safe",
+		pvp = false,
+		floorRgb = { 186, 176, 148 },
+		floorMaterial = "Sandstone",
+		volumes = { box(-80, 48, 180, 240) },
 	},
 }
 
@@ -177,6 +249,33 @@ local Anchors: { [string]: AnchorDefinition } = {
 		id = "anchor_shard_6",
 		zoneId = "zone_plain_free",
 		position = { x = 25, y = 0, z = -140 },
+	},
+	-- Marcos das células de expansão (docs/02 §3.4 / docs/24). Só apresentação
+	-- e resolução de zona — nenhum serviço novo nasce deles nesta rodada.
+	anchor_lumen_plaza = {
+		id = "anchor_lumen_plaza",
+		zoneId = "zone_lumen_safe",
+		position = { x = 0, y = 0, z = -580 },
+	},
+	anchor_woods_shrine = {
+		id = "anchor_woods_shrine",
+		zoneId = "zone_echo_woods",
+		position = { x = 380, y = 0, z = -260 },
+	},
+	anchor_port_pier = {
+		id = "anchor_port_pier",
+		zoneId = "zone_iron_port",
+		position = { x = -390, y = 0, z = -70 },
+	},
+	anchor_grey_stack = {
+		id = "anchor_grey_stack",
+		zoneId = "zone_grey_sector",
+		position = { x = 320, y = 0, z = -570 },
+	},
+	anchor_academy_yard = {
+		id = "anchor_academy_yard",
+		zoneId = "zone_academy_safe",
+		position = { x = 50, y = 0, z = 140 },
 	},
 }
 
@@ -257,7 +356,18 @@ end
 -- `anchor_gate_north` / `anchor_gate_west` declaram. Fora de todo volume
 -- devolve nil — quem chama decide (o bootstrap mantém a zona anterior).
 function ZoneCatalog.zoneAtPosition(position: Vec3): string?
-	local order = { "zone_threshold_transition", "zone_plain_free", "zone_bastion_safe" }
+	-- Células menores e transições antes das caixas grandes. Sem isso o
+	-- Distrito Lumen (norte da planície) seria engolido pela livre.
+	local order = {
+		"zone_threshold_transition",
+		"zone_lumen_safe",
+		"zone_academy_safe",
+		"zone_echo_woods",
+		"zone_iron_port",
+		"zone_grey_sector",
+		"zone_plain_free",
+		"zone_bastion_safe",
+	}
 	for _, zoneId in order do
 		local zone = Zones[zoneId]
 		if zone then

@@ -36,6 +36,7 @@ export type WorldDeps = {
 	scenery: any,
 	spawnDecorations: any,
 	wildDecorations: any,
+	biomeDecorations: any?,
 	-- Catálogo puro do ciclo dia/noite (`DayNightCycle`). Opcional só para
 	-- chamadas legadas de teste; o bootstrap da F0 sempre injeta.
 	dayNight: any?,
@@ -1045,16 +1046,21 @@ local function buildFloors(root: Folder, greybox: any, style: any, zones: any, s
 				else (if zone.id == "zone_plain_free" and index == 1
 					then "PlainFloor"
 					else ("ZoneFloor_%s_%d"):format(zone.id, index))
+			local floorColor = if type(zone.floorRgb) == "table"
+				then toColor(zone.floorRgb)
+				else (colorByKind[zone.kind] or COLORS.bastion)
 			local floor = makePart(
 				floorName,
 				Vector3.new(box.max.x - box.min.x, FLOOR_THICKNESS, box.max.z - box.min.z),
 				Vector3.new((box.min.x + box.max.x) / 2, GROUND_Y - FLOOR_THICKNESS / 2, (box.min.z + box.max.z) / 2),
-				colorByKind[zone.kind] or COLORS.bastion,
+				floorColor,
 				groupByKind[zone.kind] or "Safe",
 				true
 			)
 			floor:SetAttribute("ZoneId", zone.id)
-			floor.Material = if zone.kind == "free" then Enum.Material.Ground else Enum.Material.Slate
+			floor.Material = if type(zone.floorMaterial) == "string"
+				then materialOf(zone.floorMaterial)
+				else (if zone.kind == "free" then Enum.Material.Ground else Enum.Material.Slate)
 			floor.Parent = folder
 		end
 	end
@@ -1823,6 +1829,56 @@ local function buildWildDecorations(root: Folder, wildDecorations: any): ()
 	end
 end
 
+local function buildBiomeDecorations(root: Folder, biomeDecorations: any): ()
+	if not biomeDecorations or type(biomeDecorations.all) ~= "function" then
+		return
+	end
+	local folder = Instance.new("Folder")
+	folder.Name = "BiomeDecorations"
+	folder.Parent = root
+	for _, decoration in biomeDecorations.all() do
+		local part = Instance.new("Part")
+		part.Name = decoration.name
+		part.Anchored = true
+		part.CanCollide = decoration.canCollide == true
+		part.CanTouch = false
+		part.CanQuery = false
+		part.Size = Vector3.new(decoration.size.x, decoration.size.y, decoration.size.z)
+		part.Color = toColor(decoration.rgb)
+		part.Material = materialOf(decoration.material)
+		part.Transparency = decoration.transparency
+		part.CastShadow = decoration.transparency < 0.3
+		part.TopSurface = Enum.SurfaceType.Smooth
+		part.BottomSurface = Enum.SurfaceType.Smooth
+		part.CollisionGroup = "Free"
+		local yaw = math.rad(decoration.yawDegrees or 0)
+		-- Cylinder no Roblox tem eixo X: deita 90° em Z para o tamanho.X ser altura.
+		if decoration.shape == "Cylinder" then
+			part.Shape = Enum.PartType.Cylinder
+			part.CFrame = CFrame.new(decoration.position.x, decoration.position.y, decoration.position.z)
+				* CFrame.Angles(0, yaw, math.pi / 2)
+		elseif decoration.shape == "Ball" then
+			part.Shape = Enum.PartType.Ball
+			part.CFrame = CFrame.new(decoration.position.x, decoration.position.y, decoration.position.z)
+				* CFrame.Angles(0, yaw, 0)
+		else
+			part.CFrame = CFrame.new(decoration.position.x, decoration.position.y, decoration.position.z)
+				* CFrame.Angles(0, yaw, 0)
+		end
+		if decoration.light then
+			local light = Instance.new("PointLight")
+			light.Name = "BiomeLight"
+			light.Brightness = decoration.light.brightness
+			light:SetAttribute(ATTR_BASE_BRIGHTNESS, decoration.light.brightness)
+			light.Range = decoration.light.rangeStuds
+			light.Color = toColor(decoration.light.rgb)
+			light.Shadows = decoration.light.shadows
+			light.Parent = part
+		end
+		part.Parent = folder
+	end
+end
+
 -- Constrói o mundo. Idempotente: rodar de novo em Studio limpa e reconstrói.
 function WorldService.init(deps: WorldDeps): ()
 	WorldService.deps = deps
@@ -1846,6 +1902,7 @@ function WorldService.init(deps: WorldDeps): ()
 	buildLandmarks(root, greybox, style)
 	buildSpawnDecorations(root, deps.spawnDecorations)
 	buildWildDecorations(root, deps.wildDecorations)
+	buildBiomeDecorations(root, deps.biomeDecorations)
 	buildZoneVolumes(root, deps.zones)
 	buildStaticActors(root, deps.presentation, deps.zones)
 	verifyNpcInteractionBinding(root, "ThresholdInstructor", "npc_threshold_instructor")

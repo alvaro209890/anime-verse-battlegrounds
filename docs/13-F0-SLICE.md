@@ -31,7 +31,7 @@ Itens 1–13 estão fechados em código/headless. O snapshot de implementação 
 | `src/shared/Data/Abilities.luau` | `comet_shoulder`, `broken_cadence`, `pulse_return`; `eclipse_beat` desligada | feito |
 | `src/shared/Data/EnergyFamilies.luau` | Umbral regen 2/6, Fluxo 6 / 120 ms, cap 1,5 s | feito |
 | `src/shared/Data/Npcs.luau` | dummy 10000 HP; `enemy_wandering_shard` 60 HP / dano 8 / alcance 4 / telegraph 400 ms; `npc_threshold_instructor` (ofertante) | **item 9 feito**: `enemy_anchored_shard` (120 HP, slam 14/700 ms, combo 6+6/300 ms, respawn 180 s, XP 80 cooldown 180 s, leeching 1%/8 s) — pathfinding/Studio pendente |
-| `src/shared/Data/Zones.luau` | 3 zonas com volumes (AABB), 7 âncoras persistidas (`anchor_instructor` incluída) + 6 pontos de Estilhaço, greybox F0-BASELINE | feito |
+| `src/shared/Data/Zones.luau` | 8 zonas (Bastião, transição, planície + Lumen/Bosque/Porto/Cinza/Academia), aventais dos portões, 7 âncoras F0 + 6 Estilhaços + 5 marcos de bioma | feito |
 | `src/shared/Geometry.luau` | distância, costas, esfera, cápsula, caixa, lunge e passo de perseguição | feito |
 | `SpatialService` | registro de posição/olhar; hitbox à frente, cápsula do trajeto, `resolveCometShoulder` | feito no domínio; leitura do `HumanoidRootPart` só roda no Studio |
 | `EnemyService` | spawn nas 6 âncoras, perseguição 12 studs/s, ciclo de ataque, respawn 45 s, teto 4 | feito no domínio; nunca rodou em Studio |
@@ -549,7 +549,7 @@ Os casos abaixo estão em `tests/run.luau` (166 no total; fonte: chamadas `test(
 
 Item 6 (zona/fronteira) adicionou os casos abaixo:
 
-- catálogo: 3 zonas; PvP só em `zone_plain_free`; 6 âncoras; spawn = `anchor_bastion_spawn` em `zone_bastion_safe`
+- catálogo: 8 zonas (3 F0 + 5 biomas); PvP em zonas `kind=free`; âncoras F0 + Estilhaço + marcos; spawn = `anchor_bastion_spawn` em `zone_bastion_safe`
 - catálogo: zona/âncora inválida (zona desconhecida, spawn ausente, PvP fora da planície) falha validação
 - zona: join começa em `zone_bastion_safe`; `canPvp` false
 - zona: sem `holdConfirmed`, recusa primeira ida à livre (`hold_required`)

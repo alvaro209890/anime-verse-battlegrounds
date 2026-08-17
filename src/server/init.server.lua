@@ -49,6 +49,7 @@ local RemoteEnvelope = require(ReplicatedStorage.Shared.RemoteEnvelope)
 local WorldPresentation = require(ReplicatedStorage.Shared.Data.WorldPresentation)
 local SpawnDecorations = require(ReplicatedStorage.Shared.Data.SpawnDecorations)
 local WildDecorations = require(ReplicatedStorage.Shared.Data.WildDecorations)
+local BiomeDecorations = require(ReplicatedStorage.Shared.Data.BiomeDecorations)
 local Locomotion = require(ReplicatedStorage.Shared.Data.Locomotion)
 local SceneryPresentation = require(ReplicatedStorage.Shared.Data.SceneryPresentation)
 local DayNightCycle = require(ReplicatedStorage.Shared.Data.DayNightCycle)
@@ -93,6 +94,30 @@ local shardSkinOk, shardSkinReason = WorldPresentation.validateShardSkins(Npcs)
 if not shardSkinOk then
 	error("skin de estilhaço inválida: " .. (shardSkinReason or "unknown"))
 end
+local biomeVolumes = {}
+for _, zoneId in { "zone_lumen_safe", "zone_echo_woods", "zone_iron_port", "zone_grey_sector", "zone_academy_safe" } do
+	local zone = Zones.get(zoneId)
+	if zone then
+		for _, volume in zone.volumes do
+			table.insert(biomeVolumes, volume)
+		end
+	end
+end
+local shardPositions = {}
+for _, anchorId in Zones.shardAnchors() do
+	local anchor = Zones.getAnchor(anchorId)
+	if anchor then
+		table.insert(shardPositions, anchor.position)
+	end
+end
+local biomeErrors = BiomeDecorations.validate(BiomeDecorations.all(), biomeVolumes, shardPositions, {
+	x = 0,
+	z = -102,
+	radius = 20,
+})
+if #biomeErrors > 0 then
+	error("decoração de bioma inválida: " .. biomeErrors[1])
+end
 
 ProgressionService.init()
 
@@ -105,6 +130,7 @@ WorldService.init({
 	scenery = SceneryPresentation,
 	spawnDecorations = SpawnDecorations,
 	wildDecorations = WildDecorations,
+	biomeDecorations = BiomeDecorations,
 	dayNight = DayNightCycle,
 })
 -- Ciclo dia/noite: sample puro → Lighting no Heartbeat (~10 Hz interno).

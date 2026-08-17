@@ -81,9 +81,33 @@ local FRONTIER_SIGNALS: { string } = {
 }
 
 -- Lado da fronteira para dano atravessando: segura+transição = "safe",
--- livre = "free". Projétil/área não cruza safe↔free.
+-- livre (qualquer zona com pvp/kind free) = "free". Projétil/área não cruza.
+local function zoneKindOf(zoneId: string): string
+	local zone = ZoneService.getZone(zoneId)
+	if zone and type(zone.kind) == "string" then
+		return zone.kind
+	end
+	return "safe"
+end
+
+local function isSafeZone(zoneId: string): boolean
+	return zoneKindOf(zoneId) == "safe"
+end
+
+local function isFreeZone(zoneId: string): boolean
+	local zone = ZoneService.getZone(zoneId)
+	if not zone then
+		return zoneId == ZONE_FREE
+	end
+	return zone.kind == "free" or zone.pvp == true
+end
+
+local function isTransitionZone(zoneId: string): boolean
+	return zoneKindOf(zoneId) == "transition"
+end
+
 local function damageSide(zoneId: string): string
-	if zoneId == ZONE_FREE then
+	if isFreeZone(zoneId) then
 		return "free"
 	end
 	return "safe"
@@ -266,13 +290,13 @@ end
 -- vale igual, então ninguém aparece na planície já vulnerável.
 function ZoneService.reconcile(userId: number, geometricZoneId: string, now: number): EnterZoneResult
 	local result = ZoneService.tryEnterZone(userId, geometricZoneId, now, {})
-	if result.ok or geometricZoneId ~= ZONE_FREE then
+	if result.ok or not isFreeZone(geometricZoneId) then
 		return result
 	end
 	-- Pulou o volume de transição (dash, queda, ou simplesmente andou):
 	-- a travessia é registrada degrau a degrau para a proteção de 5 s valer.
 	-- Lockout é barreira de VOLTA para a segura; não cai aqui.
-	if ZoneService.getPlayerZone(userId) == ZONE_SAFE then
+	if isSafeZone(ZoneService.getPlayerZone(userId)) then
 		ZoneService.tryEnterZone(userId, ZONE_TRANSITION, now, { holdConfirmed = true })
 	end
 	return ZoneService.tryEnterZone(userId, geometricZoneId, now, { holdConfirmed = true })
@@ -303,7 +327,7 @@ function ZoneService.canPvp(userId: number): boolean
 	if not deps then
 		return false
 	end
-	if ZoneService.getPlayerZone(userId) ~= ZONE_FREE then
+	if not isFreeZone(ZoneService.getPlayerZone(userId)) then
 		return false
 	end
 	return not ZoneService.isInTransition(userId, deps.now())
@@ -343,8 +367,8 @@ function ZoneService.markHostileAction(userId: number, _now: number): boolean
 	local transition = ZoneService.transitions[userId]
 	if transition then
 		ZoneService.transitions[userId] = nil
-		if transition.to == ZONE_FREE then
-			ZoneService.zones[userId] = ZONE_FREE
+		if isFreeZone(transition.to) then
+			ZoneService.zones[userId] = transition.to
 			return true
 		end
 		return false
@@ -454,8 +478,16 @@ function ZoneService.tryEnterZone(
 		return { ok = false, reason = "already_in_zone" }
 	end
 
+	-- Duas seguras vizinhas (Bastião → Academia, etc.): sem hold e sem lockout.
+	if isSafeZone(toZoneId) and isSafeZone(fromZoneId) then
+		ZoneService.zones[userId] = toZoneId
+		ZoneService.transitions[userId] = nil
+		local event = emit(userId, fromZoneId, toZoneId, now, {})
+		return { ok = true, event = event }
+	end
+
 	-- Saindo da segura em direção à livre (via volume de transição).
-	if toZoneId == ZONE_TRANSITION and fromZoneId == ZONE_SAFE then
+	if isTransitionZone(toZoneId) and isSafeZone(fromZoneId) then
 		if not ZoneService.holdConfirmed[userId] and opts.holdConfirmed ~= true then
 			local event: ZoneEventPayload? = nil
 			if ZoneService.holdPromptedTarget[userId] ~= toZoneId then
@@ -476,7 +508,7 @@ function ZoneService.tryEnterZone(
 	end
 
 	-- Cruzando da transição para a livre: proteção restante continua valendo.
-	if toZoneId == ZONE_FREE and fromZoneId == ZONE_TRANSITION then
+	if isFreeZone(toZoneId) and isTransitionZone(fromZoneId) then
 		if not ZoneService.holdConfirmed[userId] and opts.holdConfirmed ~= true then
 			local event: ZoneEventPayload? = nil
 			if ZoneService.holdPromptedTarget[userId] ~= toZoneId then
@@ -496,13 +528,13 @@ function ZoneService.tryEnterZone(
 				protectionUntil = now + TRANSITION_SECONDS,
 			}
 		end
-		ZoneService.zones[userId] = ZONE_FREE
+		ZoneService.zones[userId] = toZoneId
 		local event = emit(userId, fromZoneId, toZoneId, now, { holdConfirmed = true })
 		return { ok = true, event = event }
 	end
 
 	-- Volta: barreira interna bloqueia combate PvP recente (15 s, timer visível).
-	if toZoneId == ZONE_TRANSITION and fromZoneId == ZONE_FREE then
+	if isTransitionZone(toZoneId) and isFreeZone(fromZoneId) then
 		local remaining = lockoutRemaining(userId, now)
 		if remaining then
 			return rejectLockout(userId, fromZoneId, toZoneId, now, remaining)
@@ -513,8 +545,15 @@ function ZoneService.tryEnterZone(
 		return { ok = true, event = event }
 	end
 
+	-- Entre duas livres (planície → bosque/porto): sem hold, PvP continua.
+	if isFreeZone(toZoneId) and isFreeZone(fromZoneId) then
+		ZoneService.zones[userId] = toZoneId
+		local event = emit(userId, fromZoneId, toZoneId, now, {})
+		return { ok = true, event = event }
+	end
+
 	-- Entrada na segura: livre, mas com a mesma barreira de lockout.
-	if toZoneId == ZONE_SAFE then
+	if isSafeZone(toZoneId) then
 		local remaining = lockoutRemaining(userId, now)
 		if remaining then
 			return rejectLockout(userId, fromZoneId, toZoneId, now, remaining)

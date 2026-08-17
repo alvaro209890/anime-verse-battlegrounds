@@ -184,9 +184,9 @@ function CatalogService.validate(): ()
 			end
 			if zone.pvp then
 				freeZones += 1
-				-- F0: alto risco não existe; PvP só em zone_plain_free
-				if zone.id ~= "zone_plain_free" then
-					fail(("zone %s → PvP fora da planície não existe na fatia"):format(zone.id))
+				-- Alto risco continua fora; PvP só em zona livre (planície + biomas).
+				if zone.kind ~= "free" then
+					fail(("zone %s → PvP exige kind=free"):format(zone.id))
 				end
 			end
 		end

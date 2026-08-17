@@ -108,6 +108,12 @@ Regras do mundo aberto multi-cidade:
 **Primeiro alvo após o F0:** o **Distrito Lumen** (F1/F2) — prova o pipeline de
 cidade urbana densa com streaming antes de comprometer a Vila Sombria.
 
+**Greybox da malha (17/08):** as cinco células (Lumen, Bosque, Porto, Setor
+Cinza, Academia) existem como volumes + piso + marcos em `Zones.luau` /
+`BiomeDecorations.luau`. Não substituem o gate de densidade de uma cidade
+completa: é o chão jogável e a identidade visual para não cair no void e para
+o mundo ler como Blox Fruits (biomas distintos, marco vertical por célula).
+
 ## 4. Tipos de zona e transição PvP
 
 ### 4.1 Regras por tipo

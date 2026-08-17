@@ -31,6 +31,11 @@ local Strings: { [string]: { [string]: string } } = {
 		-- Mundo
 		["zone.bastion.name"] = "Bastião do Limiar",
 		["zone.plain.name"] = "Planície Estilhaçada",
+		["zone.lumen.name"] = "Distrito Lumen",
+		["zone.woods.name"] = "Bosque dos Ecos",
+		["zone.port.name"] = "Porto Ferro",
+		["zone.grey.name"] = "Setor Cinza",
+		["zone.academy.name"] = "Academia Alvorada",
 
 		-- NPCs
 		["npc.threshold_instructor.name"] = "Instrutora do Limiar",
@@ -117,6 +122,11 @@ local Strings: { [string]: { [string]: string } } = {
 
 		["zone.bastion.name"] = "Threshold Bastion",
 		["zone.plain.name"] = "Shattered Plain",
+		["zone.lumen.name"] = "Lumen District",
+		["zone.woods.name"] = "Echo Woods",
+		["zone.port.name"] = "Iron Port",
+		["zone.grey.name"] = "Grey Sector",
+		["zone.academy.name"] = "Dawn Academy",
 
 		["npc.threshold_instructor.name"] = "Threshold Instructress",
 		["npc.training_dummy.name"] = "Training Dummy",

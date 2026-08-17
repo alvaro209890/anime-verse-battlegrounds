@@ -1,5 +1,19 @@
 # Snapshot Canônico da Documentação — 17/08/2026
 
+## Rodada de 17/08 (Grok) — void dos portões + malha de biomas
+
+1. **Buracos no void ao lado dos portões.** O vão norte tem 12 studs e o oeste
+   10; o muro continua. Um passo para o lado, ainda colado na caixa, caía no
+   nada. Aventais `zone_plain_free` cobrem as faces de fora; plinto leste/sul
+   amplia o Bastião para a caixa não flutuar.
+2. **Malha de células (docs/02 §3.4 / docs/24):** Distrito Lumen (seguro,
+   neon), Bosque dos Ecos, Porto Ferro, Setor Cinza (livres, PvP) e Academia
+   Alvorada (segura). Pisos coloridos por bioma; decoração sem colisão;
+   `ZoneService` generalizado (safe↔safe, free↔free). Âncoras e quests F0
+   não se mexeram.
+
+---
+
 ## Rodada de 17/08 (Grok) — raio de aggro 30 studs nos bots
 
 Os Estilhaços perseguiam o jogador por toda a planície (480×400). Agora há um
