@@ -1,5 +1,37 @@
 # Snapshot Canônico da Documentação — 17/08/2026
 
+## Rodada de 17/08 (Hermes-server) — controles no padrão dos demais jogos + hotbar Roblox
+
+Duas mudanças de input pedidas pelo Álvaro no playtest (GDD §3.1 e este
+snapshot sincronizados no mesmo commit):
+
+1. **Hotbar estilo inventário padrão do Roblox** (`UIController`): o cluster de
+   habilidades saiu do canto inferior direito (botões largos 112×78) e virou
+   uma hotbar de **slots quadrados 58×58 numerados (1/2/3), centralizada no
+   rodapé** — o visual padrão dos jogos Roblox. Número da tecla no canto do
+   slot, nome dentro, cooldown radial e cadeado preservados. O prompt de
+   travessia (`ZoneHold`) subiu para `y = -178` para não colidir com a hotbar.
+2. **Botão direito = defesa, esquerdo = ataque** (`InputController`):
+   - clique esquerdo **rápido** = golpe leve (cadeia de 4) — decidido no
+     release;
+   - clique esquerdo **seguro (~0,3 s)** = golpe pesado (hold-to-heavy, escolha
+     do Álvaro; antes o pesado morava no botão direito);
+   - botão direito = **guarda/aparo** (antes era o pesado); F e L2 seguem como
+     alternativas;
+   - gamepad intacto: RT = leve, RB = pesado, LT = guarda; toque segue leve
+     no toque (sem hold-to-heavy de propósito — arrasto viraria pesado
+     acidental).
+
+Regra extraída para função pura `InputController.resolveMouseRelease` (testada:
+release órfão/clique rápido = leve, ≥ 0,3 s = pesado) — o wiring de
+InputBegan/Ended só registra o relógio e chama ela. Textos de ajuda (PT/EN)
+atualizados.
+
+**Gates headless:** domínio 244/244 (+1 hold-to-heavy), animação 74/74, fuzz
+67/67, e2e 19/19, Selene/StyLua/Rojo limpos (conferidos na rodada).
+
+---
+
 ## Rodada de 17/08 (Hermes-server) — pesado básico agora sacode de verdade
 
 Achado em aberto do runbook (`docs/32` §6, simulação de 15/08): o perfil de
@@ -45,8 +77,9 @@ SprintDown/Up), animação **74/74**, Selene 0/0/0. StyLua limpo nos arquivos
 tocados. MCP do Studio esteve offline nesta sessão de agent — a validação em
 Play (segurar Shift e ver 22 studs/s) fica como check humano no rebuild.
 
-**Controles F0 (PC):** clique = leve · botão direito = pesado · **Shift = correr**
-· F = guarda · Q = dash · 1/2/3 = técnicas · Tab = mira · E = interagir/portão · H = menu.
+**Controles F0 (PC):** clique esquerdo = leve · segurar esquerdo ~0,3s = pesado
+· **botão direito = guarda** · Shift = correr · Q = dash · 1/2/3 = técnicas
+(hotbar numerada no rodapé) · Tab = mira · E = interagir/portão · H = menu.
 
 ---
 

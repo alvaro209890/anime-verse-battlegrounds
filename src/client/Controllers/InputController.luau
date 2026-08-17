@@ -29,7 +29,13 @@ export type Controller = {
 	touchPressed: { [string]: boolean },
 	touchCount: number,
 	connections: { any },
+	heavyHoldStart: number?,
 }
+
+-- Hold-to-heavy do clique esquerdo (decisão do Álvaro, 17/08): clique rápido
+-- é o golpe leve; segurar >= HOLD_HEAVY_SECONDS vira o pesado (quebra guarda).
+-- O botão direito virou GUARDA — por isso o pesado precisou de casa própria.
+local HOLD_HEAVY_SECONDS = 0.3
 
 local COMBAT_LIMIT_PER_SECOND = 8
 local NON_COMBAT: { [string]: boolean } = {
@@ -55,12 +61,29 @@ function InputController.new(state: any, now: (() -> number)?): Controller
 		touchPressed = {},
 		touchCount = 0,
 		connections = {},
+		heavyHoldStart = nil,
 	}
 end
 
 function InputController.subscribe(controller: Controller, listener: (SemanticAction, { [string]: any }) -> ()): ()
 	table.insert(controller.listeners, listener)
 end
+
+-- Decisão pura do hold-to-heavy no release do clique esquerdo. Clique rápido
+-- (ou sem press registrado) é o leve; segurar o suficiente vira o pesado.
+-- Extraída para função pura para os testes travarem a regra sem DataModel.
+function InputController.resolveMouseRelease(
+	holdStart: number?,
+	now: number,
+	holdSeconds: number
+): "BasicLight" | "BasicHeavy"
+	if holdStart and now - holdStart >= holdSeconds then
+		return "BasicHeavy"
+	end
+	return "BasicLight"
+end
+
+InputController.HoldHeavySeconds = HOLD_HEAVY_SECONDS
 
 -- Clique de combate não pode morrer na HUD. No Studio, InputBegan chega com
 -- processed=true sobre Frame/TextLabel do ScreenGui — o playtest clicava e
@@ -191,20 +214,28 @@ function InputController.start(
 			if not InputController.shouldAcceptInput(processed, typing, isMouseCombat, onButton) then
 				return
 			end
-			if
-				inputType == Enum.UserInputType.MouseButton1
-				or inputType == Enum.UserInputType.Touch
-				or key == Enum.KeyCode.ButtonR2
-			then
-				-- Clique do mouse OU toque no mundo = ataque simples. Sem o
-				-- botão de atacar na HUD (decisão do Álvaro, 13/08), o toque
-				-- fora de botões vira o golpe leve; cliques em botões de
-				-- habilidade continuam com os botões (shouldAcceptInput).
+			if inputType == Enum.UserInputType.MouseButton1 then
+				-- Hold-to-heavy (17/08): o clique esquerdo decide no RELEASE —
+				-- rápido = leve, segurar >= 0,3s = pesado. Nada dispara aqui.
+				controller.heavyHoldStart = controller.now()
+			elseif inputType == Enum.UserInputType.Touch or key == Enum.KeyCode.ButtonR2 then
+				-- Toque no mundo / R2 (gamepad) = ataque simples (leve). O toque
+				-- não usa hold-to-heavy: toque longo em scroll/arrasto viraria
+				-- pesado acidental, e o botão de atacar não existe na HUD
+				-- (decisão do Álvaro, 13/08).
 				dispatch("BasicLight")
-			elseif inputType == Enum.UserInputType.MouseButton2 or key == Enum.KeyCode.ButtonR1 then
-				dispatch("BasicHeavy")
-			elseif key == Enum.KeyCode.F or key == Enum.KeyCode.ButtonL2 then
+			elseif
+				inputType == Enum.UserInputType.MouseButton2
+				or key == Enum.KeyCode.ButtonL2
+				or key == Enum.KeyCode.F
+			then
+				-- Botão direito = GUARDA (padrão dos demais jogos, decisão do
+				-- Álvaro 17/08); F e L2 (gamepad) seguem como alternativas.
 				dispatch("GuardDown")
+			elseif key == Enum.KeyCode.ButtonR1 then
+				-- R1 (gamepad) continua sendo o pesado — o hold-to-heavy é só
+				-- do mouse (o gatilho R2 é o leve, como no padrão).
+				dispatch("BasicHeavy")
 			elseif key == Enum.KeyCode.Q or (key == Enum.KeyCode.ButtonB and not controller.gamepadModifier) then
 				dispatch("Dash")
 			elseif key == Enum.KeyCode.LeftShift or key == Enum.KeyCode.RightShift or key == Enum.KeyCode.ButtonL3 then
@@ -236,11 +267,23 @@ function InputController.start(
 		controller.connections,
 		userInputService.InputEnded:Connect(function(input: any, processed: boolean)
 			local key = input.KeyCode
+			local inputType = input.UserInputType
 			-- Uma ação que começou fora da UI precisa sempre poder terminar; caso
 			-- contrário guarda/modificador/sprint podem ficar presos se outra
 			-- interface consumir o release. E/Y é a exceção compartilhada com
 			-- prompts: quando processado, não deve emitir ZoneHoldUp colateral.
-			if key == Enum.KeyCode.F or key == Enum.KeyCode.ButtonL2 then
+			if inputType == Enum.UserInputType.MouseButton1 then
+				-- Release decide leve/pesado (hold-to-heavy). Uma ação que
+				-- começou fora da UI precisa sempre poder terminar; por isso
+				-- não checa `processed` aqui (mesma regra de F/Shift abaixo).
+				local started = controller.heavyHoldStart
+				controller.heavyHoldStart = nil
+				dispatch(InputController.resolveMouseRelease(started, controller.now(), HOLD_HEAVY_SECONDS))
+			elseif
+				inputType == Enum.UserInputType.MouseButton2
+				or key == Enum.KeyCode.F
+				or key == Enum.KeyCode.ButtonL2
+			then
 				dispatch("GuardUp")
 			elseif key == Enum.KeyCode.LeftShift or key == Enum.KeyCode.RightShift or key == Enum.KeyCode.ButtonL3 then
 				dispatch("SprintUp")

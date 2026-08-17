@@ -109,13 +109,32 @@ function UIController.new(deps: { [string]: any }): any
 	feedback.TextSize = 20
 	feedback.Visible = false
 
-	local abilityCluster = frame("Abilities", gui, UDim2.fromOffset(360, 84), UDim2.new(1, -378, 1, -102))
+	-- Hotbar estilo inventário padrão do Roblox (decisão do Álvaro, 17/08):
+	-- slots QUADRADOS numerados, centralizados no rodapé — como nos demais
+	-- jogos. As teclas 1/2/3 correspondem aos slots; clicar no slot também
+	-- dispara a técnica (e o InputController consome o clique, não o HUD).
+	local SLOT_SIZE = 58
+	local SLOT_GAP = 8
+	local slotCount = #deps.abilityController.slotIds
+	local hotbarWidth = slotCount * SLOT_SIZE + (slotCount - 1) * SLOT_GAP
+	local abilityCluster =
+		frame("Abilities", gui, UDim2.fromOffset(hotbarWidth, SLOT_SIZE), UDim2.new(0.5, -hotbarWidth / 2, 1, -128))
 	abilityCluster.BackgroundTransparency = 1
 	local abilityViews: { any } = {}
 	for slot, abilityId in deps.abilityController.slotIds do
-		local slotButton =
-			button("Ability" .. slot, abilityCluster, UDim2.fromOffset(112, 78), UDim2.fromOffset((slot - 1) * 120, 3))
-		local cooldown = frame("CooldownRadial", slotButton, UDim2.fromOffset(38, 38), UDim2.new(1, -43, 0, 5))
+		local slotButton = button(
+			"Ability" .. slot,
+			abilityCluster,
+			UDim2.fromOffset(SLOT_SIZE, SLOT_SIZE),
+			UDim2.fromOffset((slot - 1) * (SLOT_SIZE + SLOT_GAP), 0)
+		)
+		slotButton.TextSize = 10
+		local slotNumber = label("SlotNumber", slotButton, UDim2.fromOffset(18, 16), UDim2.fromOffset(3, 2))
+		slotNumber.Text = tostring(slot)
+		slotNumber.TextSize = 12
+		slotNumber.TextXAlignment = Enum.TextXAlignment.Center
+		slotNumber.TextColor3 = MUTED
+		local cooldown = frame("CooldownRadial", slotButton, UDim2.fromOffset(42, 42), UDim2.new(0.5, -21, 0.5, -21))
 		cooldown.BackgroundColor3 = BG
 		cooldown.Visible = false
 		local corner = Instance.new("UICorner")
@@ -132,10 +151,10 @@ function UIController.new(deps: { [string]: any }): any
 		local countdown = label("Seconds", cooldown, UDim2.fromScale(1, 1), UDim2.fromScale(0, 0))
 		countdown.TextXAlignment = Enum.TextXAlignment.Center
 		countdown.TextSize = 12
-		local locked = label("Locked", slotButton, UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 1, -19))
+		local locked = label("Locked", slotButton, UDim2.new(1, 0, 0, 12), UDim2.new(0, 0, 1, -13))
 		locked.TextXAlignment = Enum.TextXAlignment.Center
 		locked.TextColor3 = MUTED
-		locked.TextSize = 10
+		locked.TextSize = 8
 		slotButton.Activated:Connect(function()
 			deps.inputApi.dispatch(deps.input, ("Ability%d"):format(slot), {})
 		end)
@@ -183,7 +202,7 @@ function UIController.new(deps: { [string]: any }): any
 		deps.inputApi.dispatch(deps.input, "Dash", {})
 	end)
 
-	local zoneHold = button("ZoneHold", gui, UDim2.fromOffset(300, 42), UDim2.new(0.5, -150, 1, -58))
+	local zoneHold = button("ZoneHold", gui, UDim2.fromOffset(300, 42), UDim2.new(0.5, -150, 1, -178))
 	zoneHold.Visible = false
 	-- Toque e mouse: segurar o botão vale como segurar E. Antes só Touch
 	-- disparava, então no PC o botão era decorativo.

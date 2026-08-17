@@ -897,6 +897,34 @@ test("cliente: toque recusa terceiro botão simultâneo", function()
 	assertTrue(InputController.touchBegin(input, "c", "Dash", {}), "libera após soltar")
 end)
 
+test("cliente: hold-to-heavy — clique rápido é leve, segurar vira pesado", function()
+	-- Decisão do Álvaro (17/08): botão direito virou guarda; o pesado passou
+	-- a morar no clique esquerdo SEGURADO (~0,3s). A regra é função pura
+	-- (`resolveMouseRelease`) — o wiring de InputBegan/Ended só registra o
+	-- relógio e chama ela no release.
+	assertEq(
+		InputController.resolveMouseRelease(nil, 10, InputController.HoldHeavySeconds),
+		"BasicLight",
+		"sem press registrado = leve (release órfão)"
+	)
+	assertEq(
+		InputController.resolveMouseRelease(10, 10.1, InputController.HoldHeavySeconds),
+		"BasicLight",
+		"clique rápido (< 0,3s) = leve"
+	)
+	assertEq(
+		InputController.resolveMouseRelease(10, 10.3, InputController.HoldHeavySeconds),
+		"BasicHeavy",
+		"exatamente no limiar = pesado"
+	)
+	assertEq(
+		InputController.resolveMouseRelease(10, 11, InputController.HoldHeavySeconds),
+		"BasicHeavy",
+		"hold longo = pesado"
+	)
+	assertEq(InputController.HoldHeavySeconds, 0.3, "limiar documentado é 0,3s")
+end)
+
 test("cliente: CharacterController envia somente intenção sem alvo ou dano", function()
 	local state = ClientState.new(clockNow)
 	ClientState.applySnapshot(state, { ready = true })

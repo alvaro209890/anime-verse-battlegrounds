@@ -84,8 +84,8 @@ Metas de percepção:
 | Ação | PC | Mobile | Console |
 |---|---|---|---|
 | ataque leve | botão esquerdo | botão primário | RT |
-| ataque pesado | botão direito | segurar primário | RB |
-| guarda/aparo | F | botão de escudo | LT |
+| ataque pesado | segurar esquerdo (~0,3 s) | segurar primário | RB |
+| guarda/aparo | botão direito ou F | botão de escudo | LT |
 | dash | Q | botão de dash | B sem modificador |
 | pulo | Espaço | botão de pulo | A sem modificador |
 | técnicas 1–4 | 1–4 | botões contextuais 1–4 | segurar LB + A/B/X/Y |
