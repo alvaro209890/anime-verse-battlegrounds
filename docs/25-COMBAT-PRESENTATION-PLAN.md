@@ -8,6 +8,12 @@ Este documento define a próxima melhoria visual do F0 para três ações que pr
 
 A direção visual combina **slate escuro**, energia **ciano** para proteção e deslocamento, e **âmbar** para atrito, estilhaço e impacto. O objetivo é densidade antes de tamanho: poucos elementos, mas cada elemento comunica uma fase de ação.
 
+**UI (17/08):** o HUD deixou o cinza placeholder. Cores semânticas vivem em
+`UiPalette` (`docs/35-UI-VISUAL-PASS.md`). Vida verde, guarda ciano, Umbral
+violeta, dano flutuante com as cores já travadas pelos testes, faixa de zona
+verde/vermelho **mais** texto. Ghost de dano recente é apresentação do valor
+autoritativo, não estimativa.
+
 ## 2. Diagnóstico do código atual
 
 | Área | Situação encontrada | Decisão desta rodada |

@@ -3,16 +3,38 @@
 -- até 10 Hz; não chama remotes e não conhece regras de domínio.
 
 local LevelUpPlayer = require(script.Parent.Parent.Presentation.LevelUpPlayer)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UiPalette = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Data"):WaitForChild("UiPalette"))
 
 local UIController = {}
 
-local BG = Color3.fromRGB(28, 30, 34)
-local PANEL = Color3.fromRGB(45, 48, 54)
-local TEXT = Color3.fromRGB(240, 240, 236)
-local MUTED = Color3.fromRGB(155, 160, 168)
-local HEALTH = Color3.fromRGB(188, 198, 190)
-local GUARD = Color3.fromRGB(125, 158, 180)
-local RESOURCE = Color3.fromRGB(142, 118, 176)
+local function rgb(value: { number }): Color3
+	return Color3.fromRGB(value[1], value[2], value[3])
+end
+
+local BG = rgb(UiPalette.ink)
+local PANEL = rgb(UiPalette.panel)
+local TEXT = rgb(UiPalette.text)
+local MUTED = rgb(UiPalette.muted)
+local HEALTH = rgb(UiPalette.health)
+local GUARD = rgb(UiPalette.guard)
+local RESOURCE = rgb(UiPalette.resource)
+
+local function corner(parent: Instance, px: number): UICorner
+	local value = Instance.new("UICorner")
+	value.CornerRadius = UDim.new(0, px)
+	value.Parent = parent
+	return value
+end
+
+local function stroke(parent: Instance, color: { number }, thickness: number): UIStroke
+	local value = Instance.new("UIStroke")
+	value.Color = rgb(color)
+	value.Thickness = thickness
+	value.Transparency = 0.28
+	value.Parent = parent
+	return value
+end
 
 local function frame(name: string, parent: Instance, size: UDim2, position: UDim2): Frame
 	local value = Instance.new("Frame")
@@ -20,7 +42,7 @@ local function frame(name: string, parent: Instance, size: UDim2, position: UDim
 	value.Size = size
 	value.Position = position
 	value.BackgroundColor3 = BG
-	value.BackgroundTransparency = 0.12
+	value.BackgroundTransparency = 0.08
 	value.BorderSizePixel = 0
 	value.Active = false
 	value.Parent = parent
@@ -50,7 +72,7 @@ local function button(name: string, parent: Instance, size: UDim2, position: UDi
 	value.Size = size
 	value.Position = position
 	value.BackgroundColor3 = PANEL
-	value.BackgroundTransparency = 0.18
+	value.BackgroundTransparency = 0.08
 	value.BorderSizePixel = 0
 	value.Font = Enum.Font.GothamBold
 	value.TextColor3 = TEXT
@@ -58,19 +80,32 @@ local function button(name: string, parent: Instance, size: UDim2, position: UDi
 	value.TextWrapped = true
 	value.AutoButtonColor = true
 	value.Parent = parent
+	corner(value, 8)
+	stroke(value, UiPalette.strokeAccent, 1)
 	return value
 end
 
-local function makeBar(name: string, parent: Instance, y: number, color: Color3): { [string]: any }
-	local track = frame(name, parent, UDim2.new(1, -16, 0, 22), UDim2.fromOffset(8, y))
-	track.BackgroundColor3 = PANEL
+local function makeBar(name: string, parent: Instance, y: number, color: Color3, ghostColor: Color3?): { [string]: any }
+	local track = frame(name, parent, UDim2.new(1, -16, 0, 24), UDim2.fromOffset(8, y))
+	track.BackgroundColor3 = rgb(UiPalette.panelRaised)
+	corner(track, 7)
+	stroke(track, UiPalette.stroke, 1)
+	local ghost = frame("Ghost", track, UDim2.fromScale(1, 1), UDim2.fromScale(0, 0))
+	ghost.BackgroundColor3 = ghostColor or rgb(UiPalette.healthGhost)
+	ghost.BackgroundTransparency = 0.35
+	ghost.ZIndex = 1
+	corner(ghost, 7)
 	local fill = frame("Fill", track, UDim2.fromScale(1, 1), UDim2.fromScale(0, 0))
 	fill.BackgroundColor3 = color
-	fill.BackgroundTransparency = 0.05
+	fill.BackgroundTransparency = 0
+	fill.ZIndex = 2
+	corner(fill, 7)
 	local text = label("Value", track, UDim2.fromScale(1, 1), UDim2.fromScale(0, 0))
 	text.TextXAlignment = Enum.TextXAlignment.Center
+	text.TextStrokeTransparency = 0.35
+	text.TextStrokeColor3 = rgb(UiPalette.ink)
 	text.ZIndex = 3
-	return { track = track, fill = fill, text = text }
+	return { track = track, fill = fill, ghost = ghost, ghostFrac = 1, text = text }
 end
 
 local function truncate48(text: string): string
@@ -92,28 +127,42 @@ function UIController.new(deps: { [string]: any }): any
 	gui.Enabled = false
 	gui.Parent = playerGui
 
-	local status = frame("Vitals", gui, UDim2.fromOffset(310, 86), UDim2.new(0, 18, 1, -104))
-	local healthBar = makeBar("Health", status, 7, HEALTH)
-	local guardBar = makeBar("Guard", status, 32, GUARD)
-	local resourceBar = makeBar("Resource", status, 57, RESOURCE)
+	local status = frame("Vitals", gui, UDim2.fromOffset(318, 96), UDim2.new(0, 18, 1, -112))
+	corner(status, 10)
+	stroke(status, UiPalette.strokeAccent, 1.5)
+	local healthBar = makeBar("Health", status, 8, HEALTH, rgb(UiPalette.healthGhost))
+	local guardBar = makeBar("Guard", status, 36, GUARD, rgb(UiPalette.guardGhost))
+	local resourceBar = makeBar("Resource", status, 64, RESOURCE, rgb(UiPalette.strokeAccent))
 
-	local zone = label("Zone", gui, UDim2.fromOffset(520, 30), UDim2.new(0.5, -260, 0, 16))
-	zone.BackgroundColor3 = BG
-	zone.BackgroundTransparency = 0.15
+	local zone = label("Zone", gui, UDim2.fromOffset(520, 32), UDim2.new(0.5, -260, 0, 16))
+	zone.BackgroundColor3 = rgb(UiPalette.safe)
+	zone.BackgroundTransparency = 0.12
 	zone.TextXAlignment = Enum.TextXAlignment.Center
 	zone.TextSize = 16
-	local xpBar = makeBar("Xp", gui, 0, Color3.fromRGB(212, 176, 88))
+	zone.TextStrokeTransparency = 0.4
+	zone.TextStrokeColor3 = rgb(UiPalette.ink)
+	corner(zone, 8)
+	stroke(zone, UiPalette.stroke, 1)
+	local xpBar = makeBar("Xp", gui, 0, rgb(UiPalette.xp), rgb(UiPalette.warning))
 	xpBar.track.Size = UDim2.fromOffset(360, 20)
 	xpBar.track.Position = UDim2.new(0.5, -180, 0, 48)
 	xpBar.track.Parent = gui
 	local objective = label("Objective", gui, UDim2.fromOffset(520, 26), UDim2.new(0.5, -260, 0, 72))
-	objective.BackgroundColor3 = BG
-	objective.BackgroundTransparency = 0.25
+	objective.BackgroundColor3 = rgb(UiPalette.panel)
+	objective.BackgroundTransparency = 0.12
 	objective.TextXAlignment = Enum.TextXAlignment.Center
-	local feedback = label("Feedback", gui, UDim2.fromOffset(420, 36), UDim2.new(0.5, -210, 0.38, 0))
+	corner(objective, 8)
+	stroke(objective, UiPalette.strokeAccent, 1)
+	local feedback = label("Feedback", gui, UDim2.fromOffset(420, 40), UDim2.new(0.5, -210, 0.38, 0))
 	feedback.TextXAlignment = Enum.TextXAlignment.Center
 	feedback.TextSize = 20
+	feedback.BackgroundColor3 = rgb(UiPalette.panelRaised)
+	feedback.BackgroundTransparency = 0.1
+	feedback.TextStrokeTransparency = 0.3
+	feedback.TextStrokeColor3 = rgb(UiPalette.ink)
 	feedback.Visible = false
+	corner(feedback, 10)
+	stroke(feedback, UiPalette.highlight, 1.5)
 
 	-- Hotbar estilo inventário padrão do Roblox (decisão do Álvaro, 17/08):
 	-- slots QUADRADOS numerados, centralizados no rodapé — como nos demais
@@ -135,6 +184,7 @@ function UIController.new(deps: { [string]: any }): any
 			UDim2.fromOffset((slot - 1) * (SLOT_SIZE + SLOT_GAP), 0)
 		)
 		slotButton.TextSize = 10
+		slotButton.BackgroundColor3 = rgb(UiPalette.slot)
 		local slotNumber = label("SlotNumber", slotButton, UDim2.fromOffset(18, 16), UDim2.fromOffset(3, 2))
 		slotNumber.Text = tostring(slot)
 		slotNumber.TextSize = 12
@@ -143,9 +193,9 @@ function UIController.new(deps: { [string]: any }): any
 		local cooldown = frame("CooldownRadial", slotButton, UDim2.fromOffset(42, 42), UDim2.new(0.5, -21, 0.5, -21))
 		cooldown.BackgroundColor3 = BG
 		cooldown.Visible = false
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(1, 0)
-		corner.Parent = cooldown
+		local cooldownCorner = Instance.new("UICorner")
+		cooldownCorner.CornerRadius = UDim.new(1, 0)
+		cooldownCorner.Parent = cooldown
 		local gradient = Instance.new("UIGradient")
 		gradient.Transparency = NumberSequence.new({
 			NumberSequenceKeypoint.new(0, 0),
@@ -228,29 +278,35 @@ function UIController.new(deps: { [string]: any }): any
 	end)
 
 	local hint = label("Hint", gui, UDim2.fromOffset(520, 22), UDim2.new(0.5, -260, 1, -24))
-	hint.BackgroundColor3 = BG
-	hint.BackgroundTransparency = 0.25
+	hint.BackgroundColor3 = rgb(UiPalette.panel)
+	hint.BackgroundTransparency = 0.15
 	hint.TextXAlignment = Enum.TextXAlignment.Center
 	hint.TextSize = 12
 	hint.TextColor3 = MUTED
+	corner(hint, 8)
+	stroke(hint, UiPalette.strokeAccent, 1)
 
 	local unlockAim = button("UnlockAim", gui, UDim2.fromOffset(220, 40), UDim2.new(0.5, -110, 0, 78))
 	unlockAim.Visible = false
 	unlockAim.TextSize = 14
 
 	local debugKit = label("DebugKit", gui, UDim2.fromOffset(140, 22), UDim2.fromOffset(18, 16))
-	debugKit.BackgroundColor3 = BG
-	debugKit.BackgroundTransparency = 0.2
+	debugKit.BackgroundColor3 = rgb(UiPalette.panelRaised)
+	debugKit.BackgroundTransparency = 0.1
 	debugKit.TextXAlignment = Enum.TextXAlignment.Center
 	debugKit.TextSize = 11
 	debugKit.TextColor3 = MUTED
 	debugKit.Visible = false
+	corner(debugKit, 6)
 
 	local careerButton = button("Career", gui, UDim2.fromOffset(88, 40), UDim2.new(1, -388, 0, 14))
 	careerButton.TextSize = 13
 	local careerPanel = frame("CareerPanel", gui, UDim2.fromOffset(360, 320), UDim2.new(0.5, -180, 0.5, -160))
 	careerPanel.Visible = false
 	careerPanel.ZIndex = 18
+	careerPanel.BackgroundColor3 = rgb(UiPalette.panel)
+	corner(careerPanel, 12)
+	stroke(careerPanel, UiPalette.stroke, 1.5)
 	local careerTitle = label("Title", careerPanel, UDim2.new(1, -16, 0, 26), UDim2.fromOffset(8, 8))
 	careerTitle.TextXAlignment = Enum.TextXAlignment.Center
 	careerTitle.ZIndex = 19
@@ -279,18 +335,21 @@ function UIController.new(deps: { [string]: any }): any
 	statusButton.TextSize = 14
 	local helpButton = button("Help", gui, UDim2.fromOffset(88, 40), UDim2.new(1, -106, 0, 14))
 	local levelFlash = frame("LevelFlash", gui, UDim2.fromScale(1, 1), UDim2.fromScale(0, 0))
-	levelFlash.BackgroundColor3 = Color3.fromRGB(255, 214, 110)
+	levelFlash.BackgroundColor3 = rgb(UiPalette.levelFlash)
 	levelFlash.BackgroundTransparency = 1
 	levelFlash.ZIndex = 40
 	levelFlash.Visible = false
 	local levelFlashTitle = label("LevelTitle", levelFlash, UDim2.new(1, -40, 0, 64), UDim2.new(0, 20, 0.38, 0))
 	levelFlashTitle.TextXAlignment = Enum.TextXAlignment.Center
 	levelFlashTitle.TextSize = 42
-	levelFlashTitle.TextColor3 = Color3.fromRGB(255, 244, 200)
+	levelFlashTitle.TextColor3 = rgb(UiPalette.levelTitle)
 	levelFlashTitle.ZIndex = 41
 	local bagPanel = frame("BagPanel", gui, UDim2.fromOffset(440, 360), UDim2.new(0.5, -220, 0.5, -180))
 	bagPanel.Visible = false
 	bagPanel.ZIndex = 18
+	bagPanel.BackgroundColor3 = rgb(UiPalette.panel)
+	corner(bagPanel, 12)
+	stroke(bagPanel, UiPalette.strokeAccent, 1.5)
 	local bagTitle = label("Title", bagPanel, UDim2.new(1, -16, 0, 26), UDim2.fromOffset(8, 8))
 	bagTitle.TextXAlignment = Enum.TextXAlignment.Center
 	bagTitle.ZIndex = 19
@@ -320,6 +379,9 @@ function UIController.new(deps: { [string]: any }): any
 	local statusPanel = frame("StatusPanel", gui, UDim2.fromOffset(420, 430), UDim2.new(0.5, -210, 0.5, -215))
 	statusPanel.Visible = false
 	statusPanel.ZIndex = 18
+	statusPanel.BackgroundColor3 = rgb(UiPalette.panel)
+	corner(statusPanel, 12)
+	stroke(statusPanel, UiPalette.highlight, 1.5)
 	local statusTitle = label("Title", statusPanel, UDim2.new(1, -16, 0, 26), UDim2.fromOffset(8, 8))
 	statusTitle.TextXAlignment = Enum.TextXAlignment.Center
 	statusTitle.TextSize = 16
@@ -334,8 +396,9 @@ function UIController.new(deps: { [string]: any }): any
 	for index, trackId in TRACKS do
 		local y = 60 + (index - 1) * 52
 		local row = frame("Track_" .. trackId, statusPanel, UDim2.new(1, -20, 0, 46), UDim2.fromOffset(10, y))
-		row.BackgroundColor3 = PANEL
+		row.BackgroundColor3 = rgb(UiPalette.panelRaised)
 		row.ZIndex = 19
+		corner(row, 8)
 		local name = label("Name", row, UDim2.new(0.42, 0, 0, 20), UDim2.fromOffset(8, 4))
 		name.ZIndex = 20
 		local fx = label("Fx", row, UDim2.new(0.42, 0, 0, 16), UDim2.fromOffset(8, 24))
@@ -380,6 +443,9 @@ function UIController.new(deps: { [string]: any }): any
 	local helpPanel = frame("HelpPanel", gui, UDim2.fromOffset(460, 500), UDim2.new(0.5, -230, 0.5, -250))
 	helpPanel.Visible = false
 	helpPanel.ZIndex = 20
+	helpPanel.BackgroundColor3 = rgb(UiPalette.panel)
+	corner(helpPanel, 12)
+	stroke(helpPanel, UiPalette.stroke, 1.5)
 	local helpTitle = label("Title", helpPanel, UDim2.new(1, -16, 0, 28), UDim2.fromOffset(8, 8))
 	helpTitle.TextSize = 16
 	helpTitle.TextXAlignment = Enum.TextXAlignment.Center
@@ -582,8 +648,13 @@ function UIController.new(deps: { [string]: any }): any
 	return controller
 end
 
-local function renderBar(view: any, value: number, max: number, text: string): ()
-	view.fill.Size = UDim2.fromScale(math.clamp(if max > 0 then value / max else 0, 0, 1), 1)
+local function renderBar(view: any, value: number, max: number, text: string, dt: number): ()
+	local current = math.clamp(if max > 0 then value / max else 0, 0, 1)
+	view.fill.Size = UDim2.fromScale(current, 1)
+	if view.ghost then
+		view.ghostFrac = UiPalette.ghostFraction(current, view.ghostFrac or current, dt, 1.35)
+		view.ghost.Size = UDim2.fromScale(view.ghostFrac, 1)
+	end
 	view.text.Text = text
 end
 
@@ -605,20 +676,24 @@ function UIController.render(controller: any, elapsed: number): ()
 		controller.healthBar,
 		health,
 		state.maxHealth,
-		controller.locale.format("hud.health", { current = health, max = state.maxHealth }, localeId)
+		controller.locale.format("hud.health", { current = health, max = state.maxHealth }, localeId),
+		elapsed
 	)
 	renderBar(
 		controller.guardBar,
 		guard,
 		state.maxGuard,
-		controller.locale.format("hud.guard", { current = guard, max = state.maxGuard }, localeId)
+		controller.locale.format("hud.guard", { current = guard, max = state.maxGuard }, localeId),
+		elapsed
 	)
 	local resourceText = if state.depleted
 		then controller.locale.get("hud.resource_depleted", localeId)
 		else controller.locale.format("hud.resource", { current = resource, max = state.maxResource }, localeId)
-	renderBar(controller.resourceBar, resource, state.maxResource, resourceText)
+	renderBar(controller.resourceBar, resource, state.maxResource, resourceText, elapsed)
 
 	controller.zone.Text = controller.locale.get(if state.pvp then "hud.pvp_active" else "hud.zone_safe", localeId)
+	local zoneRgb = UiPalette.zoneFill(state.pvp == true)
+	controller.zone.BackgroundColor3 = rgb(zoneRgb)
 	local into = state.xpIntoLevel or 0
 	local need = state.xpToNext or 0
 	local levelText = controller.locale.format("hud.level", { level = state.accountLevel or 1 }, localeId)
@@ -630,11 +705,11 @@ function UIController.render(controller: any, elapsed: number): ()
 			.. "  "
 			.. controller.locale.format("hud.xp_field", { amount = state.unconsolidatedXp }, localeId)
 	end
-	renderBar(controller.xpBar, into, math.max(need, 1), xpText)
+	renderBar(controller.xpBar, into, math.max(need, 1), xpText, elapsed)
 	controller.statusButton.Text = controller.locale.get("hud.status_button", localeId)
 	controller.statusButton.BackgroundColor3 = if (state.unspentPoints or 0) > 0
 			or (state.pendingLevels or 0) > 0
-		then Color3.fromRGB(196, 156, 72)
+		then rgb(UiPalette.xp)
 		else PANEL
 	controller.statusPanel.Visible = controller.statusVisible == true
 	if controller.statusVisible then
@@ -785,6 +860,14 @@ function UIController.render(controller: any, elapsed: number): ()
 		view.locked.Visible = not unlocked
 		view.locked.Text = if unlocked then "" else controller.locale.get("hud.ability_locked", localeId)
 		view.button.Active = unlocked
+		view.button.BackgroundColor3 = if unlocked then rgb(UiPalette.slot) else rgb(UiPalette.slotLocked)
+		local slotStroke = view.button:FindFirstChildOfClass("UIStroke")
+		if slotStroke then
+			local ready = unlocked and controller.stateApi.cooldownRemaining(state, view.abilityId) <= 0
+			local accent = if ready then UiPalette.slotReady else UiPalette.strokeAccent
+			slotStroke.Color = rgb(accent)
+			slotStroke.Transparency = if ready then 0.05 else 0.4
+		end
 		local remaining = controller.stateApi.cooldownRemaining(state, view.abilityId)
 		view.cooldown.Visible = remaining > 0
 		if remaining > 0 and ability then

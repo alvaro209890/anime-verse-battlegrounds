@@ -26,6 +26,20 @@ export type Controller = {
 	folder: Folder?,
 }
 
+local function loadUiPalette(): any
+	local ok, mod = pcall(function()
+		return require("../../shared/Data/UiPalette")
+	end)
+	if ok then
+		return mod
+	end
+	return require(
+		game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Data"):WaitForChild("UiPalette")
+	)
+end
+
+local UiPalette = loadUiPalette()
+
 local CombatHudController = {}
 
 local SHOW_OUTCOMES: { [string]: boolean } = {
@@ -51,14 +65,7 @@ end
 -- contra âmbar, morte vermelho. Retorna RGB puro (testável fora do Studio;
 -- a materialização converte com Color3.fromRGB).
 function CombatHudController.damageColor(outcome: string?): { number }
-	if outcome == "guard" then
-		return { 150, 190, 255 }
-	elseif outcome == "counter" then
-		return { 255, 200, 120 }
-	elseif outcome == "death" then
-		return { 255, 90, 90 }
-	end
-	return { 255, 255, 255 }
+	return UiPalette.damageColor(outcome)
 end
 
 function CombatHudController.barFraction(health: number, maxHealth: number): number
@@ -82,7 +89,7 @@ function CombatHudController.shouldShowXp(payload: { [string]: any }): boolean
 end
 
 function CombatHudController.xpColor(): { number }
-	return { 255, 214, 96 }
+	return UiPalette.xpColor()
 end
 
 function CombatHudController.xpText(amount: number): string
@@ -159,7 +166,7 @@ function CombatHudController.spawnDamage(hud: Controller, payload: { [string]: a
 	gui.Active = false
 	gui.LightInfluence = 0
 	gui.MaxDistance = 120
-	gui.Size = UDim2.fromOffset(80, 34)
+	gui.Size = UDim2.fromOffset(92, 40)
 	gui.StudsOffsetWorldSpace = Vector3.new(0, offset, 0)
 	local label = Instance.new("TextLabel")
 	label.Name = "Value"
@@ -170,7 +177,7 @@ function CombatHudController.spawnDamage(hud: Controller, payload: { [string]: a
 	local rgb = CombatHudController.damageColor(payload.outcome)
 	label.TextColor3 = Color3.fromRGB(rgb[1], rgb[2], rgb[3])
 	label.TextScaled = true
-	label.TextStrokeColor3 = Color3.fromRGB(20, 20, 28)
+	label.TextStrokeColor3 = Color3.fromRGB(UiPalette.ink[1], UiPalette.ink[2], UiPalette.ink[3])
 	label.TextStrokeTransparency = 0
 	label.Parent = gui
 	gui.Parent = adornee
@@ -205,26 +212,33 @@ function CombatHudController.spawnBar(hud: Controller, fighterId: string): BarEn
 	gui.Active = false
 	gui.LightInfluence = 0
 	gui.MaxDistance = 100
-	gui.Size = UDim2.fromOffset(120, 16)
+	gui.Size = UDim2.fromOffset(128, 18)
 	gui.StudsOffsetWorldSpace = Vector3.new(0, 3.4, 0)
 	local track = Instance.new("Frame")
 	track.Name = "Track"
-	track.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
-	track.BackgroundTransparency = 0.25
+	track.BackgroundColor3 = Color3.fromRGB(UiPalette.ink[1], UiPalette.ink[2], UiPalette.ink[3])
+	track.BackgroundTransparency = 0.2
 	track.BorderSizePixel = 0
 	track.Size = UDim2.fromScale(1, 1)
+	local trackCorner = Instance.new("UICorner")
+	trackCorner.CornerRadius = UDim.new(0, 5)
+	trackCorner.Parent = track
 	local fill = Instance.new("Frame")
 	fill.Name = "Fill"
-	fill.BackgroundColor3 = Color3.fromRGB(224, 120, 80)
+	local startFill = UiPalette.enemyFill(1, false)
+	fill.BackgroundColor3 = Color3.fromRGB(startFill[1], startFill[2], startFill[3])
 	fill.BorderSizePixel = 0
 	fill.Size = UDim2.fromScale(1, 1)
+	local fillCorner = Instance.new("UICorner")
+	fillCorner.CornerRadius = UDim.new(0, 5)
+	fillCorner.Parent = fill
 	local label = Instance.new("TextLabel")
 	label.Name = "Value"
 	label.BackgroundTransparency = 1
 	label.Font = Enum.Font.GothamBold
-	label.TextColor3 = Color3.fromRGB(255, 255, 255)
+	label.TextColor3 = Color3.fromRGB(UiPalette.text[1], UiPalette.text[2], UiPalette.text[3])
 	label.TextScaled = true
-	label.TextStrokeColor3 = Color3.fromRGB(15, 15, 20)
+	label.TextStrokeColor3 = Color3.fromRGB(UiPalette.ink[1], UiPalette.ink[2], UiPalette.ink[3])
 	label.TextStrokeTransparency = 0
 	label.Size = UDim2.fromScale(1, 1)
 	fill.Parent = track
@@ -253,13 +267,14 @@ function CombatHudController.onFighterDelta(hud: Controller, payload: { [string]
 	if not entry then
 		return
 	end
-	entry.fill.Size = UDim2.fromScale(CombatHudController.barFraction(health, maxHealth), 1)
+	local fraction = CombatHudController.barFraction(health, maxHealth)
+	entry.fill.Size = UDim2.fromScale(fraction, 1)
 	entry.label.Text = ("%d/%d"):format(math.max(0, math.floor(health + 0.5)), maxHealth)
-	entry.fill.BackgroundColor3 = if health / math.max(1, maxHealth) <= 0.25
-		then Color3.fromRGB(255, 80, 70)
-		else (if health / math.max(1, maxHealth) <= 0.5
-			then Color3.fromRGB(240, 190, 70)
-			else Color3.fromRGB(224, 120, 80))
+	local model = CombatHudController.modelFor(hud, payload.fighterId)
+	local npcId = if model then model:GetAttribute("NpcId") else nil
+	local elite = npcId == "enemy_anchored_shard"
+	local fillRgb = UiPalette.enemyFill(fraction, elite == true)
+	entry.fill.BackgroundColor3 = Color3.fromRGB(fillRgb[1], fillRgb[2], fillRgb[3])
 	if health <= 0 and not entry.dying then
 		entry.dying = true
 		task.spawn(function()

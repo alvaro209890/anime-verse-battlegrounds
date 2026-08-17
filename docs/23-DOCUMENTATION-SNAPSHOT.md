@@ -1,5 +1,14 @@
 # Snapshot Canônico da Documentação — 17/08/2026
 
+## Rodada de 17/08 (Grok) — pass visual da UI
+
+Paleta única `UiPalette`: vida/guarda/umbral/dano/destaque/perigo. HUD com
+cantos, traço e ghost de dano recente. Hotbar com glow no slot pronto. Faixa
+de zona colorida **e** texto. Painéis B/K/J/MENU com fundo e traço. Gatilhos
+de dano/XP/zona intactos. Ver `docs/35-UI-VISUAL-PASS.md`.
+
+---
+
 ## Rodada de 17/08 (Grok) — serras e relevo, fim do chão reto
 
 Cordilheira no horizonte da planície (7 picos + elos, neve nos altos), serras
