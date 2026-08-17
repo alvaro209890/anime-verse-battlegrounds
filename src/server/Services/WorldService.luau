@@ -225,6 +225,12 @@ local function setActorVisible(model: Model, visible: boolean): ()
 			descendant.Transparency = if visible
 				then (if type(baseTransparency) == "number" then baseTransparency else 0)
 				else 1
+			-- Só na morte: tira colisão/query. No respawn NÃO forçamos CanCollide
+			-- true — as peças decorativas nascem sem colisão de propósito.
+			if not visible then
+				descendant.CanCollide = false
+				descendant.CanQuery = false
+			end
 		end
 	end
 	if not visible then
@@ -234,6 +240,8 @@ local function setActorVisible(model: Model, visible: boolean): ()
 	local root = model.PrimaryPart
 	if root and type(actorId) == "string" and string.find(actorId, "@", 1, true) then
 		root:SetAttribute("CombatTarget", visible)
+		-- Root some do soft-lock/query na morte; no respawn volta a ser alvo.
+		root.CanQuery = visible
 	end
 end
 

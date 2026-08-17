@@ -172,13 +172,15 @@ local function applyCadenceHit(
 			end
 			return false, killed, attackerKilled
 		end
-		local outcome = if result.parried or result.stoppedOnGuard or result.pulseCounter then "guard" else "hit"
+		local outcome = if killed
+			then "death"
+			else (if result.parried or result.stoppedOnGuard or result.pulseCounter then "guard" else "hit")
 		notifyCombatHit(attackerUserId, target, applied, abilityId, killed, outcome)
 		return true, killed, attackerKilled
 	end
 
 	local killed = deps.applyDamage(target, damage, attackerUserId)
-	notifyCombatHit(attackerUserId, target, damage, abilityId, killed, "hit")
+	notifyCombatHit(attackerUserId, target, damage, abilityId, killed, if killed then "death" else "hit")
 	return true, killed, false
 end
 
@@ -276,7 +278,9 @@ local function cometShoulderRunner(attacker: ServerPlayerState, target: ServerPl
 						if hit.pulseCounter and deps.onPulseCounter then
 							deps.onPulseCounter(attacker.userId, targetFighter, hitAt)
 						end
-						local outcome = if hit.parried or hit.stoppedOnGuard or hit.pulseCounter then "guard" else "hit"
+						local outcome = if hit.killed
+							then "death"
+							else (if hit.parried or hit.stoppedOnGuard or hit.pulseCounter then "guard" else "hit")
 						notifyCombatHit(
 							attacker.userId,
 							targetFighter,
@@ -301,7 +305,9 @@ local function cometShoulderRunner(attacker: ServerPlayerState, target: ServerPl
 				if hit.pulseCounter and deps.onPulseCounter then
 					deps.onPulseCounter(attacker.userId, targetFighter, hitAt)
 				end
-				local outcome = if hit.parried or hit.stoppedOnGuard or hit.pulseCounter then "guard" else "hit"
+				local outcome = if hit.killed
+					then "death"
+					else (if hit.parried or hit.stoppedOnGuard or hit.pulseCounter then "guard" else "hit")
 				notifyCombatHit(attacker.userId, targetFighter, hit.damage, "comet_shoulder", hit.killed, outcome)
 			end
 			return

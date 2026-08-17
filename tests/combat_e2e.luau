@@ -699,12 +699,8 @@ test("morte: o último golpe emite desfecho de morte e ainda mostra o número", 
 	local event = serverBasicAttack(sim, "light")
 	assertTrue(event.damage > 0, "golpe causou dano")
 	assertTrue(alvo.health <= 0, "alvo caiu")
+	assertEq(event.outcome, "death", "golpe fatal já chega como death (não hit + evento extra)")
 	assertEq(#sim.numbers, 1, "número do golpe fatal aparece")
-
-	-- O desfecho de morte é publicado pelo servidor num evento próprio; o
-	-- cliente trata igual, com hit-stop mais longo.
-	local morte = { targetId = sim.targetId, abilityId = "light", outcome = "death", damage = event.damage }
-	receiveCombatEvent(sim, morte)
 	assertEq(ClientState.feedback(sim.state), "hud.feedback_death", "HUD anuncia a morte")
 	assertTrue(PlayerCombatAnimator.HitStopMs.death > PlayerCombatAnimator.HitStopMs.hit, "morte segura mais")
 end)

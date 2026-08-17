@@ -222,17 +222,25 @@ function CombatHudController.onFighterDelta(hud: Controller, payload: { [string]
 	if health <= 0 and not entry.dying then
 		entry.dying = true
 		task.spawn(function()
+			-- BillboardGui NÃO tem propriedade Transparency (erro no Output e o
+			-- thread morria antes de Destroy — barra ficava em 0/60 para sempre).
 			local tweenService = game:GetService("TweenService")
-			tweenService
-				:Create(
-					entry.gui,
-					TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-					{ StudsOffsetWorldSpace = Vector3.new(0, 4.6, 0) }
-				)
-				:Play()
-			tweenService:Create(entry.gui, TweenInfo.new(0.4), { Transparency = 1 }):Play()
+			local info = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+			pcall(function()
+				tweenService:Create(entry.gui, info, { StudsOffsetWorldSpace = Vector3.new(0, 4.6, 0) }):Play()
+			end)
+			local track = entry.gui:FindFirstChild("Track")
+			if track and track:IsA("GuiObject") then
+				tweenService:Create(track, info, { BackgroundTransparency = 1 }):Play()
+			end
+			if entry.fill and entry.fill.Parent then
+				tweenService:Create(entry.fill, info, { BackgroundTransparency = 1 }):Play()
+			end
+			if entry.label and entry.label.Parent then
+				tweenService:Create(entry.label, info, { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+			end
 			task.wait(0.45)
-			if entry.gui.Parent then
+			if entry.gui and entry.gui.Parent then
 				entry.gui:Destroy()
 			end
 			hud.bars[payload.fighterId] = nil

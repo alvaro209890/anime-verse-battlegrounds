@@ -383,13 +383,17 @@ function CombatService.basicCombatEvent(
 			step = 0,
 		}
 	end
-	local outcome = if result.parried
-			or result.stoppedOnGuard
-			or result.broken
-			or result.pulseCounter
-			or targetGuarding
-		then "guard"
-		else "hit"
+	-- Morte tem desfecho próprio: o cliente precisa de "death" para hit-stop,
+	-- feedback e para não tratar o último golpe como um hit comum com barra 0/0.
+	local outcome = if result.killed
+		then "death"
+		else (if result.parried
+				or result.stoppedOnGuard
+				or result.broken
+				or result.pulseCounter
+				or targetGuarding
+			then "guard"
+			else "hit")
 	return {
 		targetId = targetId,
 		abilityId = if isHeavy then "heavy" else "light",

@@ -1599,6 +1599,11 @@ RunService.Heartbeat:Connect(function()
 	-- Item 9: ciclo do elite (combo/slam + leeching + respawn 180 s).
 	EnemyService.tickElite(now, delta)
 	for _, record in EnemyService.list() do
+		-- Morto: não atualiza pose de locomoção (evita "andar" fantasma com vida 0).
+		local enemyFighter = CombatService.getFighter(record.fighterId)
+		if enemyFighter and enemyFighter.health <= 0 then
+			continue
+		end
 		local transform = SpatialService.getTransform(record.fighterId)
 		if transform then
 			WorldService.syncActor(record.fighterId, transform)

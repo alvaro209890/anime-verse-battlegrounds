@@ -60,6 +60,9 @@ local EnemyService = {
 	eliteDeathResolved = {} :: { [string]: boolean },
 	-- Alternância visual do inimigo comum; não altera hitbox nem dano.
 	shardCycleCount = {} :: { [string]: number },
+	-- fighterId → já emitiu "died" nesta vida (evita zumbi com vida 0 sem pose
+	-- de morte se o creditKill falhou ou o golpe não passou por reportKill).
+	deathPresented = {} :: { [string]: boolean },
 }
 
 function EnemyService.init(deps: EnemyDeps): ()
@@ -69,6 +72,7 @@ function EnemyService.init(deps: EnemyDeps): ()
 	table.clear(EnemyService.eliteTimeInRadius)
 	table.clear(EnemyService.eliteDeathResolved)
 	table.clear(EnemyService.shardCycleCount)
+	table.clear(EnemyService.deathPresented)
 end
 
 function EnemyService.fighterId(npcId: string, anchorId: string, index: number): string
@@ -93,6 +97,20 @@ local function emit(fighterId: string, event: { any }): ()
 	if deps and deps.onEnemyEvent then
 		deps.onEnemyEvent(fighterId, event)
 	end
+end
+
+-- Garante apresentação de morte uma vez por vida (corpo some / CombatTarget off).
+local function ensureDeathPresented(fighterId: string, anchorId: string, durationSeconds: number?): ()
+	if EnemyService.deathPresented[fighterId] then
+		return
+	end
+	EnemyService.deathPresented[fighterId] = true
+	emit(fighterId, {
+		kind = "died",
+		anchorId = anchorId,
+		durationSeconds = durationSeconds or 0.75,
+		visualPattern = "collapse",
+	})
 end
 
 local function attackOutcome(result: any, target: any): string
@@ -276,10 +294,13 @@ function EnemyService.tick(now: number, deltaSeconds: number): number
 		local fighter = deps.combat.getFighter(record.fighterId)
 		if fighter then
 			if fighter.health <= 0 then
+				-- Vida 0 sem "died" = zumbi visual (barra 0 e corpo em pé).
+				ensureDeathPresented(record.fighterId, record.anchorId, 0.75)
 				local radius = def.combatClearRadius or 20
 				local blocked = combatNearAnchor(record, targets, radius)
 				local respawned = deps.combat.tryRespawn(fighter, now, def.respawnSeconds or 45, blocked)
 				if respawned then
+					EnemyService.deathPresented[record.fighterId] = nil
 					local anchor = deps.getAnchor(record.anchorId)
 					if anchor then
 						deps.spatial.setTransform(record.fighterId, {
@@ -403,9 +424,12 @@ function EnemyService.tickElite(now: number, deltaSeconds: number): number
 		-- Morte: resolve o leeching UMA vez (o resolve é idempotente por
 		-- construção) e programa o respawn de 180 s.
 		EnemyService.resolveEliteDeath(fighterId, now)
+		-- resolveEliteDeath já emite "died"; a flag evita reemit no ensure.
+		EnemyService.deathPresented[fighterId] = true
 		local blocked = combatNearAnchor(record, targets, def.combatClearRadius or 20)
 		local respawned = deps.combat.tryRespawn(fighter, now, def.respawnSeconds or 180, blocked)
 		if respawned then
+			EnemyService.deathPresented[fighterId] = nil
 			local anchor = deps.getAnchor(record.anchorId)
 			if anchor then
 				deps.spatial.setTransform(fighterId, {
@@ -562,13 +586,7 @@ function EnemyService.reportKill(userId: number, fighterId: string): boolean
 	if not deps or not record then
 		return false
 	end
-	emit(fighterId, {
-		kind = "died",
-		anchorId = record.anchorId,
-		byUserId = userId,
-		durationSeconds = 0.75,
-		visualPattern = "collapse",
-	})
+	ensureDeathPresented(fighterId, record.anchorId, 0.75)
 	if deps.onKill then
 		deps.onKill(userId, fighterId)
 	end
@@ -587,6 +605,7 @@ function EnemyService.despawnAll(): ()
 	table.clear(EnemyService.eliteDamage)
 	table.clear(EnemyService.eliteTimeInRadius)
 	table.clear(EnemyService.eliteDeathResolved)
+	table.clear(EnemyService.deathPresented)
 end
 
 return EnemyService
