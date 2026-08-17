@@ -21,6 +21,15 @@ export type Model = {
 	unlocks: { [string]: boolean },
 	objective: { [string]: any }?,
 	unconsolidatedXp: number,
+	accountLevel: number,
+	xpIntoLevel: number,
+	xpToNext: number,
+	unspentPoints: number,
+	pendingLevels: number,
+	previewLevel: number,
+	spent: { [string]: number },
+	levelsGained: number,
+	pointsGranted: number,
 	deathPenalty: number,
 	cooldowns: { [string]: { startedAt: number, duration: number } },
 	feedbackKey: string?,
@@ -67,6 +76,15 @@ function ClientState.new(now: (() -> number)?): Model
 		unlocks = {},
 		objective = nil,
 		unconsolidatedXp = 0,
+		accountLevel = 1,
+		xpIntoLevel = 0,
+		xpToNext = 0,
+		unspentPoints = 0,
+		pendingLevels = 0,
+		previewLevel = 1,
+		spent = {},
+		levelsGained = 0,
+		pointsGranted = 0,
 		deathPenalty = 0,
 		cooldowns = {},
 		feedbackKey = nil,
@@ -111,6 +129,7 @@ function ClientState.applySnapshot(model: Model, payload: { [string]: any }): bo
 	model.unlocks = rebuildUnlocks(payload.unlocks)
 	model.objective = if type(payload.objective) == "table" then payload.objective else nil
 	model.unconsolidatedXp = numberOr(payload.unconsolidatedXp, model.unconsolidatedXp)
+	ClientState.applyProgression(model, payload)
 	ClientState.notify(model)
 	return true
 end
@@ -136,6 +155,12 @@ function ClientState.applyDelta(model: Model, payload: { [string]: any }): boole
 	end
 	model.unconsolidatedXp = numberOr(payload.unconsolidatedXp, model.unconsolidatedXp)
 	model.deathPenalty = numberOr(payload.deathPenalty, model.deathPenalty)
+	ClientState.applyProgression(model, payload)
+	if type(payload.feedbackKey) == "string" then
+		ClientState.setFeedback(model, payload.feedbackKey, 2.6)
+	elseif numberOr(payload.levelsGained, 0) > 0 then
+		ClientState.setFeedback(model, "hud.feedback_level_up", 3.4)
+	end
 	if type(payload.cooldowns) == "table" then
 		for abilityId, remaining in payload.cooldowns do
 			if type(abilityId) == "string" and type(remaining) == "number" then
@@ -145,6 +170,26 @@ function ClientState.applyDelta(model: Model, payload: { [string]: any }): boole
 	end
 	ClientState.notify(model)
 	return true
+end
+
+function ClientState.applyProgression(model: Model, payload: { [string]: any }): ()
+	model.accountLevel = numberOr(payload.accountLevel, model.accountLevel)
+	model.xpIntoLevel = numberOr(payload.xpIntoLevel, model.xpIntoLevel)
+	model.xpToNext = numberOr(payload.xpToNext, model.xpToNext)
+	model.unspentPoints = numberOr(payload.unspentPoints, model.unspentPoints)
+	model.pendingLevels = numberOr(payload.pendingLevels, model.pendingLevels)
+	model.previewLevel = numberOr(payload.previewLevel, model.previewLevel)
+	model.levelsGained = numberOr(payload.levelsGained, model.levelsGained)
+	model.pointsGranted = numberOr(payload.pointsGranted, model.pointsGranted)
+	if type(payload.spent) == "table" then
+		local spent: { [string]: number } = {}
+		for key, value in payload.spent do
+			if type(key) == "string" and type(value) == "number" then
+				spent[key] = value
+			end
+		end
+		model.spent = spent
+	end
 end
 
 function ClientState.setResource(model: Model, current: number, max: number, depleted: boolean): ()

@@ -296,10 +296,17 @@ QuestService.init({
 		if not player then
 			return
 		end
+		local view = ProgressionService.viewFor(userId)
 		RemoteGateway.fireClient(player, Remotes.Names.StateDelta, {
 			objective = event,
 			unlocks = ProgressionService.listUnlocks(userId),
-			unconsolidatedXp = ProgressionService.getUnconsolidatedXp(userId),
+			unconsolidatedXp = if view then view.unconsolidatedXp else ProgressionService.getUnconsolidatedXp(userId),
+			accountLevel = if view then view.accountLevel else 1,
+			xpIntoLevel = if view then view.xpIntoLevel else 0,
+			xpToNext = if view then view.xpToNext else 0,
+			unspentPoints = if view then view.unspentPoints else 0,
+			pendingLevels = if view then view.pendingLevels else 0,
+			spent = if view then view.spent else nil,
 		})
 		-- Item 11: recompensa/unlock de objetivo muda o perfil.
 		if event.state == "completed" then
@@ -613,6 +620,7 @@ AbilityService.init({
 		end
 		return ResourceService.trySpend(userId, amount)
 	end,
+	getResourceCostMul = ProgressionService.resourceCostMul,
 	grantFlowGain = ResourceService.grantFlowGain,
 	tryGrantFlow = ResourceService.tryGrantFlow,
 	isAlive = function(state: any)
@@ -780,7 +788,68 @@ PlayerSessionService.init({
 	getUnlocks = ProgressionService.listUnlocks,
 	getObjective = QuestService.getTracker,
 	getUnconsolidatedXp = ProgressionService.getUnconsolidatedXp,
+	getProgression = ProgressionService.viewFor,
 })
+
+local function progressionPayload(userId: number): { [string]: any }
+	local view = ProgressionService.viewFor(userId)
+	if not view then
+		return { unconsolidatedXp = 0, accountLevel = 1 }
+	end
+	return {
+		unconsolidatedXp = view.unconsolidatedXp,
+		consolidatedXp = view.consolidatedXp,
+		accountLevel = view.accountLevel,
+		xpIntoLevel = view.xpIntoLevel,
+		xpToNext = view.xpToNext,
+		unspentPoints = view.unspentPoints,
+		pendingLevels = view.pendingLevels,
+		previewLevel = view.previewLevel,
+		spent = view.spent,
+		vitals = view.vitals,
+	}
+end
+
+local function applyProgressionVitals(userId: number): ()
+	local view = ProgressionService.viewFor(userId)
+	if not view then
+		return
+	end
+	CombatService.applyVitals(
+		CombatService.playerFighterId(userId),
+		view.vitals.maxHealth,
+		view.vitals.maxGuard,
+		view.vitals.damageBonus
+	)
+	ResourceService.setPoolBonus(userId, view.vitals.maxResource - 100)
+end
+
+local function pushProgression(userId: number, extra: { [string]: any }?): ()
+	local player = game.Players:GetPlayerByUserId(userId)
+	if not player then
+		return
+	end
+	applyProgressionVitals(userId)
+	local payload = progressionPayload(userId)
+	if extra then
+		for key, value in extra do
+			payload[key] = value
+		end
+	end
+	local fighter = CombatService.getFighter(CombatService.playerFighterId(userId))
+	if fighter then
+		payload.health = fighter.health
+		payload.maxHealth = fighter.maxHealth
+		payload.guard = fighter.guard
+		payload.maxGuard = fighter.maxGuard
+	end
+	local resource = ResourceService.getState(userId)
+	if resource then
+		payload.resource = resource.resource
+		payload.maxResource = ResourceService.poolCapFor(resource)
+	end
+	RemoteGateway.fireClient(player, Remotes.Names.StateDelta, payload)
+end
 
 local function requireReady(player: Player): boolean
 	return PlayerSessionService.isReady(player.UserId)
@@ -881,9 +950,7 @@ local function grantKillCredit(player: Player, fighterId: string, now: number): 
 	-- QuestService já emitiu StateDelta com o XP atualizado; sem evento de
 	-- objetivo, o XP do kill ainda precisa chegar ao HUD.
 	if #events == 0 and award.granted > 0 then
-		RemoteGateway.fireClient(player, Remotes.Names.StateDelta, {
-			unconsolidatedXp = ProgressionService.getUnconsolidatedXp(player.UserId),
-		})
+		pushProgression(player.UserId)
 	end
 	return award.granted
 end
@@ -926,11 +993,7 @@ local function applyDeathPenalty(userId: number, pvp: boolean): ()
 		SaveService.markDirty(userId)
 		local player = game.Players:GetPlayerByUserId(userId)
 		if player then
-			RemoteGateway.fireClient(player, Remotes.Names.StateDelta, {
-				unconsolidatedXp = ProgressionService.getUnconsolidatedXp(userId),
-				consolidatedXp = ProgressionService.getLedger(userId).consolidated,
-				deathPenalty = penalty.lost,
-			})
+			pushProgression(userId, { deathPenalty = penalty.lost })
 		end
 	end
 end
@@ -1314,14 +1377,12 @@ InteractionService.init({
 			at = receipt.at,
 		})
 		SaveService.markDirty(userId)
-		local player = game.Players:GetPlayerByUserId(userId)
-		local ledger = ProgressionService.getLedger(userId)
-		if player and ledger then
-			RemoteGateway.fireClient(player, Remotes.Names.StateDelta, {
-				unconsolidatedXp = ProgressionService.getUnconsolidatedXp(userId),
-				consolidatedXp = ledger.consolidated,
-			})
+		local extra: { [string]: any } = {}
+		if (receipt.levelsGained or 0) > 0 then
+			extra.levelsGained = receipt.levelsGained
+			extra.pointsGranted = receipt.pointsGranted
 		end
+		pushProgression(userId, extra)
 		return true, nil, receipt
 	end,
 })
@@ -1330,6 +1391,33 @@ RemoteGateway.onClientIntent(Remotes.Names.InteractionIntent, function(player: P
 	if requireReady(player) then
 		InteractionService.tryInteract(player.UserId, payload, os.clock())
 	end
+end)
+
+RemoteGateway.onClientIntent(Remotes.Names.SpendProgressionIntent, function(player: Player, payload: { any })
+	if not requireReady(player) then
+		return
+	end
+	local userId = player.UserId
+	local result
+	if payload.trackId == "respec" then
+		local zone = CatalogService.getZone(ZoneService.getPlayerZone(userId))
+		local inSafe = zone ~= nil and zone.kind == "safe"
+		result = ProgressionService.respecPoints(userId, inSafe)
+	else
+		result = ProgressionService.spendPoints(userId, payload.trackId, payload.amount or 1)
+	end
+	if not result.ok then
+		local key = if result.reason == "not_safe"
+			then "hud.feedback_not_safe"
+			elseif result.reason == "no_points" then "hud.feedback_no_points"
+			else "hud.feedback_rejected"
+		pushProgression(userId, { feedbackKey = key })
+		return
+	end
+	SaveService.markDirty(userId)
+	pushProgression(userId, {
+		feedbackKey = if payload.trackId == "respec" then "hud.feedback_respec" else "hud.feedback_spent",
+	})
 end)
 
 RemoteGateway.onClientIntent(Remotes.Names.GuardIntent, function(player: Player, payload: { any })
@@ -1501,6 +1589,7 @@ game.Players.PlayerAdded:Connect(function(player: Player)
 		elapsedMs = math.floor((os.clock() - loadStartedAt) * 1000),
 	})
 	PlayerSessionService.onPlayerJoined(player)
+	applyProgressionVitals(player.UserId)
 	-- Snapshot S→C reemitido após o StarterPlayerScripts existir. Isso evita a
 	-- corrida de boot sem criar uma intenção C→S proibida pela SLICE-DEC-005.
 	local function resendSnapshot()
@@ -1520,6 +1609,7 @@ game.Players.PlayerAdded:Connect(function(player: Player)
 			if not fighter or fighter.health <= 0 then
 				fighter = CombatService.createFighter(fighterId, "player", 100, 100)
 			end
+			applyProgressionVitals(player.UserId)
 			deathPresented[player.UserId] = nil
 			local spawnPosition =
 				WorldService.getAnchorPosition(if respawning then "anchor_bastion_return" else "anchor_bastion_spawn")

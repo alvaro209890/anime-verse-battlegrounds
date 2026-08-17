@@ -46,6 +46,8 @@ export type FighterState = {
 	pulseRecoveryUntil: number,
 	-- Padrão do ciclo do elite (docs/13 §9.3): alterna combo leve e slam.
 	elitePattern: "combo" | "slam",
+	-- Bônus de Impacto (0..0.06). Só jogador; NPC fica 0.
+	damageBonus: number,
 }
 
 export type HitFacing = "front" | "back"
@@ -127,9 +129,33 @@ function CombatService.createFighter(
 		pulseStanceUsed = false,
 		pulseRecoveryUntil = 0,
 		elitePattern = "combo",
+		damageBonus = 0,
 	}
 	CombatService.fighters[id] = fighter
 	return fighter
+end
+
+function CombatService.applyVitals(id: string, maxHealth: number, maxGuard: number, damageBonus: number): FighterState?
+	local fighter = CombatService.fighters[id]
+	if not fighter then
+		return nil
+	end
+	local healthRatio = if fighter.maxHealth > 0 then fighter.health / fighter.maxHealth else 1
+	local guardRatio = if fighter.maxGuard > 0 then fighter.guard / fighter.maxGuard else 1
+	fighter.maxHealth = math.max(1, math.floor(maxHealth))
+	fighter.maxGuard = math.max(1, math.floor(maxGuard))
+	fighter.health = math.clamp(math.floor(fighter.maxHealth * healthRatio + 0.5), 0, fighter.maxHealth)
+	fighter.guard = math.clamp(math.floor(fighter.maxGuard * guardRatio + 0.5), 0, fighter.maxGuard)
+	fighter.damageBonus = math.clamp(damageBonus, 0, 0.06)
+	return fighter
+end
+
+local function outgoing(attacker: FighterState, raw: number): number
+	local bonus = attacker.damageBonus or 0
+	if raw <= 0 or bonus <= 0 then
+		return raw
+	end
+	return math.max(1, math.floor(raw * (1 + bonus) + 0.5))
 end
 
 function CombatService.getFighter(id: string): FighterState?
@@ -329,7 +355,7 @@ function CombatService.tryLight(attacker: FighterState, target: FighterState, no
 	if attacker.lightStep > 0 and attacker.lightStep < 4 and (now - attacker.lastLightAt) <= LIGHT_WINDOW then
 		step = attacker.lightStep + 1
 	end
-	local raw = LIGHT_DAMAGE[step]
+	local raw = outgoing(attacker, LIGHT_DAMAGE[step])
 	local blocked = math.floor(raw * 0.4)
 	local result = applyHit(target, now, raw, raw, blocked, facing, true)
 	if not result.ok then
@@ -358,7 +384,15 @@ function CombatService.tryHeavy(
 		attacker.lightStep = 0
 		return fail("miss")
 	end
-	local result = applyHit(target, now, HEAVY_HP, HEAVY_GUARD, HEAVY_BLOCKED_HP, facing, true)
+	local result = applyHit(
+		target,
+		now,
+		outgoing(attacker, HEAVY_HP),
+		outgoing(attacker, HEAVY_GUARD),
+		outgoing(attacker, HEAVY_BLOCKED_HP),
+		facing,
+		true
+	)
 	if result.ok then
 		attacker.lightStep = 0
 		attacker.lastLightAt = 0
@@ -413,7 +447,8 @@ function CombatService.tryCometShoulder(
 		return fail("dead")
 	end
 	local wasGuarding = target.guarding and now >= target.cannotGuardUntil and facing ~= "back"
-	local result = applyHit(target, now, 14, 14, 6, facing, true)
+	local result =
+		applyHit(target, now, outgoing(attacker, 14), outgoing(attacker, 14), outgoing(attacker, 6), facing, true)
 	if result.ok and wasGuarding and not result.iframe then
 		result.stoppedOnGuard = true
 	end
@@ -433,7 +468,8 @@ function CombatService.tryCadenceHit(
 		return fail("dead")
 	end
 	local wasGuarding = target.guarding and now >= target.cannotGuardUntil and facing ~= "back"
-	local result = applyHit(target, now, damage, damage, math.floor(damage * 0.4), facing, true)
+	local scaled = outgoing(attacker, damage)
+	local result = applyHit(target, now, scaled, scaled, math.floor(scaled * 0.4), facing, true)
 	if result.ok and wasGuarding and not result.iframe then
 		result.stoppedOnGuard = true
 	end

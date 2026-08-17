@@ -167,6 +167,32 @@ local function validateInteraction(payload: { [string]: any }): boolean
 	return npcValid ~= anchorValid and phaseValid
 end
 
+local SPEND_TRACKS: { [string]: boolean } = {
+	vitality = true,
+	umbral = true,
+	impact = true,
+	guard = true,
+	resonance = true,
+	respec = true,
+}
+
+local function validateSpend(payload: { [string]: any }): boolean
+	if not hasOnlyKeys(payload, { trackId = true, amount = true }) then
+		return false
+	end
+	if type(payload.trackId) ~= "string" or not SPEND_TRACKS[payload.trackId] then
+		return false
+	end
+	if payload.amount == nil then
+		return true
+	end
+	return type(payload.amount) == "number"
+		and payload.amount == payload.amount
+		and payload.amount >= 1
+		and payload.amount <= 3
+		and payload.amount == math.floor(payload.amount)
+end
+
 local VALIDATORS: { [string]: ({ [string]: any }) -> boolean } = {
 	AbilityIntent = validateAbility,
 	BasicAttackIntent = validateBasic,
@@ -174,6 +200,7 @@ local VALIDATORS: { [string]: ({ [string]: any }) -> boolean } = {
 	DashIntent = validateDash,
 	ZoneCrossingIntent = validateZone,
 	InteractionIntent = validateInteraction,
+	SpendProgressionIntent = validateSpend,
 }
 
 function SecurityService.init(deps: Deps): ()

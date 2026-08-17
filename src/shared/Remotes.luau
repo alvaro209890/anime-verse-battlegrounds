@@ -27,6 +27,7 @@ export type RemoteName =
 	| "ZoneEvent"
 	| "ZoneCrossingIntent"
 	| "InteractionIntent"
+	| "SpendProgressionIntent"
 	| "StateDelta"
 	| "EnemyEvent"
 
@@ -43,6 +44,7 @@ local REMOTES = {
 	ZoneEvent = "ZoneEvent",
 	ZoneCrossingIntent = "ZoneCrossingIntent",
 	InteractionIntent = "InteractionIntent",
+	SpendProgressionIntent = "SpendProgressionIntent",
 	StateDelta = "StateDelta",
 	EnemyEvent = "EnemyEvent",
 }
@@ -87,7 +89,7 @@ local RemoteContracts = {
 		name = REMOTES.SessionSnapshot,
 		direction = "ServerToClient",
 		version = 1,
-		payload = "{ protocolVersion: number, ready: boolean, zoneId: string, health: number, guard: number, resource: number, familyId: string, unlocks: { string }, dummyId: string, objective: any?, unconsolidatedXp: number }",
+		payload = "{ protocolVersion: number, ready: boolean, zoneId: string, health: number, guard: number, resource: number, familyId: string, unlocks: { string }, dummyId: string, objective: any?, unconsolidatedXp: number, accountLevel: number?, xpIntoLevel: number?, xpToNext: number?, unspentPoints: number?, pendingLevels: number?, spent: any?, vitals: any? }",
 	} :: NetworkContract,
 	[REMOTES.BasicAttackIntent] = {
 		name = REMOTES.BasicAttackIntent,
@@ -126,12 +128,20 @@ local RemoteContracts = {
 		version = 2,
 		payload = 'EnvelopeV2<{ npcId: string?, anchorId: string?, phase: "begin" | "complete" | "cancel" }>',
 	} :: NetworkContract,
+	-- Gasto de ponto de nível. O cliente só declara a trilha; o servidor
+	-- valida saldo, teto e aplica os vitais (docs/01 §7.1, estilo Blox Fruits).
+	[REMOTES.SpendProgressionIntent] = {
+		name = REMOTES.SpendProgressionIntent,
+		direction = "ClientToServer",
+		version = 1,
+		payload = 'EnvelopeV2<{ trackId: "vitality" | "umbral" | "impact" | "guard" | "resonance" | "respec", amount: number? }>',
+	} :: NetworkContract,
 	-- Delta autoritativo de estado; carrega o tracker do objetivo e as flags.
 	[REMOTES.StateDelta] = {
 		name = REMOTES.StateDelta,
 		direction = "ServerToClient",
 		version = 1,
-		payload = "{ health: number?, maxHealth: number?, guard: number?, maxGuard: number?, resource: number?, maxResource: number?, cooldowns: any?, objective: any?, unlocks: { string }?, unconsolidatedXp: number?, deathPenalty: number? }",
+		payload = "{ health: number?, maxHealth: number?, guard: number?, maxGuard: number?, resource: number?, maxResource: number?, cooldowns: any?, objective: any?, unlocks: { string }?, unconsolidatedXp: number?, deathPenalty: number?, accountLevel: number?, xpIntoLevel: number?, xpToNext: number?, unspentPoints: number?, pendingLevels: number?, spent: any?, levelsGained: number?, pointsGranted: number? }",
 	} :: NetworkContract,
 	-- Telegraph, ataque, spawn e morte de inimigo. O telegraph é o que permite
 	-- o contorno branco de perigo (§17); o cliente não decide se acertou.

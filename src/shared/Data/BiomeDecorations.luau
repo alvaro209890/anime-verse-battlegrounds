@@ -226,6 +226,38 @@ for i = 1, 4 do
 		)
 	)
 end
+for i = 1, 8 do
+	local side = if i <= 4 then -48 else 48
+	local z = -640 + ((i - 1) % 4) * 28
+	push(
+		piece(
+			("LumenPlanter_%02d"):format(i),
+			"Block",
+			{ x = 3.2, y = 0.8, z = 3.2 },
+			{ x = side, y = 0.45, z = z },
+			0,
+			ASPHALT,
+			"SmoothPlastic",
+			0,
+			false,
+			nil
+		)
+	)
+	push(
+		piece(
+			("LumenBush_%02d"):format(i),
+			"Ball",
+			{ x = 2.6, y = 2.0, z = 2.6 },
+			{ x = side, y = 1.7, z = z },
+			0,
+			if i % 2 == 0 then NEON else NEON_MAGENTA,
+			"Neon",
+			0.25,
+			false,
+			nil
+		)
+	)
+end
 
 -- ── Bosque dos Ecos ────────────────────────────────────────────────────────
 push(
@@ -261,55 +293,121 @@ push(
 		}
 	)
 )
-for i = 1, 18 do
-	local col = (i - 1) % 6
-	local row = math.floor((i - 1) / 6)
-	local x = 280 + col * 36 + (row % 2) * 10
-	local z = -120 - row * 70
-	push(
-		piece(
-			("WoodsTrunk_%02d"):format(i),
-			"Cylinder",
-			{ x = 10 + (i % 4) * 1.4, y = 2.2, z = 2.2 },
-			{ x = x, y = 5 + (i % 4) * 0.7, z = z },
-			0,
-			WOOD,
-			"Wood",
-			0,
-			false,
-			nil
-		)
-	)
-	push(
-		piece(
-			("WoodsCanopy_%02d"):format(i),
-			"Ball",
-			{ x = 8 + (i % 3), y = 5, z = 8 + (i % 3) },
-			{ x = x, y = 12 + (i % 3), z = z },
-			0,
-			LEAF,
-			"Grass",
-			0.05,
-			false,
-			nil
-		)
-	)
-end
-for i = 1, 10 do
-	push(
-		piece(
-			("WoodsShroom_%02d"):format(i),
-			"Ball",
-			{ x = 1.6, y = 1.2, z = 1.6 },
-			{ x = 300 + i * 18, y = 0.8, z = -200 - (i % 4) * 22 },
-			0,
-			{ 180, 80, 160 },
-			"SmoothPlastic",
-			0,
-			false,
-			nil
-		)
-	)
+-- Bosque denso: LCG com semente fixa, NÃO grade. Grade lia como pomar.
+do
+	local seed = 20260819
+	local function rnd(): number
+		seed = (seed * 1103515245 + 12345) % 2147483648
+		return seed / 2147483648
+	end
+	local occupied: { { x: number, z: number, r: number } } = { { x = 380, z = -260, r = 10 } }
+	local function claim(x: number, z: number, radius: number): boolean
+		if x < 252 or x > 508 or z < -428 or z > -92 then
+			return false
+		end
+		for _, spot in occupied do
+			local dx, dz = x - spot.x, z - spot.z
+			if dx * dx + dz * dz < (radius + spot.r) * (radius + spot.r) then
+				return false
+			end
+		end
+		table.insert(occupied, { x = x, z = z, r = radius })
+		return true
+	end
+	local planted = 0
+	local attempts = 0
+	while planted < 42 and attempts < 2200 do
+		attempts += 1
+		local x = 260 + rnd() * 240
+		local z = -420 + rnd() * 320
+		if claim(x, z, 9) then
+			planted += 1
+			local height = 9 + rnd() * 7
+			push(
+				piece(
+					("WoodsTrunk_%02d"):format(planted),
+					"Cylinder",
+					{ x = height, y = 1.8 + (planted % 3) * 0.35, z = 1.8 + (planted % 3) * 0.35 },
+					{ x = x, y = height / 2, z = z },
+					0,
+					WOOD,
+					"Wood",
+					0,
+					false,
+					nil
+				)
+			)
+			push(
+				piece(
+					("WoodsCanopy_%02d"):format(planted),
+					"Ball",
+					{ x = 7.5 + (planted % 4), y = 5.2 + (planted % 3) * 0.4, z = 7.2 + (planted % 3) },
+					{ x = x + (rnd() - 0.5) * 1.4, y = height + 1.6, z = z + (rnd() - 0.5) * 1.4 },
+					0,
+					if planted % 3 == 0 then MOSS else LEAF,
+					"Grass",
+					0.04,
+					false,
+					nil
+				)
+			)
+			push(
+				piece(
+					("WoodsCanopyB_%02d"):format(planted),
+					"Ball",
+					{ x = 5.2, y = 3.6, z = 5.6 },
+					{ x = x + 1.8, y = height + 3.2, z = z - 1.2 },
+					0,
+					LEAF,
+					"Grass",
+					0.08,
+					false,
+					nil
+				)
+			)
+		end
+	end
+	local under = 0
+	local underTries = 0
+	while under < 36 and underTries < 1600 do
+		underTries += 1
+		local x = 265 + rnd() * 230
+		local z = -415 + rnd() * 310
+		if claim(x, z, 3.2) then
+			under += 1
+			if under % 3 == 0 then
+				push(
+					piece(
+						("WoodsShroom_%02d"):format(under),
+						"Ball",
+						{ x = 1.5, y = 1.15, z = 1.5 },
+						{ x = x, y = 0.72, z = z },
+						0,
+						{ 180, 80, 160 },
+						"SmoothPlastic",
+						0,
+						false,
+						nil
+					)
+				)
+			else
+				push(
+					piece(
+						("WoodsFern_%02d"):format(under),
+						"Block",
+						{ x = 1.4, y = 1.6, z = 0.35 },
+						{ x = x, y = 0.85, z = z },
+						rnd() * 180,
+						LEAF,
+						"LeafyGrass",
+						0,
+						false,
+						nil
+					)
+				)
+			end
+		end
+	end
 end
 
 -- ── Porto Ferro ────────────────────────────────────────────────────────────
@@ -422,6 +520,38 @@ for i = 1, 6 do
 		)
 	)
 end
+for i = 1, 10 do
+	push(
+		piece(
+			("PortReed_%02d"):format(i),
+			"Block",
+			{ x = 0.35, y = 3.2 + (i % 3) * 0.4, z = 0.35 },
+			{ x = -330 - (i % 5) * 14, y = 1.7, z = 8 + math.floor((i - 1) / 5) * 18 },
+			12 * i,
+			MOSS,
+			"Grass",
+			0,
+			false,
+			nil
+		)
+	)
+end
+for i = 1, 8 do
+	push(
+		piece(
+			("PortShrub_%02d"):format(i),
+			"Ball",
+			{ x = 2.4, y = 1.6, z = 2.2 },
+			{ x = -280 - i * 16, y = 0.9, z = 40 - (i % 3) * 12 },
+			0,
+			MOSS,
+			"LeafyGrass",
+			0,
+			false,
+			nil
+		)
+	)
+end
 
 -- ── Setor Cinza ────────────────────────────────────────────────────────────
 push(
@@ -492,6 +622,22 @@ for i = 1, 4 do
 			0,
 			{ 84, 80, 78 },
 			"CorrodedMetal",
+			0,
+			false,
+			nil
+		)
+	)
+end
+for i = 1, 12 do
+	push(
+		piece(
+			("GreyWeed_%02d"):format(i),
+			"Ball",
+			{ x = 1.8, y = 1.1, z = 1.6 },
+			{ x = 190 + (i % 6) * 42, y = 0.62, z = -460 - math.floor((i - 1) / 6) * 36 },
+			0,
+			{ 70, 78, 58 },
+			"Grass",
 			0,
 			false,
 			nil
@@ -575,6 +721,52 @@ for i = 1, 4 do
 			GOLD,
 			"Fabric",
 			0.08,
+			false,
+			nil
+		)
+	)
+end
+for i = 1, 8 do
+	push(
+		piece(
+			("AcademyHedge_%02d"):format(i),
+			"Block",
+			{ x = 10, y = 2.2, z = 1.4 },
+			{ x = -40 + (i % 4) * 36, y = 1.15, z = 70 + math.floor((i - 1) / 4) * 90 },
+			0,
+			MOSS,
+			"LeafyGrass",
+			0,
+			false,
+			nil
+		)
+	)
+end
+for i = 1, 6 do
+	push(
+		piece(
+			("AcademyTree_%02d"):format(i),
+			"Cylinder",
+			{ x = 8, y = 1.2, z = 1.2 },
+			{ x = -50 + i * 28, y = 4, z = 200 },
+			0,
+			WOOD,
+			"Wood",
+			0,
+			false,
+			nil
+		)
+	)
+	push(
+		piece(
+			("AcademyCanopy_%02d"):format(i),
+			"Ball",
+			{ x = 5.4, y = 3.6, z = 5.4 },
+			{ x = -50 + i * 28, y = 9.2, z = 200 },
+			0,
+			LEAF,
+			"Grass",
+			0.05,
 			false,
 			nil
 		)

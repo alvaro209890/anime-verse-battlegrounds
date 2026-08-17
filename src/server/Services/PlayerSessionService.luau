@@ -23,6 +23,7 @@ export type SessionDeps = {
 	-- Tracker do objetivo ativo (docs/13 §13 — SessionSnapshot carrega objetivo).
 	getObjective: ((number) -> any?)?,
 	getUnconsolidatedXp: ((number) -> number)?,
+	getProgression: ((number) -> any?)?,
 }
 
 export type SessionSnapshot = {
@@ -42,6 +43,14 @@ export type SessionSnapshot = {
 	-- nil quando não há objetivo aceito (HUD esconde a linha).
 	objective: any?,
 	unconsolidatedXp: number,
+	accountLevel: number?,
+	xpIntoLevel: number?,
+	xpToNext: number?,
+	unspentPoints: number?,
+	pendingLevels: number?,
+	previewLevel: number?,
+	spent: any?,
+	vitals: any?,
 }
 
 local PlayerSessionService = {
@@ -99,6 +108,16 @@ function PlayerSessionService.buildSnapshot(userId: number, characterId: string,
 	end
 	local objective = if deps.getObjective then deps.getObjective(userId) else nil
 	local unconsolidatedXp = if deps.getUnconsolidatedXp then deps.getUnconsolidatedXp(userId) else 0
+	local progression = if deps.getProgression then deps.getProgression(userId) else nil
+	if progression and type(progression.vitals) == "table" then
+		maxHealth = progression.vitals.maxHealth or maxHealth
+		maxGuard = progression.vitals.maxGuard or maxGuard
+		maxResource = progression.vitals.maxResource or maxResource
+		if not fighter then
+			health = maxHealth
+			guard = maxGuard
+		end
+	end
 	return {
 		protocolVersion = 1,
 		ready = true,
@@ -115,6 +134,14 @@ function PlayerSessionService.buildSnapshot(userId: number, characterId: string,
 		dummyId = DUMMY_ID,
 		objective = objective,
 		unconsolidatedXp = unconsolidatedXp,
+		accountLevel = if progression then progression.accountLevel else 1,
+		xpIntoLevel = if progression then progression.xpIntoLevel else 0,
+		xpToNext = if progression then progression.xpToNext else 0,
+		unspentPoints = if progression then progression.unspentPoints else 0,
+		pendingLevels = if progression then progression.pendingLevels else 0,
+		previewLevel = if progression then progression.previewLevel else 1,
+		spent = if progression then progression.spent else nil,
+		vitals = if progression then progression.vitals else nil,
 	}
 end
 

@@ -66,6 +66,8 @@ export type AbilityDeps = {
 	-- Eco da Cadência acertou (item 10 — objetivo quest_flow): o bootstrap
 	-- liga ao QuestService.creditFlowEcho. `abilityId` é quem gerou o eco.
 	onFlowEcho: ((number, string, number) -> ())?,
+	-- Ressonância: multiplica o custo de Umbral (teto GDD 6%).
+	getResourceCostMul: ((number) -> number)?,
 }
 
 local AbilityService = {
@@ -496,7 +498,14 @@ function AbilityService.tryActivate(
 		end
 	end
 
-	if not deps.trySpendResource(attacker.userId, ability.resourceCost.amount) then
+	local cost = ability.resourceCost.amount
+	if deps.getResourceCostMul then
+		local mul = deps.getResourceCostMul(attacker.userId)
+		if type(mul) == "number" and mul < 1 then
+			cost = math.max(1, math.floor(cost * math.clamp(mul, 0.94, 1) + 0.5))
+		end
+	end
+	if not deps.trySpendResource(attacker.userId, cost) then
 		return false, "no_resource"
 	end
 

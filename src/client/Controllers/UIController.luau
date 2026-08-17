@@ -100,7 +100,11 @@ function UIController.new(deps: { [string]: any }): any
 	zone.BackgroundTransparency = 0.15
 	zone.TextXAlignment = Enum.TextXAlignment.Center
 	zone.TextSize = 16
-	local objective = label("Objective", gui, UDim2.fromOffset(520, 26), UDim2.new(0.5, -260, 0, 50))
+	local xpBar = makeBar("Xp", gui, 0, Color3.fromRGB(212, 176, 88))
+	xpBar.track.Size = UDim2.fromOffset(360, 20)
+	xpBar.track.Position = UDim2.new(0.5, -180, 0, 48)
+	xpBar.track.Parent = gui
+	local objective = label("Objective", gui, UDim2.fromOffset(520, 26), UDim2.new(0.5, -260, 0, 72))
 	objective.BackgroundColor3 = BG
 	objective.BackgroundTransparency = 0.25
 	objective.TextXAlignment = Enum.TextXAlignment.Center
@@ -240,9 +244,71 @@ function UIController.new(deps: { [string]: any }): any
 	debugKit.TextColor3 = MUTED
 	debugKit.Visible = false
 
+	local statusButton = button("Status", gui, UDim2.fromOffset(88, 40), UDim2.new(1, -200, 0, 14))
+	statusButton.TextSize = 14
 	local helpButton = button("Help", gui, UDim2.fromOffset(88, 40), UDim2.new(1, -106, 0, 14))
 	helpButton.TextSize = 16
-	local helpPanel = frame("HelpPanel", gui, UDim2.fromOffset(460, 470), UDim2.new(0.5, -230, 0.5, -235))
+	local statusPanel = frame("StatusPanel", gui, UDim2.fromOffset(420, 430), UDim2.new(0.5, -210, 0.5, -215))
+	statusPanel.Visible = false
+	statusPanel.ZIndex = 18
+	local statusTitle = label("Title", statusPanel, UDim2.new(1, -16, 0, 26), UDim2.fromOffset(8, 8))
+	statusTitle.TextXAlignment = Enum.TextXAlignment.Center
+	statusTitle.TextSize = 16
+	statusTitle.ZIndex = 19
+	local statusPoints = label("Points", statusPanel, UDim2.new(1, -16, 0, 20), UDim2.fromOffset(8, 34))
+	statusPoints.TextXAlignment = Enum.TextXAlignment.Center
+	statusPoints.TextSize = 13
+	statusPoints.TextColor3 = MUTED
+	statusPoints.ZIndex = 19
+	local TRACKS = { "vitality", "umbral", "impact", "guard", "resonance" }
+	local trackViews = {}
+	for index, trackId in TRACKS do
+		local y = 60 + (index - 1) * 52
+		local row = frame("Track_" .. trackId, statusPanel, UDim2.new(1, -20, 0, 46), UDim2.fromOffset(10, y))
+		row.BackgroundColor3 = PANEL
+		row.ZIndex = 19
+		local name = label("Name", row, UDim2.new(0.42, 0, 0, 20), UDim2.fromOffset(8, 4))
+		name.ZIndex = 20
+		local fx = label("Fx", row, UDim2.new(0.42, 0, 0, 16), UDim2.fromOffset(8, 24))
+		fx.TextSize = 12
+		fx.TextColor3 = MUTED
+		fx.ZIndex = 20
+		local value = label("Value", row, UDim2.fromOffset(36, 28), UDim2.new(1, -92, 0, 8))
+		value.TextXAlignment = Enum.TextXAlignment.Center
+		value.TextSize = 18
+		value.ZIndex = 20
+		local plus = button("Plus", row, UDim2.fromOffset(36, 32), UDim2.new(1, -48, 0, 7))
+		plus.Text = "+"
+		plus.TextSize = 20
+		plus.ZIndex = 20
+		plus.Activated:Connect(function()
+			if deps.onSpend then
+				deps.onSpend(trackId)
+			end
+		end)
+		table.insert(trackViews, {
+			id = trackId,
+			name = name,
+			fx = fx,
+			value = value,
+			plus = plus,
+		})
+	end
+	local respecButton = button("Respec", statusPanel, UDim2.new(1, -24, 0, 32), UDim2.fromOffset(12, 328))
+	respecButton.ZIndex = 19
+	respecButton.Activated:Connect(function()
+		if deps.onSpend then
+			deps.onSpend("respec")
+		end
+	end)
+	local statusHint = label("Hint", statusPanel, UDim2.new(1, -16, 0, 48), UDim2.fromOffset(8, 366))
+	statusHint.TextWrapped = true
+	statusHint.TextSize = 12
+	statusHint.TextColor3 = MUTED
+	statusHint.ZIndex = 19
+	local statusClose = button("CloseStatus", statusPanel, UDim2.new(1, -24, 0, 30), UDim2.fromOffset(12, 390))
+	statusClose.ZIndex = 19
+	local helpPanel = frame("HelpPanel", gui, UDim2.fromOffset(460, 500), UDim2.new(0.5, -230, 0.5, -250))
 	helpPanel.Visible = false
 	helpPanel.ZIndex = 20
 	local helpTitle = label("Title", helpPanel, UDim2.new(1, -16, 0, 28), UDim2.fromOffset(8, 8))
@@ -259,6 +325,7 @@ function UIController.new(deps: { [string]: any }): any
 		"hud.help_lock",
 		"hud.help_interact",
 		"hud.help_gate",
+		"hud.help_status",
 		"hud.settings_where",
 	}
 	local helpLines: { TextLabel } = {}
@@ -270,11 +337,11 @@ function UIController.new(deps: { [string]: any }): any
 		table.insert(helpLines, line)
 	end
 	-- 10 linhas de ajuda × 24 px + título → botões a partir de y≈280.
-	local lockInPanel = button("LockInPanel", helpPanel, UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 284))
+	local lockInPanel = button("LockInPanel", helpPanel, UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 308))
 	lockInPanel.ZIndex = 21
-	local shakeToggle = button("ShakeToggle", helpPanel, UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 328))
+	local shakeToggle = button("ShakeToggle", helpPanel, UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 352))
 	shakeToggle.ZIndex = 21
-	local closeButton = button("Close", helpPanel, UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 416))
+	local closeButton = button("Close", helpPanel, UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 440))
 	closeButton.ZIndex = 21
 
 	local controller = {
@@ -294,6 +361,7 @@ function UIController.new(deps: { [string]: any }): any
 		guardBar = guardBar,
 		resourceBar = resourceBar,
 		zone = zone,
+		xpBar = xpBar,
 		objective = objective,
 		feedback = feedback,
 		abilityViews = abilityViews,
@@ -304,6 +372,15 @@ function UIController.new(deps: { [string]: any }): any
 		hint = hint,
 		unlockAim = unlockAim,
 		debugKit = debugKit,
+		statusButton = statusButton,
+		statusPanel = statusPanel,
+		statusTitle = statusTitle,
+		statusPoints = statusPoints,
+		trackViews = trackViews,
+		respecButton = respecButton,
+		statusHint = statusHint,
+		statusClose = statusClose,
+		statusVisible = false,
 		helpButton = helpButton,
 		helpPanel = helpPanel,
 		helpTitle = helpTitle,
@@ -321,6 +398,15 @@ function UIController.new(deps: { [string]: any }): any
 
 	local function toggleHelp()
 		controller.helpVisible = not controller.helpVisible
+		if controller.helpVisible then
+			controller.statusVisible = false
+		end
+	end
+	local function toggleStatus()
+		controller.statusVisible = not controller.statusVisible
+		if controller.statusVisible then
+			controller.helpVisible = false
+		end
 	end
 	local function releaseAim()
 		local characterApi = deps.characterApi
@@ -349,10 +435,16 @@ function UIController.new(deps: { [string]: any }): any
 		end
 	end)
 	shakeToggle.Activated:Connect(toggleShake)
+	statusButton.Activated:Connect(toggleStatus)
+	statusClose.Activated:Connect(function()
+		controller.statusVisible = false
+	end)
 	if deps.inputApi and deps.input then
 		deps.inputApi.subscribe(deps.input, function(action: string, _payload: { [string]: any })
 			if action == "ToggleHelp" then
 				toggleHelp()
+			elseif action == "ToggleProgression" then
+				toggleStatus()
 			elseif action == "BasicLight" or action == "BasicHeavy" or action == "Dash" then
 				controller.helpVisible = false
 			end
@@ -408,6 +500,51 @@ function UIController.render(controller: any, elapsed: number): ()
 	renderBar(controller.resourceBar, resource, state.maxResource, resourceText)
 
 	controller.zone.Text = controller.locale.get(if state.pvp then "hud.pvp_active" else "hud.zone_safe", localeId)
+	local into = state.xpIntoLevel or 0
+	local need = state.xpToNext or 0
+	local levelText = controller.locale.format("hud.level", { level = state.accountLevel or 1 }, localeId)
+	local xpText = if need > 0
+		then levelText .. "  " .. controller.locale.format("hud.xp_bar", { into = into, need = need }, localeId)
+		else levelText
+	if (state.unconsolidatedXp or 0) > 0 then
+		xpText = xpText
+			.. "  "
+			.. controller.locale.format("hud.xp_field", { amount = state.unconsolidatedXp }, localeId)
+	end
+	renderBar(controller.xpBar, into, math.max(need, 1), xpText)
+	controller.statusButton.Text = controller.locale.get("hud.status_button", localeId)
+	controller.statusButton.BackgroundColor3 = if (state.unspentPoints or 0) > 0
+			or (state.pendingLevels or 0) > 0
+		then Color3.fromRGB(196, 156, 72)
+		else PANEL
+	controller.statusPanel.Visible = controller.statusVisible == true
+	if controller.statusVisible then
+		controller.statusTitle.Text = controller.locale.get("hud.status_title", localeId)
+		controller.statusPoints.Text = if (state.unspentPoints or 0) > 0
+			then controller.locale.format("hud.status_points", { n = state.unspentPoints }, localeId)
+			else controller.locale.get("hud.status_no_points", localeId)
+		local spent = state.spent or {}
+		for _, view in controller.trackViews do
+			local points = spent[view.id] or 0
+			view.name.Text = controller.locale.get("hud.track." .. view.id, localeId)
+			view.value.Text = tostring(points)
+			local fxAmount = if view.id == "impact" or view.id == "resonance"
+				then math.floor(points * 0.06 * 10 + 0.5) / 10
+				else points * 2
+			view.fx.Text = controller.locale.format("hud.track." .. view.id .. ".fx", { n = fxAmount }, localeId)
+			view.plus.Visible = (state.unspentPoints or 0) > 0
+		end
+		controller.respecButton.Text = controller.locale.get("hud.status_respec", localeId)
+		controller.statusClose.Text = controller.locale.get("hud.settings_close", localeId)
+		local pending = state.pendingLevels or 0
+		if pending > 1 then
+			controller.statusHint.Text = controller.locale.format("hud.xp_ready_many", { levels = pending }, localeId)
+		elseif pending == 1 then
+			controller.statusHint.Text = controller.locale.format("hud.xp_ready", { levels = 1 }, localeId)
+		else
+			controller.statusHint.Text = controller.locale.get("hud.help_status", localeId)
+		end
+	end
 	local objective = state.objective
 	if objective and objective.state ~= "completed" then
 		controller.objective.Text =
@@ -421,6 +558,11 @@ function UIController.render(controller: any, elapsed: number): ()
 	if feedbackKey then
 		controller.feedback.Text = if feedbackKey == "hud.feedback_death_loss"
 			then controller.locale.format(feedbackKey, { amount = state.deathPenalty }, localeId)
+			elseif feedbackKey == "hud.feedback_level_up" then controller.locale.format(
+				feedbackKey,
+				{ level = state.accountLevel, points = state.pointsGranted },
+				localeId
+			)
 			else controller.locale.get(feedbackKey, localeId)
 	end
 

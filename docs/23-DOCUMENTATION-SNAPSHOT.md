@@ -1,5 +1,20 @@
 # Snapshot Canônico da Documentação — 17/08/2026
 
+## Rodada de 17/08 (Grok) — vegetação realista + nível por pontos
+
+1. **Vegetação.** A planície saiu do sorteio uniforme (que agrupava e deixava
+   claros) e passou a bosques com ocupação mínima + sub-bosque (grama,
+   samambaia, tronco, flor). Árvore agora tem tronco em dois segmentos e copa
+   em quatro camadas. O Bosque dos Ecos deixou a grade; Lumen/Porto/Cinza/
+   Academia ganharam vegetação de bioma. Nada colide; teto W2 6000 intacto.
+2. **Evolução.** XP consolidado no Marco vira nível (`floor(2 × n^2,3 + 84)`,
+   curva Blox Fruits). Cada nível dá 3 pontos gastos em Vitalidade / Umbral /
+   Impacto / Guarda / Ressonância. Impacto e Ressonância capam em 6%
+   (GDD-DEC-005). HUD STATUS (K). `SpendProgressionIntent` só declara a
+   trilha. Respec só na zona segura.
+
+---
+
 ## Rodada de 17/08 (Grok) — void dos portões + malha de biomas
 
 1. **Buracos no void ao lado dos portões.** O vão norte tem 12 studs e o oeste

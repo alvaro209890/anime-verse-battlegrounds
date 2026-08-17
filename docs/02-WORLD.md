@@ -114,6 +114,12 @@ Cinza, Academia) existem como volumes + piso + marcos em `Zones.luau` /
 completa: é o chão jogável e a identidade visual para não cair no void e para
 o mundo ler como Blox Fruits (biomas distintos, marco vertical por célula).
 
+**Vegetação (17/08):** a planície deixou o sorteio uniforme e passou a bosques
+com ocupação (mínimo de espaçamento) + sub-bosque (grama, samambaia, tronco,
+flor). O Bosque dos Ecos saiu da grade 6×3 e virou mata com LCG. Lumen ganhou
+vasos, Porto juncos, Setor Cinza erva, Academia sebes e árvores de alameda.
+Nada colide; o teto W2 de 6000 parts permanece.
+
 ## 4. Tipos de zona e transição PvP
 
 ### 4.1 Regras por tipo

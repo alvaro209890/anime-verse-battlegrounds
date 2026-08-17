@@ -100,6 +100,13 @@ export type SessionSnapshot = {
 	dummyId: string,
 	objective: QuestTracker?,
 	unconsolidatedXp: number,
+	accountLevel: number?,
+	xpIntoLevel: number?,
+	xpToNext: number?,
+	unspentPoints: number?,
+	pendingLevels: number?,
+	spent: any?,
+	vitals: any?,
 }
 
 -- Objetivos da fatia (docs/13-F0-SLICE.md §10)

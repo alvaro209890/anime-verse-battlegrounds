@@ -355,20 +355,35 @@ local function canopy(prefix: string, x: number, y: number, z: number, spread: n
 			nil
 		)
 	)
+	push(
+		deco(
+			prefix .. "_CanopyD",
+			"Part",
+			"Ball",
+			{ x = spread * 0.48, y = spread * 0.38, z = spread * 0.52 },
+			{ x = x + spread * 0.08, y = y + spread * 0.92, z = z + spread * 0.18 },
+			yaw + 102,
+			FOLIAGE_DUSK,
+			"LeafyGrass",
+			0,
+			nil
+		)
+	)
 end
 
--- Árvore frondosa: tronco, alargamento de base, forquilha inclinada e copa em
--- três camadas. O alargamento é barato e resolve o defeito clássico de tronco
--- primitivo, que é parecer um poste enfiado no chão.
+-- Árvore frondosa: base musgosa, tronco em dois segmentos (afunila), dois
+-- galhos e copa em camadas. O segundo segmento deslocado tira o "poste".
 local function tree(prefix: string, x: number, z: number, height: number, spread: number, yaw: number, tint: { number })
-	local trunkTop = height * 0.62
+	local lower = height * 0.38
+	local upper = height * 0.28
+	local lean = (yaw % 17 - 8) * 0.04
 	push(
 		deco(
 			prefix .. "_Root",
 			"Part",
 			"Ball",
-			{ x = 2.1, y = 1.1, z = 2.1 },
-			{ x = x, y = 0.6, z = z },
+			{ x = 2.4, y = 1.15, z = 2.3 },
+			{ x = x, y = 0.62, z = z },
 			yaw,
 			MOSS,
 			"Grass",
@@ -381,10 +396,24 @@ local function tree(prefix: string, x: number, z: number, height: number, spread
 			prefix .. "_Trunk",
 			"Part",
 			"Block",
-			{ x = 0.9, y = trunkTop, z = 0.9 },
-			{ x = x, y = trunkTop / 2, z = z },
+			{ x = 1.05, y = lower, z = 1.05 },
+			{ x = x, y = lower / 2, z = z },
 			yaw,
 			BARK,
+			"Slate",
+			0,
+			nil
+		)
+	)
+	push(
+		deco(
+			prefix .. "_Bole",
+			"Part",
+			"Block",
+			{ x = 0.78, y = upper, z = 0.78 },
+			{ x = x + lean, y = lower + upper / 2, z = z - lean * 0.4 },
+			yaw + 8,
+			BARK_PALE,
 			"Slate",
 			0,
 			nil
@@ -395,16 +424,30 @@ local function tree(prefix: string, x: number, z: number, height: number, spread
 			prefix .. "_Fork",
 			"Part",
 			"Block",
-			{ x = 0.55, y = height * 0.3, z = 0.55 },
-			{ x = x + spread * 0.16, y = trunkTop + height * 0.11, z = z - spread * 0.1 },
-			yaw + 20,
+			{ x = 0.5, y = height * 0.28, z = 0.5 },
+			{ x = x + spread * 0.18, y = lower + upper + height * 0.06, z = z - spread * 0.08 },
+			yaw + 22,
 			BARK_PALE,
 			"Slate",
 			0,
 			nil
 		)
 	)
-	canopy(prefix, x, trunkTop, z, spread, yaw, tint)
+	push(
+		deco(
+			prefix .. "_Limb",
+			"Part",
+			"Block",
+			{ x = 0.42, y = height * 0.22, z = 0.42 },
+			{ x = x - spread * 0.14, y = lower + upper * 0.7, z = z + spread * 0.12 },
+			yaw - 28,
+			BARK,
+			"Slate",
+			0,
+			nil
+		)
+	)
+	canopy(prefix, x + lean * 0.5, lower + upper * 0.55, z, spread, yaw, tint)
 end
 
 -- Conífera: silhueta cônica feita de três blocos girados. Existe para o bosque
@@ -413,11 +456,25 @@ end
 local function conifer(prefix: string, x: number, z: number, height: number, spread: number, yaw: number)
 	push(
 		deco(
+			prefix .. "_Root",
+			"Part",
+			"Ball",
+			{ x = 1.6, y = 0.8, z = 1.6 },
+			{ x = x, y = 0.45, z = z },
+			yaw,
+			MOSS,
+			"Grass",
+			0,
+			nil
+		)
+	)
+	push(
+		deco(
 			prefix .. "_Trunk",
 			"Part",
 			"Block",
-			{ x = 0.7, y = height * 0.5, z = 0.7 },
-			{ x = x, y = height * 0.25, z = z },
+			{ x = 0.68, y = height * 0.52, z = 0.68 },
+			{ x = x, y = height * 0.26, z = z },
 			yaw,
 			BARK,
 			"Slate",
@@ -425,18 +482,18 @@ local function conifer(prefix: string, x: number, z: number, height: number, spr
 			nil
 		)
 	)
-	local tiers = { 0.42, 0.66, 0.86 }
-	local widths = { 1.0, 0.72, 0.44 }
+	local tiers = { 0.38, 0.58, 0.76, 0.92 }
+	local widths = { 1.05, 0.82, 0.58, 0.34 }
 	for index, tier in tiers do
 		push(
 			deco(
 				("%s_Tier%d"):format(prefix, index),
 				"Part",
 				"Block",
-				{ x = spread * widths[index], y = height * 0.26, z = spread * widths[index] },
+				{ x = spread * widths[index], y = height * 0.22, z = spread * widths[index] },
 				{ x = x, y = height * tier, z = z },
-				yaw + index * 22,
-				if index == 2 then FOLIAGE_DEEP else FOLIAGE,
+				yaw + index * 18,
+				if index % 2 == 0 then FOLIAGE_DEEP else FOLIAGE,
 				"LeafyGrass",
 				0,
 				nil
@@ -495,6 +552,123 @@ local function shrub(prefix: string, x: number, z: number, radius: number, rgb: 
 	))
 end
 
+local function grassTuft(prefix: string, x: number, z: number, radius: number, rgb: { number })
+	push(
+		deco(
+			prefix,
+			"Part",
+			"Ball",
+			{ x = radius * 2.2, y = radius * 0.7, z = radius * 1.8 },
+			{ x = x, y = radius * 0.38, z = z },
+			0,
+			rgb,
+			"Grass",
+			0,
+			nil
+		)
+	)
+end
+
+local function fern(prefix: string, x: number, z: number, height: number, yaw: number)
+	push(
+		deco(
+			prefix .. "A",
+			"WedgePart",
+			"Block",
+			{ x = 1.1, y = height, z = 0.35 },
+			{ x = x, y = height / 2, z = z },
+			yaw,
+			FOLIAGE,
+			"LeafyGrass",
+			0,
+			nil
+		)
+	)
+	push(
+		deco(
+			prefix .. "B",
+			"WedgePart",
+			"Block",
+			{ x = 0.9, y = height * 0.78, z = 0.3 },
+			{ x = x + 0.35, y = height * 0.39, z = z + 0.2 },
+			yaw + 48,
+			FOLIAGE_DEEP,
+			"LeafyGrass",
+			0,
+			nil
+		)
+	)
+end
+
+local function fallenLog(prefix: string, x: number, z: number, length: number, yaw: number)
+	push(
+		deco(
+			prefix,
+			"Part",
+			"Block",
+			{ x = length, y = 0.7, z = 0.7 },
+			{ x = x, y = 0.38, z = z },
+			yaw,
+			BARK_DEAD,
+			"Wood",
+			0,
+			nil
+		)
+	)
+	push(
+		deco(
+			prefix .. "_Cap",
+			"Part",
+			"Ball",
+			{ x = 0.75, y = 0.75, z = 0.75 },
+			{
+				x = x + math.cos(math.rad(yaw)) * length * 0.42,
+				y = 0.42,
+				z = z + math.sin(math.rad(yaw)) * length * 0.42,
+			},
+			yaw,
+			BARK,
+			"Wood",
+			0,
+			nil
+		)
+	)
+end
+
+local function flower(prefix: string, x: number, z: number, rgb: { number })
+	push(
+		deco(
+			prefix,
+			"Part",
+			"Ball",
+			{ x = 0.55, y = 0.4, z = 0.55 },
+			{ x = x, y = 0.24, z = z },
+			0,
+			rgb,
+			"Grass",
+			0,
+			nil
+		)
+	)
+end
+
+local function carpet(prefix: string, x: number, z: number, width: number, rgb: { number }, yaw: number)
+	push(
+		deco(
+			prefix,
+			"Part",
+			"Block",
+			{ x = width, y = 0.16, z = width * 0.86 },
+			{ x = x, y = 0.09, z = z },
+			yaw,
+			rgb,
+			"Grass",
+			0.12,
+			nil
+		)
+	)
+end
+
 -- Pedra musgosa: quebra o campo e amarra a vegetação ao chão mineral do mundo.
 local function boulder(prefix: string, x: number, z: number, radius: number, yaw: number)
 	push(
@@ -530,56 +704,182 @@ local ANCHOR_SPOTS = {
 	{ 0, -102 },
 }
 
-local function blocked(x: number, z: number): boolean
-	if math.abs(x) <= 9 and z <= -36 and z >= -104 then
+local function blockedAt(x: number, z: number, radius: number): boolean
+	if math.abs(x) <= 9 + radius and z <= -36 + radius and z >= -104 - radius then
 		return true
 	end
-	local cx, cz = x - 0, z + 102
-	if math.sqrt(cx * cx + cz * cz) <= 26 then
+	local cx, cz = x, z + 102
+	if math.sqrt(cx * cx + cz * cz) <= 26 + radius then
 		return true
 	end
 	for _, spot in ANCHOR_SPOTS do
 		local dx, dz = x - spot[1], z - spot[2]
-		if math.sqrt(dx * dx + dz * dz) <= 8 then
+		if math.sqrt(dx * dx + dz * dz) <= 8 + radius then
 			return true
 		end
 	end
-	-- Boca dos portões: nada planta na saída do Bastião.
-	if z > -46 and math.abs(x) < 14 then
+	if z > -46 - radius and math.abs(x) < 14 + radius then
 		return true
 	end
-	if z > -46 and x > -54 and x < -38 then
+	if z > -46 - radius and x > -54 - radius and x < -38 + radius then
 		return true
 	end
-	return false
+	local insideMain = x >= -240 + radius and x <= 240 - radius and z >= -440 + radius and z <= -40 - radius
+	local insideWest = x >= -240 + radius and x <= -48 - radius and z >= -40 - radius and z <= 8 - radius
+	return not insideMain and not insideWest
 end
 
 local TINTS = { FOLIAGE, FOLIAGE_RIFT, FOLIAGE_DUSK, FOLIAGE_DEEP }
+local BLOOM = { { 168, 92, 122 }, { 214, 176, 86 }, { 92, 148, 168 }, { 186, 120, 72 } }
 
 do
+	-- Poisson / bosques: ocupação com raio impede o agrupamento do sorteio
+	-- uniforme (que lia como "chuva de árvores") e o vazio entre elas.
+	local occupied: { { x: number, z: number, r: number } } = {}
 	local planted = 0
-	local attempts = 0
-	-- Teto de tentativas: sem ele, uma regra de exclusão mais rígida no futuro
-	-- transformaria isto em laço infinito no carregamento do módulo.
-	while planted < 210 and attempts < 4000 do
-		attempts += 1
-		local x = between(-228, 228)
-		local z = between(-428, -50)
-		if not blocked(x, z) then
-			planted += 1
-			local roll = rnd()
-			local tint = TINTS[(planted % #TINTS) + 1]
-			local prefix = ("Wild_%03d"):format(planted)
-			if roll < 0.42 then
-				tree(prefix, x, z, between(9, 15), between(5.4, 8.2), between(0, 360), tint)
-			elseif roll < 0.66 then
-				conifer(prefix, x, z, between(11, 18), between(4.6, 7.0), between(0, 360))
-			elseif roll < 0.74 then
-				deadTree(prefix, x, z, between(7, 12), between(0, 360))
-			elseif roll < 0.90 then
-				shrub(prefix, x, z, between(1.6, 2.6), tint)
+	local function claim(x: number, z: number, radius: number): boolean
+		if blockedAt(x, z, radius) then
+			return false
+		end
+		for _, spot in occupied do
+			local dx, dz = x - spot.x, z - spot.z
+			if dx * dx + dz * dz < (radius + spot.r) * (radius + spot.r) then
+				return false
+			end
+		end
+		table.insert(occupied, { x = x, z = z, r = radius })
+		return true
+	end
+
+	local function tintFor(index: number): { number }
+		return TINTS[(index % #TINTS) + 1]
+	end
+
+	local function plantTree(x: number, z: number)
+		planted += 1
+		local prefix = ("Wild_%03d"):format(planted)
+		local yaw = between(0, 360)
+		local craterDist = math.sqrt(x * x + (z + 102) * (z + 102))
+		local north = z < -300
+		local roll = rnd()
+		if craterDist < 90 then
+			if roll < 0.38 then
+				deadTree(prefix, x, z, between(6.5, 11), yaw)
+			elseif roll < 0.78 then
+				tree(prefix, x, z, between(8, 13), between(5.0, 7.2), yaw, tintFor(planted))
 			else
-				boulder(prefix, x, z, between(1.8, 3.4), between(0, 360))
+				conifer(prefix, x, z, between(10, 15), between(4.2, 6.2), yaw)
+			end
+		elseif north then
+			if roll < 0.62 then
+				conifer(prefix, x, z, between(12, 19), between(4.8, 7.2), yaw)
+			elseif roll < 0.88 then
+				tree(prefix, x, z, between(9, 14), between(5.2, 7.6), yaw, tintFor(planted))
+			else
+				deadTree(prefix, x, z, between(7, 11), yaw)
+			end
+		else
+			if roll < 0.58 then
+				tree(prefix, x, z, between(9, 16), between(5.4, 8.4), yaw, tintFor(planted))
+			elseif roll < 0.84 then
+				conifer(prefix, x, z, between(11, 17), between(4.6, 6.8), yaw)
+			else
+				deadTree(prefix, x, z, between(7, 12), yaw)
+			end
+		end
+	end
+
+	-- 1. Centros de bosque (silhueta de "mancha" como no Blox Fruits).
+	local groves: { { x: number, z: number } } = {}
+	local groveAttempts = 0
+	while #groves < 16 and groveAttempts < 2400 do
+		groveAttempts += 1
+		local x = between(-210, 210)
+		local z = between(-410, -70)
+		local far = true
+		for _, grove in groves do
+			local dx, dz = x - grove.x, z - grove.z
+			if dx * dx + dz * dz < 58 * 58 then
+				far = false
+				break
+			end
+		end
+		if far and not blockedAt(x, z, 14) then
+			table.insert(groves, { x = x, z = z })
+			carpet(("WildCarpet_%02d"):format(#groves), x, z, between(9, 13), tintFor(#groves), between(0, 50))
+		end
+	end
+
+	-- 2. Árvores de cada bosque, apertadas no centro e mais soltas na borda.
+	for _, grove in groves do
+		local members = 5 + math.floor(rnd() * 3)
+		local placed = 0
+		local tries = 0
+		while placed < members and tries < 80 do
+			tries += 1
+			local angle = rnd() * math.pi * 2
+			local dist = between(5.5, 18)
+			local x = grove.x + math.cos(angle) * dist
+			local z = grove.z + math.sin(angle) * dist
+			if claim(x, z, 7.2) then
+				plantTree(x, z)
+				placed += 1
+			end
+		end
+	end
+
+	-- 3. Árvores soltas no campo e no braço oeste (preenche o vazio entre bosques).
+	local scatter = 0
+	local scatterTries = 0
+	while scatter < 48 and scatterTries < 3500 do
+		scatterTries += 1
+		local westArm = rnd() < 0.18
+		local x = if westArm then between(-220, -60) else between(-220, 220)
+		local z = if westArm then between(-38, 2) else between(-420, -55)
+		if claim(x, z, 11) then
+			plantTree(x, z)
+			scatter += 1
+		end
+	end
+
+	-- 4. Arbustos, pedras, samambaias, troncos e flores no sub-bosque.
+	local cover = 0
+	local coverTries = 0
+	while cover < 280 and coverTries < 5000 do
+		coverTries += 1
+		local westArm = rnd() < 0.16
+		local x = if westArm then between(-220, -58) else between(-225, 225)
+		local z = if westArm then between(-36, 4) else between(-425, -48)
+		local roll = rnd()
+		if roll < 0.28 then
+			if claim(x, z, 3.2) then
+				cover += 1
+				shrub(("WildShrub_%03d"):format(cover), x, z, between(1.4, 2.5), tintFor(cover))
+			end
+		elseif roll < 0.38 then
+			if claim(x, z, 3.6) then
+				cover += 1
+				boulder(("WildRock_%03d"):format(cover), x, z, between(1.6, 3.1), between(0, 360))
+			end
+		elseif roll < 0.48 then
+			if claim(x, z, 2.4) then
+				cover += 1
+				fern(("WildFern_%03d"):format(cover), x, z, between(1.4, 2.3), between(0, 360))
+			end
+		elseif roll < 0.56 then
+			if claim(x, z, 3.8) then
+				cover += 1
+				fallenLog(("WildLog_%03d"):format(cover), x, z, between(3.2, 5.4), between(0, 180))
+			end
+		elseif roll < 0.68 then
+			if claim(x, z, 1.4) then
+				cover += 1
+				flower(("WildBloom_%03d"):format(cover), x, z, BLOOM[(cover % #BLOOM) + 1])
+			end
+		else
+			if claim(x, z, 2.0) then
+				cover += 1
+				grassTuft(("WildTuft_%03d"):format(cover), x, z, between(1.2, 2.2), tintFor(cover))
 			end
 		end
 	end
@@ -589,6 +889,10 @@ end
 
 function WildDecorations.all(): { WildDecoration }
 	return DECORATIONS
+end
+
+function WildDecorations.pieceCount(): number
+	return #DECORATIONS
 end
 
 function WildDecorations.lightCount(): number

@@ -355,6 +355,12 @@ local ui = UIController.new({
 	input = input,
 	inputApi = InputController,
 	runService = RunService,
+	onSpend = function(trackId: string)
+		send("SpendProgressionIntent", "SpendProgressionIntent", {
+			trackId = trackId,
+			amount = if trackId == "respec" then nil else 1,
+		})
+	end,
 })
 
 local function mouseOnButton(): boolean

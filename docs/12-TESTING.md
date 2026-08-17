@@ -1,10 +1,10 @@
 # 12 — Testes e evidências
 
-> **Snapshot de implementação:** 2026-08-17, derivado de `5fcbe4c`. Quatro suítes Lune: `tests/run.luau` **247 casos de domínio**, `tests/animation.luau` **78 de animação/apresentação**, `tests/security_fuzz.luau` **67 de fuzz adversarial** e `tests/combat_e2e.luau` **19 de simulação de combate ponta a ponta** — total automatizado de **411 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada: a folga da âncora passou a valer para os pilares-marco (que viviam fora do alcance dos testes), a escada de valor da paleta virou gate, e as fixtures de âncora deixaram de transcrever coordenada à mão.
+> **Snapshot de implementação:** 2026-08-17. Quatro suítes Lune: `tests/run.luau` **257 casos de domínio**, `tests/animation.luau` **79 de animação/apresentação**, `tests/security_fuzz.luau` **71 de fuzz adversarial** e `tests/combat_e2e.luau` **23 de simulação de combate ponta a ponta** — total automatizado de **430 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada: curva de nível Blox Fruits + gasto de pontos (teto GDD 6%) e vegetação com bosques/espaçamento mínimo.
 
 ## 1. Estado da execução
 
-No snapshot de implementação atual, a verificação automatizada registrou 247/247 em `tests/run.luau`, 78/78 em `tests/animation.luau`, 67/67 em `tests/security_fuzz.luau` e 19/19 em `tests/combat_e2e.luau`. Selene e StyLua continuam gates separados e foram executados neste release: Selene com 0 erros/0 warnings e StyLua com `--check` limpo em `src tests plugins scripts`. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
+No snapshot de implementação atual, a verificação automatizada registrou 257/257 em `tests/run.luau`, 79/79 em `tests/animation.luau`, 71/71 em `tests/security_fuzz.luau` e 23/23 em `tests/combat_e2e.luau`. Selene e StyLua continuam gates separados e foram executados neste release: Selene com 0 erros/0 warnings e StyLua com `--check` limpo em `src tests plugins scripts`. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
 
 **Registro histórico, não evidência do snapshot atual:** uma rodada anterior teve confirmação em Play pelo jogador, com `avb-debug sync` = 56/56, de que a animação de golpe movia o corpo e o personagem não girava sozinho. Essa evidência pertence ao estado anterior documentado em `docs/14` e não deve ser usada para declarar o commit `d7c44e8` validado em runtime. Neste snapshot, o Play atual continua pendente.
 
@@ -143,6 +143,17 @@ Os testes abaixo são backlog, não parte dos 205 existentes:
 - IDs de runner/fallback ausentes derrubam validação, e falha não debita recurso nem inicia cooldown.
 
 ## 7. Matriz runtime ainda pendente
+
+> **Atualização 17/08 — sessão de Play executada.** Fecharam em runtime: W1
+> completo (boot limpo, spawn, Instrutora, Marco de Retorno, saídas norte/oeste,
+> morte/respawn, elite), o passo `a1_impact` (leve/pesado/Ombro Cometa com a
+> camada de impacto — hit-stop, tremida, luz, som e número — confirmada a
+> olho), W2 (desempenho com MicroProfiler em `stepAnimation`/script/render) e
+> R1 (dois clientes, latência simulada, Android e gamepad reais). Permanecem
+> pendentes por não dependerem de Play no Studio: DataStore real em place
+> privado publicado (session lock entre servidores, reconnect, shutdown),
+> telemetria operacional (alertas/dashboards) e o Gate P1 jurídico. Medidas
+> numéricas do W2 seguem na ficha `docs/26`.
 
 A spec de execução da fatia (`docs/13-F0-SLICE.md` §19–§21) lista os testes Lune que devem mudar com o catálogo novo e o roteiro Studio. Antes de chamar F0 de jogável ou liberar a fase seguinte, registrar evidência para:
 

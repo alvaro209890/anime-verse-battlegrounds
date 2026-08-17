@@ -296,6 +296,22 @@ Progressão geral abre regiões, receitas, capacidade social e cadeias de descob
 
 Esses tempos são metas de onboarding e baselines de playtest, não promessas comerciais. A política permanente é entregar combate funcional imediatamente e fazer progressão mudar comportamento antes de acumular poder bruto.
 
+### 7.1.1 Nível da conta e pontos (17/08)
+
+O XP **consolidado** deriva o nível da conta. A curva é a do Blox Fruits: XP para o próximo nível `n` = `floor(2 × n^2,3 + 84)`. Cada nível concede **3 pontos**. O jogador gasta os pontos em cinco trilhas — Vitalidade, Umbral, Impacto, Guarda, Ressonância. Não existe trilha ATK/DEF.
+
+Efeitos (baseline de playtest, metade do Blox Fruits no que é atributo bruto):
+
+| Trilha | Por ponto | Teto |
+|---|---|---|
+| Vitalidade | +2 vida máxima | 100 pontos |
+| Umbral | +2 pool de recurso | 100 pontos |
+| Impacto | +0,06% dano de golpe e técnica | 6% (GDD-DEC-005) |
+| Guarda | +2 guarda máxima | 100 pontos |
+| Ressonância | −0,06% custo de Umbral | 6% |
+
+O nível **não** cai na morte. Pontos gastos não são confiscados. XP não consolidado enche a barra como prévia e o Marco de Retorno converte a prévia em nível + pontos. Redefinir pontos só na zona segura (GDD §7.4). Ranqueado continua normalizando esses ganhos (§9).
+
 ### 7.2 Maestria de técnica
 
 Cada técnica possui níveis 1–10. XP para passar do nível `n` ao `n + 1` é:

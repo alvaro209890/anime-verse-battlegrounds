@@ -95,6 +95,14 @@ local function newTemplate(userId: number, sessionId: string): { any }
 			accountLevel = 1,
 			consolidatedXp = 0,
 			unconsolidatedXp = 0,
+			unspentProgressionPoints = 0,
+			spentTracks = {
+				vitality = 0,
+				umbral = 0,
+				impact = 0,
+				guard = 0,
+				resonance = 0,
+			},
 			lastConsolidationAt = 0,
 			tutorialFlags = {},
 		},
@@ -198,6 +206,16 @@ function SaveService.saveProfile(userId: number): boolean
 			progression.unconsolidatedXp = snapshot.unconsolidatedXp
 			progression.lastConsolidationAt = snapshot.lastConsolidationAt
 			progression.tutorialFlags = snapshot.tutorialFlags
+			progression.accountLevel = snapshot.accountLevel or 1
+			progression.unspentProgressionPoints = snapshot.unspentProgressionPoints or 0
+			progression.spentTracks = snapshot.spentTracks
+				or {
+					vitality = 0,
+					umbral = 0,
+					impact = 0,
+					guard = 0,
+					resonance = 0,
+				}
 			-- abilities.{id}.unlockedAt — sem masteryXp na fatia (docs/13 §11).
 			local abilities = profile.data.abilities
 			for _, abilityId in snapshot.unlockedAbilities do

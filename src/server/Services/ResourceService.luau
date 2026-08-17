@@ -15,6 +15,7 @@ export type ServerPlayerState = {
 	familyId: string,
 	combat: boolean,
 	lastCombatAt: number,
+	poolBonus: number,
 }
 
 export type ResourceDeps = {
@@ -66,8 +67,7 @@ local function broadcastResource(playerUserId: number)
 		end
 		local onChanged = ResourceService.deps and ResourceService.deps.onResourceChanged
 		if onChanged then
-			local family = ResourceService.deps and ResourceService.deps.getFamily(state.familyId)
-			local poolCap = family and family.poolCap or 100
+			local poolCap = ResourceService.poolCapFor(state)
 			onChanged(playerUserId, state.resource, poolCap, state.resource <= 0)
 		end
 	end)
@@ -90,7 +90,7 @@ local function regenTick()
 		end
 		local delta = rate * 0.5
 		local before = state.resource
-		state.resource = math.min(family.poolCap, state.resource + delta)
+		state.resource = math.min(ResourceService.poolCapFor(state), state.resource + delta)
 		if state.resource ~= before then
 			broadcastResource(userId)
 		end
@@ -151,6 +151,7 @@ function ResourceService.createState(playerUserId: number, familyId: string): Se
 		familyId = familyId,
 		combat = false,
 		lastCombatAt = 0,
+		poolBonus = 0,
 	}
 	ResourceService.states[playerUserId] = state
 	return state
@@ -193,7 +194,7 @@ function ResourceService.grantFlowGain(playerUserId: number, amount: number): ()
 	if not family then
 		return
 	end
-	state.resource = math.min(family.poolCap, state.resource + amount)
+	state.resource = math.min(ResourceService.poolCapFor(state), state.resource + amount)
 	broadcastResource(playerUserId)
 end
 
@@ -234,6 +235,27 @@ function ResourceService.setCombat(playerUserId: number, inCombat: boolean): ()
 	end
 	state.combat = inCombat
 	state.lastCombatAt = now()
+end
+
+function ResourceService.poolCapFor(state: ServerPlayerState): number
+	local deps = ResourceService.deps
+	local family = deps and deps.getFamily(state.familyId)
+	local base = if family then family.poolCap else 100
+	return base + (state.poolBonus or 0)
+end
+
+function ResourceService.setPoolBonus(playerUserId: number, bonus: number): number
+	local state = ResourceService.states[playerUserId]
+	if not state then
+		return 0
+	end
+	state.poolBonus = math.max(0, math.floor(bonus))
+	local cap = ResourceService.poolCapFor(state)
+	if state.resource > cap then
+		state.resource = cap
+		broadcastResource(playerUserId)
+	end
+	return cap
 end
 
 return ResourceService

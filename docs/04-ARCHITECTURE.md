@@ -223,6 +223,7 @@ Não aceitar timestamp do cliente como prova de cooldown, posição, propriedade
 | AbilityIntent | C→S | Ativar, manter ou cancelar uma habilidade por ID e input mínimo | Aceite/rejeição com fase e sequência autoritativa |
 | MovementAbilityIntent | C→S | Solicitar dash ou movimento especial | Aceite e parâmetros visuais aprovados |
 | InteractionIntent | C→S | Interagir com entidade identificada | Resultado do caso de uso, nunca recompensa arbitrária |
+| SpendProgressionIntent | C→S | Gastar ou redefinir ponto de nível | Só `trackId` allowlisted; o servidor aplica o efeito |
 | LoadoutCommand | C→S | Salvar ou ativar composição | Aceite/rejeição, loadout recalculado e resumo de Ressonância |
 | InventoryCommand | C→S | Equipar, desequipar, forjar ou melhorar | Revisão nova do inventário ou erro de conflito |
 | TradeCommand | C→S | Criar, alterar, confirmar ou cancelar troca futura | Estado da saga e revisão; contrato só é habilitado na F7 pós-lançamento |

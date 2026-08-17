@@ -70,7 +70,10 @@ redor da cratera.
 | Borda da cratera | 6 postes altos FORA do aro (raio 23,5) | Cratera visível da metade da rota; o par de 60°/120° emoldura a entrada |
 | Formações de Estilhaço | 3 lascas em volta de cada uma das 6 âncoras, centro livre | Ensina onde caçar sem escrever nada na tela |
 
-Total: **80 peças e 7 fontes de luz**.
+Total original (15/08): **80 peças e 7 fontes de luz**. Em 17/08 a vegetação da
+planície passou de sorteio uniforme para bosques com espaçamento mínimo +
+sub-bosque (grama, samambaia, tronco caído, flor). As tochas da rota
+permanecem 7 luzes. O gate headless agora exige ≥ 400 peças e ≤ 2800.
 
 ### O que a validação pura trava
 

@@ -43,6 +43,7 @@ local WorldPresentation = require("../src/shared/Data/WorldPresentation")
 local SpawnDecorations = require("../src/shared/Data/SpawnDecorations")
 local WildDecorations = require("../src/shared/Data/WildDecorations")
 local BiomeDecorations = require("../src/shared/Data/BiomeDecorations")
+local ProgressionCatalog = require("../src/shared/Data/ProgressionCatalog")
 local StudioEvidence = require("../scripts/StudioEvidence")
 local Remotes = require("../src/shared/Remotes")
 local RemoteEnvelope = require("../src/shared/RemoteEnvelope")
@@ -238,6 +239,8 @@ test("planície: decoração externa valida contra zonas, cratera e âncoras rea
 	local errors = WildDecorations.validate(WildDecorations.all(), free.volumes, transition.volumes, anchors, crater)
 	assertEq(#errors, 0, table.concat(errors, "; "))
 	assertTrue(#WildDecorations.all() >= 60, "planície decorada de verdade")
+	assertTrue(WildDecorations.pieceCount() >= 400, "vegetação densa o bastante para ler como campo")
+	assertTrue(WildDecorations.pieceCount() <= 2800, "vegetação cabe no teto de 6000 parts")
 end)
 
 test("bioma: células têm chão, nomes e decoração sem colisão", function()
@@ -866,6 +869,36 @@ end)
 
 test("dados: 4 famílias de energia", function()
 	assertEq(#EnergyFamilies.all(), 4, "número de famílias")
+end)
+
+test("progressão: curva Blox Fruits e teto GDD de 6%", function()
+	assertEq(ProgressionCatalog.POINTS_PER_LEVEL, 3, "3 pontos por nível")
+	assertEq(ProgressionCatalog.xpToNextLevel(1), 86, "2×1^2,3+84")
+	assertEq(ProgressionCatalog.xpToNextLevel(100), 0, "teto sem próximo")
+	local start = ProgressionCatalog.progressFromXp(0)
+	assertEq(start.level, 1, "começa no 1")
+	assertEq(start.intoLevel, 0, "barra vazia")
+	local afterFirst = ProgressionCatalog.progressFromXp(86)
+	assertEq(afterFirst.level, 2, "86 XP sobe para 2")
+	assertEq(ProgressionCatalog.earnedPoints(2), 3, "nível 2 rende 3 pontos")
+	assertEq(ProgressionCatalog.earnedPoints(1), 0, "nível 1 sem pontos")
+	local spent = ProgressionCatalog.emptySpent()
+	spent.impact = 100
+	spent.resonance = 100
+	spent.vitality = 50
+	local vitals = ProgressionCatalog.vitalsFor(spent)
+	assertEq(vitals.damageBonus, 0.06, "impacto no teto GDD")
+	assertEq(vitals.resourceCostMul, 0.94, "ressonância no teto GDD")
+	assertEq(vitals.maxHealth, 200, "vitalidade +2 HP")
+	assertEq(ProgressionCatalog.scaleDamage(10, 0.06), 11, "10 × 1,06")
+	assertEq(ProgressionCatalog.scaleDamage(6, 0), 6, "sem bônus não arredonda")
+	assertEq(ProgressionCatalog.canSpend(spent, 3, "impact", 1), "track_cap", "trilha no teto 100")
+	assertEq(ProgressionCatalog.canSpend(ProgressionCatalog.emptySpent(), 0, "vitality", 1), "no_points", "sem pontos")
+	assertEq(
+		ProgressionCatalog.canSpend(ProgressionCatalog.emptySpent(), 3, "atk", 1),
+		"unknown_track",
+		"trilha ATK recusada"
+	)
 end)
 
 test("dados: remotes registrados com contrato", function()
@@ -5721,7 +5754,64 @@ test("consolidação: move todo não consolidado e emite recibo idempotente", fu
 		assertEq(empty.consolidated, 0, "nada a consolidar")
 	end
 	assertEq(ProgressionService.getLedger(1000).consolidated, 130, "não duplica")
+	assertEq(ProgressionService.getLedger(1000).accountLevel, 2, "130 XP consolidado = nível 2")
+	assertEq(ProgressionService.getLedger(1000).unspentPoints, 3, "3 pontos no level-up")
+	if receipt then
+		assertEq(receipt.levelsGained, 1, "subiu 1 nível")
+		assertEq(receipt.pointsGranted, 3, "ganhou 3 pontos")
+	end
 	ProgressionService.unregisterPlayer(1000)
+end)
+
+test("progressão: gasta pontos nas trilhas e respec só na segura", function()
+	ProgressionService.init()
+	ProgressionService.registerPlayer(1400)
+	ProgressionService.awardXp(1400, 300)
+	local receipt = ProgressionService.consolidate(1400, 1)
+	assertTrue(receipt ~= nil and (receipt.levelsGained or 0) >= 2, "vários níveis com 300 XP")
+	local view = ProgressionService.viewFor(1400)
+	assertTrue(view ~= nil, "view")
+	if not view then
+		return
+	end
+	assertTrue(view.unspentPoints >= 6, "pontos suficientes")
+	local denied = ProgressionService.spendPoints(1400, "atk", 1)
+	assertEq(denied.ok, false, "ATK não existe")
+	local ok = ProgressionService.spendPoints(1400, "vitality", 2)
+	assertEq(ok.ok, true, "gastou vitalidade")
+	if ok.vitals then
+		assertEq(ok.vitals.maxHealth, 104, "+2 HP por ponto")
+	end
+	local impact = ProgressionService.spendPoints(1400, "impact", 1)
+	assertEq(impact.ok, true, "gastou impacto")
+	assertTrue(ProgressionService.damageBonus(1400) > 0, "bônus de dano")
+	assertTrue(ProgressionService.damageBonus(1400) <= 0.06, "abaixo do teto")
+	local unsafe = ProgressionService.respecPoints(1400, false)
+	assertEq(unsafe.reason, "not_safe", "respec bloqueado no campo")
+	local reset = ProgressionService.respecPoints(1400, true)
+	assertEq(reset.ok, true, "respec na segura")
+	if reset.vitals then
+		assertEq(reset.vitals.maxHealth, 100, "vida base após reset")
+	end
+	local snap = ProgressionService.snapshotForSave(1400)
+	assertTrue(snap ~= nil and snap.accountLevel ~= nil and snap.accountLevel >= 3, "snapshot com nível")
+	ProgressionService.unregisterPlayer(1400)
+	ProgressionService.registerPlayer(1400)
+	if snap then
+		ProgressionService.restoreFromSave(1400, snap)
+	end
+	local restored = ProgressionService.viewFor(1400)
+	assertTrue(restored ~= nil and restored.accountLevel >= 3, "nível restaurado")
+	ProgressionService.unregisterPlayer(1400)
+end)
+
+test("dados: SpendProgressionIntent tem contrato C→S", function()
+	local contract = Remotes.Contracts.get("SpendProgressionIntent")
+	assertTrue(contract ~= nil, "contrato existe")
+	if contract then
+		assertEq(contract.direction, "ClientToServer", "intenção do cliente")
+		assertTrue(contract.payload:find("trackId", 1, true) ~= nil, "trilha no payload")
+	end
 end)
 
 test("morte: segura/treino não perde; livre PvE 10% e PvP 15% com cap 200", function()
@@ -5933,6 +6023,39 @@ end)
 print("")
 print("== Testes F0 — Anime Verse Battlegrounds ==")
 print("")
+
+test("cliente: snapshot e delta carregam nível e pontos", function()
+	local state = ClientState.new(clockNow)
+	assertTrue(
+		ClientState.applySnapshot(state, {
+			ready = true,
+			accountLevel = 4,
+			xpIntoLevel = 20,
+			xpToNext = 132,
+			unspentPoints = 6,
+			pendingLevels = 1,
+			spent = { vitality = 2, umbral = 0, impact = 0, guard = 0, resonance = 0 },
+		}),
+		"snapshot aceito"
+	)
+	assertEq(state.accountLevel, 4, "nível")
+	assertEq(state.unspentPoints, 6, "pontos")
+	assertEq(state.spent.vitality, 2, "trilha")
+	ClientState.applyDelta(state, { unspentPoints = 5, feedbackKey = "hud.feedback_spent" })
+	assertEq(state.unspentPoints, 5, "gasto chegou")
+	assertEq(ClientState.feedback(state), "hud.feedback_spent", "feedback do gasto")
+end)
+
+test("combate: impacto escala o pesado e respeita o teto de 6%", function()
+	CombatService.clear()
+	local attacker = CombatService.createFighter("p:scale", "player", 100, 100)
+	local target = CombatService.createFighter("n:scale", "npc", 200, 100)
+	CombatService.applyVitals("p:scale", 104, 100, 0.06)
+	assertEq(attacker.maxHealth, 104, "vida sobe")
+	local heavy = CombatService.tryHeavy(attacker, target, 10, "front")
+	assertEq(heavy.damage, 13, "12 × 1,06 = 13")
+	CombatService.clear()
+end)
 
 test("cliente: cooldown parametrizado nunca aparece como codigo interno", function()
 	local state = ClientState.new(clockNow)

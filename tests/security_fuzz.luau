@@ -155,6 +155,21 @@ expectRejected(
 	}, "ambiguous-interaction", 1),
 	"payload_schema"
 )
+expectRejected(
+	"trilha de progresso inventada",
+	741,
+	"SpendProgressionIntent",
+	RemoteEnvelope.create("SpendProgressionIntent", {
+		trackId = "atk",
+		amount = 1,
+	}, "bad-track", 1),
+	"payload_schema"
+)
+local spendOk = RemoteEnvelope.create("SpendProgressionIntent", {
+	trackId = "vitality",
+	amount = 1,
+}, "spend-ok", 1)
+check("gasto válido aceito", SecurityService.inspect(742, "SpendProgressionIntent", spendOk) ~= nil)
 
 local valid = RemoteEnvelope.create("AbilityIntent", {
 	abilityId = "comet_shoulder",

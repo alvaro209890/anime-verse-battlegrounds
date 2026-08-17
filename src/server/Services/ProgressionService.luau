@@ -13,6 +13,18 @@
 --
 -- Puro (sem Instances) — testável.
 
+local ProgressionCatalog
+do
+	local ok, catalog = pcall(function()
+		return require("../../shared/Data/ProgressionCatalog")
+	end)
+	if ok and type(catalog) == "table" and catalog.progressFromXp then
+		ProgressionCatalog = catalog
+	else
+		ProgressionCatalog = require(game:GetService("ReplicatedStorage").Shared.Data.ProgressionCatalog)
+	end
+end
+
 local ABILITY_UNLOCK_FLAG: { [string]: string } = {
 	comet_shoulder = "unlock_comet_shoulder",
 	broken_cadence = "unlock_broken_cadence",
@@ -38,6 +50,14 @@ local DEATH_LOSS_PVE_PCT = 0.10
 local DEATH_LOSS_PVP_PCT = 0.15
 local DEATH_LOSS_CAP = 200
 
+export type SpentTracks = {
+	vitality: number,
+	umbral: number,
+	impact: number,
+	guard: number,
+	resonance: number,
+}
+
 export type XpLedger = {
 	unconsolidated: number,
 	consolidated: number,
@@ -49,6 +69,10 @@ export type XpLedger = {
 	lastConsolidationAt: number,
 	-- operationId do último recibo de consolidação (idempotência §11.1).
 	lastOperationId: string?,
+	-- Nível da conta derivado do XP consolidado (docs/05 §4.1).
+	accountLevel: number,
+	unspentPoints: number,
+	spent: SpentTracks,
 }
 
 export type XpAward = {
@@ -100,6 +124,9 @@ function ProgressionService.registerPlayer(userId: number): ()
 		killsByAnchor = {},
 		lastConsolidationAt = 0,
 		lastOperationId = nil,
+		accountLevel = 1,
+		unspentPoints = 0,
+		spent = ProgressionCatalog.emptySpent(),
 	}
 end
 
@@ -302,6 +329,145 @@ function ProgressionService.sessionXpCap(): number
 	return SESSION_XP_CAP
 end
 
+local function syncLevel(ledger: XpLedger): number
+	local progress = ProgressionCatalog.progressFromXp(ledger.consolidated)
+	local gained = progress.level - ledger.accountLevel
+	if gained > 0 then
+		ledger.unspentPoints += gained * ProgressionCatalog.POINTS_PER_LEVEL
+		ledger.accountLevel = progress.level
+		return gained
+	end
+	if ledger.accountLevel < 1 then
+		ledger.accountLevel = 1
+	end
+	return 0
+end
+
+local function reconcilePoints(ledger: XpLedger): ()
+	local earned = ProgressionCatalog.earnedPoints(ledger.accountLevel)
+	local spent = ProgressionCatalog.spentTotal(ledger.spent)
+	if spent > earned then
+		ledger.spent = ProgressionCatalog.emptySpent()
+		ledger.unspentPoints = earned
+		return
+	end
+	ledger.unspentPoints = earned - spent
+end
+
+export type ProgressionView = {
+	accountLevel: number,
+	consolidatedXp: number,
+	unconsolidatedXp: number,
+	xpIntoLevel: number,
+	xpToNext: number,
+	previewLevel: number,
+	pendingLevels: number,
+	unspentPoints: number,
+	spent: SpentTracks,
+	vitals: {
+		maxHealth: number,
+		maxGuard: number,
+		maxResource: number,
+		damageBonus: number,
+		resourceCostMul: number,
+	},
+}
+
+function ProgressionService.viewFor(userId: number): ProgressionView?
+	local ledger = ProgressionService.xp[userId]
+	if not ledger then
+		return nil
+	end
+	local banked = ProgressionCatalog.progressFromXp(ledger.consolidated)
+	local preview = ProgressionCatalog.progressFromXp(ledger.consolidated + ledger.unconsolidated)
+	return {
+		accountLevel = ledger.accountLevel,
+		consolidatedXp = ledger.consolidated,
+		unconsolidatedXp = ledger.unconsolidated,
+		xpIntoLevel = banked.intoLevel,
+		xpToNext = banked.toNext,
+		previewLevel = preview.level,
+		pendingLevels = math.max(0, preview.level - ledger.accountLevel),
+		unspentPoints = ledger.unspentPoints,
+		spent = {
+			vitality = ledger.spent.vitality,
+			umbral = ledger.spent.umbral,
+			impact = ledger.spent.impact,
+			guard = ledger.spent.guard,
+			resonance = ledger.spent.resonance,
+		},
+		vitals = ProgressionCatalog.vitalsFor(ledger.spent),
+	}
+end
+
+export type SpendResult = {
+	ok: boolean,
+	reason: string?,
+	spent: SpentTracks?,
+	unspentPoints: number?,
+	vitals: {
+		maxHealth: number,
+		maxGuard: number,
+		maxResource: number,
+		damageBonus: number,
+		resourceCostMul: number,
+	}?,
+}
+
+function ProgressionService.spendPoints(userId: number, trackId: string, amount: number): SpendResult
+	local ledger = ProgressionService.xp[userId]
+	if not ledger then
+		return { ok = false, reason = "unknown_player" }
+	end
+	local err = ProgressionCatalog.canSpend(ledger.spent, ledger.unspentPoints, trackId, amount)
+	if err then
+		return { ok = false, reason = err }
+	end
+	ledger.spent = ProgressionCatalog.applySpend(ledger.spent, trackId :: any, amount)
+	ledger.unspentPoints -= amount
+	return {
+		ok = true,
+		spent = ledger.spent,
+		unspentPoints = ledger.unspentPoints,
+		vitals = ProgressionCatalog.vitalsFor(ledger.spent),
+	}
+end
+
+function ProgressionService.respecPoints(userId: number, inSafeZone: boolean): SpendResult
+	local ledger = ProgressionService.xp[userId]
+	if not ledger then
+		return { ok = false, reason = "unknown_player" }
+	end
+	if not inSafeZone then
+		return { ok = false, reason = "not_safe" }
+	end
+	local returned = ProgressionCatalog.spentTotal(ledger.spent)
+	ledger.spent = ProgressionCatalog.emptySpent()
+	ledger.unspentPoints += returned
+	return {
+		ok = true,
+		spent = ledger.spent,
+		unspentPoints = ledger.unspentPoints,
+		vitals = ProgressionCatalog.vitalsFor(ledger.spent),
+	}
+end
+
+function ProgressionService.resourceCostMul(userId: number): number
+	local ledger = ProgressionService.xp[userId]
+	if not ledger then
+		return 1
+	end
+	return ProgressionCatalog.vitalsFor(ledger.spent).resourceCostMul
+end
+
+function ProgressionService.damageBonus(userId: number): number
+	local ledger = ProgressionService.xp[userId]
+	if not ledger then
+		return 0
+	end
+	return ProgressionCatalog.vitalsFor(ledger.spent).damageBonus
+end
+
 -- ── Consolidação e morte (docs/13 §11.1) ───────────────────────────────────
 
 export type ConsolidationReceipt = {
@@ -310,6 +476,9 @@ export type ConsolidationReceipt = {
 	-- Saldo não consolidado restante (sempre 0 — consolida tudo).
 	unconsolidatedAfter: number,
 	at: number,
+	levelsGained: number?,
+	pointsGranted: number?,
+	accountLevel: number?,
 }
 
 -- Consolida todo o XP não consolidado (interagir 1,5 s com
@@ -327,6 +496,9 @@ function ProgressionService.consolidate(userId: number, at: number): Consolidati
 			consolidated = 0,
 			unconsolidatedAfter = 0,
 			at = at,
+			levelsGained = 0,
+			pointsGranted = 0,
+			accountLevel = ledger.accountLevel,
 		}
 	end
 	ledger.consolidated += ledger.unconsolidated
@@ -334,11 +506,15 @@ function ProgressionService.consolidate(userId: number, at: number): Consolidati
 	ledger.lastOperationId = ("cons_%d_%d"):format(userId, at)
 	local moved = ledger.unconsolidated
 	ledger.unconsolidated = 0
+	local levelsGained = syncLevel(ledger)
 	return {
 		operationId = ledger.lastOperationId,
 		consolidated = moved,
 		unconsolidatedAfter = 0,
 		at = at,
+		levelsGained = levelsGained,
+		pointsGranted = levelsGained * ProgressionCatalog.POINTS_PER_LEVEL,
+		accountLevel = ledger.accountLevel,
 	}
 end
 
@@ -379,6 +555,9 @@ export type ProgressionSnapshot = {
 	tutorialFlags: { string },
 	-- Habilidades desbloqueadas (abilities.{id}.unlockedAt no perfil).
 	unlockedAbilities: { string },
+	accountLevel: number?,
+	unspentProgressionPoints: number?,
+	spentTracks: SpentTracks?,
 }
 
 -- O que o perfil persiste. Sessão (emitted/killsByAnchor/combate) não entra:
@@ -403,6 +582,15 @@ function ProgressionService.snapshotForSave(userId: number): ProgressionSnapshot
 		lastConsolidationAt = ledger.lastConsolidationAt,
 		tutorialFlags = ProgressionService.listPersistentUnlocks(userId),
 		unlockedAbilities = unlocked,
+		accountLevel = ledger.accountLevel,
+		unspentProgressionPoints = ledger.unspentPoints,
+		spentTracks = {
+			vitality = ledger.spent.vitality,
+			umbral = ledger.spent.umbral,
+			impact = ledger.spent.impact,
+			guard = ledger.spent.guard,
+			resonance = ledger.spent.resonance,
+		},
 	}
 end
 
@@ -418,6 +606,22 @@ function ProgressionService.restoreFromSave(userId: number, snapshot: Progressio
 	ledger.lastConsolidationAt = snapshot.lastConsolidationAt or 0
 	ledger.emitted = 0
 	ledger.killsByAnchor = {}
+	local spent = ProgressionCatalog.emptySpent()
+	local savedSpent = snapshot.spentTracks
+	if type(savedSpent) == "table" then
+		for _, trackId in ProgressionCatalog.TRACK_IDS do
+			local value = (savedSpent :: { [string]: any })[trackId]
+			if type(value) == "number" and value == value and value >= 0 then
+				spent[trackId] = math.floor(value)
+			end
+		end
+	end
+	ledger.spent = spent
+	syncLevel(ledger)
+	if type(snapshot.unspentProgressionPoints) == "number" and snapshot.unspentProgressionPoints >= 0 then
+		ledger.unspentPoints = math.floor(snapshot.unspentProgressionPoints)
+	end
+	reconcilePoints(ledger)
 	for _, flag in (snapshot.tutorialFlags or {}) do
 		if KNOWN_FLAGS[flag] then
 			ProgressionService.grantUnlock(userId, flag)

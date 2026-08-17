@@ -356,9 +356,11 @@ Se o jogador ignorar o NPC, o tracker ainda aparece após 90 s (`quest_hunt_acce
 ```text
 ProfileRoot v1
   schemaVersion, userId, revision, createdAt, updatedAt, lastServerSessionId
-  progression.accountLevel          -- derivado; começa 1
+  progression.accountLevel          -- derivado do XP consolidado; começa 1
   progression.consolidatedXp
   progression.unconsolidatedXp
+  progression.unspentProgressionPoints
+  progression.spentTracks           -- vitality/umbral/impact/guard/resonance
   progression.lastConsolidationAt
   progression.tutorialFlags         -- conjunto de IDs conhecidos
   characters.eclipse_fist           -- unlockedAt
@@ -371,7 +373,7 @@ ProfileRoot v1
 
 Fontes F0: Estilhaço 25, elite 80, objetivo 1 +40, objetivo elite +60, objetivo Fluxo +40. Teto de emissão por sessão: 800 não consolidado.
 
-Consolidar: interagir 1,5 s com `anchor_bastion_return` fora de combate. Move todo `unconsolidatedXp` para `consolidatedXp`. Recibo `operationId` idempotente.
+Consolidar: interagir 1,5 s com `anchor_bastion_return` fora de combate. Move todo `unconsolidatedXp` para `consolidatedXp`. Recibo `operationId` idempotente. Se o consolidado cruzar a curva `floor(2 × n^2,3 + 84)`, o nível sobe e o jogador recebe 3 pontos por nível (HUD STATUS / tecla K). Gasto é `SpendProgressionIntent` com `trackId` allowlisted; o cliente nunca informa o efeito.
 
 Morte (Q-018, sem materiais):
 
@@ -416,6 +418,7 @@ F0 mostra **três** botões de técnica. Slot vazio/bloqueado: ícone cadeado, s
 | Zona | “SEGURO” / “PvP ATIVO” + perda resumida | persistente fora da vila |
 | Objetivo | uma linha, máx. 48 caracteres | some ao completar |
 | Feedback | hit confirm, guarda, rejeição (`no_resource`, `cooldown`) | 1 s; sem código interno |
+| Nível | barra de XP no topo; **STATUS** / tecla **K** abre as 5 trilhas | pontos só gastam via remote; cliente não calcula curva |
 | Menu | botão **MENU** / tecla **H**; controles, mira e tremor da câmera | não envia remote |
 | Combate | botões **ATACAR / GUARDA / DASH** (PC e toque); clique esquerdo no mundo | HUD chrome não descarta o golpe (`processed`) |
 | Mira | botão **SOLTAR MIRA** no centro enquanto travada | só apresentação local; `clearLock` não procura outro alvo |
@@ -444,6 +447,7 @@ Envelope: `protocolVersion`, `requestId`, `clientSequence`, `action`, `payload`.
 | `ZoneEvent` | S→C | de, para, regra PvP, instante, sinais, lockoutRemaining | — |
 | `ZoneCrossingIntent` | C→S | `toZoneId`, `holdConfirmed?`, `requestId` | posição, “já cruzei” |
 | `InteractionIntent` | C→S | exatamente um de `anchorId` / `npcId`; `phase = begin/complete/cancel` | distância, duração, recompensa |
+| `SpendProgressionIntent` | C→S | `trackId` allowlisted, `amount` 1–3 ou `respec` | efeito, nível, saldo |
 | `AbilityRejected` | S→C | `abilityId`, `reason` estável | — |
 
 `AbilityActivate` atual vira `AbilityIntent` (mesmo remote pode ser renomeado numa mudança só, com versão 2). Rate limit: 8 intenções de combate/s; excesso descarta sem efeito.
