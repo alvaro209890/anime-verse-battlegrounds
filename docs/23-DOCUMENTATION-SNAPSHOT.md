@@ -11,7 +11,8 @@
    a ~11 studs passa a conectar.
 6. **Persistência da carreira:** `releaseProfile` sempre grava; créditos
    sujam o perfil. Dano de técnica (Cometa/Cadência) e contra do Pulso
-   entram no placar.
+   entram no placar. `getCareer` persiste o placar mesmo depois de
+   `ProgressionService.unregisterPlayer` (leave curto / snapshot de XP nil).
 
 ---
 

@@ -37,6 +37,9 @@ export type SaveDeps = {
 	now: (() -> number)?,
 	-- Leitura do estado durável atual (bootstrap liga ao ProgressionService).
 	getSnapshot: ((number) -> any?)?,
+	-- Carreira independente da progressão: o leave pode unregister o ledger
+	-- antes do release. Sem isto o snapshot vem nil e o placar zera no rejoin.
+	getCareer: ((number) -> any?)?,
 	-- Aplica o snapshot carregado (bootstrap liga ao restoreFromSave).
 	applySnapshot: ((number, any) -> ())?,
 	-- Autosave base em segundos (F0: 60–120 s com jitter; padrão 60).
@@ -215,7 +218,7 @@ function SaveService.saveProfile(userId: number): boolean
 	end
 	if deps.getSnapshot then
 		local snapshot = deps.getSnapshot(userId)
-		if snapshot then
+		if snapshot and type(snapshot.consolidatedXp) == "number" then
 			local progression = profile.data.progression
 			progression.consolidatedXp = snapshot.consolidatedXp
 			progression.unconsolidatedXp = snapshot.unconsolidatedXp
@@ -234,21 +237,30 @@ function SaveService.saveProfile(userId: number): boolean
 			if type(snapshot.inventory) == "table" then
 				profile.data.inventory = snapshot.inventory
 			end
-			if type(snapshot.career) == "table" then
-				profile.data.career = snapshot.career
-			end
 			-- abilities.{id}.unlockedAt — sem masteryXp na fatia (docs/13 §11).
-			local abilities = profile.data.abilities
-			for _, abilityId in snapshot.unlockedAbilities do
-				local entry = abilities[abilityId]
-				if not entry then
-					abilities[abilityId] = { unlockedAt = now() }
+			if type(snapshot.unlockedAbilities) == "table" then
+				local abilities = profile.data.abilities
+				for _, abilityId in snapshot.unlockedAbilities do
+					local entry = abilities[abilityId]
+					if not entry then
+						abilities[abilityId] = { unlockedAt = now() }
+					end
 				end
 			end
 			local character = profile.data.characters["eclipse_fist"]
 			if not character then
 				profile.data.characters["eclipse_fist"] = { unlockedAt = now() }
 			end
+		end
+		if snapshot and type(snapshot.career) == "table" then
+			profile.data.career = snapshot.career
+		end
+	end
+	-- Sempre depois do snapshot: a carreira não pode depender do ledger de XP.
+	if deps.getCareer then
+		local career = deps.getCareer(userId)
+		if type(career) == "table" then
+			profile.data.career = career
 		end
 	end
 	profile.revision += 1

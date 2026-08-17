@@ -241,8 +241,19 @@ SaveService.init({
 			local payload = snapshot :: any
 			payload.inventory = InventoryService.snapshot(userId)
 			payload.career = CareerService.snapshot(userId, os.clock())
+			return payload
 		end
-		return snapshot
+		local career = CareerService.snapshot(userId, os.clock())
+		if career then
+			return {
+				career = career,
+				inventory = InventoryService.snapshot(userId),
+			}
+		end
+		return nil
+	end,
+	getCareer = function(userId: number)
+		return CareerService.snapshot(userId, os.clock())
 	end,
 	applySnapshot = function(userId: number, snapshot: any)
 		ProgressionService.restoreFromSave(userId, snapshot)
@@ -1745,9 +1756,11 @@ game.Players.PlayerRemoving:Connect(function(player: Player)
 	PlayerSessionService.onPlayerLeft(player)
 	QuestService.unregisterPlayer(player.UserId)
 	ZoneService.unregisterPlayer(player.UserId)
-	ProgressionService.unregisterPlayer(player.UserId)
-	-- Item 11: libera o lock do perfil (salva se sujo) — §11.2 item 1.
+	-- Item 11: grava o perfil ANTES de desligar progressão/carreira. Se a
+	-- progressão já tiver saído (outro caminho de leave), getCareer ainda
+	-- persiste o placar.
 	SaveService.releaseProfile(player.UserId)
+	ProgressionService.unregisterPlayer(player.UserId)
 	InventoryService.unregisterPlayer(player.UserId)
 	CareerService.unregisterPlayer(player.UserId, os.clock())
 end)

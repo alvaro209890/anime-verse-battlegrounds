@@ -5776,7 +5776,14 @@ local function makeSaveDeps(store: any): any
 				payload.career = CareerService.snapshot(userId, clockNow())
 				return payload
 			end
-			return snapshot
+			local career = CareerService.snapshot(userId, clockNow())
+			if career then
+				return { career = career }
+			end
+			return nil
+		end,
+		getCareer = function(userId: number)
+			return CareerService.snapshot(userId, clockNow())
 		end,
 		applySnapshot = function(userId: number, snapshot: any)
 			ProgressionService.restoreFromSave(userId, snapshot)
@@ -6134,10 +6141,10 @@ test("save: carreira persiste no leave sem markDirty manual", function()
 	local profile = SaveService.loadProfile(1610)
 	assertTrue(profile ~= nil, "perfil")
 	assertFalse((SaveService.getProfile(1610) :: any) == nil, "sessão aberta")
-	-- Sem SaveService.markDirty: o leave tem de gravar carreira sozinho.
+	-- Ordem do leave vivo: progressão sai, depois o release. Sem markDirty.
+	ProgressionService.unregisterPlayer(1610)
 	SaveService.releaseProfile(1610)
 	CareerService.unregisterPlayer(1610, fakeNow)
-	ProgressionService.unregisterPlayer(1610)
 	ProgressionService.registerPlayer(1610)
 	CareerService.registerPlayer(1610, fakeNow + 10)
 	local restored = SaveService.loadProfile(1610)
