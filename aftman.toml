@@ -3,6 +3,10 @@
 # Roblox toolchain — gerenciado pelo Aftman (https://github.com/LPGhatguy/aftman)
 rojo = "rojo-rbx/rojo@7.7.0"
 wally = "UpliftGames/wally@0.3.2"
+# Editor-only (CI gates = selene/stylua/lune/wally/rojo). Pin must publish
+# luau-lsp-linux-x86_64.zip. 1.69.0 verified on Actions 2026-08-17 (was
+# intermittently "Could not find release" earlier the same day — keep GITHUB_TOKEN
+# on ok-nick/setup-aftman). Fallback if it breaks again: @1.68.1.
 luau-lsp = "JohnnyMorganz/luau-lsp@1.69.0"
 selene = "Kampfkarren/selene@0.31.0"
 stylua = "JohnnyMorganz/StyLua@2.5.2"
