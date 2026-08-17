@@ -37,6 +37,22 @@ runtime pelo Álvaro:** com ela, a guarda passou a levantar os punhos ao apertar
 maiores, velocidade do trecho carga→impacto preservada, todos os degraus ainda
 abaixo da janela de 0,65 s do `CombatService`.
 
+**VFX publicado — os assets deixaram de ser fallback.** Os oito atlas CC0/CC-BY
+que estavam no repo desde 14/08 esperando publicação (`docs/20`) foram enviados
+por script e ganharam ID real. As **21 camadas** de `AbilityVfx` que já
+declaravam `assetKey` estavam todas caindo no fallback procedural por falta de
+`assetId`; agora usam a textura. Procedência registrada em
+`assets/published-vfx-assets.json` (arquivo de origem, licença e crédito por
+chave), e o teste que antes exigia `assetId == nil` passou a exigir que todo ID
+conste nesse registro — inventar um número reprova.
+
+**Sobre "a skin do outro agente não aparece":** verificado em runtime que as
+skins do `main` **estão corretas** — os Estilhaços materializam 15 peças (25 no
+elite) com as cores certas (ciano 104,220,238 no Halo/RiftRing/CoreGlow). A
+skin esperada não existe em código: a branch `cursor/skins-code-pipeline-579d`
+traz `docs/34-CODE-DRIVEN-SKINS.md`, que se declara **plano** na primeira linha
+e não toca `WorldPresentation.luau`. Não há implementação para aparecer.
+
 **Falha conhecida em aberto:** `planície: nada colide, nada entra no ringue do
 elite e a luz tem teto` falha com `materialização existe`. Confirmado como
 **pré-existente** (reproduz com a árvore limpa), não introduzido nesta rodada.

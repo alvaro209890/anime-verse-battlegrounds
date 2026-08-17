@@ -1,5 +1,24 @@
 # Assets gratuitos de VFX para ataques e bolas de energia
 
+> **Publicados em 17/08/2026.** O que este documento chamava de pendência
+> ("importar/publicar as texturas no Roblox, preencher IDs reais") **foi feito**:
+> os oito atlas foram enviados por script a partir do arquivo versionado, e os
+> IDs estão em `AbilityVfx.luau` e `EnemyVfxAssets.luau`.
+>
+> As **21 camadas** que já declaravam `assetKey` estavam caindo no fallback
+> procedural porque `assetId` era `nil` — o efeito existia, mas sem textura.
+>
+> Para os atlas de flipbook, o ID publicado é o da **versão de grade**
+> (`energy_ball_4x4`, `power_ring_2x2`, `*_8x8`), não a imagem plana: o
+> `layout` declarado no catálogo precisa casar com a imagem, senão o emissor lê
+> quadros errados.
+>
+> Procedência (arquivo de origem, licença, crédito) em
+> `assets/published-vfx-assets.json`. O teste de animação exige que todo
+> `assetId` conste lá — a trava antiga era `assetId == nil` e passou a proibir o
+> estado correto; a nova proíbe o que ela realmente queria proibir, que é ID
+> inventado. **A atribuição CC-BY abaixo continua obrigatória nos créditos.**
+
 **Projeto:** Anime Verse Battlegrounds  
 **Atualização examinada:** `bb147a6` → `73d8b96`  
 **Data da revisão:** 14 de agosto de 2026

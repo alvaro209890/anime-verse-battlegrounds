@@ -1139,12 +1139,44 @@ test("npc: Pounce e Slam têm poses mais fortes que o baseline", function()
 	assertTrue(math.abs(slam.leanDegrees) > math.abs(rend.leanDegrees), "Slam inclina mais")
 end)
 
+-- Registro de procedência: chave -> assetId realmente publicado. Ler o JSON aqui
+-- é de propósito — é ele que transforma "confie no número" em "prove a origem".
+local function lerPublicados(): { [string]: string }
+	local bruto = fs.readFile("assets/published-vfx-assets.json")
+	local mapa: { [string]: string } = {}
+	for chave, id in string.gmatch(bruto, '"key":%s*"([%w_]+)",%s*"assetId":%s*"([^"]+)"') do
+		-- Duplicata no registro significa duas procedências para a mesma chave;
+		-- a última venceria em silêncio e a auditoria de licença ficaria errada.
+		if mapa[chave] ~= nil then
+			error("chave duplicada no registro de publicação: " .. chave)
+		end
+		mapa[chave] = id
+	end
+	return mapa
+end
+
 test("vfx: cada camada usa asset preparado conhecido e atlas existente", function()
 	local assets = AbilityVfx.allAssets()
+	local publicados = lerPublicados()
+	assertTrue(next(publicados) ~= nil, "registro de publicação foi lido")
 	assertEq(#assets, 5, "cinco assets preparados no catálogo")
 	for _, asset in assets do
 		assertTrue(fs.isFile(asset.preparedFile), "atlas preparado existe: " .. asset.preparedFile)
-		assertTrue(asset.assetId == nil, "IDs Roblox não são inventados antes da publicação")
+		-- Esta asserção já foi `assetId == nil`, para impedir ID inventado. Em
+		-- 17/08 os cinco atlas foram REALMENTE publicados (upload por script, a
+		-- partir do arquivo versionado), então exigir nil passou a proibir o
+		-- estado correto.
+		--
+		-- A trava original vale igual, e continua verificável: um ID só é aceito
+		-- se constar em assets/published-vfx-assets.json com o arquivo de origem
+		-- e a licença. Inventar um número não passa — ele não está no registro.
+		if asset.assetId ~= nil then
+			assertTrue(
+				string.match(asset.assetId, "^rbxassetid://%d+$") ~= nil,
+				"ID publicado tem forma de rbxassetid: " .. asset.key
+			)
+			assertEq(publicados[asset.key], asset.assetId, "ID consta no registro de publicação: " .. asset.key)
+		end
 		assertTrue(asset.framerate > 0, "framerate positivo: " .. asset.key)
 	end
 	for _, technique in AbilityVfx.all() do

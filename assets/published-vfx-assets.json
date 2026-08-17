@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "publishedAt": "2026-08-17",
+  "publishedBy": "upload por script (MCP Roblox Studio), a partir do arquivo versionado no repo",
+  "policy": "Todo assetId em AbilityVfx.luau e EnemyVfxAssets.luau precisa constar aqui, com o arquivo de origem e a licenca. Um ID que nao esta neste arquivo e um ID inventado, e o teste de animacao reprova.",
+  "attributionRequired": [
+    "Energy Ball - yiannisd, OpenGameArt.org, CC-BY 3.0",
+    "Lightning Shock Spell - Clint Bellanger, OpenGameArt.org, CC-BY 3.0"
+  ],
+  "assets": [
+    {
+      "key": "energy_ball",
+      "assetId": "rbxassetid://88905938168827",
+      "uploadedFile": "AVB-free-vfx-assets/assets/vfx/prepared/energy_ball_4x4.png",
+      "license": "CC-BY 3.0",
+      "credit": "yiannisd, OpenGameArt.org",
+      "consumer": "AbilityVfx"
+    },
+    {
+      "key": "power_ring",
+      "assetId": "rbxassetid://139053543856972",
+      "uploadedFile": "AVB-free-vfx-assets/assets/vfx/prepared/power_ring_2x2.png",
+      "license": "CC0",
+      "credit": "Oiboo, OpenGameArt.org",
+      "consumer": "AbilityVfx"
+    },
+    {
+      "key": "lightning_shock",
+      "assetId": "rbxassetid://94416490862398",
+      "uploadedFile": "AVB-free-vfx-assets/assets/vfx/prepared/lightning_shock_8x8.png",
+      "license": "CC-BY 3.0",
+      "credit": "Clint Bellanger, OpenGameArt.org",
+      "consumer": "AbilityVfx"
+    },
+    {
+      "key": "explosion_0003",
+      "assetId": "rbxassetid://122352039155979",
+      "uploadedFile": "AVB-free-vfx-assets/assets/vfx/prepared/explosion_0003_cc0_1024px_8x8.png",
+      "license": "CC0",
+      "credit": "dirkwybe, OpenGameArt.org",
+      "consumer": "AbilityVfx"
+    },
+    {
+      "key": "explosion_0005",
+      "assetId": "rbxassetid://117330663592150",
+      "uploadedFile": "AVB-free-vfx-assets/assets/vfx/prepared/explosion_0005_cc0_1024px_8x8.png",
+      "license": "CC0",
+      "credit": "dirkwybe, OpenGameArt.org",
+      "consumer": "AbilityVfx"
+    },
+    {
+      "key": "kenney_slash",
+      "assetId": "rbxassetid://92361464498223",
+      "uploadedFile": "AVB-free-vfx-assets/assets/vfx/kenney/slash_01.png",
+      "license": "CC0",
+      "credit": "Kenney.nl Particle Pack",
+      "consumer": "EnemyVfxAssets"
+    },
+    {
+      "key": "kenney_spark",
+      "assetId": "rbxassetid://126425214159939",
+      "uploadedFile": "AVB-free-vfx-assets/assets/vfx/kenney/spark_01.png",
+      "license": "CC0",
+      "credit": "Kenney.nl Particle Pack",
+      "consumer": "EnemyVfxAssets"
+    },
+    {
+      "key": "kenney_scorch",
+      "assetId": "rbxassetid://71986137964693",
+      "uploadedFile": "AVB-free-vfx-assets/assets/vfx/kenney/scorch_01.png",
+      "license": "CC0",
+      "credit": "Kenney.nl Particle Pack",
+      "consumer": "EnemyVfxAssets"
+    }
+  ]
+}
