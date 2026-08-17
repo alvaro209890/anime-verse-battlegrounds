@@ -615,24 +615,11 @@ local function fallenLog(prefix: string, x: number, z: number, length: number, y
 			nil
 		)
 	)
-	push(
-		deco(
-			prefix .. "_Cap",
-			"Part",
-			"Ball",
-			{ x = 0.75, y = 0.75, z = 0.75 },
-			{
-				x = x + math.cos(math.rad(yaw)) * length * 0.42,
-				y = 0.42,
-				z = z + math.sin(math.rad(yaw)) * length * 0.42,
-			},
-			yaw,
-			BARK,
-			"Wood",
-			0,
-			nil
-		)
-	)
+	push(deco(prefix .. "_Cap", "Part", "Ball", { x = 0.75, y = 0.75, z = 0.75 }, {
+		x = x + math.cos(math.rad(yaw)) * length * 0.42,
+		y = 0.42,
+		z = z + math.sin(math.rad(yaw)) * length * 0.42,
+	}, yaw, BARK, "Wood", 0, nil))
 end
 
 local function flower(prefix: string, x: number, z: number, rgb: { number })
