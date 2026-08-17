@@ -1,5 +1,36 @@
 # Snapshot Canônico da Documentação — 17/08/2026
 
+## Rodada de 17/08 (Hermes-server) — honestidade visual: glow contido + auditoria W2
+
+1. **Alerta de 14/08 fechado — a luz não passa mais do alcance** (`AbilityVfx`):
+   `validate()` limitava `radiusStuds` mas não `glowStuds` (= raio × `GLOW_BY_KIND`),
+   então o brilho podia crescer além do alcance sem teste reclamar — pior caso
+   real: `guard_ring` 2,4 × 1,4 = **3,36 vs alcance 3,0** (12% acima). O
+   `validate()` agora rejeita `glowStuds > rangeStuds` e o `guard_ring` teve o
+   raio ajustado 2,4 → 2,1 (2,94 ≤ 3,0; anel 12% menor, contrato do teste
+   "luz = raio × fator" preservado). Teste novo trava o catálogo inteiro.
+2. **Auditoria de Parts para o gate W2** (medida nos catálogos, não estimada):
+
+   | Fonte | Parts |
+   |---|---:|
+   | Vegetação da planície (`WildDecorations`) | **914** (74%) |
+   | Rigs ativos (instrutora ~61 + dummy ~56 + 4 errantes ~15 + elite ~25) | ~200 |
+   | `SpawnDecorations` (dentro do bastião) | 40 |
+   | Pisos (8 volumes + praça/rotas/cratera) | ~17 |
+   | Muralha/portões/marcos/postes/estilhas | ~50 |
+   | **Total estimado** | **~1.220** |
+
+   Teto F0-BASELINE do W2 é **6.000** — folga de ~5×. Conclusão: **parts não é
+   o gargalo provável**; o W2 no Studio deve olhar primeiro `heartbeatTimeMs`
+   (16,6) e `stepAnimation` com 5 NPCs animando procedural. Se o Android sofrer,
+   a ordem de corte de `docs/31` §7 manda reduzir a densidade da vegetação
+   (74% do total) antes de qualquer outra coisa.
+
+**Gates headless:** domínio 244/244, animação 75/75 (+1 glow), fuzz 67/67, e2e
+19/19, Selene/StyLua/Rojo limpos (conferidos na rodada).
+
+---
+
 ## Rodada de 17/08 (Hermes-server) — controles no padrão dos demais jogos + hotbar Roblox
 
 Duas mudanças de input pedidas pelo Álvaro no playtest (GDD §3.1 e este

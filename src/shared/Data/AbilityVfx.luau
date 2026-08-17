@@ -505,7 +505,10 @@ local Techniques: { [string]: TechniqueVfx } = {
 				durationSeconds = 0.14,
 				attackSeconds = 0.03,
 				releaseSeconds = 0.08,
-				radiusStuds = 2.4,
+				-- 17/08: raio reduzido de 2,4 para 2,1 — o brilho derivado
+				-- (2,4 × 1,4 ring = 3,36) passava do alcance 3,0 da guarda;
+				-- com 2,1 × 1,4 = 2,94 a luz fica contida (docs/17 §2.6).
+				radiusStuds = 2.1,
 				rgb = { 190, 230, 255 },
 				rate = 0,
 			}),
@@ -711,6 +714,18 @@ function AbilityVfx.validate(): (boolean, string?)
 					("camada %s tem raio %.1f maior que o alcance %.1f da habilidade"):format(
 						entry.id,
 						entry.radiusStuds,
+						technique.rangeStuds
+					)
+			end
+			-- A LUZ também não pode passar do alcance (alerta de 14/08, fechado
+			-- 17/08): glowStuds = radiusStuds × GLOW_BY_KIND pode crescer além
+			-- do raio sem nenhum teste reclamar, e uma receita futura estouraria
+			-- sozinha. O anel que brilha além do alcance lê como técnica maior.
+			if entry.glowStuds > technique.rangeStuds then
+				return false,
+					("camada %s tem brilho %.1f maior que o alcance %.1f da habilidade"):format(
+						entry.id,
+						entry.glowStuds,
 						technique.rangeStuds
 					)
 			end

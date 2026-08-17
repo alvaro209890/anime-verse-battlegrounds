@@ -608,6 +608,38 @@ test("vfx: toda camada acende luz proporcional ao próprio raio", function()
 	assertTrue(AbilityVfx.GlowByKind.ring > AbilityVfx.GlowByKind.trail, "anel acende mais que rastro")
 end)
 
+test("vfx: nenhuma luz passa do alcance da habilidade (glow ≤ rangeStuds)", function()
+	-- Alerta de honestidade visual de 14/08, fechado em 17/08: glowStuds =
+	-- radiusStuds × GLOW_BY_KIND podia ultrapassar o alcance sem reclamar
+	-- (o pior caso era GuardDown/guard_ring: 2,4 × 1,4 = 3,36 vs alcance
+	-- 3,0). A luz além do alcance lê como técnica maior do que o servidor
+	-- concedeu; o validate() agora rejeita, e este teste trava o catálogo.
+	for _, technique in AbilityVfx.all() do
+		for _, camada in technique.layers do
+			assertTrue(
+				camada.glowStuds <= technique.rangeStuds + 1e-9,
+				("%s/%s: brilho %.2f passa do alcance %.2f"):format(
+					technique.abilityId,
+					camada.id,
+					camada.glowStuds,
+					technique.rangeStuds
+				)
+			)
+		end
+	end
+	-- O pior caso antigo está corrigido: o anel da guarda brilha dentro do
+	-- alcance da defesa.
+	local guarda = AbilityVfx.get("guard_raise")
+	assertTrue(guarda ~= nil, "guarda existe")
+	local ring = nil
+	for _, camada in (guarda :: any).layers do
+		if camada.id == "guard_ring" then
+			ring = camada
+		end
+	end
+	assertTrue(ring ~= nil and ring.glowStuds <= 3.0 + 1e-9, "anel da guarda contido no alcance 3,0")
+end)
+
 test("câmera: addImpact clampa trauma e fov no teto e decai no tick", function()
 	local cam = CombatCameraController.new({
 		random = function()
