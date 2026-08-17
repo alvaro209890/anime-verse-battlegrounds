@@ -1,5 +1,16 @@
 # Snapshot Canônico da Documentação — 17/08/2026
 
+## Rodada de 17/08 (Grok) — XP visível, flash de nível e mochila
+
+1. **XP do kill** flutua no monstro (`+25 XP` / `+80 XP`), igual o número de dano.
+   O tracker da task mostra o prêmio (`+40 / +60 / +40 XP`). A barra de nível
+   enche com o XP do campo; os pontos continuam só na consolidação.
+2. **Flash de evolução** (1,6 s, dourado) quando o Marco sobe o nível.
+3. **Mochila (B):** técnicas + materiais sem poder (fragmento, lasca, pó,
+   faixa). Persistida no ProfileRoot. Suite headless + place `anime-verse-battlegrounds.rbxl`.
+
+---
+
 ## Rodada de 17/08 (Grok) — vegetação realista + nível por pontos
 
 1. **Vegetação.** A planície saiu do sorteio uniforme (que agrupava e deixava

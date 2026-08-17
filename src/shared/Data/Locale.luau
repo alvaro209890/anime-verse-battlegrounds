@@ -80,7 +80,7 @@ local Strings: { [string]: { [string]: string } } = {
 		["hud.menu_button"] = "MENU",
 		["hud.help_button"] = "MENU",
 		["hud.help_title"] = "CONFIGURAÇÕES",
-		["hud.help_hint"] = "clique atacar  ·  segure 0,3s pesado  ·  direito guarda  ·  Shift correr  ·  Q dash  ·  Tab mira  ·  E portão  ·  K status  ·  H",
+		["hud.help_hint"] = "clique atacar  ·  segure 0,3s pesado  ·  direito guarda  ·  Shift correr  ·  Q dash  ·  Tab mira  ·  E portão  ·  K status  ·  B mochila  ·  H",
 		["hud.help_light"] = "Clique esquerdo — golpe leve (cadeia de 4)",
 		["hud.help_heavy"] = "Clique esquerdo segurado (~0,3 s) — golpe pesado (quebra guarda)",
 		["hud.help_guard"] = "Botão direito ou F — guarda / aparo (segure)",
@@ -129,9 +129,25 @@ local Strings: { [string]: { [string]: string } } = {
 
 		-- FTUE e objetivos
 		["ftue.dummy_hint"] = "Ataque, defenda e esquive no boneco",
-		["quest.hunt.tracker"] = "Derrote Estilhaços: {n}/3",
-		["quest.elite.tracker"] = "Derrote o Estilhaço Ancorado",
-		["quest.flow.tracker"] = "Acerte um eco da Cadência",
+		["quest.hunt.tracker"] = "Estilhaços: {n}/{req}  ·  +{xp} XP",
+		["quest.elite.tracker"] = "Ancorado  ·  +{xp} XP",
+		["quest.flow.tracker"] = "Eco da Cadência  ·  +{xp} XP",
+		["item.shard_fragment.name"] = "Fragmento de Estilhaço",
+		["item.shard_fragment.desc"] = "Lasca que o Estilhaço Errante deixa. Sem poder de combate.",
+		["item.void_splinter.name"] = "Lasca do Vazio",
+		["item.void_splinter.desc"] = "Resíduo do Estilhaço Ancorado. Sem poder de combate.",
+		["item.umbral_dust.name"] = "Pó Umbral",
+		["item.umbral_dust.desc"] = "Poeira de evolução. Sem poder de combate.",
+		["item.traveler_wrap.name"] = "Faixa do Viajante",
+		["item.traveler_wrap.desc"] = "Lembrança do primeiro passo no Bastião.",
+		["hud.bag_button"] = "MOCHILA",
+		["hud.bag_title"] = "MOCHILA",
+		["hud.bag_abilities"] = "Técnicas",
+		["hud.bag_items"] = "Itens",
+		["hud.bag_empty"] = "Nada aqui ainda — cace na planície",
+		["hud.bag_locked"] = "bloqueada",
+		["hud.help_bag"] = "B — mochila de técnicas e itens",
+		["hud.feedback_loot"] = "+{item}",
 	},
 
 	en = {
@@ -195,7 +211,7 @@ local Strings: { [string]: { [string]: string } } = {
 		["hud.menu_button"] = "MENU",
 		["hud.help_button"] = "MENU",
 		["hud.help_title"] = "SETTINGS",
-		["hud.help_hint"] = "click attack  ·  hold 0.3s heavy  ·  right-click guard  ·  Shift sprint  ·  Q dash  ·  Tab lock-on  ·  E gate  ·  K status  ·  H",
+		["hud.help_hint"] = "click attack  ·  hold 0.3s heavy  ·  right-click guard  ·  Shift sprint  ·  Q dash  ·  Tab lock-on  ·  E gate  ·  K status  ·  B bag  ·  H",
 		["hud.help_light"] = "Left click — light attack (4-hit chain)",
 		["hud.help_heavy"] = "Hold left click (~0.3s) — heavy attack (guard breaker)",
 		["hud.help_guard"] = "Right click or F — guard / parry (hold)",
@@ -243,9 +259,25 @@ local Strings: { [string]: { [string]: string } } = {
 		["hud.feedback_not_safe"] = "Reset only in a safe zone",
 
 		["ftue.dummy_hint"] = "Attack, guard and dodge on the dummy",
-		["quest.hunt.tracker"] = "Defeat Shards: {n}/3",
-		["quest.elite.tracker"] = "Defeat the Anchored Shard",
-		["quest.flow.tracker"] = "Land a Cadence echo",
+		["quest.hunt.tracker"] = "Shards: {n}/{req}  ·  +{xp} XP",
+		["quest.elite.tracker"] = "Anchored  ·  +{xp} XP",
+		["quest.flow.tracker"] = "Cadence echo  ·  +{xp} XP",
+		["item.shard_fragment.name"] = "Shard Fragment",
+		["item.shard_fragment.desc"] = "A chip the Wandering Shard leaves. No combat power.",
+		["item.void_splinter.name"] = "Void Splinter",
+		["item.void_splinter.desc"] = "Residue of the Anchored Shard. No combat power.",
+		["item.umbral_dust.name"] = "Umbral Dust",
+		["item.umbral_dust.desc"] = "Evolution dust. No combat power.",
+		["item.traveler_wrap.name"] = "Traveler Wrap",
+		["item.traveler_wrap.desc"] = "A keepsake of the first step in the Bastion.",
+		["hud.bag_button"] = "BAG",
+		["hud.bag_title"] = "BACKPACK",
+		["hud.bag_abilities"] = "Techniques",
+		["hud.bag_items"] = "Items",
+		["hud.bag_empty"] = "Empty — hunt on the plain",
+		["hud.bag_locked"] = "locked",
+		["hud.help_bag"] = "B — backpack of techniques and items",
+		["hud.feedback_loot"] = "+{item}",
 	},
 }
 
@@ -270,7 +302,7 @@ function LocaleCatalog.get(key: string, locale: LocaleId?): string
 end
 
 -- Substitui `{campo}` pelos valores informados. Usado pelos trackers
--- (`quest.hunt.tracker` → "Derrote Estilhaços: 2/3").
+-- (`quest.hunt.tracker` → "Estilhaços: 2/3  ·  +40 XP").
 function LocaleCatalog.format(key: string, params: { [string]: any }, locale: LocaleId?): string
 	local text = LocaleCatalog.get(key, locale)
 	local formatted = text:gsub("{(%w+)}", function(field: string): string

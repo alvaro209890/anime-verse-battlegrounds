@@ -44,6 +44,9 @@ local SpawnDecorations = require("../src/shared/Data/SpawnDecorations")
 local WildDecorations = require("../src/shared/Data/WildDecorations")
 local BiomeDecorations = require("../src/shared/Data/BiomeDecorations")
 local ProgressionCatalog = require("../src/shared/Data/ProgressionCatalog")
+local Items = require("../src/shared/Data/Items")
+local InventoryService = require("../src/server/Services/InventoryService")
+local LevelUpPlayer = require("../src/client/Presentation/LevelUpPlayer")
 local StudioEvidence = require("../scripts/StudioEvidence")
 local Remotes = require("../src/shared/Remotes")
 local RemoteEnvelope = require("../src/shared/RemoteEnvelope")
@@ -3118,9 +3121,11 @@ test("catálogo: dados reais passam na validação", function()
 		Npcs = Npcs,
 		Zones = Zones,
 		Quests = Quests,
+		Items = Items,
 		Locale = Locale,
 	})
 	assertEq(CatalogService.getQuest("quest_hunt") ~= nil, true, "objetivo 1 no catálogo")
+	assertEq(CatalogService.getItem("shard_fragment") ~= nil, true, "item na mochila")
 	assertEq(CatalogService.getQuest("quest_elite") ~= nil, true, "objetivo 2 no catálogo")
 	assertEq(CatalogService.getQuest("quest_flow") ~= nil, true, "objetivo 3 no catálogo")
 	assertEq(#CatalogService.questChain(), 3, "cadeia com os 3 objetivos")
@@ -3867,9 +3872,17 @@ test("dados: Locale cobre as chaves da fatia em PT-BR e EN", function()
 	assertEq(Locale.get("chave.inexistente"), "chave.inexistente", "chave desconhecida devolve a própria chave")
 end)
 
-test("dados: tracker formata {n} com o progresso", function()
-	assertEq(Locale.format("quest.hunt.tracker", { n = 0 }), "Derrote Estilhaços: 0/3", "0/3")
-	assertEq(Locale.format("quest.hunt.tracker", { n = 2 }), "Derrote Estilhaços: 2/3", "2/3")
+test("dados: tracker formata progresso e XP da task", function()
+	assertEq(
+		Locale.format("quest.hunt.tracker", { n = 0, req = 3, xp = 40 }),
+		"Estilhaços: 0/3  ·  +40 XP",
+		"0/3 + XP"
+	)
+	assertEq(
+		Locale.format("quest.hunt.tracker", { n = 2, req = 3, xp = 40 }),
+		"Estilhaços: 2/3  ·  +40 XP",
+		"2/3 + XP"
+	)
 end)
 
 test("dados: objetivo 1 é 3 Estilhaços, +40 XP e unlock do Cometa", function()
@@ -6023,6 +6036,68 @@ end)
 print("")
 print("== Testes F0 — Anime Verse Battlegrounds ==")
 print("")
+
+test("HUD: XP flutuante só com valor positivo do servidor", function()
+	assertTrue(CombatHudController.shouldShowXp({ amount = 25, targetId = "e1" }), "kill mostra XP")
+	assertFalse(CombatHudController.shouldShowXp({ amount = 0 }), "zero some")
+	assertFalse(CombatHudController.shouldShowXp({}), "sem amount some")
+	assertFalse(CombatHudController.shouldShowXp({ amount = 25, view = "taken" }), "quem apanha não vê")
+	assertEq(CombatHudController.xpText(25), "+25 XP", "texto")
+	local rgb = CombatHudController.xpColor()
+	assertEq(rgb[1], 255, "dourado")
+end)
+
+test("evolução: flash nasce, pico e some", function()
+	assertTrue(LevelUpPlayer.shouldPlay({ levelsGained = 1 }), "toca no level-up")
+	assertFalse(LevelUpPlayer.shouldPlay({ levelsGained = 0 }), "sem nível não toca")
+	assertTrue(LevelUpPlayer.flashAlpha(0.2, 1.6) > 0.4, "vê o brilho")
+	assertEq(LevelUpPlayer.flashAlpha(1.6, 1.6), 0, "some no fim")
+	assertTrue(LevelUpPlayer.ringScale(1.6, 1.6) > 1, "anel abre")
+end)
+
+test("mochila: concede material sem poder e respeita teto", function()
+	InventoryService.init({ getItem = Items.get, capacity = 30 })
+	InventoryService.registerPlayer(1500)
+	local wrap = InventoryService.grant(1500, "traveler_wrap", 1)
+	assertEq(wrap.granted, 1, "faixa inicial")
+	local frag = InventoryService.grant(1500, "shard_fragment", 2)
+	assertEq(frag.granted, 2, "fragmentos")
+	assertEq(InventoryService.count(1500, "shard_fragment"), 2, "saldo")
+	local full = InventoryService.grant(1500, "traveler_wrap", 1)
+	assertEq(full.reason, "stack_cap", "cosmético não empilha além de 1")
+	local unknown = InventoryService.grant(1500, "atk_potion", 1)
+	assertEq(unknown.reason, "unknown_item", "item de poder recusado")
+	local loot = Items.lootForNpc("enemy_wandering_shard")
+	assertEq(#loot, 1, "loot do errante")
+	assertEq(loot[1].itemId, "shard_fragment", "fragmento")
+	local snap = InventoryService.snapshot(1500)
+	InventoryService.unregisterPlayer(1500)
+	InventoryService.registerPlayer(1500)
+	InventoryService.restore(1500, snap)
+	assertEq(InventoryService.count(1500, "shard_fragment"), 2, "restore")
+	InventoryService.unregisterPlayer(1500)
+end)
+
+test("progressão: a barra enche com XP do campo antes de consolidar", function()
+	ProgressionService.init()
+	ProgressionService.registerPlayer(1501)
+	ProgressionService.awardXp(1501, 80)
+	local view = ProgressionService.viewFor(1501)
+	assertTrue(view ~= nil, "view")
+	if view then
+		assertEq(view.accountLevel, 1, "ainda nível 1")
+		assertEq(view.xpIntoLevel, 80, "barra mostra o campo")
+		assertEq(view.xpToNext, 86, "próximo em 86")
+		assertEq(view.pendingLevels, 0, "ainda não cruzou")
+	end
+	ProgressionService.awardXp(1501, 10)
+	local ready = ProgressionService.viewFor(1501)
+	if ready then
+		assertEq(ready.pendingLevels, 1, "pronto para evoluir")
+		assertEq(ready.xpIntoLevel, 86, "barra cheia")
+	end
+	ProgressionService.unregisterPlayer(1501)
+end)
 
 test("cliente: snapshot e delta carregam nível e pontos", function()
 	local state = ClientState.new(clockNow)

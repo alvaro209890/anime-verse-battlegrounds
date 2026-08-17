@@ -312,6 +312,10 @@ Efeitos (baseline de playtest, metade do Blox Fruits no que é atributo bruto):
 
 O nível **não** cai na morte. Pontos gastos não são confiscados. XP não consolidado enche a barra como prévia e o Marco de Retorno converte a prévia em nível + pontos. Redefinir pontos só na zona segura (GDD §7.4). Ranqueado continua normalizando esses ganhos (§9).
 
+Na tela: o kill mostra `+N XP` flutuante (mesmo ancoradouro do dano). O tracker da task anuncia o prêmio (`+40 XP`). Consolidar e cruzar a curva dispara um flash dourado de 1,6 s com o novo nível.
+
+A **mochila** (tecla B) guarda técnicas desbloqueadas e materiais empilháveis (`shard_fragment`, `void_splinter`, `umbral_dust`, `traveler_wrap`). Nenhum item da fatia concede dano, vida, guarda ou recurso.
+
 ### 7.2 Maestria de técnica
 
 Cada técnica possui níveis 1–10. XP para passar do nível `n` ao `n + 1` é:

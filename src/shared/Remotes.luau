@@ -141,7 +141,7 @@ local RemoteContracts = {
 		name = REMOTES.StateDelta,
 		direction = "ServerToClient",
 		version = 1,
-		payload = "{ health: number?, maxHealth: number?, guard: number?, maxGuard: number?, resource: number?, maxResource: number?, cooldowns: any?, objective: any?, unlocks: { string }?, unconsolidatedXp: number?, deathPenalty: number?, accountLevel: number?, xpIntoLevel: number?, xpToNext: number?, unspentPoints: number?, pendingLevels: number?, spent: any?, levelsGained: number?, pointsGranted: number? }",
+		payload = "{ health: number?, maxHealth: number?, guard: number?, maxGuard: number?, resource: number?, maxResource: number?, cooldowns: any?, objective: any?, unlocks: { string }?, unconsolidatedXp: number?, deathPenalty: number?, accountLevel: number?, xpIntoLevel: number?, xpToNext: number?, unspentPoints: number?, pendingLevels: number?, spent: any?, levelsGained: number?, pointsGranted: number?, xpPopup: { amount: number, targetId: string? }?, inventory: any? }",
 	} :: NetworkContract,
 	-- Telegraph, ataque, spawn e morte de inimigo. O telegraph é o que permite
 	-- o contorno branco de perigo (§17); o cliente não decide se acertou.

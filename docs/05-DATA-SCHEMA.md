@@ -82,7 +82,7 @@ Em F0/v1 existem envelope, progressão mínima, personagens/habilidades da fatia
 | `loadouts` / `activeLoadoutId` | mapa + ID | F1 | Referências desbloqueadas; Ressonância é recalculada |
 | `wallet` | Wallet | F2 | Moeda e materiais; inteiros com caps |
 | `familyMastery` | mapa família → MasteryProgress | F2 | Somente IDs das quatro famílias aprovadas |
-| `inventory` / `equipment` | estados versionados | F2 | Posse, capacidade e referências coerentes |
+| `inventory` / `equipment` | estados versionados | F0 mínimo (stackables); equipment F2 | Mochila de materiais/cosmético sem poder; equipment entra em F2 |
 | `inFlightOperations` | mapa operationId → PendingOperation | F2 | Somente operações econômicas interrompíveis |
 | `quests` | QuestState | F3 | Ativas, concluídas e flags compactas; o objetivo único F0 usa `tutorialFlags` + receipt, sem antecipar o agregado completo |
 | `reputation` | ReputationState | F4 | Valor, estado e cooldowns de recuperação |

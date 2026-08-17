@@ -45,6 +45,8 @@ local Interactions = require(ReplicatedStorage.Shared.Data.Interactions)
 local Locale = require(ReplicatedStorage.Shared.Data.Locale)
 local Npcs = require(ReplicatedStorage.Shared.Data.Npcs)
 local Quests = require(ReplicatedStorage.Shared.Data.Quests)
+local Items = require(ReplicatedStorage.Shared.Data.Items)
+local InventoryService = require(Services.InventoryService)
 local RemoteEnvelope = require(ReplicatedStorage.Shared.RemoteEnvelope)
 local WorldPresentation = require(ReplicatedStorage.Shared.Data.WorldPresentation)
 local SpawnDecorations = require(ReplicatedStorage.Shared.Data.SpawnDecorations)
@@ -63,7 +65,12 @@ CatalogService.init({
 	Npcs = Npcs,
 	Zones = Zones,
 	Quests = Quests,
+	Items = Items,
 	Locale = Locale,
+})
+InventoryService.init({
+	getItem = CatalogService.getItem,
+	capacity = Items.CAPACITY,
 })
 print("[Bootstrap] catálogo validado")
 
@@ -226,7 +233,11 @@ SaveService.init({
 		return game.JobId
 	end,
 	getSnapshot = function(userId: number)
-		return ProgressionService.snapshotForSave(userId)
+		local snapshot = ProgressionService.snapshotForSave(userId)
+		if snapshot then
+			(snapshot :: any).inventory = InventoryService.snapshot(userId)
+		end
+		return snapshot
 	end,
 	applySnapshot = function(userId: number, snapshot: any)
 		ProgressionService.restoreFromSave(userId, snapshot)
@@ -296,8 +307,11 @@ QuestService.init({
 		if not player then
 			return
 		end
+		if event.state == "completed" then
+			InventoryService.grant(userId, "umbral_dust", 1)
+		end
 		local view = ProgressionService.viewFor(userId)
-		RemoteGateway.fireClient(player, Remotes.Names.StateDelta, {
+		local payload: { [string]: any } = {
 			objective = event,
 			unlocks = ProgressionService.listUnlocks(userId),
 			unconsolidatedXp = if view then view.unconsolidatedXp else ProgressionService.getUnconsolidatedXp(userId),
@@ -307,7 +321,12 @@ QuestService.init({
 			unspentPoints = if view then view.unspentPoints else 0,
 			pendingLevels = if view then view.pendingLevels else 0,
 			spent = if view then view.spent else nil,
-		})
+			inventory = if InventoryService.snapshot(userId) then InventoryService.snapshot(userId).stackables else {},
+		}
+		if event.xpGranted and event.xpGranted > 0 then
+			payload.xpPopup = { amount = event.xpGranted }
+		end
+		RemoteGateway.fireClient(player, Remotes.Names.StateDelta, payload)
 		-- Item 11: recompensa/unlock de objetivo muda o perfil.
 		if event.state == "completed" then
 			SaveService.markDirty(userId)
@@ -789,6 +808,10 @@ PlayerSessionService.init({
 	getObjective = QuestService.getTracker,
 	getUnconsolidatedXp = ProgressionService.getUnconsolidatedXp,
 	getProgression = ProgressionService.viewFor,
+	getInventory = function(userId: number)
+		local bag = InventoryService.snapshot(userId)
+		return if bag then bag.stackables else {}
+	end,
 })
 
 local function progressionPayload(userId: number): { [string]: any }
@@ -807,6 +830,7 @@ local function progressionPayload(userId: number): { [string]: any }
 		previewLevel = view.previewLevel,
 		spent = view.spent,
 		vitals = view.vitals,
+		inventory = if InventoryService.snapshot(userId) then InventoryService.snapshot(userId).stackables else {},
 	}
 end
 
@@ -944,14 +968,19 @@ local function grantKillCredit(player: Player, fighterId: string, now: number): 
 		return 0
 	end
 	local award = ProgressionService.creditNpcKill(player.UserId, npcDef, anchorId)
-	local events = QuestService.creditKill(player.UserId, npcId, now)
+	QuestService.creditKill(player.UserId, npcId, now)
+	for _, drop in Items.lootForNpc(npcId) do
+		InventoryService.grant(player.UserId, drop.itemId, drop.amount)
+	end
 	-- Item 11: XP/flags mudaram — o autosave precisa persistir.
 	SaveService.markDirty(player.UserId)
-	-- QuestService já emitiu StateDelta com o XP atualizado; sem evento de
-	-- objetivo, o XP do kill ainda precisa chegar ao HUD.
-	if #events == 0 and award.granted > 0 then
-		pushProgression(player.UserId)
+	-- Sempre empurra o popup de XP do kill. Se o objetivo também avançou,
+	-- o onQuestEvent já mandou o tracker (e o XP da task, se completou).
+	local extra: { [string]: any } = {}
+	if award.granted > 0 then
+		extra.xpPopup = { amount = award.granted, targetId = fighterId }
 	end
+	pushProgression(player.UserId, extra)
 	return award.granted
 end
 
@@ -1381,6 +1410,7 @@ InteractionService.init({
 		if (receipt.levelsGained or 0) > 0 then
 			extra.levelsGained = receipt.levelsGained
 			extra.pointsGranted = receipt.pointsGranted
+			InventoryService.grant(userId, "umbral_dust", receipt.levelsGained or 1)
 		end
 		pushProgression(userId, extra)
 		return true, nil, receipt
@@ -1553,12 +1583,21 @@ game.Players.PlayerAdded:Connect(function(player: Player)
 	local loadStartedAt = os.clock()
 	sessionStartedAt[player.UserId] = loadStartedAt
 	ProgressionService.registerPlayer(player.UserId)
+	InventoryService.registerPlayer(player.UserId)
 	-- Item 11: restaura o perfil salvo (flags + XP consolidado). Se o load
 	-- falhar (lock de outro servidor ou falha de rede), a sessão segue em
 	-- memória SEM criar default por cima do save existente (§11.2 itens 4/5).
 	local profile = SaveService.loadProfile(player.UserId)
 	if not profile then
 		warn(("[Bootstrap] save indisponível para %d — sessão em memória"):format(player.UserId))
+	end
+	if profile and type(profile.inventory) == "table" then
+		InventoryService.restore(player.UserId, profile.inventory)
+	end
+	if InventoryService.count(player.UserId, "traveler_wrap") <= 0 then
+		if InventoryService.grant(player.UserId, "traveler_wrap", 1).granted > 0 then
+			SaveService.markDirty(player.UserId)
+		end
 	end
 	-- Recorte adicional da §18: playtest pode receber as três técnicas sem
 	-- remote de cheat. O override é de sessão e nunca entra no ProfileRoot.
@@ -1676,6 +1715,7 @@ game.Players.PlayerRemoving:Connect(function(player: Player)
 	ProgressionService.unregisterPlayer(player.UserId)
 	-- Item 11: libera o lock do perfil (salva se sujo) — §11.2 item 1.
 	SaveService.releaseProfile(player.UserId)
+	InventoryService.unregisterPlayer(player.UserId)
 end)
 
 -- Aceite forçado do objetivo após 90 s (docs/13 §10). Heartbeat barato: o

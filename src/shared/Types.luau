@@ -136,6 +136,7 @@ export type QuestTracker = {
 	trackerKey: string,
 	progress: number,
 	required: number,
+	xpReward: number?,
 	xpGranted: number?,
 	unlockFlag: string?,
 	acceptSource: string?,

@@ -49,6 +49,7 @@ local AbilityVfx = require(Shared.Data.AbilityVfx)
 local EnemyAbilities = require(Shared.Data.EnemyAbilities)
 local EnemyVfxAssets = require(Shared.Data.EnemyVfxAssets)
 local Npcs = require(Shared.Data.Npcs)
+local Items = require(Shared.Data.Items)
 
 local player = Players.LocalPlayer
 local state = ClientState.new(os.clock)
@@ -275,6 +276,9 @@ remote(Remotes.Names.StateDelta).OnClientEvent:Connect(function(payload: { [stri
 	end
 	ClientState.applyDelta(state, payload)
 	ZoneController.onDelta(zone, payload)
+	if type(payload.xpPopup) == "table" then
+		CombatHudController.spawnXp(combatHud, payload.xpPopup)
+	end
 end)
 
 remote(Remotes.Names.ResourceChanged).OnClientEvent:Connect(function(payload: { [string]: any })
@@ -355,6 +359,7 @@ local ui = UIController.new({
 	input = input,
 	inputApi = InputController,
 	runService = RunService,
+	items = Items,
 	onSpend = function(trackId: string)
 		send("SpendProgressionIntent", "SpendProgressionIntent", {
 			trackId = trackId,

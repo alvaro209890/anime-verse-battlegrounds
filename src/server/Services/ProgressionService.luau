@@ -380,14 +380,24 @@ function ProgressionService.viewFor(userId: number): ProgressionView?
 	end
 	local banked = ProgressionCatalog.progressFromXp(ledger.consolidated)
 	local preview = ProgressionCatalog.progressFromXp(ledger.consolidated + ledger.unconsolidated)
+	local pending = math.max(0, preview.level - ledger.accountLevel)
+	-- A barra mostra o XP do campo enchendo o próximo nível (feel Blox Fruits);
+	-- os pontos só caem na consolidação.
+	local visualInto = banked.intoLevel + ledger.unconsolidated
+	if banked.toNext > 0 then
+		visualInto = math.min(visualInto, banked.toNext)
+	end
+	if pending > 0 and banked.toNext > 0 then
+		visualInto = banked.toNext
+	end
 	return {
 		accountLevel = ledger.accountLevel,
 		consolidatedXp = ledger.consolidated,
 		unconsolidatedXp = ledger.unconsolidated,
-		xpIntoLevel = banked.intoLevel,
+		xpIntoLevel = visualInto,
 		xpToNext = banked.toNext,
 		previewLevel = preview.level,
-		pendingLevels = math.max(0, preview.level - ledger.accountLevel),
+		pendingLevels = pending,
 		unspentPoints = ledger.unspentPoints,
 		spent = {
 			vitality = ledger.spent.vitality,

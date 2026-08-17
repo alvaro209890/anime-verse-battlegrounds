@@ -106,6 +106,11 @@ local function newTemplate(userId: number, sessionId: string): { any }
 			lastConsolidationAt = 0,
 			tutorialFlags = {},
 		},
+		inventory = {
+			capacity = 30,
+			stackables = {},
+			revision = 0,
+		},
 		characters = {},
 		abilities = {},
 		settings = {
@@ -216,6 +221,9 @@ function SaveService.saveProfile(userId: number): boolean
 					guard = 0,
 					resonance = 0,
 				}
+			if type(snapshot.inventory) == "table" then
+				profile.data.inventory = snapshot.inventory
+			end
 			-- abilities.{id}.unlockedAt — sem masteryXp na fatia (docs/13 §11).
 			local abilities = profile.data.abilities
 			for _, abilityId in snapshot.unlockedAbilities do

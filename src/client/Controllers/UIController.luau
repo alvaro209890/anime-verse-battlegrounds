@@ -2,6 +2,8 @@
 -- HUD F0 retangular, neutro e sem arte. Renderiza o estado dos controllers em
 -- até 10 Hz; não chama remotes e não conhece regras de domínio.
 
+local LevelUpPlayer = require(script.Parent.Parent.Presentation.LevelUpPlayer)
+
 local UIController = {}
 
 local BG = Color3.fromRGB(28, 30, 34)
@@ -244,9 +246,49 @@ function UIController.new(deps: { [string]: any }): any
 	debugKit.TextColor3 = MUTED
 	debugKit.Visible = false
 
+	local bagButton = button("Bag", gui, UDim2.fromOffset(88, 40), UDim2.new(1, -294, 0, 14))
+	bagButton.TextSize = 14
 	local statusButton = button("Status", gui, UDim2.fromOffset(88, 40), UDim2.new(1, -200, 0, 14))
 	statusButton.TextSize = 14
 	local helpButton = button("Help", gui, UDim2.fromOffset(88, 40), UDim2.new(1, -106, 0, 14))
+	local levelFlash = frame("LevelFlash", gui, UDim2.fromScale(1, 1), UDim2.fromScale(0, 0))
+	levelFlash.BackgroundColor3 = Color3.fromRGB(255, 214, 110)
+	levelFlash.BackgroundTransparency = 1
+	levelFlash.ZIndex = 40
+	levelFlash.Visible = false
+	local levelFlashTitle = label("LevelTitle", levelFlash, UDim2.new(1, -40, 0, 64), UDim2.new(0, 20, 0.38, 0))
+	levelFlashTitle.TextXAlignment = Enum.TextXAlignment.Center
+	levelFlashTitle.TextSize = 42
+	levelFlashTitle.TextColor3 = Color3.fromRGB(255, 244, 200)
+	levelFlashTitle.ZIndex = 41
+	local bagPanel = frame("BagPanel", gui, UDim2.fromOffset(440, 360), UDim2.new(0.5, -220, 0.5, -180))
+	bagPanel.Visible = false
+	bagPanel.ZIndex = 18
+	local bagTitle = label("Title", bagPanel, UDim2.new(1, -16, 0, 26), UDim2.fromOffset(8, 8))
+	bagTitle.TextXAlignment = Enum.TextXAlignment.Center
+	bagTitle.ZIndex = 19
+	local bagAbilitiesTitle = label("AbiTitle", bagPanel, UDim2.new(0.5, -16, 0, 20), UDim2.fromOffset(12, 38))
+	bagAbilitiesTitle.ZIndex = 19
+	local bagItemsTitle = label("ItemTitle", bagPanel, UDim2.new(0.5, -16, 0, 20), UDim2.new(0.5, 4, 0, 38))
+	bagItemsTitle.ZIndex = 19
+	local bagAbilityLines: { TextLabel } = {}
+	for index = 1, 4 do
+		local line =
+			label("Abi" .. index, bagPanel, UDim2.new(0.5, -20, 0, 22), UDim2.fromOffset(12, 60 + (index - 1) * 24))
+		line.TextSize = 13
+		line.ZIndex = 19
+		table.insert(bagAbilityLines, line)
+	end
+	local bagItemLines: { TextLabel } = {}
+	for index = 1, 8 do
+		local line =
+			label("It" .. index, bagPanel, UDim2.new(0.5, -20, 0, 20), UDim2.new(0.5, 4, 0, 60 + (index - 1) * 22))
+		line.TextSize = 13
+		line.ZIndex = 19
+		table.insert(bagItemLines, line)
+	end
+	local bagClose = button("CloseBag", bagPanel, UDim2.new(1, -24, 0, 30), UDim2.fromOffset(12, 318))
+	bagClose.ZIndex = 19
 	helpButton.TextSize = 16
 	local statusPanel = frame("StatusPanel", gui, UDim2.fromOffset(420, 430), UDim2.new(0.5, -210, 0.5, -215))
 	statusPanel.Visible = false
@@ -326,6 +368,7 @@ function UIController.new(deps: { [string]: any }): any
 		"hud.help_interact",
 		"hud.help_gate",
 		"hud.help_status",
+		"hud.help_bag",
 		"hud.settings_where",
 	}
 	local helpLines: { TextLabel } = {}
@@ -372,6 +415,18 @@ function UIController.new(deps: { [string]: any }): any
 		hint = hint,
 		unlockAim = unlockAim,
 		debugKit = debugKit,
+		bagButton = bagButton,
+		bagPanel = bagPanel,
+		bagTitle = bagTitle,
+		bagAbilitiesTitle = bagAbilitiesTitle,
+		bagItemsTitle = bagItemsTitle,
+		bagAbilityLines = bagAbilityLines,
+		bagItemLines = bagItemLines,
+		bagClose = bagClose,
+		bagVisible = false,
+		levelFlash = levelFlash,
+		levelFlashTitle = levelFlashTitle,
+		items = deps.items,
 		statusButton = statusButton,
 		statusPanel = statusPanel,
 		statusTitle = statusTitle,
@@ -406,6 +461,14 @@ function UIController.new(deps: { [string]: any }): any
 		controller.statusVisible = not controller.statusVisible
 		if controller.statusVisible then
 			controller.helpVisible = false
+			controller.bagVisible = false
+		end
+	end
+	local function toggleBag()
+		controller.bagVisible = not controller.bagVisible
+		if controller.bagVisible then
+			controller.helpVisible = false
+			controller.statusVisible = false
 		end
 	end
 	local function releaseAim()
@@ -439,12 +502,18 @@ function UIController.new(deps: { [string]: any }): any
 	statusClose.Activated:Connect(function()
 		controller.statusVisible = false
 	end)
+	bagButton.Activated:Connect(toggleBag)
+	bagClose.Activated:Connect(function()
+		controller.bagVisible = false
+	end)
 	if deps.inputApi and deps.input then
 		deps.inputApi.subscribe(deps.input, function(action: string, _payload: { [string]: any })
 			if action == "ToggleHelp" then
 				toggleHelp()
 			elseif action == "ToggleProgression" then
 				toggleStatus()
+			elseif action == "ToggleBag" then
+				toggleBag()
 			elseif action == "BasicLight" or action == "BasicHeavy" or action == "Dash" then
 				controller.helpVisible = false
 			end
@@ -547,11 +616,82 @@ function UIController.render(controller: any, elapsed: number): ()
 	end
 	local objective = state.objective
 	if objective and objective.state ~= "completed" then
-		controller.objective.Text =
-			truncate48(controller.locale.format(objective.trackerKey, { n = objective.progress }, localeId))
+		controller.objective.Text = truncate48(controller.locale.format(objective.trackerKey, {
+			n = objective.progress,
+			req = objective.required,
+			xp = objective.xpReward or 0,
+		}, localeId))
 		controller.objective.Visible = true
 	else
 		controller.objective.Visible = false
+	end
+	controller.bagButton.Text = controller.locale.get("hud.bag_button", localeId)
+	controller.bagPanel.Visible = controller.bagVisible == true
+	if controller.bagVisible then
+		controller.bagTitle.Text = controller.locale.get("hud.bag_title", localeId)
+		controller.bagAbilitiesTitle.Text = controller.locale.get("hud.bag_abilities", localeId)
+		controller.bagItemsTitle.Text = controller.locale.get("hud.bag_items", localeId)
+		controller.bagClose.Text = controller.locale.get("hud.settings_close", localeId)
+		for index, line in controller.bagAbilityLines do
+			local view = controller.abilityViews[index]
+			if view then
+				local ability = controller.abilities.get(view.abilityId)
+				local unlocked = controller.abilityApi.isUnlocked(controller.abilityController, view.abilityId)
+				local name = if ability then controller.locale.get(ability.displayNameKey, localeId) else view.abilityId
+				line.Text = if unlocked
+					then name
+					else (name .. " — " .. controller.locale.get("hud.bag_locked", localeId))
+				line.Visible = true
+			else
+				line.Visible = false
+			end
+		end
+		local stacks: { { id: string, count: number } } = {}
+		for itemId, count in state.inventory or {} do
+			table.insert(stacks, { id = itemId, count = count })
+		end
+		table.sort(stacks, function(a, b)
+			return a.id < b.id
+		end)
+		if #stacks == 0 then
+			controller.bagItemLines[1].Text = controller.locale.get("hud.bag_empty", localeId)
+			controller.bagItemLines[1].Visible = true
+			for index = 2, #controller.bagItemLines do
+				controller.bagItemLines[index].Visible = false
+			end
+		else
+			for index, line in controller.bagItemLines do
+				local stack = stacks[index]
+				if stack then
+					local itemName = stack.id
+					if controller.items and controller.items.get then
+						local def = controller.items.get(stack.id)
+						if def then
+							itemName = controller.locale.get(def.displayNameKey, localeId)
+						end
+					end
+					line.Text = ("%s  ×%d"):format(itemName, stack.count)
+					line.Visible = true
+				else
+					line.Visible = false
+				end
+			end
+		end
+	end
+	local flashLeft = (state.levelUpUntil or 0) - state.now()
+	if flashLeft > 0 then
+		local flashElapsed = LevelUpPlayer.DURATION - flashLeft
+		local flashAlpha = LevelUpPlayer.flashAlpha(flashElapsed, LevelUpPlayer.DURATION)
+		controller.levelFlash.Visible = true
+		controller.levelFlash.BackgroundTransparency = 1 - flashAlpha * 0.55
+		controller.levelFlashTitle.Text = controller.locale.format(
+			"hud.feedback_level_up",
+			{ level = state.accountLevel, points = state.pointsGranted },
+			localeId
+		)
+		controller.levelFlashTitle.TextTransparency = 1 - flashAlpha
+	else
+		controller.levelFlash.Visible = false
 	end
 	local feedbackKey = controller.stateApi.feedback(state)
 	controller.feedback.Visible = feedbackKey ~= nil

@@ -37,6 +37,8 @@ export type QuestEvent = {
 	trackerKey: string,
 	progress: number,
 	required: number,
+	-- Prêmio anunciado (o cliente não inventa o número).
+	xpReward: number?,
 	-- Só no evento de conclusão.
 	xpGranted: number?,
 	unlockFlag: string?,
@@ -133,6 +135,7 @@ function QuestService.tryAccept(userId: number, questId: string, now: number, so
 		trackerKey = def.trackerKey,
 		progress = progress.progress,
 		required = progress.required,
+		xpReward = def.xpReward,
 		acceptSource = source,
 	})
 	return true, nil
@@ -238,6 +241,7 @@ function QuestService.creditEvent(userId: number, kind: string, targetId: string
 					trackerKey = def.trackerKey,
 					progress = progress.progress,
 					required = progress.required,
+					xpReward = def.xpReward,
 				}
 				table.insert(out, event)
 				emit(userId, event)
@@ -258,6 +262,7 @@ function QuestService.creditEvent(userId: number, kind: string, targetId: string
 					trackerKey = def.trackerKey,
 					progress = progress.progress,
 					required = progress.required,
+					xpReward = def.xpReward,
 					xpGranted = xpGranted,
 					unlockFlag = def.unlockFlag,
 				}
@@ -292,6 +297,7 @@ function QuestService.getTracker(userId: number): QuestEvent?
 				trackerKey = def.trackerKey,
 				progress = progress.progress,
 				required = progress.required,
+				xpReward = def.xpReward,
 			}
 		end
 	end

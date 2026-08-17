@@ -21,6 +21,7 @@ export type CatalogDeps = {
 		gateAnchors: (() -> { string })?,
 	}?,
 	Quests: { get: (string) -> any?, all: () -> { any }, chain: () -> { string } }?,
+	Items: { get: (string) -> any?, all: () -> { any }, lootForNpc: ((string) -> { any })? }?,
 	Locale: { hasKey: (string) -> boolean, get: (string, any?) -> string }?,
 }
 
@@ -320,6 +321,34 @@ function CatalogService.validate(): ()
 		end
 	end
 
+	if deps.Items then
+		local itemIds: { [string]: boolean } = {}
+		for _, item in deps.Items.all() do
+			itemIds[item.id] = true
+			if item.stackLimit == nil or item.stackLimit < 1 then
+				fail(("item %s → stackLimit inválido"):format(item.id))
+			end
+			if item.itemType ~= "Material" and item.itemType ~= "Cosmetic" then
+				fail(("item %s → tipo F0 inválido"):format(item.id))
+			end
+			if item.minorStatModifiers ~= nil then
+				fail(("item %s → F0 não aceita modificador de combate"):format(item.id))
+			end
+		end
+		if deps.Npcs and type(deps.Items.lootForNpc) == "function" then
+			for _, npc in deps.Npcs.all() do
+				for _, drop in deps.Items.lootForNpc(npc.id) do
+					if not itemIds[drop.itemId] then
+						fail(("loot de %s → item desconhecido %s"):format(npc.id, tostring(drop.itemId)))
+					end
+					if type(drop.amount) ~= "number" or drop.amount < 1 then
+						fail(("loot de %s → quantidade inválida"):format(npc.id))
+					end
+				end
+			end
+		end
+	end
+
 	if deps.Quests then
 		local npcIds: { [string]: boolean } = {}
 		if deps.Npcs then
@@ -409,6 +438,14 @@ function CatalogService.validate(): ()
 				requireKey("quest " .. quest.id, quest.trackerKey)
 			end
 		end
+		if deps.Items then
+			for _, item in deps.Items.all() do
+				if item.enabled then
+					requireKey("item " .. item.id, item.displayNameKey)
+					requireKey("item " .. item.id, item.descriptionKey)
+				end
+			end
+		end
 	end
 
 	CatalogService.validated = true
@@ -484,6 +521,15 @@ function CatalogService.getQuest(questId: string): any?
 	end
 	CatalogService.validate()
 	return deps.Quests.get(questId)
+end
+
+function CatalogService.getItem(itemId: string): any?
+	local deps = CatalogService.deps
+	if not deps or not deps.Items then
+		return nil
+	end
+	CatalogService.validate()
+	return deps.Items.get(itemId)
 end
 
 function CatalogService.questChain(): { string }

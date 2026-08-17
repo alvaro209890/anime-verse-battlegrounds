@@ -68,6 +68,27 @@ function CombatHudController.barFraction(health: number, maxHealth: number): num
 	return math.clamp(health / maxHealth, 0, 1)
 end
 
+-- Popup de XP: o servidor manda o valor já creditado. Mesma regra do dano —
+-- cliente não inventa quantidade.
+function CombatHudController.shouldShowXp(payload: { [string]: any }): boolean
+	if payload.view == "taken" then
+		return false
+	end
+	local amount = payload.amount
+	if type(amount) ~= "number" or amount ~= amount or amount <= 0 then
+		return false
+	end
+	return true
+end
+
+function CombatHudController.xpColor(): { number }
+	return { 255, 214, 96 }
+end
+
+function CombatHudController.xpText(amount: number): string
+	return ("+%d XP"):format(math.floor(amount))
+end
+
 -- Estado e ciclo de vida ─────────────────────────────────────────────────────
 
 function CombatHudController.new(deps: {
@@ -273,6 +294,58 @@ function CombatHudController.onCombatEvent(hud: Controller, payload: { [string]:
 	if CombatHudController.shouldShowDamage(payload) then
 		CombatHudController.spawnDamage(hud, payload)
 	end
+end
+
+-- Número de XP flutuante: mesmo ancoradouro do dano, um pouco mais alto e dourado.
+function CombatHudController.spawnXp(hud: Controller, payload: { [string]: any }): ()
+	if not CombatHudController.shouldShowXp(payload) then
+		return
+	end
+	local targetId = payload.targetId
+	local model = if type(targetId) == "string" then CombatHudController.modelFor(hud, targetId) else nil
+	local adornee: Instance? = model
+	local offset = 3.2
+	if not adornee then
+		adornee = hud.player:FindFirstChild("PlayerGui") or hud.player:WaitForChild("PlayerGui")
+		offset = 0
+	end
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "AvbXp"
+	gui.Adornee = adornee
+	gui.AlwaysOnTop = true
+	gui.Active = false
+	gui.LightInfluence = 0
+	gui.MaxDistance = 120
+	gui.Size = UDim2.fromOffset(96, 32)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, offset, 0)
+	local label = Instance.new("TextLabel")
+	label.Name = "Value"
+	label.BackgroundTransparency = 1
+	label.Size = UDim2.fromScale(1, 1)
+	label.Font = Enum.Font.GothamBlack
+	label.Text = CombatHudController.xpText(payload.amount)
+	local rgb = CombatHudController.xpColor()
+	label.TextColor3 = Color3.fromRGB(rgb[1], rgb[2], rgb[3])
+	label.TextScaled = true
+	label.TextStrokeColor3 = Color3.fromRGB(28, 22, 8)
+	label.TextStrokeTransparency = 0
+	label.Parent = gui
+	gui.Parent = adornee
+	task.spawn(function()
+		local tweenService = game:GetService("TweenService")
+		tweenService
+			:Create(
+				gui,
+				TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+				{ StudsOffsetWorldSpace = Vector3.new(0.4, offset + 2.8, 0) }
+			)
+			:Play()
+		tweenService:Create(label, TweenInfo.new(0.95, Enum.EasingStyle.Linear), { TextTransparency = 1 }):Play()
+		task.wait(0.95)
+		if gui.Parent then
+			gui:Destroy()
+		end
+	end)
 end
 
 return CombatHudController

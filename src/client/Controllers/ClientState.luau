@@ -31,6 +31,9 @@ export type Model = {
 	levelsGained: number,
 	pointsGranted: number,
 	deathPenalty: number,
+	inventory: { [string]: number },
+	levelUpUntil: number,
+	xpPopup: { [string]: any }?,
 	cooldowns: { [string]: { startedAt: number, duration: number } },
 	feedbackKey: string?,
 	feedbackUntil: number,
@@ -86,6 +89,9 @@ function ClientState.new(now: (() -> number)?): Model
 		levelsGained = 0,
 		pointsGranted = 0,
 		deathPenalty = 0,
+		inventory = {},
+		levelUpUntil = 0,
+		xpPopup = nil,
 		cooldowns = {},
 		feedbackKey = nil,
 		feedbackUntil = 0,
@@ -189,6 +195,21 @@ function ClientState.applyProgression(model: Model, payload: { [string]: any }):
 			end
 		end
 		model.spent = spent
+	end
+	if type(payload.inventory) == "table" then
+		local bag: { [string]: number } = {}
+		for key, value in payload.inventory do
+			if type(key) == "string" and type(value) == "number" and value > 0 then
+				bag[key] = value
+			end
+		end
+		model.inventory = bag
+	end
+	if numberOr(payload.levelsGained, 0) > 0 then
+		model.levelUpUntil = model.now() + 1.6
+	end
+	if type(payload.xpPopup) == "table" then
+		model.xpPopup = payload.xpPopup
 	end
 end
 

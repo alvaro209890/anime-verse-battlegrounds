@@ -1467,6 +1467,9 @@ test("hud: número de dano só com desfecho e dano positivo", function()
 	assertTrue(not CombatHudController.shouldShowDamage({ outcome = "miss", damage = 10 }), "erro não mostra")
 	assertTrue(not CombatHudController.shouldShowDamage({ outcome = "hit" }), "sem dano não mostra")
 	assertTrue(not CombatHudController.shouldShowDamage({}), "payload vazio não mostra")
+	assertTrue(CombatHudController.shouldShowXp({ amount = 25 }), "XP do kill aparece")
+	assertTrue(not CombatHudController.shouldShowXp({ amount = 0 }), "XP zero some")
+	assertEq(CombatHudController.xpText(80), "+80 XP", "texto do elite")
 	assertTrue(
 		not CombatHudController.shouldShowDamage({ outcome = "hit", damage = 6, view = "taken" }),
 		"quem apanha não mostra número"

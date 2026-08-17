@@ -416,9 +416,11 @@ F0 mostra **três** botões de técnica. Slot vazio/bloqueado: ícone cadeado, s
 | Umbral | valor / 100; ícone distinto **sem** depender só de cor | esgotado visível |
 | Técnicas | 3 slots, cooldown radial, cadeado se locked | não mostra custo mentiroso |
 | Zona | “SEGURO” / “PvP ATIVO” + perda resumida | persistente fora da vila |
-| Objetivo | uma linha, máx. 48 caracteres | some ao completar |
+| Objetivo | progresso + **+XP da task** (número do servidor), máx. 48 caracteres | some ao completar |
 | Feedback | hit confirm, guarda, rejeição (`no_resource`, `cooldown`) | 1 s; sem código interno |
-| Nível | barra de XP no topo; **STATUS** / tecla **K** abre as 5 trilhas | pontos só gastam via remote; cliente não calcula curva |
+| Nível | barra de XP no topo; **STATUS** / tecla **K** abre as 5 trilhas; flash dourado no level-up | pontos só gastam via remote; cliente não calcula curva |
+| XP do kill | número dourado flutuante no monstro, como o dano | só com `xpPopup.amount > 0` do servidor |
+| Mochila | **MOCHILA** / tecla **B** — técnicas e materiais | itens F0 sem poder de combate |
 | Menu | botão **MENU** / tecla **H**; controles, mira e tremor da câmera | não envia remote |
 | Combate | botões **ATACAR / GUARDA / DASH** (PC e toque); clique esquerdo no mundo | HUD chrome não descarta o golpe (`processed`) |
 | Mira | botão **SOLTAR MIRA** no centro enquanto travada | só apresentação local; `clearLock` não procura outro alvo |
@@ -503,7 +505,7 @@ Arquivo único `src/shared/Data/Locale.luau` (PT-BR default, EN segundo). Sem co
 | `hud.pvp_active` | PvP ATIVO — morte perde XP não consolidado |
 | `hud.pvp_hold` | Segure para entrar na zona livre |
 | `ftue.dummy_hint` | Ataque, defenda e esquive no boneco |
-| `quest.hunt.tracker` | Derrote Estilhaços: {n}/3 |
+| `quest.hunt.tracker` | Estilhaços: {n}/{req}  ·  +{xp} XP |
 | `quest.elite.tracker` | Derrote o Estilhaço Ancorado |
 | `quest.flow.tracker` | Acerte um eco da Cadência |
 | `npc.threshold_instructor.name` | Instrutor do Limiar |

@@ -24,6 +24,7 @@ export type SessionDeps = {
 	getObjective: ((number) -> any?)?,
 	getUnconsolidatedXp: ((number) -> number)?,
 	getProgression: ((number) -> any?)?,
+	getInventory: ((number) -> any?)?,
 }
 
 export type SessionSnapshot = {
@@ -51,6 +52,7 @@ export type SessionSnapshot = {
 	previewLevel: number?,
 	spent: any?,
 	vitals: any?,
+	inventory: any?,
 }
 
 local PlayerSessionService = {
@@ -142,6 +144,7 @@ function PlayerSessionService.buildSnapshot(userId: number, characterId: string,
 		previewLevel = if progression then progression.previewLevel else 1,
 		spent = if progression then progression.spent else nil,
 		vitals = if progression then progression.vitals else nil,
+		inventory = if deps.getInventory then deps.getInventory(userId) else nil,
 	}
 end
 
