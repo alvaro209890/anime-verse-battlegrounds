@@ -1,6 +1,6 @@
 # 25 — Plano de apresentação de combate e assets abertos
 
-> **Estado:** proposta implementável e referências visuais geradas; a validação em Roblox Studio ainda não foi executada.
+> **Estado:** proposta implementável e referências visuais geradas. Play no Studio em 17/08 (place 400.736 B, SHA 71F1BBFA): HUD colorido, dummy tomou 6+6 no alcance 13/cone 92°, número flutuante só com damage>0. Detalhe em docs/35-UI-VISUAL-PASS.md.
 
 ## 1. Objetivo
 
