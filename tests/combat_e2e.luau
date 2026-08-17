@@ -31,6 +31,7 @@ require("./harness")
 local fs = require("@lune/fs")
 
 local Geometry = require("../src/shared/Geometry")
+local HitContact = require("../src/shared/HitContact")
 local SpatialService = require("../src/server/Services/SpatialService")
 local CombatService = require("../src/server/Services/CombatService")
 local CombatAudio = require("../src/shared/Data/CombatAudio")
@@ -114,6 +115,7 @@ type Sim = {
 	state: any,
 	feedback: any,
 	vfxConfirmed: { [string]: boolean },
+	claimedTargetId: string?,
 }
 
 local function newSim(distanceStuds: number, targetKind: string?): Sim
@@ -153,20 +155,28 @@ local function newSim(distanceStuds: number, targetKind: string?): Sim
 		state = state,
 		feedback = CombatFeedbackController.new(state, ClientState),
 		vfxConfirmed = {},
+		claimedTargetId = nil,
 	}
 	return sim
 end
 
 -- Cliente: a MESMA ordem de reações do `init.client.lua` no `CombatEvent`.
-local function receiveCombatEvent(sim: Sim, payload: { [string]: any }): ()
+local function receiveCombatEvent(sim: Sim, payload: { [string]: any }, predictedAt: number?): ()
 	table.insert(sim.events, payload)
+	local view = HitContact.viewFor(sim.attackerId, payload)
 	CombatFeedbackController.onCombatEvent(sim.feedback, payload)
-	local cue = CombatAudio.impactId(payload.abilityId, payload.outcome)
-	if cue then
-		table.insert(sim.cues, cue)
+	local replayFeeling = view == "taken" or HitContact.shouldReplayImpact(predictedAt, sim.now)
+	if replayFeeling then
+		local cue = CombatAudio.impactId(payload.abilityId, payload.outcome)
+		if cue then
+			table.insert(sim.cues, cue)
+		end
+		PlayerCombatAnimator.confirmHit(sim.animator, payload.outcome)
+		CombatCameraController.addImpact(sim.camera, payload.outcome, payload.abilityId)
 	end
-	PlayerCombatAnimator.confirmHit(sim.animator, payload.outcome)
-	CombatCameraController.addImpact(sim.camera, payload.outcome, payload.abilityId)
+	if view == "taken" then
+		return
+	end
 	-- `AbilityVfxPlayer.confirm` só marca a entrada ativa; o efeito observável
 	-- da confirmação é o `planAt` passar a devolver as camadas de contato.
 	local confirming = payload.outcome == "hit"
@@ -219,10 +229,27 @@ local function serverBasicAttack(sim: Sim, kind: string): { [string]: any }
 	local step = math.clamp(attacker.lightStep + 1, 1, 4)
 	local reach = if isHeavy then HEAVY_REACH else LIGHT_REACH[step]
 	local halfAngle = if isHeavy then HEAVY_HALF_ANGLE else LIGHT_HALF_ANGLE
-	local targetId = SpatialService.acquireTarget(sim.attackerId, reach, halfAngle, function(fighterId: string): boolean
-		local other = CombatService.getFighter(fighterId)
-		return other ~= nil and other.health > 0
-	end)
+	local acquiredId = SpatialService.acquireTarget(
+		sim.attackerId,
+		reach,
+		halfAngle,
+		function(fighterId: string): boolean
+			local other = CombatService.getFighter(fighterId)
+			return other ~= nil and other.health > 0
+		end
+	)
+	local attackerTransform = SpatialService.getTransform(sim.attackerId)
+	local claimedId = sim.claimedTargetId
+	local claimedTransform = if type(claimedId) == "string" then SpatialService.getTransform(claimedId) else nil
+	local targetId = HitContact.resolveTarget(
+		acquiredId,
+		claimedId,
+		if attackerTransform then attackerTransform.position else nil,
+		if attackerTransform then attackerTransform.look else nil,
+		if claimedTransform then claimedTransform.position else nil,
+		reach,
+		halfAngle
+	)
 	local target = if targetId then CombatService.getFighter(targetId) else nil
 	local facing = if targetId then SpatialService.facingOf(targetId, sim.attackerId) else "front"
 
@@ -772,6 +799,67 @@ test("dois jogadores: o dano do alvo nunca ultrapassa o publicado no evento", fu
 		math.abs(perdaReal - somaEventos) < 1e-9,
 		("vida perdida %.2f difere da soma dos eventos %.2f"):format(perdaReal, somaEventos)
 	)
+end)
+
+test("12 studs com pista: o cone autoritativo erra e a folga de latência recupera o hit", function()
+	local semPista = newSim(12, "player")
+	local miss = serverBasicAttack(semPista, "light")
+	assertEq(miss.outcome, "miss", "sem pista, 12 studs passam do alcance 9")
+	assertSilentImpact(semPista, "sem pista")
+
+	local comPista = newSim(12, "player")
+	comPista.claimedTargetId = comPista.targetId
+	local hit = serverBasicAttack(comPista, "light")
+	assertEq(hit.outcome, "hit", "pista dentro da folga conecta")
+	assertTrue(hit.damage > 0, "HP sai do servidor")
+	assertTrue(#comPista.numbers > 0, "número só depois do CombatEvent")
+	assertTrue(PlayerCombatAnimator.hitStopActive(comPista.now, comPista.animator.hitStopUntil), "feeling no acerto")
+end)
+
+test("20 studs com pista: a folga não autoriza o impossível", function()
+	local sim = newSim(20, "player")
+	sim.claimedTargetId = sim.targetId
+	local event = serverBasicAttack(sim, "light")
+	assertEq(event.outcome, "miss", "pista longe demais continua miss")
+	assertSilentImpact(sim, "pista abusiva")
+end)
+
+test("view taken: quem apanha sente o golpe e não desenha o número", function()
+	local sim = newSim(6)
+	local dealt = serverBasicAttack(sim, "light")
+	assertTrue(#sim.numbers == 1, "atacante vê o número")
+	local takenPayload = {
+		targetId = sim.attackerId,
+		abilityId = "light",
+		outcome = "hit",
+		damage = 6,
+		view = "taken",
+	}
+	local taken = newSim(6)
+	receiveCombatEvent(taken, takenPayload)
+	assertEq(#taken.numbers, 0, "defensor não desenha número")
+	assertTrue(#taken.cues > 0, "defensor ouve o impacto")
+	assertTrue(taken.camera.trauma > 0, "defensor sente a câmera")
+	assertTrue(PlayerCombatAnimator.hitStopActive(taken.now, taken.animator.hitStopUntil), "defensor congela")
+	assertEq(dealt.outcome, "hit", "o golpe original foi acerto")
+end)
+
+test("contato previsto: CombatEvent na janela não dobra câmera nem som", function()
+	local sim = newSim(6)
+	local predictedAt = sim.now
+	sim.camera.trauma = 0.35
+	table.insert(sim.cues, "impact_light")
+	PlayerCombatAnimator.confirmHit(sim.animator, "hit")
+	local event = CombatService.basicCombatEvent(
+		{ ok = true, damage = 6, killed = false, step = 1 },
+		"light",
+		sim.targetId,
+		false
+	)
+	receiveCombatEvent(sim, event, predictedAt)
+	assertEq(#sim.cues, 1, "som não dobrou")
+	assertTrue(sim.camera.trauma <= 0.35 + 1e-9, "câmera não empilhou")
+	assertEq(#sim.numbers, 1, "número autoritativo entra mesmo assim")
 end)
 
 print(("Resultado combate E2E: %d passaram, %d falharam"):format(passed, failed))

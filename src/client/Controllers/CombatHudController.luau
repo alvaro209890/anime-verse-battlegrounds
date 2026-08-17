@@ -19,6 +19,7 @@ export type BarEntry = {
 export type Controller = {
 	player: any,
 	workspace: any,
+	players: any?,
 	now: (() -> number)?,
 	bars: { [string]: BarEntry },
 	modelCache: { [string]: any },
@@ -36,8 +37,13 @@ local SHOW_OUTCOMES: { [string]: boolean } = {
 
 -- Funções puras (testáveis sem DataModel) ───────────────────────────────────
 
--- Um CombatEvent vira número de dano? Só desfecho com dano positivo.
+-- Um CombatEvent vira número de dano? Só desfecho com dano positivo, e só
+-- para quem aplicou o golpe. Quem apanha (`view = "taken"`) sente câmera/som
+-- mas não inventa o número — o HP dele chega no StateDelta.
 function CombatHudController.shouldShowDamage(payload: { [string]: any }): boolean
+	if payload.view == "taken" then
+		return false
+	end
 	return SHOW_OUTCOMES[payload.outcome or ""] == true and type(payload.damage) == "number" and payload.damage > 0
 end
 
@@ -67,11 +73,13 @@ end
 function CombatHudController.new(deps: {
 	player: any,
 	workspace: any,
+	players: any?,
 	now: (() -> number)?,
 }): Controller
 	return {
 		player = deps.player,
 		workspace = deps.workspace,
+		players = deps.players,
 		now = deps.now or os.clock,
 		bars = {},
 		modelCache = {},
@@ -95,6 +103,18 @@ function CombatHudController.modelFor(hud: Controller, fighterId: string): Model
 		if child:IsA("Model") and child:GetAttribute("ActorId") == fighterId then
 			hud.modelCache[fighterId] = child
 			return child
+		end
+	end
+	-- Outro jogador não vive em Actors: o número ancora no Character replicado.
+	local userIdText = string.match(fighterId, "^player:(%d+)$")
+	local players = hud.players
+	if userIdText and players and type(players.GetPlayers) == "function" then
+		local userId = tonumber(userIdText)
+		for _, other in players:GetPlayers() do
+			if other.UserId == userId and other.Character then
+				hud.modelCache[fighterId] = other.Character
+				return other.Character
+			end
 		end
 	end
 	return nil

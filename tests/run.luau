@@ -59,6 +59,7 @@ local Quests = require("../src/shared/Data/Quests")
 local Locale = require("../src/shared/Data/Locale")
 local Locomotion = require("../src/shared/Data/Locomotion")
 local Geometry = require("../src/shared/Geometry")
+local HitContact = require("../src/shared/HitContact")
 local SpatialService = require("../src/server/Services/SpatialService")
 local PlayerMotionGuard = require("../src/server/Services/PlayerMotionGuard")
 local EnemyService = require("../src/server/Services/EnemyService")
@@ -1948,6 +1949,19 @@ test("segurança: mira declarada entra no contrato de golpe e técnica", functio
 		nil,
 		"mira que não é vetor recusada"
 	)
+	assertTrue(
+		inspecionar(
+			"BasicAttackIntent",
+			{ kind = "light", phase = "press", aim = { x = 0, z = -1 }, claimedTargetId = "player:777" },
+			8
+		) ~= nil,
+		"pista de alvo declarada é válida"
+	)
+	assertEq(
+		inspecionar("BasicAttackIntent", { kind = "light", phase = "press", claimedTargetId = "player 777" }, 9),
+		nil,
+		"pista com espaço recusada"
+	)
 end)
 
 test("segurança: rejeita vetor impossível, NaN e payload ambíguo", function()
@@ -2086,6 +2100,9 @@ test("combate: golpe fatal emite outcome death no evento do básico", function()
 	assertEq(event.outcome, "death", "cliente recebe death, não hit genérico")
 	assertTrue(event.damage > 0, "número de dano no golpe fatal")
 	assertTrue(CombatHudController.shouldShowDamage(event), "HUD desenha o número da morte")
+	local taken = CombatService.basicCombatEvent(hit, "light", tgt.id, false)
+	taken.view = "taken"
+	assertFalse(CombatHudController.shouldShowDamage(taken), "quem apanha não desenha o número")
 end)
 
 test("combate: janela 0,65 s reinicia a cadeia", function()
@@ -4561,6 +4578,84 @@ test("espaço: mira inválida é recusada e o cone volta para o corpo", function
 	SpatialService.setTransform("player:abraco", vec(0, 0, 0), vec(0, 0, -1))
 	SpatialService.setTransform("grudado", vec(0, 0, 0.5), vec(0, 0, 1))
 	assertEq(SpatialService.acquireTarget("player:abraco", 11, 65), "grudado", "colado acerta mesmo por trás")
+end)
+
+test("contato: alcance do módulo bate com o handler e o cone pega o mais próximo", function()
+	assertEq(HitContact.LightReachStuds[1], 9, "leve 1")
+	assertEq(HitContact.HeavyReachStuds, 9.5, "pesado")
+	assertEq(HitContact.LightHalfAngleDegrees, 65, "cone leve")
+	assertEq(HitContact.HeavyHalfAngleDegrees, 50, "cone pesado")
+	local source = fs.readFile("src/server/init.server.lua")
+	assertTrue(source:find("local BASIC_RANGE_STUDS = 6", 1, true) ~= nil, "handler ainda declara 6")
+	assertTrue(source:find("local BODY_ALLOWANCE_STUDS = 3", 1, true) ~= nil, "handler ainda declara folga 3")
+
+	local origin = { x = 0, y = 0, z = 0 }
+	local look = { x = 0, y = 0, z = -1 }
+	local got = HitContact.acquire(origin, look, {
+		{ id = "perto", position = { x = 0, y = 0, z = -6 } },
+		{ id = "longe", position = { x = 0, y = 0, z = -8 } },
+		{ id = "atras", position = { x = 0, y = 0, z = 6 } },
+	}, 9, 65)
+	assertEq(got, "perto", "mais próximo à frente")
+end)
+
+test("contato: claimed só entra na folga de latência, nunca longe ou pelas costas", function()
+	local origin = { x = 0, y = 0, z = 0 }
+	local look = { x = 0, y = 0, z = -1 }
+	assertTrue(
+		HitContact.acceptClaimed({
+			origin = origin,
+			look = look,
+			target = { x = 0, y = 0, z = -12 },
+			reach = 9,
+			halfAngle = 65,
+		}),
+		"12 studs cabem em 9+5"
+	)
+	assertFalse(
+		HitContact.acceptClaimed({
+			origin = origin,
+			look = look,
+			target = { x = 0, y = 0, z = -20 },
+			reach = 9,
+			halfAngle = 65,
+		}),
+		"20 studs passam da folga"
+	)
+	assertFalse(
+		HitContact.acceptClaimed({
+			origin = origin,
+			look = look,
+			target = { x = 0, y = 0, z = 8 },
+			reach = 9,
+			halfAngle = 65,
+		}),
+		"atrás do olhar não entra"
+	)
+	assertEq(
+		HitContact.resolveTarget(nil, "player:777", origin, look, { x = 0, y = 0, z = -12 }, 9, 65),
+		"player:777",
+		"miss espacial + pista válida"
+	)
+	assertEq(
+		HitContact.resolveTarget("npc:dummy", "player:777", origin, look, { x = 0, y = 0, z = -12 }, 9, 65),
+		"npc:dummy",
+		"cone autoritativo vence a pista"
+	)
+	assertEq(
+		HitContact.resolveTarget(nil, "player:777", origin, look, { x = 0, y = 0, z = -20 }, 9, 65),
+		nil,
+		"pista longe demais continua miss"
+	)
+end)
+
+test("contato: view e replay do feeling não dobram o impacto previsto", function()
+	assertEq(HitContact.viewFor("player:1", { view = "taken", targetId = "player:1" }), "taken", "campo vence")
+	assertEq(HitContact.viewFor("player:1", { targetId = "player:1" }), "taken", "alvo sou eu")
+	assertEq(HitContact.viewFor("player:1", { targetId = "player:2" }), "dealt", "eu bati")
+	assertTrue(HitContact.shouldReplayImpact(nil, 10), "sem previsão toca o confirmado")
+	assertFalse(HitContact.shouldReplayImpact(10.0, 10.1), "dentro da janela não repete")
+	assertTrue(HitContact.shouldReplayImpact(10.0, 10.5), "depois da janela o próximo golpe toca")
 end)
 
 test("espaço: dash avança 12 studs e ignora distância declarada na direção", function()

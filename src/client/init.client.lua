@@ -21,6 +21,7 @@ local Interactions = require(Shared.Data.Interactions)
 local WorldPresentation = require(Shared.Data.WorldPresentation)
 local RemoteEnvelope = require(Shared.RemoteEnvelope)
 local Remotes = require(Shared.Remotes)
+local HitContact = require(Shared.HitContact)
 
 local Controllers = script:WaitForChild("Controllers")
 local Presentation = script:WaitForChild("Presentation")
@@ -70,6 +71,7 @@ end
 -- Ordem obrigatória de controllers (docs/13 §12.3).
 local input = InputController.new(state, os.clock)
 local playerCombatAnimator: any = nil
+local combatCamera: any = nil
 -- Declarado antes do AbilityController porque o callback de ativação o captura;
 -- a construção fica junto das demais camadas de apresentação, abaixo.
 local abilityVfx: any = nil
@@ -114,6 +116,7 @@ local character = CharacterController.new({
 	runService = RunService,
 	walkSpeed = Locomotion.walkSpeed,
 	runSpeed = Locomotion.runSpeed,
+	hitContact = HitContact,
 })
 local ability = AbilityController.new({
 	state = state,
@@ -151,6 +154,7 @@ local feedback = CombatFeedbackController.new(state, ClientState)
 local combatHud = CombatHudController.new({
 	player = player,
 	workspace = Workspace,
+	players = Players,
 	now = os.clock,
 })
 local resource = ResourceController.new(state, ClientState)
@@ -162,12 +166,28 @@ local actorAnimator = ActorAnimator.new({
 	now = os.clock,
 })
 -- Áudio de combate: o corte de ar sai da própria ação do jogador (2D, preso à
--- câmera); o impacto espera o desfecho autoritativo em CombatEvent.
+-- câmera); o impacto de contato pode antecipar (docs/17 §2.11) e o número de
+-- dano continua esperando o CombatEvent.
 local combatAudio = CombatAudioPlayer.new({
 	catalog = CombatAudio,
 	soundParent = workspace.CurrentCamera,
 	now = os.clock,
 })
+-- Relógio do último contato previsto. Se o CombatEvent chegar dentro da
+-- janela, hit-stop/câmera/som não tocam de novo.
+local predictedImpactAt: number? = nil
+local localFighterId = "player:" .. tostring(player.UserId)
+
+local function playPredictedImpact(abilityId: string)
+	predictedImpactAt = os.clock()
+	PlayerCombatAnimator.confirmHit(playerCombatAnimator, "hit")
+	CombatCameraController.addImpact(combatCamera, "hit", abilityId)
+	local impactCue = CombatAudio.impactId(abilityId, "hit")
+	if impactCue then
+		CombatAudioPlayer.play(combatAudio, impactCue)
+	end
+end
+
 playerCombatAnimator = PlayerCombatAnimator.new({
 	player = player,
 	runService = RunService,
@@ -175,9 +195,10 @@ playerCombatAnimator = PlayerCombatAnimator.new({
 	emitCue = function(cueId: string)
 		CombatAudioPlayer.play(combatAudio, cueId)
 	end,
+	onPredictedHit = playPredictedImpact,
 })
--- Câmera de impacto: shake/FOV locais disparados apenas por desfecho confirmado.
-local combatCamera = CombatCameraController.new({
+-- Câmera de impacto: shake/FOV locais no contato previsto ou no CombatEvent.
+combatCamera = CombatCameraController.new({
 	workspace = Workspace,
 	runService = RunService,
 })
@@ -214,6 +235,14 @@ InputController.subscribe(input, function(action: string, _payload: { [string]: 
 		-- decidindo bloqueio, custo, cooldown e deslocamento real.
 		if abilityVfx then
 			AbilityVfxPlayer.play(abilityVfx, action)
+		end
+		-- Contato previsto no instante do corte de ar, só se o cone local viu alvo.
+		if (action == "BasicLight" or action == "BasicHeavy") and type(character.lastClaimedTargetId) == "string" then
+			local abilityId = if action == "BasicHeavy" then "heavy" else "light"
+			local delay = if action == "BasicHeavy"
+				then PlayerCombatAnimator.HeavyBeats.windupEnd
+				else PlayerCombatAnimator.lightChainAnticipation(playerCombatAnimator.comboStep)
+			PlayerCombatAnimator.armPredictedHit(playerCombatAnimator, abilityId, delay)
 		end
 	end
 end)
@@ -261,13 +290,9 @@ remote(Remotes.Names.ZoneEvent).OnClientEvent:Connect(function(payload: { [strin
 end)
 
 remote(Remotes.Names.CombatEvent).OnClientEvent:Connect(function(payload: { [string]: any })
+	local view = HitContact.viewFor(localFighterId, payload)
+	local now = os.clock()
 	CombatFeedbackController.onCombatEvent(feedback, payload)
-	-- Impacto é reação a resultado do servidor, nunca a intenção local: só soa
-	-- quando o acerto/guarda já foi decidido (docs/14 §5, PresentationImpact).
-	local impactCue = CombatAudio.impactId(payload.abilityId, payload.outcome)
-	if impactCue then
-		CombatAudioPlayer.play(combatAudio, impactCue)
-	end
 	-- O contra do Pulso nasce somente deste evento autoritativo: primeiro inicia a
 	-- pose/receita própria, depois confirma as camadas de contato.
 	if payload.abilityId == "pulse_return" and payload.outcome == "counter" then
@@ -277,13 +302,25 @@ remote(Remotes.Names.CombatEvent).OnClientEvent:Connect(function(payload: { [str
 			AbilityVfxPlayer.play(abilityVfx, "Ability3Counter")
 		end
 	end
-	-- Hit-stop, câmera e VFX de contato reagem ao desfecho, nunca à intenção local.
-	PlayerCombatAnimator.confirmHit(playerCombatAnimator, payload.outcome)
-	CombatCameraController.addImpact(combatCamera, payload.outcome, payload.abilityId)
+	-- Feeling (hit-stop/câmera/som): quem apanha sempre sente; quem bate só
+	-- repete se o contato previsto ainda não tocou nesta janela.
+	local replayFeeling = view == "taken" or HitContact.shouldReplayImpact(predictedImpactAt, now)
+	if replayFeeling then
+		local impactCue = CombatAudio.impactId(payload.abilityId, payload.outcome)
+		if impactCue then
+			CombatAudioPlayer.play(combatAudio, impactCue)
+		end
+		PlayerCombatAnimator.confirmHit(playerCombatAnimator, payload.outcome)
+		CombatCameraController.addImpact(combatCamera, payload.outcome, payload.abilityId)
+	end
+	PlayerCombatAnimator.clearPredictedHit(playerCombatAnimator)
+	if view == "taken" then
+		return
+	end
+	-- VFX de contato e número de dano continuam autoritativos (honestidade visual).
 	if abilityVfx then
 		AbilityVfxPlayer.confirm(abilityVfx, payload.abilityId, payload.outcome)
 	end
-	-- Número de dano flutuante (dano > 0, desfecho confirmado).
 	CombatHudController.onCombatEvent(combatHud, payload)
 	-- Sincronização da cadeia leve com o degrau autoritativo (docs/14 §4.3):
 	-- whiff zera a pose visual; acerto confirma o degrau do servidor.

@@ -435,11 +435,11 @@ Envelope: `protocolVersion`, `requestId`, `clientSequence`, `action`, `payload`.
 |---|---|---|---|
 | `SessionSnapshot` | S→C | zona, HP, guarda, Umbral, unlocks, objetivo | — |
 | `StateDelta` | S→C | HP/guarda/recurso/cooldown/flags | — |
-| `BasicAttackIntent` | C→S | `press`/`release`, `requestId` | alvo, dano |
+| `BasicAttackIntent` | C→S | `press`/`release`, `aim?`, `claimedTargetId?` (pista) | dano, distância, “foi hit” |
 | `GuardIntent` | C→S | `down`/`up` | “parry success” |
 | `DashIntent` | C→S | direção unitária limitada | distância final |
 | `AbilityIntent` | C→S | `abilityId`, `inputMode`, `executionId?`, `phase?`, ponto/alvo só se a def exigir | dano, vítimas, custo |
-| `CombatEvent` | S→C | `executionId`, `abilityId`, hit/guarda/morte | fórmulas |
+| `CombatEvent` | S→C | `executionId`, `abilityId`, hit/guarda/morte, `view` dealt/taken | fórmulas |
 | `ZoneEvent` | S→C | de, para, regra PvP, instante, sinais, lockoutRemaining | — |
 | `ZoneCrossingIntent` | C→S | `toZoneId`, `holdConfirmed?`, `requestId` | posição, “já cruzei” |
 | `InteractionIntent` | C→S | exatamente um de `anchorId` / `npcId`; `phase = begin/complete/cancel` | distância, duração, recompensa |

@@ -40,6 +40,7 @@ local Abilities = require(ReplicatedStorage.Shared.Data.Abilities)
 local Characters = require(ReplicatedStorage.Shared.Data.Characters)
 local EnergyFamilies = require(ReplicatedStorage.Shared.Data.EnergyFamilies)
 local Geometry = require(ReplicatedStorage.Shared.Geometry)
+local HitContact = require(ReplicatedStorage.Shared.HitContact)
 local Interactions = require(ReplicatedStorage.Shared.Data.Interactions)
 local Locale = require(ReplicatedStorage.Shared.Data.Locale)
 local Npcs = require(ReplicatedStorage.Shared.Data.Npcs)
@@ -348,6 +349,32 @@ local function fireVitalsForFighter(fighterId: string, viewerUserId: number?): (
 	end
 end
 
+local function copyCombatEvent(payload: { [string]: any }, view: string): { [string]: any }
+	local event = table.clone(payload)
+	event.view = view
+	return event
+end
+
+local function fireCombatEvent(player: Player, payload: { [string]: any }, view: string): ()
+	RemoteGateway.fireClient(player, Remotes.Names.CombatEvent, copyCombatEvent(payload, view))
+end
+
+-- HP/número continuam autoritativos; o defensor precisa do feeling no mesmo frame.
+local function fireDealtAndTaken(attackerPlayer: Player, targetId: string?, payload: { [string]: any }): ()
+	fireCombatEvent(attackerPlayer, payload, "dealt")
+	if type(targetId) ~= "string" then
+		return
+	end
+	local targetUserIdText = string.match(targetId, "^player:(%d+)$")
+	if not targetUserIdText then
+		return
+	end
+	local targetPlayer = game.Players:GetPlayerByUserId(tonumber(targetUserIdText) :: number)
+	if targetPlayer and targetPlayer ~= attackerPlayer then
+		fireCombatEvent(targetPlayer, payload, "taken")
+	end
+end
+
 -- O contra do Retorno de Pulso é o único desfecho em que quem apanha devolve
 -- dano. Ele já era resolvido no servidor, mas não chegava ao cliente do
 -- defensor: quem usou a técnica via só "levei um golpe" e nunca o resultado
@@ -595,7 +622,7 @@ AbilityService.init({
 		elseif damage > 0 and EnemyService.isElite(targetId) then
 			EnemyService.registerEliteDamage(targetId, userId, damage)
 		end
-		RemoteGateway.fireClient(player, Remotes.Names.CombatEvent, {
+		fireDealtAndTaken(player, targetId, {
 			targetId = targetId,
 			abilityId = abilityId,
 			outcome = outcome or "hit",
@@ -1123,7 +1150,7 @@ RemoteGateway.onClientIntent(Remotes.Names.BasicAttackIntent, function(player: P
 	-- (fora do alcance? fora do cone? bloqueado pela fronteira?). Sem isto, a
 	-- única evidência era "não acertou nada" (docs/18 §8).
 	local blockedByFrontier = 0
-	local targetId = SpatialService.acquireTarget(attackerId, reach, halfAngle, function(fighterId: string): boolean
+	local function canAcquire(fighterId: string): boolean
 		local other = CombatService.getFighter(fighterId)
 		if not other or other.health <= 0 then
 			return false
@@ -1134,7 +1161,21 @@ RemoteGateway.onClientIntent(Remotes.Names.BasicAttackIntent, function(player: P
 			blockedByFrontier += 1
 		end
 		return allowed
-	end)
+	end
+	local acquiredId = SpatialService.acquireTarget(attackerId, reach, halfAngle, canAcquire)
+	local claimedId = payload.claimedTargetId
+	local claimedOk = type(claimedId) == "string" and canAcquire(claimedId)
+	local attackerTransform = SpatialService.getTransform(attackerId)
+	local claimedTransform = if claimedOk then SpatialService.getTransform(claimedId :: string) else nil
+	local targetId = HitContact.resolveTarget(
+		acquiredId,
+		if claimedOk then claimedId :: string else nil,
+		if attackerTransform then attackerTransform.position else nil,
+		if attackerTransform then attackerTransform.look else nil,
+		if claimedTransform then claimedTransform.position else nil,
+		reach,
+		halfAngle
+	)
 	if combatDebugEnabled and not targetId then
 		local nearest = SpatialService.acquireTarget(attackerId, reach * 3, 180, function(fighterId: string): boolean
 			local other = CombatService.getFighter(fighterId)
@@ -1183,9 +1224,9 @@ RemoteGateway.onClientIntent(Remotes.Names.BasicAttackIntent, function(player: P
 			applyPulseCounterToPlayer(player.UserId, target, now)
 		end
 		if not result.iframe then
-			RemoteGateway.fireClient(
+			fireDealtAndTaken(
 				player,
-				Remotes.Names.CombatEvent,
+				target.id,
 				CombatService.basicCombatEvent(result, kind, target.id, target.guarding == true)
 			)
 			fireVitalsForFighter(target.id, player.UserId)
@@ -1213,11 +1254,7 @@ RemoteGateway.onClientIntent(Remotes.Names.BasicAttackIntent, function(player: P
 		if not isHeavy then
 			attacker.lightStep = 0
 		end
-		RemoteGateway.fireClient(
-			player,
-			Remotes.Names.CombatEvent,
-			CombatService.basicCombatEvent(result, kind, nil, false)
-		)
+		fireCombatEvent(player, CombatService.basicCombatEvent(result, kind, nil, false), "dealt")
 	end
 end)
 

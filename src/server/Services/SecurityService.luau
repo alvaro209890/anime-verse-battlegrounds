@@ -117,10 +117,13 @@ local function validateAbility(payload: { [string]: any }): boolean
 end
 
 local function validateBasic(payload: { [string]: any }): boolean
-	if not hasOnlyKeys(payload, { kind = true, phase = true, aim = true }) then
+	if not hasOnlyKeys(payload, { kind = true, phase = true, aim = true, claimedTargetId = true }) then
 		return false
 	end
 	if payload.aim ~= nil and not validAimVector(payload.aim) then
+		return false
+	end
+	if payload.claimedTargetId ~= nil and not validId(payload.claimedTargetId) then
 		return false
 	end
 	return (payload.kind == "light" or payload.kind == "heavy")

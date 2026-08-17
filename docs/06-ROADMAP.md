@@ -173,7 +173,7 @@ runtime**:
 | Mundo aberto legível | ✅ | planície 160×120 → **480×400**, ~210 peças de vegetação |
 | Camada visual de impacto | ❌ | hit-stop/tremida/luz/som **não confirmados a olho** |
 | W1 completo | ❌ | prompts, marco, saídas e morte ainda não percorridos |
-| Dois clientes, latência, Android, gamepad | ❌ | intocados |
+| Dois clientes, latência, Android, gamepad | 🟡 | R1 rodou; feeling de impacto atrasado tratado em código (`docs/17` §2.11). Android/gamepad intocados |
 | Desempenho da planície ampliada | ❌ | ~700 partes novas, **não medido** — é o risco aberto do W2 |
 | Corrida hold-to-run (Shift / L3) | ✅ | 16→22 studs/s (`Locomotion`); envelope com teto 22; headless 243 |
 

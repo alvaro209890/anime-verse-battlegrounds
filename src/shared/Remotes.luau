@@ -74,7 +74,8 @@ local RemoteContracts = {
 		direction = "ServerToClient",
 		version = 3,
 		payload = "{ executionId: string?, abilityId: string, targetId: string?, damage: number?, "
-			.. 'outcome: "hit" | "guard" | "death" | "counter" }',
+			.. 'outcome: "hit" | "guard" | "death" | "counter" | "miss", '
+			.. 'view: "dealt" | "taken"? }',
 	} :: NetworkContract,
 	[REMOTES.PlayerDied] = {
 		name = REMOTES.PlayerDied,
@@ -92,7 +93,7 @@ local RemoteContracts = {
 		name = REMOTES.BasicAttackIntent,
 		direction = "ClientToServer",
 		version = 2,
-		payload = 'EnvelopeV2<{ kind: "light" | "heavy", phase: "press" | "release" }>',
+		payload = 'EnvelopeV2<{ kind: "light" | "heavy", phase: "press" | "release", aim: { x: number, z: number }?, claimedTargetId: string? }>',
 	} :: NetworkContract,
 	[REMOTES.GuardIntent] = {
 		name = REMOTES.GuardIntent,

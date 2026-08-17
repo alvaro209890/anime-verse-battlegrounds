@@ -42,9 +42,14 @@ A regra de `14-ANIMATION-PLAN.md` §5 vale integralmente para som:
 | Deixa | Dispara com | Nunca |
 |---|---|---|
 | Corte de ar (`swing_*`) | intenção local do jogador | representar acerto |
-| Impacto (`impact_*`) | `CombatEvent` do servidor | tocar por predição local |
+| Impacto (`impact_*`) | contato previsto no cone local, ou `CombatEvent` se a previsão não tocou | autorizar HP ou número de dano |
 
-O corte de ar é a *ação* — é do jogador e sempre acontece, mesmo errando. O impacto é *resultado* — só existe depois de o servidor decidir. Tocar impacto na intenção faria o jogador ouvir acertos que não existiram, que é mentir sobre o estado autoritativo.
+O corte de ar é a *ação* — é do jogador e sempre acontece, mesmo errando. O
+impacto é *contato*: desde 17/08 (`docs/17` §2.11) ele pode sair no instante
+da antecipação quando o cone local viu alguém, para o soco no outro jogador
+não esperar o RTT. Um `CombatEvent` na mesma janela não toca de novo. HP e
+número de dano continuam só no servidor — ouvir o thump sem número é um
+flash fantasma aceito; ver vida cair sem thump era o defeito do R1.
 
 `impact_guard` é deliberadamente metálico e distinto de `impact_light`/`impact_heavy`: a diferença entre acertar e ser bloqueado precisa ser audível sem olhar o HUD.
 

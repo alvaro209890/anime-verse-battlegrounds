@@ -546,6 +546,34 @@ test("combate: hit-stop só congela no desfecho confirmado", function()
 	assertTrue(not PlayerCombatAnimator.hitStopActive(clock, animator.hitStopUntil), "após a janela descongela")
 end)
 
+test("combate: contato previsto dispara no instante da antecipação e o confirmado cancela", function()
+	local clock = 0
+	local seen: { string } = {}
+	local animator = PlayerCombatAnimator.new({
+		player = { Character = nil },
+		runService = nil,
+		now = function()
+			return clock
+		end,
+		onPredictedHit = function(abilityId: string)
+			table.insert(seen, abilityId)
+		end,
+	})
+	PlayerCombatAnimator.play(animator, "BasicLight")
+	PlayerCombatAnimator.armPredictedHit(animator, "light", PlayerCombatAnimator.lightChainAnticipation(1))
+	clock += PlayerCombatAnimator.lightChainAnticipation(1) - 0.001
+	assertEq(PlayerCombatAnimator.flushPredictedHit(animator, clock), nil, "ainda na carga")
+	clock += 0.002
+	assertEq(PlayerCombatAnimator.flushPredictedHit(animator, clock), "light", "no corte de ar")
+	assertEq(seen[1], "light", "callback do contato previsto")
+
+	PlayerCombatAnimator.play(animator, "BasicHeavy")
+	PlayerCombatAnimator.armPredictedHit(animator, "heavy", PlayerCombatAnimator.HeavyBeats.windupEnd)
+	PlayerCombatAnimator.clearPredictedHit(animator)
+	clock += 1
+	assertEq(PlayerCombatAnimator.flushPredictedHit(animator, clock), nil, "CombatEvent antecipado cancela o previsto")
+end)
+
 test("câmera: trauma decai, clampa e técnica pesada sacode mais", function()
 	local d = CombatCameraController.decay(0.5, 2.0, 0.1)
 	assertTrue(math.abs(d - 0.3) < 1e-9, "decaimento linear")
@@ -1439,6 +1467,10 @@ test("hud: número de dano só com desfecho e dano positivo", function()
 	assertTrue(not CombatHudController.shouldShowDamage({ outcome = "miss", damage = 10 }), "erro não mostra")
 	assertTrue(not CombatHudController.shouldShowDamage({ outcome = "hit" }), "sem dano não mostra")
 	assertTrue(not CombatHudController.shouldShowDamage({}), "payload vazio não mostra")
+	assertTrue(
+		not CombatHudController.shouldShowDamage({ outcome = "hit", damage = 6, view = "taken" }),
+		"quem apanha não mostra número"
+	)
 end)
 
 test("hud: cor do número varia com o desfecho", function()

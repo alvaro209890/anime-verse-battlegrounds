@@ -508,7 +508,7 @@ Cada clip de combate declara os markers abaixo quando aplicáveis:
 | Marker | Uso de apresentação | Proibido |
 |---|---|---|
 | `AnticipationEnd` | encerrar smear/câmera de preparação | abrir hitbox |
-| `PresentationImpact` | som, hit-stop visual e VFX se o servidor confirmou | decidir acerto/dano |
+| `PresentationImpact` | som e hit-stop no contato previsto ou no `CombatEvent`; VFX de acerto só com confirmação | decidir acerto/dano |
 | `FootPlantL` / `FootPlantR` | passo e poeira local | alterar velocidade |
 | `TrailOn` / `TrailOff` | trilha geométrica local | representar alcance maior que a hitbox |
 | `RecoveryPose` | iniciar blend visual de retorno | liberar ação antes do servidor |

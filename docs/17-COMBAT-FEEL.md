@@ -230,16 +230,45 @@ para encadear, e a cadeia deixa de ser jogável.
 > no fim da antecipação", não um número. Agora leem
 > `lightChainAnticipation(n)`, `lightChainImpact(n)` e `HeavyBeats`.
 
+### 2.11 Contato local, HP no servidor (17/08 — R1)
+
+O playtest de dois clientes mostrou o soco **lento no outro jogador**. A pose
+já saía no clique; flash, número, hit-stop e câmera esperavam o `CombatEvent`;
+no PvP a `HumanoidRootPart` do outro ainda replica, então o cone autoritativo
+via o alvo onde ele estava ~200 ms atrás e o golpe errava ou chegava tarde.
+
+Decisão (opção A): o cliente antecipa o *feeling* do contato; o servidor
+continua dono de HP, número e morte.
+
+| Camada | Quem dispara | Autoridade |
+|---|---|---|
+| Pose, corte de ar | intenção local | já era local |
+| Hit-stop, shake, som de impacto | cone local no instante da antecipação; `CombatEvent` se a previsão não tocou | apresentação |
+| Número de dano, barra, VFX `requiresConfirmation` | só `CombatEvent` | servidor |
+| HP, guarda, morte, XP | só servidor | servidor |
+
+`claimedTargetId` no `BasicAttackIntent` é pista, não alvo. O cone do servidor
+vence quando acerta; a pista só entra no miss espacial, e só se a posição
+conhecida ainda cabe em `alcance + 5 studs` e no cone alargado em 15°. 20
+studs continuam miss. A fronteira PvP e a vida ≤ 0 recusam a pista.
+
+O `CombatEvent` agora carrega `view`: `dealt` para quem bateu, `taken` para o
+outro jogador. Quem apanha sente câmera/som/hit-stop no mesmo frame em que o
+HP muda; não desenha o número (isso é do atacante).
+
+Se o `CombatEvent` chega até 350 ms depois do contato previsto, feeling não
+repete. VFX de acerto e HUD continuam esperando o servidor.
+
 ## 3. Regra de autoridade preservada
 
 | Camada | Dispara com | Nunca |
 |---|---|---|
 | Easing/follow-through/idle/wrist | intenção local (ação do jogador) | decidir acerto/dano |
-| Hit-stop | `CombatEvent` (desfecho do servidor) | congelar na intenção |
-| Shake/FOV | `CombatEvent` (desfecho do servidor) | tremer sem confirmação |
+| Hit-stop / shake / som de impacto | contato previsto no cone local, ou `CombatEvent` se a previsão não tocou | decidir HP |
+| Número de dano e VFX de acerto | `CombatEvent` (desfecho do servidor) | intenção local |
 
-O bootstrap (`src/client/init.client.lua`) conecta `CombatEvent` a
-`confirmHit` + `addImpact`, ao lado do áudio de impacto já existente.
+O bootstrap (`src/client/init.client.lua`) liga o contato previsto ao instante
+da antecipação e o `CombatEvent` a número/VFX (e ao feeling se ainda não tocou).
 
 O golpe básico agora emite `damage` no `CombatEvent` e o `StateDelta` da vida
 do NPC para o atacante. Sem isso o HUD (`shouldShowDamage` exige `damage > 0`)
@@ -257,7 +286,7 @@ Novos testes em `tests/animation.luau` (executado pelo CI junto de
 - follow-through ultrapassa a pose de impacto e ainda assenta em neutro exato;
 - idle respira e preserva a guarda canônica sem relógio;
 - soco flexiona o punho, chute não;
-- hit-stop só congela no desfecho confirmado e descongela após a janela;
+- hit-stop congela no contato previsto ou no `CombatEvent`, e descongela após a janela;
 - trauma decai/clampa e técnica pesada sacode mais;
 - `addImpact` clampa trauma/fov no teto e decai no tick;
 - VFX do Cometa: aura acesa na carga sem confirmação; flash e onda só com

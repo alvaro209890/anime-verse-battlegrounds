@@ -231,7 +231,7 @@ Não aceitar timestamp do cliente como prova de cooldown, posição, propriedade
 | TournamentCommand | C→S | Inscrição, ready, forfeit ou reconexão | Estado de inscrição/partida |
 | SessionSnapshot | S→C | Projeção inicial após perfil pronto | Versão da projeção e seções permitidas |
 | StateDelta | S→C | Mudança confirmada de recurso, cooldown, inventário ou progressão | Sequência para detectar lacuna |
-| CombatEvent | S→C | Ação aceita, hit confirmado, dano e estado | Dados visuais mínimos, sem segredos desnecessários |
+| CombatEvent | S→C | Ação aceita, hit confirmado, dano, estado e `view` (dealt/taken) | Dados visuais mínimos, sem segredos desnecessários |
 | ZoneEvent | S→C | Pré-aviso e confirmação de transição | Zona, regra PvP e instante de efetivação |
 | OperationResult | S→C | Resultado correlacionado de comando | `requestId`, status estável e revisão relevante |
 

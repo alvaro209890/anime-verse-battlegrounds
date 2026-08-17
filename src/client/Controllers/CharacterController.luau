@@ -1,6 +1,8 @@
 --!strict
 -- Movimento/câmera e ações universais. Magnetismo só altera apresentação da
--- mira: o cliente nunca envia alvo, acerto, dano ou distância final.
+-- mira. O cliente nunca envia acerto, dano ou distância final. Desde 17/08
+-- pode mandar `claimedTargetId` como pista (docs/17 §2.11): o servidor só
+-- aceita se o cone autoritativo falhou e a posição ainda cabe na folga.
 -- Corrida (Shift/L3) só muda Humanoid.WalkSpeed local; o servidor limita o
 -- envelope pelo teto de Locomotion.runSpeed (docs/13 §5: 16 / 22).
 
@@ -18,6 +20,8 @@ export type Controller = {
 	connection: any?,
 	characterAddedConnection: any?,
 	now: () -> number,
+	hitContact: any?,
+	lastClaimedTargetId: string?,
 }
 
 local SOFT_LOCK_DEGREES = 8
@@ -39,6 +43,7 @@ function CharacterController.new(deps: {
 	walkSpeed: number?,
 	runSpeed: number?,
 	now: (() -> number)?,
+	hitContact: any?,
 }): Controller
 	local controller: Controller = {
 		state = deps.state,
@@ -54,6 +59,8 @@ function CharacterController.new(deps: {
 		connection = nil,
 		characterAddedConnection = nil,
 		now = deps.now or os.clock,
+		hitContact = deps.hitContact,
+		lastClaimedTargetId = nil,
 	}
 	deps.inputSubscribe(deps.input, function(action: string, _payload: { [string]: any })
 		CharacterController.onAction(controller, action)
@@ -249,17 +256,108 @@ function CharacterController.clearLock(controller: Controller): ()
 	controller.lockTarget = nil
 end
 
+local function partPosition(part: any): { x: number, y: number, z: number }?
+	if not part then
+		return nil
+	end
+	local position = part.Position
+	if not position or type(position.X) ~= "number" or type(position.Z) ~= "number" then
+		return nil
+	end
+	local y = if type(position.Y) == "number" then position.Y else 0
+	return { x = position.X, y = y, z = position.Z }
+end
+
+local function localRootPosition(controller: Controller): { x: number, y: number, z: number }?
+	local players = controller.players
+	local player = if players then players.LocalPlayer else nil
+	local character = if player then player.Character else nil
+	local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
+	return partPosition(root)
+end
+
+function CharacterController.collectCandidates(
+	controller: Controller
+): { { id: string, position: { x: number, y: number, z: number } } }
+	local candidates: { { id: string, position: { x: number, y: number, z: number } } } = {}
+	local players = controller.players
+	local localPlayer = if players then players.LocalPlayer else nil
+	if players and type(players.GetPlayers) == "function" then
+		for _, other in players:GetPlayers() do
+			if other ~= localPlayer then
+				local character = other.Character
+				local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
+				local position = partPosition(root)
+				local userId = other.UserId
+				if position and type(userId) == "number" then
+					table.insert(candidates, {
+						id = "player:" .. tostring(userId),
+						position = position,
+					})
+				end
+			end
+		end
+	end
+	local workspace = controller.workspace
+	local world = if workspace then workspace:FindFirstChild("GreyboxF0") else nil
+	local actors = if world then world:FindFirstChild("Actors") else nil
+	if actors then
+		for _, child in actors:GetChildren() do
+			if child:IsA("Model") then
+				local actorId = child:GetAttribute("ActorId")
+				if type(actorId) == "string" then
+					local root = child:FindFirstChild("HumanoidRootPart") or child.PrimaryPart
+					local position = partPosition(root)
+					if position then
+						table.insert(candidates, { id = actorId, position = position })
+					end
+				end
+			end
+		end
+	end
+	return candidates
+end
+
+function CharacterController.claimTarget(controller: Controller, isHeavy: boolean): string?
+	local hitContact = controller.hitContact
+	if not hitContact then
+		return nil
+	end
+	local origin = localRootPosition(controller)
+	local look = CharacterController.aimVector(controller)
+	if not origin or not look then
+		return nil
+	end
+	local reach = if isHeavy then hitContact.HeavyReachStuds else hitContact.LightReachStuds[1]
+	local halfAngle = if isHeavy then hitContact.HeavyHalfAngleDegrees else hitContact.LightHalfAngleDegrees
+	return hitContact.acquire(
+		origin,
+		{ x = look.x, y = 0, z = look.z },
+		CharacterController.collectCandidates(controller),
+		reach,
+		halfAngle
+	)
+end
+
 function CharacterController.onAction(controller: Controller, action: string): ()
 	if action == "BasicLight" or action == "BasicHeavy" then
 		if controller.state.platform ~= "KeyboardMouse" then
 			aimAt(controller, findAimTarget(controller, SOFT_LOCK_DISTANCE, SOFT_LOCK_DEGREES))
 		end
 		-- O corpo NÃO gira: a direção do golpe vai declarada no payload.
-		controller.send("BasicAttackIntent", "BasicAttackIntent", {
-			kind = if action == "BasicHeavy" then "heavy" else "light",
+		-- claimedTargetId é pista visual; dano e HP continuam no servidor.
+		local isHeavy = action == "BasicHeavy"
+		local claimed = CharacterController.claimTarget(controller, isHeavy)
+		controller.lastClaimedTargetId = claimed
+		local payload: { [string]: any } = {
+			kind = if isHeavy then "heavy" else "light",
 			phase = "press",
 			aim = CharacterController.aimVector(controller),
-		})
+		}
+		if type(claimed) == "string" then
+			payload.claimedTargetId = claimed
+		end
+		controller.send("BasicAttackIntent", "BasicAttackIntent", payload)
 	elseif action == "GuardDown" or action == "GuardUp" then
 		controller.send("GuardIntent", "GuardIntent", {
 			phase = if action == "GuardDown" then "down" else "up",

@@ -1,5 +1,28 @@
 # Snapshot Canônico da Documentação — 17/08/2026
 
+## Rodada de 17/08 (Grok) — contato local, HP no servidor (R1)
+
+Playtest de dois clientes: o soco de um no outro (e no monstro) chegava
+atrasado. Pose já era local; flash/número/hit-stop esperavam o `CombatEvent`;
+no PvP a HRP do outro replica.
+
+**Opção A fechada em código:**
+
+1. `HitContact` (shared, puro) — cone, folga de 5 studs + 15°, `view`, janela
+   de 350 ms para não dobrar feeling.
+2. `claimedTargetId` no `BasicAttackIntent` é pista. Cone do servidor vence;
+   a pista só entra no miss espacial e ainda passa por vida/fronteira/folga.
+3. Cliente antecipa hit-stop/câmera/som no instante da antecipação se o cone
+   local viu alvo. Número e VFX `requiresConfirmation` continuam no
+   `CombatEvent`.
+4. `CombatEvent.view = dealt | taken` — o outro jogador sente o golpe no
+   mesmo frame em que o HP muda.
+
+R1 de feeling/registro fecha em contrato headless. Latência real de dois
+clientes no Studio ainda é evidência de Play, não desta suíte.
+
+---
+
 ## Rodada de 17/08 (Claude-windows) — a Instrutora sai do pilar e a skin aparece
 
 Rodada de conserto: a silhueta feminina da Instrutora tinha entrado em `54836f9`

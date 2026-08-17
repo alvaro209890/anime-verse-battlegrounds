@@ -296,6 +296,29 @@ expectRejected(
 	}, "extra-dash", 1),
 	"payload_schema"
 )
+check(
+	"pista de alvo declarada no golpe",
+	SecurityService.inspect(
+		741,
+		"BasicAttackIntent",
+		RemoteEnvelope.create("BasicAttackIntent", {
+			kind = "light",
+			phase = "press",
+			claimedTargetId = "player:777",
+		}, "claimed-ok", 1)
+	) ~= nil
+)
+expectRejected(
+	"pista de alvo com espaço",
+	741,
+	"BasicAttackIntent",
+	RemoteEnvelope.create("BasicAttackIntent", {
+		kind = "light",
+		phase = "press",
+		claimedTargetId = "player 777",
+	}, "claimed-bad", 2),
+	"payload_schema"
+)
 expectRejected(
 	"payload com nove chaves",
 	729,

@@ -23,9 +23,9 @@ export type CombatAction =
 	| "Ability1"
 	| "Ability2"
 	| "Ability3"
-	-- Eco da Cadência (reentrada) e contra do Pulso são momentos próprios da
-	-- técnica: reusar a pose da ativação faria o jogador ler "de novo o mesmo
-	-- golpe" onde a regra mudou (docs/18 §2.2 e §2.3).
+	-- Eco da Cadência (reentrada) e contra do Pulso são momentos próprios da
+	-- técnica: reusar a pose da ativação faria o jogador ler "de novo o mesmo
+	-- golpe" onde a regra mudou (docs/18 §2.2 e §2.3).
 	| "Ability2Echo"
 	| "Ability3Counter"
 
@@ -102,6 +102,12 @@ export type Animator = {
 	emitCue: ((string) -> ())?,
 	pendingCue: string?,
 	pendingCueAt: number,
+	-- Contato previsto (docs/17 §2.11): dispara no instante da antecipação,
+	-- o mesmo do corte de ar. O CombatEvent confirma HP; se chegar antes,
+	-- clearPredictedHit evita o flash dobrado.
+	predictedHitAbilityId: string?,
+	predictedHitAt: number,
+	onPredictedHit: ((string) -> ())?,
 	character: Model?,
 	joints: { [string]: JointState },
 	preSimulationConnection: any?,
@@ -1614,6 +1620,7 @@ function PlayerCombatAnimator.new(deps: {
 	runService: any,
 	now: (() -> number)?,
 	emitCue: ((string) -> ())?,
+	onPredictedHit: ((string) -> ())?,
 }): Animator
 	return {
 		player = deps.player,
@@ -1628,6 +1635,9 @@ function PlayerCombatAnimator.new(deps: {
 		emitCue = deps.emitCue,
 		pendingCue = nil,
 		pendingCueAt = 0,
+		predictedHitAbilityId = nil,
+		predictedHitAt = 0,
+		onPredictedHit = deps.onPredictedHit,
 		character = nil,
 		joints = {},
 		preSimulationConnection = nil,
@@ -1713,6 +1723,7 @@ function PlayerCombatAnimator.play(animator: Animator, action: string): boolean
 	end
 	animator.action = action :: CombatAction
 	animator.actionStartedAt = now
+	PlayerCombatAnimator.clearPredictedHit(animator)
 	scheduleCue(animator, action, now)
 	return true
 end
@@ -1741,6 +1752,32 @@ function PlayerCombatAnimator.flushCue(animator: Animator, now: number): string?
 	return cueId
 end
 
+function PlayerCombatAnimator.armPredictedHit(animator: Animator, abilityId: string, delaySeconds: number): ()
+	if type(abilityId) ~= "string" or abilityId == "" then
+		return
+	end
+	animator.predictedHitAbilityId = abilityId
+	animator.predictedHitAt = animator.now() + math.max(0, delaySeconds)
+end
+
+function PlayerCombatAnimator.clearPredictedHit(animator: Animator): ()
+	animator.predictedHitAbilityId = nil
+	animator.predictedHitAt = 0
+end
+
+function PlayerCombatAnimator.flushPredictedHit(animator: Animator, now: number): string?
+	local abilityId = animator.predictedHitAbilityId
+	if not abilityId or now < animator.predictedHitAt then
+		return nil
+	end
+	animator.predictedHitAbilityId = nil
+	local emit = animator.onPredictedHit
+	if emit then
+		emit(abilityId)
+	end
+	return abilityId
+end
+
 -- A cadeia leve tem duração própria por degrau; as demais ações usam DURATIONS.
 -- Isolado em função para que o refinamento de `action` fique contido aqui.
 local function actionDuration(action: CombatAction?, comboStep: number): number
@@ -1757,6 +1794,7 @@ function PlayerCombatAnimator.step(animator: Animator): ()
 	-- Áudio antes do early return: o som da ação não depende de o rig já estar
 	-- anexado, e perder o corte de ar por um frame sem personagem seria audível.
 	PlayerCombatAnimator.flushCue(animator, animator.now())
+	PlayerCombatAnimator.flushPredictedHit(animator, animator.now())
 
 	-- Hit-stop visual: segura a pose por alguns ms no impacto confirmado.
 	if PlayerCombatAnimator.hitStopActive(animator.now(), animator.hitStopUntil) then
