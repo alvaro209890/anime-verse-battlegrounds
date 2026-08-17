@@ -19,7 +19,7 @@ Cada NPC agora possui uma skin declarada em `WorldPresentation.luau`, com paleta
 | `enemy_wandering_shard` | **Fenda Ciano** | Ciano (104, 220, 238) | Halo ciano orbitando o núcleo mineral, casca de rocha arredondando o volume, anel de fenda e duas lascas soltas. |
 | `enemy_anchored_shard` | **Coroa do Vazio** | Laranja (255, 118, 92) | Coroa de cinco pontas de alturas alternadas, colar de ancoragem em basalto com quatro cravos e manto de pedra. |
 | `npc_training_dummy` | **Saco de Treino** | Vermelho (226, 78, 78) | Alvo Neon vermelho no peito. |
-| `npc_threshold_instructor`| **Guardião do Limiar** | Violeta (138, 96, 196) | Bordas do capuz e gola em Neon violeta. |
+| `npc_threshold_instructor`| **Guardiã do Limiar** | Violeta (138, 96, 196) | Cabelo longo + rabo, casaco com saia em camadas, neon só nas bordas (capuz/gola/punhos/hem). |
 
 ## Habilidades e Animações
 

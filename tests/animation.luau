@@ -969,14 +969,32 @@ test("cenário: as fontes de luz do spawn são dados, ficam na sala e cobrem o r
 end)
 
 test("npc: instrutora tem silhueta visual enriquecida e rosto validado", function()
-	local rig = require("../src/shared/Data/WorldPresentation").rigFor("npc_threshold_instructor")
+	local Presentation = require("../src/shared/Data/WorldPresentation")
+	local rig = Presentation.rigFor("npc_threshold_instructor")
 	assertTrue(rig ~= nil, "rig da instrutora existe")
 	if not rig then
 		return
 	end
-	assertTrue(#rig.gear >= 20, "instrutora tem camadas suficientes")
+	-- 17/08: silhueta feminina (cabelo longo + saia) — densidade mínima sobe.
+	assertTrue(#rig.gear >= 40, "instrutora tem camadas suficientes para silhueta feminina")
 	assertEq(rig.faceTexture, "rbxasset://textures/face.png", "rosto usa textura embutida")
-	local ok, reason = require("../src/shared/Data/WorldPresentation").validateRigs()
+	assertTrue(rig.scales.width <= 0.9, "ombros mais estreitos que o dummy genérico")
+	assertTrue(rig.scales.proportion >= 0.55, "proporção alongada da instrutora")
+
+	local function has(name: string): boolean
+		for _, piece in rig.gear do
+			if piece.name == name then
+				return true
+			end
+		end
+		return false
+	end
+	assertTrue(has("HairTail"), "rabo de cabelo longo")
+	assertTrue(has("OverSkirt"), "saia em camadas")
+	assertTrue(has("WaistCinch"), "cintura marcada")
+	assertTrue(has("HairOrnament"), "ornamento umbral no cabelo")
+
+	local ok, reason = Presentation.validateRigs()
 	assertTrue(ok, reason or "rigs válidos")
 end)
 

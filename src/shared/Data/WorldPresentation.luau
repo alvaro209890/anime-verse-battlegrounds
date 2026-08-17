@@ -119,17 +119,18 @@ local Actors: { [string]: ActorRecipe } = {
 		id = "npc_threshold_instructor",
 		shape = "humanoid",
 		scale = 1.05,
-		-- O mensageiro do Limiar: casaco escuro, energia umbral nas bordas
-		-- (capuz, gola e faixa neon) e rosto pálido — a presença do anime.
+		-- Instrutora do Limiar (quest giver): casaco umbral, cabelo longo,
+		-- energia só nas bordas e rosto legível — silhueta feminina de anime,
+		-- não guarda andrógino de armadura.
 		bodyRgb = { 38, 40, 48 },
 		accentRgb = { 118, 84, 158 },
 		coreRgb = { 206, 196, 224 },
 		skinNameKey = "skin.threshold_warden",
 		auraRgb = { 138, 96, 196 },
-		auraScale = 1.0,
-		idleBobStuds = 0.04,
-		idleCyclesPerSecond = 0.35,
-		strideDegrees = 7,
+		auraScale = 1.05,
+		idleBobStuds = 0.05,
+		idleCyclesPerSecond = 0.32,
+		strideDegrees = 6,
 		telegraphLeanDegrees = 5,
 		attackLeanDegrees = 10,
 		deathTiltDegrees = 35,
@@ -173,11 +174,16 @@ local Actors: { [string]: ActorRecipe } = {
 	},
 }
 
-local HAIR: Rgb = { 26, 24, 38 }
+local HAIR: Rgb = { 32, 28, 48 }
+local HAIR_DEEP: Rgb = { 22, 18, 34 }
+local HAIR_SHEEN: Rgb = { 72, 58, 110 }
 local UMBRAL: Rgb = { 138, 96, 196 }
 local UMBRAL_CORE: Rgb = { 226, 214, 250 }
-local COAT: Rgb = { 40, 42, 54 }
-local COAT_DARK: Rgb = { 26, 27, 36 }
+local UMBRAL_SOFT: Rgb = { 168, 132, 214 }
+local COAT: Rgb = { 42, 40, 56 }
+local COAT_DARK: Rgb = { 28, 26, 38 }
+local COAT_LINING: Rgb = { 58, 44, 82 }
+local SKIN_TONE: Rgb = { 232, 208, 198 }
 local BURLAP: Rgb = { 186, 156, 108 }
 local BURLAP_DARK: Rgb = { 148, 120, 80 }
 local ROPE: Rgb = { 122, 96, 58 }
@@ -187,14 +193,26 @@ local TARGET_PALE: Rgb = { 226, 214, 183 }
 local TARGET_RED: Rgb = { 226, 78, 78 }
 local TARGET_CORE: Rgb = { 244, 238, 220 }
 
--- Escalas da HumanoidDescription dos dois bots. Ver o aviso do cabeçalho: as
--- medidas do rig neste arquivo só valem para estes cinco números.
+-- Escalas da HumanoidDescription. Ver o aviso do cabeçalho: as medidas do
+-- gear do dummy valem para `RIG_SCALES`; a instrutora usa `INSTRUCTOR_SCALES`
+-- (ombros um pouco mais estreitos, proporção um pouco mais alongada).
 local RIG_SCALES: RigScales = {
 	bodyType = 1,
 	proportion = 0.5,
 	head = 1.14,
 	width = 0.92,
 	height = 0.95,
+}
+
+-- Silhueta feminina sem sair do Rthro: bodyType alto continua obrigatório
+-- (validateScales recusa o boneco cúbico). Width menor e height levemente
+-- maior dão ombro fino + linha de perna sem reescalar a roupa à mão.
+local INSTRUCTOR_SCALES: RigScales = {
+	bodyType = 1,
+	proportion = 0.58,
+	head = 1.10,
+	width = 0.86,
+	height = 0.98,
 }
 
 local function makeGear(
@@ -263,74 +281,116 @@ local function spike(
 	return makeGear("Block", "WedgePart", name, host, sizeStuds, offsetStuds, rotationDegrees, rgb, material)
 end
 
--- Instrutor do Limiar. Silhueta em volumes redondos: capuz e cabelo são
--- elipsoides concêntricos em volta da cabeça, ombreira é meia-esfera, e gola,
--- cinto, punho e barra são anéis. A energia umbral fica só nas BORDAS (testa do
--- capuz, gola, emblema, fivela, barra, punhos): neon em tudo apaga a silhueta.
+-- Instrutora do Limiar (quest giver). Silhueta feminina de anime em volumes
+-- redondos: cabelo longo com franja e rabo, capuz aberto no rosto, casaco com
+-- cintura marcada e saia em camadas, ombreiras leves (não pauldron de tank).
+-- Energia umbral só nas BORDAS — neon em tudo apaga a leitura de personagem.
 --
 -- ⚠️ O rosto ocupa a face −Z da cabeça (plano em z = −0,628) e os olhos sobem
 -- até y ≈ +0,31. Peça que avança na frente desse plano TEM de ficar acima dos
--- olhos, senão o instrutor volta a ser um vulto encapuzado sem cara.
--- `Presentation.gearClearsFace` trava isso.
+-- olhos, senão a instrutora volta a ser um vulto encapuzado sem cara.
+-- `Presentation.gearClearsFace` trava isso. Rosto = textura embutida
+-- `rbxasset://textures/face.png` (sem rbxassetid de catálogo).
 local INSTRUCTOR_GEAR: { RigGear } = {
-	blob("HairBack", "Head", { 1.36, 1.30, 1.34 }, { 0, 0.26, 0.12 }, { 0, 0, 0 }, HAIR, "Fabric"),
-	blob("HairTop", "Head", { 1.24, 0.86, 1.24 }, { 0, 0.62, 0.02 }, { 0, 0, 0 }, HAIR, "Fabric"),
-	blob("HairSideL", "Head", { 0.38, 0.92, 0.84 }, { -0.62, 0.02, 0.22 }, { 0, 0, -8 }, HAIR, "Fabric"),
-	blob("HairSideR", "Head", { 0.38, 0.92, 0.84 }, { 0.62, 0.02, 0.22 }, { 0, 0, 8 }, HAIR, "Fabric"),
-	-- Franja em cinco mechas de alturas e ângulos diferentes: uma mecha só, ou
-	-- cinco iguais, lê como capacete.
-	spike("Fringe", "Head", { 0.30, 0.42, 0.26 }, { -0.44, 0.58, -0.48 }, { -26, -22, -8 }, HAIR, "Fabric"),
-	spike("Fringe", "Head", { 0.26, 0.38, 0.24 }, { -0.22, 0.60, -0.52 }, { -22, -10, 6 }, HAIR, "Fabric"),
-	spike("Fringe", "Head", { 0.30, 0.44, 0.26 }, { 0.02, 0.58, -0.53 }, { -30, 4, -4 }, HAIR, "Fabric"),
-	spike("Fringe", "Head", { 0.26, 0.38, 0.24 }, { 0.24, 0.60, -0.52 }, { -22, 12, 8 }, HAIR, "Fabric"),
-	spike("Fringe", "Head", { 0.30, 0.42, 0.26 }, { 0.44, 0.58, -0.48 }, { -26, 24, 6 }, HAIR, "Fabric"),
-	blob("HoodShell", "Head", { 1.78, 1.62, 1.72 }, { 0, 0.18, 0.42 }, { 0, 0, 0 }, COAT, "Leather"),
-	blob("HoodCheek", "Head", { 0.44, 1.30, 1.30 }, { -0.72, 0.06, 0.16 }, { 0, 0, 0 }, COAT, "Leather"),
-	blob("HoodCheek", "Head", { 0.44, 1.30, 1.30 }, { 0.72, 0.06, 0.16 }, { 0, 0, 0 }, COAT, "Leather"),
-	blob("HoodBrow", "Head", { 1.80, 0.20, 1.70 }, { 0, 0.72, 0.30 }, { 0, 0, 0 }, UMBRAL, "Neon"),
+	-- ── Cabelo ────────────────────────────────────────────────────────────
+	-- Volume de cima + nuca; laterais curtos enquadram a face; mechas longas e
+	-- rabo descem pelo tronco (presos ao UpperTorso) para ler como cabelo de
+	-- anime e não capacete curto.
+	blob("HairBack", "Head", { 1.42, 1.36, 1.40 }, { 0, 0.22, 0.18 }, { 0, 0, 0 }, HAIR, "Fabric"),
+	blob("HairTop", "Head", { 1.28, 0.92, 1.28 }, { 0, 0.66, 0.04 }, { 0, 0, 0 }, HAIR, "Fabric"),
+	blob("HairCrown", "Head", { 0.96, 0.48, 0.96 }, { 0, 0.88, 0.06 }, { 0, 0, 0 }, HAIR_DEEP, "Fabric"),
+	blob("HairSideL", "Head", { 0.42, 1.05, 0.88 }, { -0.66, 0.00, 0.18 }, { 0, 0, -10 }, HAIR, "Fabric"),
+	blob("HairSideR", "Head", { 0.42, 1.05, 0.88 }, { 0.66, 0.00, 0.18 }, { 0, 0, 10 }, HAIR, "Fabric"),
+	-- Franja em mechas assimétricas (alturas/ângulos diferentes): cinco iguais
+	-- lê como capacete; a mecha central fica um pouco mais alta.
+	spike("Fringe", "Head", { 0.28, 0.40, 0.24 }, { -0.46, 0.60, -0.46 }, { -24, -24, -8 }, HAIR, "Fabric"),
+	spike("Fringe", "Head", { 0.24, 0.36, 0.22 }, { -0.24, 0.62, -0.50 }, { -20, -12, 4 }, HAIR, "Fabric"),
+	spike("Fringe", "Head", { 0.28, 0.42, 0.24 }, { 0.00, 0.64, -0.52 }, { -28, 2, -2 }, HAIR, "Fabric"),
+	spike("Fringe", "Head", { 0.24, 0.36, 0.22 }, { 0.26, 0.62, -0.50 }, { -20, 14, 6 }, HAIR, "Fabric"),
+	spike("Fringe", "Head", { 0.28, 0.40, 0.24 }, { 0.46, 0.60, -0.46 }, { -24, 26, 8 }, HAIR, "Fabric"),
+	-- Mechas laterais longas (atrás do plano do rosto) + rabo de cavalo.
+	blob("HairLockL", "Head", { 0.34, 1.20, 0.40 }, { -0.58, -0.42, 0.28 }, { 0, 0, -6 }, HAIR_DEEP, "Fabric"),
+	blob("HairLockR", "Head", { 0.34, 1.20, 0.40 }, { 0.58, -0.42, 0.28 }, { 0, 0, 6 }, HAIR_DEEP, "Fabric"),
+	blob("HairTail", "UpperTorso", { 0.52, 1.70, 0.48 }, { 0.08, 0.10, 0.72 }, { 12, 0, 4 }, HAIR, "Fabric"),
+	blob("HairTailTip", "UpperTorso", { 0.40, 0.90, 0.38 }, { 0.10, -0.70, 0.86 }, { 18, 0, 4 }, HAIR_DEEP, "Fabric"),
+	blob("HairSheen", "Head", { 0.70, 0.28, 0.50 }, { -0.18, 0.72, 0.20 }, { 0, 0, -12 }, HAIR_SHEEN, "Fabric"),
+	band("HairTie", "Head", { 0.14, 0.48, 0.48 }, { 0.04, 0.28, 0.72 }, { 0, 0, 90 }, UMBRAL, "Neon"),
+	blob("HairOrnament", "Head", { 0.28, 0.28, 0.18 }, { -0.42, 0.56, -0.10 }, { 0, 0, 0 }, UMBRAL_SOFT, "Neon"),
+	blob("HairOrnamentCore", "Head", { 0.12, 0.12, 0.10 }, { -0.42, 0.56, -0.16 }, { 0, 0, 0 }, UMBRAL_CORE, "Neon"),
 
-	-- Casaco: um elipsoide sobre o tronco arredonda o peito antes de qualquer
-	-- detalhe. Sem ele, cinto e emblema ficam colados numa caixa.
-	blob("CoatChest", "UpperTorso", { 1.92, 2.00, 1.20 }, { 0, 0, 0.02 }, { 0, 0, 0 }, COAT, "Fabric"),
-	band("Collar", "UpperTorso", { 0.46, 1.24, 1.24 }, { 0, 0.86, 0.02 }, { 0, 0, 90 }, COAT, "Fabric"),
-	band("CollarGlow", "UpperTorso", { 0.10, 1.30, 1.30 }, { 0, 1.06, 0.02 }, { 0, 0, 90 }, UMBRAL, "Neon"),
-	blob("Sash", "UpperTorso", { 0.34, 1.70, 1.22 }, { -0.30, 0, -0.02 }, { 0, 0, -18 }, COAT_DARK, "Fabric"),
-	blob("WaistPanel", "LowerTorso", { 1.62, 1.12, 1.16 }, { 0, -0.18, 0.04 }, { 0, 0, 0 }, COAT, "Fabric"),
-	blob("CapePanelL", "UpperTorso", { 0.62, 1.72, 0.38 }, { -0.70, -0.62, 0.34 }, { 8, 0, -8 }, COAT, "Fabric"),
-	blob("CapePanelR", "UpperTorso", { 0.62, 1.72, 0.38 }, { 0.70, -0.62, 0.34 }, { 8, 0, 8 }, COAT, "Fabric"),
-	blob("Emblem", "UpperTorso", { 0.36, 0.44, 0.20 }, { 0, 0.20, -0.62 }, { 0, 0, 0 }, UMBRAL, "Neon"),
-	blob("EmblemCore", "UpperTorso", { 0.16, 0.18, 0.14 }, { 0, 0.20, -0.66 }, { 0, 0, 0 }, UMBRAL_CORE, "Neon"),
-	band("Belt", "UpperTorso", { 0.34, 1.55, 1.20 }, { 0, -0.86, 0.02 }, { 0, 0, 90 }, COAT_DARK, "Leather"),
-	blob("Buckle", "UpperTorso", { 0.36, 0.40, 0.22 }, { 0, -0.86, -0.60 }, { 0, 0, 0 }, UMBRAL, "Neon"),
-	-- Saia do casaco: nasce no tórax e desce por cima das coxas. Presa ao tronco
-	-- de propósito — casaco não acompanha a perna.
-	blob("CoatSkirt", "UpperTorso", { 1.80, 1.50, 1.34 }, { 0, -1.62, 0.04 }, { 0, 0, 0 }, COAT, "Fabric"),
-	band("Hem", "UpperTorso", { 0.12, 1.86, 1.40 }, { 0, -2.26, 0.04 }, { 0, 0, 90 }, UMBRAL, "Neon"),
-	spike("CoatTail", "UpperTorso", { 0.74, 2.00, 0.42 }, { -0.34, -2.20, 0.48 }, { 10, 0, -5 }, COAT, "Fabric"),
-	spike("CoatTail", "UpperTorso", { 0.74, 2.00, 0.42 }, { 0.34, -2.20, 0.48 }, { 10, 0, 5 }, COAT, "Fabric"),
+	-- ── Capuz (aberto, emoldura sem tapar o rosto) ─────────────────────────
+	blob("HoodShell", "Head", { 1.82, 1.58, 1.70 }, { 0, 0.22, 0.46 }, { 0, 0, 0 }, COAT, "Leather"),
+	blob("HoodCheek", "Head", { 0.40, 1.22, 1.18 }, { -0.74, 0.08, 0.22 }, { 0, 0, 0 }, COAT, "Leather"),
+	blob("HoodCheek", "Head", { 0.40, 1.22, 1.18 }, { 0.74, 0.08, 0.22 }, { 0, 0, 0 }, COAT, "Leather"),
+	blob("HoodBrow", "Head", { 1.76, 0.18, 1.58 }, { 0, 0.74, 0.34 }, { 0, 0, 0 }, UMBRAL, "Neon"),
+	-- Brincos: laterais da cabeça, atrás o suficiente para não invadir o rosto.
+	blob("EarringL", "Head", { 0.14, 0.28, 0.14 }, { -0.72, -0.18, 0.08 }, { 0, 0, 0 }, UMBRAL, "Neon"),
+	blob("EarringR", "Head", { 0.14, 0.28, 0.14 }, { 0.72, -0.18, 0.08 }, { 0, 0, 0 }, UMBRAL, "Neon"),
 
-	blob("Pauldron", "LeftUpperArm", { 1.32, 1.00, 1.36 }, { 0, 0.44, 0 }, { 0, 0, 8 }, COAT, "Fabric"),
-	blob("Pauldron", "RightUpperArm", { 1.32, 1.00, 1.36 }, { 0, 0.44, 0 }, { 0, 0, -8 }, COAT, "Fabric"),
-	band("PauldronGlow", "LeftUpperArm", { 0.10, 1.34, 1.38 }, { 0, 0.14, 0 }, { 0, 0, 90 }, UMBRAL, "Neon"),
-	band("PauldronGlow", "RightUpperArm", { 0.10, 1.34, 1.38 }, { 0, 0.14, 0 }, { 0, 0, 90 }, UMBRAL, "Neon"),
-	band("Cuff", "LeftLowerArm", { 0.26, 1.10, 1.18 }, { 0, -0.50, 0 }, { 0, 0, 90 }, UMBRAL, "Neon"),
-	band("Cuff", "RightLowerArm", { 0.26, 1.10, 1.18 }, { 0, -0.50, 0 }, { 0, 0, 90 }, UMBRAL, "Neon"),
-	blob("Glove", "LeftHand", { 1.04, 0.48, 1.26 }, { 0, -0.02, 0 }, { 0, 0, 0 }, COAT_DARK, "Leather"),
-	blob("Glove", "RightHand", { 1.04, 0.48, 1.26 }, { 0, -0.02, 0 }, { 0, 0, 0 }, COAT_DARK, "Leather"),
+	-- ── Casaco / torso ─────────────────────────────────────────────────────
+	-- Peito arredondado + cintura marcada (faixa + painel) + saia em camadas.
+	blob("CoatChest", "UpperTorso", { 1.78, 1.92, 1.14 }, { 0, 0.04, 0.02 }, { 0, 0, 0 }, COAT, "Fabric"),
+	blob("BustShape", "UpperTorso", { 1.48, 0.72, 0.92 }, { 0, 0.28, -0.12 }, { 0, 0, 0 }, COAT, "Fabric"),
+	band("Collar", "UpperTorso", { 0.42, 1.18, 1.18 }, { 0, 0.88, 0.02 }, { 0, 0, 90 }, COAT, "Fabric"),
+	band("CollarGlow", "UpperTorso", { 0.10, 1.24, 1.24 }, { 0, 1.06, 0.02 }, { 0, 0, 90 }, UMBRAL, "Neon"),
+	blob("Sash", "UpperTorso", { 0.32, 1.65, 1.10 }, { -0.28, 0.02, -0.04 }, { 0, 0, -16 }, COAT_LINING, "Fabric"),
+	blob("WaistPanel", "LowerTorso", { 1.48, 1.00, 1.08 }, { 0, -0.14, 0.04 }, { 0, 0, 0 }, COAT, "Fabric"),
+	band("WaistCinch", "LowerTorso", { 0.22, 1.42, 1.08 }, { 0, 0.10, 0.02 }, { 0, 0, 90 }, COAT_DARK, "Leather"),
+	blob("CapePanelL", "UpperTorso", { 0.58, 1.80, 0.36 }, { -0.68, -0.70, 0.38 }, { 10, 0, -10 }, COAT, "Fabric"),
+	blob("CapePanelR", "UpperTorso", { 0.58, 1.80, 0.36 }, { 0.68, -0.70, 0.38 }, { 10, 0, 10 }, COAT, "Fabric"),
+	blob(
+		"CapeLiningL",
+		"UpperTorso",
+		{ 0.40, 1.40, 0.22 },
+		{ -0.62, -0.55, 0.28 },
+		{ 8, 0, -8 },
+		COAT_LINING,
+		"Fabric"
+	),
+	blob("CapeLiningR", "UpperTorso", { 0.40, 1.40, 0.22 }, { 0.62, -0.55, 0.28 }, { 8, 0, 8 }, COAT_LINING, "Fabric"),
+	blob("Emblem", "UpperTorso", { 0.34, 0.42, 0.18 }, { 0, 0.22, -0.58 }, { 0, 0, 0 }, UMBRAL, "Neon"),
+	blob("EmblemCore", "UpperTorso", { 0.14, 0.16, 0.12 }, { 0, 0.22, -0.62 }, { 0, 0, 0 }, UMBRAL_CORE, "Neon"),
+	band("Belt", "UpperTorso", { 0.30, 1.42, 1.12 }, { 0, -0.82, 0.02 }, { 0, 0, 90 }, COAT_DARK, "Leather"),
+	blob("Buckle", "UpperTorso", { 0.32, 0.36, 0.20 }, { 0, -0.82, -0.56 }, { 0, 0, 0 }, UMBRAL, "Neon"),
+	-- Saia em duas camadas: volume principal + overskirt mais largo/curto.
+	blob("CoatSkirt", "UpperTorso", { 1.72, 1.55, 1.28 }, { 0, -1.58, 0.04 }, { 0, 0, 0 }, COAT, "Fabric"),
+	blob("OverSkirt", "UpperTorso", { 1.95, 0.95, 1.42 }, { 0, -1.20, 0.06 }, { 0, 0, 0 }, COAT_DARK, "Fabric"),
+	band("Hem", "UpperTorso", { 0.12, 1.90, 1.42 }, { 0, -2.28, 0.04 }, { 0, 0, 90 }, UMBRAL, "Neon"),
+	spike("CoatTail", "UpperTorso", { 0.70, 2.05, 0.40 }, { -0.36, -2.18, 0.50 }, { 12, 0, -6 }, COAT, "Fabric"),
+	spike("CoatTail", "UpperTorso", { 0.70, 2.05, 0.40 }, { 0.36, -2.18, 0.50 }, { 12, 0, 6 }, COAT, "Fabric"),
 
-	blob("Boot", "LeftLowerLeg", { 1.06, 1.10, 1.20 }, { 0, -0.44, -0.02 }, { 0, 0, 0 }, COAT_DARK, "Leather"),
-	blob("Boot", "RightLowerLeg", { 1.06, 1.10, 1.20 }, { 0, -0.44, -0.02 }, { 0, 0, 0 }, COAT_DARK, "Leather"),
+	-- Cachecol leve no ombro (movimento sem tapar o peito).
+	blob("ScarfKnot", "UpperTorso", { 0.40, 0.38, 0.32 }, { -0.18, 0.82, 0.28 }, { 0, 0, 0 }, UMBRAL_SOFT, "Neon"),
+	spike(
+		"ScarfTail",
+		"UpperTorso",
+		{ 0.32, 1.35, 0.26 },
+		{ -0.24, 0.05, 0.50 },
+		{ 16, 0, -12 },
+		COAT_LINING,
+		"Fabric"
+	),
+	blob("HipPouch", "LowerTorso", { 0.48, 0.52, 0.40 }, { 0.58, -0.18, 0.08 }, { 0, 0, -10 }, COAT_DARK, "Leather"),
 
-	-- 15/08: a silhueta de trás e de perfil ainda era lisa. Cachecol e nó dão
-	-- movimento no ombro, a bolsa quebra a linha reta do quadril e a joelheira
-	-- fecha a perna entre a barra do casaco e a bota. Tudo atrás do plano do
-	-- rosto ou fora da cabeça: nada disso pode tapar os olhos.
-	band("HairTie", "Head", { 0.16, 0.62, 0.62 }, { 0, 0.10, 0.66 }, { 0, 0, 90 }, UMBRAL, "Neon"),
-	blob("ScarfKnot", "UpperTorso", { 0.42, 0.40, 0.34 }, { -0.16, 0.80, 0.30 }, { 0, 0, 0 }, UMBRAL, "Neon"),
-	spike("ScarfTail", "UpperTorso", { 0.34, 1.30, 0.28 }, { -0.22, 0.10, 0.52 }, { 14, 0, -10 }, COAT_DARK, "Fabric"),
-	blob("HipPouch", "LowerTorso", { 0.52, 0.56, 0.44 }, { 0.62, -0.20, 0.10 }, { 0, 0, -12 }, COAT_DARK, "Leather"),
-	band("KneeGuard", "LeftLowerLeg", { 0.22, 1.14, 1.22 }, { 0, 0.42, 0 }, { 0, 0, 90 }, COAT, "Leather"),
-	band("KneeGuard", "RightLowerLeg", { 0.22, 1.14, 1.22 }, { 0, 0.42, 0 }, { 0, 0, 90 }, COAT, "Leather"),
+	-- ── Braços: ombreira leve (não tanque) + punho + luva ───────────────────
+	blob("Pauldron", "LeftUpperArm", { 1.10, 0.78, 1.12 }, { 0, 0.40, 0 }, { 0, 0, 6 }, COAT, "Fabric"),
+	blob("Pauldron", "RightUpperArm", { 1.10, 0.78, 1.12 }, { 0, 0.40, 0 }, { 0, 0, -6 }, COAT, "Fabric"),
+	band("PauldronGlow", "LeftUpperArm", { 0.08, 1.12, 1.14 }, { 0, 0.12, 0 }, { 0, 0, 90 }, UMBRAL, "Neon"),
+	band("PauldronGlow", "RightUpperArm", { 0.08, 1.12, 1.14 }, { 0, 0.12, 0 }, { 0, 0, 90 }, UMBRAL, "Neon"),
+	blob("Sleeve", "LeftUpperArm", { 0.95, 1.20, 0.95 }, { 0, -0.10, 0 }, { 0, 0, 0 }, COAT, "Fabric"),
+	blob("Sleeve", "RightUpperArm", { 0.95, 1.20, 0.95 }, { 0, -0.10, 0 }, { 0, 0, 0 }, COAT, "Fabric"),
+	band("Cuff", "LeftLowerArm", { 0.24, 1.02, 1.08 }, { 0, -0.48, 0 }, { 0, 0, 90 }, UMBRAL, "Neon"),
+	band("Cuff", "RightLowerArm", { 0.24, 1.02, 1.08 }, { 0, -0.48, 0 }, { 0, 0, 90 }, UMBRAL, "Neon"),
+	blob("Glove", "LeftHand", { 0.98, 0.44, 1.16 }, { 0, -0.02, 0 }, { 0, 0, 0 }, COAT_DARK, "Leather"),
+	blob("Glove", "RightHand", { 0.98, 0.44, 1.16 }, { 0, -0.02, 0 }, { 0, 0, 0 }, COAT_DARK, "Leather"),
+
+	-- ── Pernas / botas ─────────────────────────────────────────────────────
+	band("KneeGuard", "LeftLowerLeg", { 0.18, 1.06, 1.12 }, { 0, 0.40, 0 }, { 0, 0, 90 }, COAT, "Leather"),
+	band("KneeGuard", "RightLowerLeg", { 0.18, 1.06, 1.12 }, { 0, 0.40, 0 }, { 0, 0, 90 }, COAT, "Leather"),
+	blob("Boot", "LeftLowerLeg", { 1.00, 1.05, 1.14 }, { 0, -0.42, -0.02 }, { 0, 0, 0 }, COAT_DARK, "Leather"),
+	blob("Boot", "RightLowerLeg", { 1.00, 1.05, 1.14 }, { 0, -0.42, -0.02 }, { 0, 0, 0 }, COAT_DARK, "Leather"),
+	blob("BootCuff", "LeftFoot", { 1.00, 0.36, 1.10 }, { 0, 0.10, 0.02 }, { 0, 0, 0 }, COAT, "Leather"),
+	blob("BootCuff", "RightFoot", { 1.00, 0.36, 1.10 }, { 0, 0.10, 0.02 }, { 0, 0, 0 }, COAT, "Leather"),
 }
 
 -- Boneco de treino: saco de estopa amarrado, palha saindo pelas costuras,
@@ -648,13 +708,14 @@ local SHARD_REQUIRED: { string } = { "enemy_wandering_shard", "enemy_anchored_sh
 local Rigs: { [string]: RigRecipe } = {
 	npc_threshold_instructor = {
 		npcId = "npc_threshold_instructor",
-		skinRgb = { 226, 205, 194 },
+		skinRgb = SKIN_TONE,
 		bodyRgb = COAT,
 		legRgb = COAT_DARK,
 		bodyMaterial = "Fabric",
 		legMaterial = "Leather",
+		-- Rosto embutido do cliente: sem download, sem moderação de catálogo.
 		faceTexture = "rbxasset://textures/face.png",
-		scales = RIG_SCALES,
+		scales = INSTRUCTOR_SCALES,
 		gear = INSTRUCTOR_GEAR,
 	},
 	npc_training_dummy = {

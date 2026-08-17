@@ -82,7 +82,7 @@ As receitas vivem em `src/shared/Data/WorldPresentation.luau`; o módulo guarda 
 | Ator | Forma | Escala | Papel visual |
 |---|---|---:|---|
 | Dummy de treino | **rig R15** + estopa/palha/alvo | 1,00 | saco de treino amarrado, com poste |
-| Instrutor do Limiar | **rig R15** + capuz/casaco | 1,05 | mensageiro umbral, rosto visível |
+| Instrutora do Limiar | **rig R15** + cabelo longo/casaco-saia | 1,05 | quest giver umbral, silhueta feminina, rosto visível |
 | Estilhaço Errante | núcleo + cunhas | 0,90 | ameaça móvel leve |
 | Estilhaço Ancorado | núcleo + cunhas | 1,65 | elite reconhecível por escala e massa, não só por cor |
 

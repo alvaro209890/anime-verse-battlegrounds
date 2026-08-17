@@ -31,16 +31,18 @@ Os valores são dados puros e passam por limites de RGB, transparência, brilho,
 
 ## Skin da instrutora
 
-A personagem `npc_threshold_instructor` mantém o rosto embutido `rbxasset://textures/face.png` e a autoridade da interação existente. A silhueta foi enriquecida com mechas laterais, painel de cintura e painéis de capa, preservando o rosto e mantendo o corpo R15 com proporção não cúbica.
+A personagem `npc_threshold_instructor` (quest giver) mantém o rosto embutido `rbxasset://textures/face.png` e a autoridade da interação existente. Em 17/08 a silhueta foi repolida para leitura **feminina de anime** (100% procedural, sem mesh/atlas de catálogo): cabelo longo com rabo, casaco com cintura e saia em camadas, ombreiras leves e neon só nas bordas.
 
 | Camada | Intenção |
 |---|---|
-| `HairSideL/R` | Enquadrar o rosto sem cobrir a faixa dos olhos |
-| `WaistPanel` | Dar transição visual entre torso, cinto e saia do casaco |
-| `CapePanelL/R` | Criar leitura lateral e movimento de tecido sem rig novo |
-| Emblema, gola, punhos e barra | Continuar usando acento umbral localizado, evitando silhueta toda neon |
+| `HairTail` / `HairLockL/R` / franja 5 mechas | Cabelo longo de anime; rabo no tronco, mechas laterais sem tapar olhos |
+| `HairOrnament` / `EarringL/R` / `HairTie` | Acentos umbral legíveis de perto |
+| `BustShape` + `WaistCinch` + `OverSkirt` | Silhueta feminina: peito, cintura e saia em camadas |
+| `CapePanel` + `CapeLining` | Leitura lateral/costas com forro violeta |
+| Emblema, gola, punhos e barra | Neon umbral **só nas bordas** — nunca silhueta toda neon |
+| `INSTRUCTOR_SCALES` | `width 0,86` / `proportion 0,58` / `height 0,98` (ombros mais finos que o dummy) |
 
-A skin é apresentação. Ela não muda `Npcs.luau`, `Interactions.luau`, `QuestService`, alcance, hold, recompensa ou qualquer decisão server-side.
+A skin é apresentação. Ela não muda `Npcs.luau`, `Interactions.luau`, `QuestService`, alcance, hold, recompensa ou qualquer decisão server-side. Inventário de assets: sem mesh humanoide candidata — ver artefato de assets da epic.
 
 ## Validação headless
 
