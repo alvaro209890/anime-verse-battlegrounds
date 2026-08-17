@@ -31,7 +31,7 @@ bastante para a camada de impacto existir.
 lune run scripts/avb-debug.luau sync    # exit 0 segue · exit 2 = reabra, não meça
 ```
 
-Depois: Play, encostar no dummy (≤ 11 studs centro-a-centro), acertar leve, pesado e Ombro Cometa
+Depois: Play, encostar no dummy (≤ 13 studs centro-a-centro), acertar leve, pesado e Ombro Cometa
 (passo `a1_impact`). Abrir **J** confirma o placar de carreira (dummy não conta). Com o Studio fechado, o mesmo atalho imprime em JSON:
 
 ```bash
@@ -112,7 +112,7 @@ aprovação em uma linha — ambíguo aqui vira discussão depois.
 | # | Passo | O que fazer | Capturar | Passa quando |
 |---|---|---|---|---|
 | 8 | **Impacto de verdade** | **encostar** no boneco (≤ 6 studs) e acertar leve, pesado e Ombro Cometa | vídeo 60 fps, número de dano na tela, Output **sem** `[Combat] ... errou` | os três conectam e a camada de impacto aparece: hit-stop, tremida, luz, som e número |
-| 9 | Cadeia leve | quatro cliques dentro de 0,65 s | vídeo dos quatro degraus, `props` da junta Root durante o golpe | silhueta distinta por degrau e `Root.Transform.Z` ≠ 0 |
+| 9 | Cadeia leve | quatro cliques dentro de 1,00 s | vídeo dos quatro degraus, `props` da junta Root durante o golpe | silhueta distinta por degrau e `Root.Transform.Z` ≠ 0 |
 
 > O passo 8 é o item 1 do recorte executivo (`docs/06` §5) e existe por um
 > motivo específico: **a camada de impacto nunca rodou**. No playtest de 14/08

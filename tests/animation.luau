@@ -264,7 +264,13 @@ test("cadeia: play avança o degrau e reinicia fora da janela", function()
 end)
 
 test("cadeia: janela de apresentação bate com LIGHT_WINDOW do servidor", function()
-	assertEq(PlayerCombatAnimator.LightChainWindowSeconds, 0.65, "janela espelha CombatService")
+	assertEq(PlayerCombatAnimator.LightChainWindowSeconds, 1.00, "janela espelha CombatService")
+	for step = 1, CHAIN do
+		assertTrue(
+			PlayerCombatAnimator.lightChainDuration(step) < PlayerCombatAnimator.LightChainWindowSeconds,
+			("degrau %d cabe na janela"):format(step)
+		)
+	end
 end)
 
 test("cadeia: pose nunca declara posição autoritativa", function()

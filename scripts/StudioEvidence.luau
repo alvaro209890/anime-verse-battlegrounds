@@ -114,7 +114,7 @@ local STEPS: { Step } = {
 		id = "a1_chain",
 		gate = "A1",
 		title = "Cadeia leve de quatro degraus",
-		action = "Quatro cliques seguidos dentro da janela de 0,65 s.",
+		action = "Quatro cliques seguidos dentro da janela de 1,00 s.",
 		capture = { "vídeo dos quatro degraus", "`props` da junta Root durante o golpe" },
 		pass = "Silhueta distinta por degrau e `Root.Transform.Z` diferente de zero — se der zero, é o defeito de docs/14 §4.7.",
 	},

@@ -59,8 +59,8 @@ end
 
 -- Espelham o handler de init.server.lua. Um teste trava a igualdade.
 -- 17/08: 3 studs deixava o jogador "colado" (centro-a-centro ~11) fora do
--- cone. 5 cobre torso+alvo sem abrir o hitbox para o lado do mapa.
-local BODY_ALLOWANCE_STUDS = 5
+-- cone. 7 cobre torso+alvo em movimento sem abrir o hitbox para o lado do mapa.
+local BODY_ALLOWANCE_STUDS = 7
 local BASIC_RANGE_STUDS = 6
 
 local HitContact = {}
@@ -74,13 +74,13 @@ HitContact.LightReachStuds = {
 	BASIC_RANGE_STUDS + BODY_ALLOWANCE_STUDS + 1,
 }
 HitContact.HeavyReachStuds = BASIC_RANGE_STUDS + BODY_ALLOWANCE_STUDS + 0.5
-HitContact.LightHalfAngleDegrees = 78
-HitContact.HeavyHalfAngleDegrees = 68
+HitContact.LightHalfAngleDegrees = 92
+HitContact.HeavyHalfAngleDegrees = 80
 
 -- Folga de latência: corrida 22 studs/s × ~230 ms de replica + RTT local.
 -- Só vale para o alvo que o cliente declarou; não alarga o cone autoritativo.
-HitContact.SlackStuds = 7
-HitContact.ClaimExtraAngleDegrees = 15
+HitContact.SlackStuds = 8
+HitContact.ClaimExtraAngleDegrees = 20
 -- Janela em que o CombatEvent não re-toca hit-stop/câmera/som já previstos.
 HitContact.PredictWindowSeconds = 0.35
 

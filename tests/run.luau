@@ -2177,12 +2177,12 @@ test("combate: golpe fatal emite outcome death no evento do básico", function()
 	assertFalse(CombatHudController.shouldShowDamage(taken), "quem apanha não desenha o número")
 end)
 
-test("combate: janela 0,65 s reinicia a cadeia", function()
+test("combate: janela 1,00 s reinicia a cadeia", function()
 	CombatService.clear()
 	local atk = CombatService.createFighter("p:a", "player", 100, 100)
 	local tgt = CombatService.createFighter("p:b", "player", 100, 100)
 	CombatService.tryLight(atk, tgt, 1.0, "front")
-	local result = CombatService.tryLight(atk, tgt, 1.7, "front")
+	local result = CombatService.tryLight(atk, tgt, 2.05, "front")
 	assertEq(result.step, 1, "reset")
 	assertEq(result.damage, 6, "primeiro golpe de novo")
 end)
@@ -4589,7 +4589,7 @@ test("espaço: hitbox à frente acerta o alvo e ignora quem está atrás", funct
 	assertEq(SpatialService.distanceBetween("player:900", "fantasma"), nil, "sem transform devolve nil")
 end)
 
--- docs/18 §8: medido no Studio, "colado no bicho" eram 11 studs de centro a
+-- docs/18 §8: medido no Studio, "colado no bicho" eram ~11 studs de centro a
 -- centro e a esfera de 6 studs nunca conectava. O cone corrige alcance E
 -- abertura, e sempre escolhe o alvo mais próximo dentro dela.
 test("espaço: cone de aquisição pega o mais próximo dentro do alcance e da abertura", function()
@@ -4685,13 +4685,14 @@ test("espaço: mira inválida é recusada e o cone volta para o corpo", function
 end)
 
 test("contato: alcance do módulo bate com o handler e o cone pega o mais próximo", function()
-	assertEq(HitContact.LightReachStuds[1], 11, "leve 1")
-	assertEq(HitContact.HeavyReachStuds, 11.5, "pesado")
-	assertEq(HitContact.LightHalfAngleDegrees, 78, "cone leve")
-	assertEq(HitContact.HeavyHalfAngleDegrees, 68, "cone pesado")
+	assertEq(CombatService.LightWindowSeconds, 1.00, "janela do servidor")
+	assertEq(HitContact.LightReachStuds[1], 13, "leve 1")
+	assertEq(HitContact.HeavyReachStuds, 13.5, "pesado")
+	assertEq(HitContact.LightHalfAngleDegrees, 92, "cone leve")
+	assertEq(HitContact.HeavyHalfAngleDegrees, 80, "cone pesado")
 	local source = fs.readFile("src/server/init.server.lua")
 	assertTrue(source:find("local BASIC_RANGE_STUDS = 6", 1, true) ~= nil, "handler ainda declara 6")
-	assertTrue(source:find("local BODY_ALLOWANCE_STUDS = 5", 1, true) ~= nil, "handler ainda declara folga 5")
+	assertTrue(source:find("local BODY_ALLOWANCE_STUDS = 7", 1, true) ~= nil, "handler ainda declara folga 7")
 
 	local origin = { x = 0, y = 0, z = 0 }
 	local look = { x = 0, y = 0, z = -1 }
@@ -4714,7 +4715,7 @@ test("contato: claimed só entra na folga de latência, nunca longe ou pelas cos
 			reach = 9,
 			halfAngle = 65,
 		}),
-		"12 studs cabem em 9+5"
+		"12 studs cabem em 9+8"
 	)
 	assertFalse(
 		HitContact.acceptClaimed({
@@ -4753,20 +4754,20 @@ test("contato: claimed só entra na folga de latência, nunca longe ou pelas cos
 	)
 end)
 
-test("contato: frontal no alcance 11 resolve; 11,6 erra no caminho real", function()
+test("contato: frontal no alcance 13 resolve; 13,6 erra no caminho real", function()
 	local origin = { x = 0, y = 0, z = 0 }
 	local look = { x = 0, y = 0, z = -1 }
 	local reach = HitContact.LightReachStuds[1]
 	local angle = HitContact.LightHalfAngleDegrees
-	assertEq(reach, 11, "módulo no alcance 11")
+	assertEq(reach, 13, "módulo no alcance 13")
 	local inside = HitContact.acquire(origin, look, {
-		{ id = "perto", position = { x = 0, y = 0, z = -10.9 } },
+		{ id = "perto", position = { x = 0, y = 0, z = -12.9 } },
 	}, reach, angle)
-	assertEq(inside, "perto", "10,9 studs conecta")
+	assertEq(inside, "perto", "12,9 studs conecta")
 	local outside = HitContact.acquire(origin, look, {
-		{ id = "longe", position = { x = 0, y = 0, z = -11.6 } },
+		{ id = "longe", position = { x = 0, y = 0, z = -13.6 } },
 	}, reach, angle)
-	assertEq(outside, nil, "11,6 studs erra")
+	assertEq(outside, nil, "13,6 studs erra")
 	assertEq(
 		HitContact.resolveTarget(inside, nil, origin, look, nil, reach, angle),
 		"perto",

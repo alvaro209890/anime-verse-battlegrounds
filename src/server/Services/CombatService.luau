@@ -68,7 +68,7 @@ export type HitResult = {
 }
 
 local LIGHT_DAMAGE = { 6, 6, 8, 12 }
-local LIGHT_WINDOW = 0.65
+local LIGHT_WINDOW = 1.00
 local PARRY_WINDOW = 0.12
 local HEAVY_HP = 12
 local HEAVY_GUARD = 28
@@ -85,6 +85,7 @@ local PULSE_MISS_RECOVERY_MS = 600
 
 local CombatService = {
 	fighters = {} :: { [string]: FighterState },
+	LightWindowSeconds = LIGHT_WINDOW,
 }
 
 local function fail(reason: string): HitResult

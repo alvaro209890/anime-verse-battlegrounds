@@ -23,9 +23,9 @@ export type CombatAction =
 	| "Ability1"
 	| "Ability2"
 	| "Ability3"
-	-- Eco da Cadência (reentrada) e contra do Pulso são momentos próprios da
-	-- técnica: reusar a pose da ativação faria o jogador ler "de novo o mesmo
-	-- golpe" onde a regra mudou (docs/18 §2.2 e §2.3).
+	-- Eco da Cadência (reentrada) e contra do Pulso são momentos próprios da
+	-- técnica: reusar a pose da ativação faria o jogador ler "de novo o mesmo
+	-- golpe" onde a regra mudou (docs/18 §2.2 e §2.3).
 	| "Ability2Echo"
 	| "Ability3Counter"
 
@@ -1202,13 +1202,14 @@ end
 --  · **pausa e recuperação maiores** — o peso vem do que acontece DEPOIS do
 --    contato; cortar a recuperação é o que fazia o golpe "atravessar" o alvo.
 --
--- Teto: a duração de cada degrau fica abaixo de LIGHT_WINDOW (0,65 s), senão o
+-- Teto: a duração de cada degrau fica abaixo de LIGHT_WINDOW (1,00 s), senão o
 -- jogador precisaria interromper a própria animação para encadear.
+-- 17/08: ~1,5× mais lento que a cadeia de 330–620 ms — o jab lê carga.
 local LIGHT_CHAIN: { { number } } = {
-	{ 0.090, 0.165, 0.215, 0.330 },
-	{ 0.100, 0.210, 0.270, 0.400 },
-	{ 0.145, 0.290, 0.365, 0.500 },
-	{ 0.175, 0.350, 0.450, 0.620 },
+	{ 0.135, 0.248, 0.323, 0.495 },
+	{ 0.150, 0.315, 0.405, 0.600 },
+	{ 0.218, 0.435, 0.548, 0.750 },
+	{ 0.263, 0.525, 0.675, 0.930 },
 }
 -- Quadro do meio de cada degrau: o instante em que o quadril já virou e a
 -- extremidade ainda está a caminho. É ele que dá corpo ao golpe — sem esse
@@ -1232,7 +1233,7 @@ local LIGHT_CHAIN_POSES: { { PoseSample } } = {
 
 -- A janela de encadeamento espelha LIGHT_WINDOW do CombatService. Divergir aqui
 -- só desalinha a apresentação: quem decide o degrau real continua o servidor.
-local LIGHT_CHAIN_WINDOW_SECONDS = 0.65
+local LIGHT_CHAIN_WINDOW_SECONDS = 1.00
 PlayerCombatAnimator.LightChainWindowSeconds = LIGHT_CHAIN_WINDOW_SECONDS
 PlayerCombatAnimator.LightChainLength = #LIGHT_CHAIN
 

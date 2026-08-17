@@ -124,7 +124,7 @@ speed não inflar o budget do `PlayerMotionGuard`. Não há remote de sprint.
 
 ### 5.1 Ataque leve
 
-Cadeia de 4 golpes: **5 + 5 + 6 + 10**. Janela para continuar: 0,65 s. O quarto golpe não gira 180° após o quadro de compromisso.
+Cadeia de 4 golpes: **5 + 5 + 6 + 10**. Janela para continuar: **1,00 s**. O quarto golpe não gira 180° após o quadro de compromisso.
 
 | Golpe | Startup | Active | Recovery | Hitbox | Stagger |
 |---|---:|---:|---:|---|---|
@@ -135,7 +135,7 @@ Cadeia de 4 golpes: **5 + 5 + 6 + 10**. Janela para continuar: 0,65 s. O quarto 
 
 Leve contra guarda: 40% do HP passa; guarda perde o dano cheio. Costas ignoram guarda.
 
-Aquisição autoritativa (centro-a-centro): alcance 6 + folga de corpo **5** = **11 studs** no degrau 1 (cone 78° leve / 68° pesado). Playtest: colado a ~11 studs não conectava com folga 3. Dummy de treino não concede XP nem kill de carreira.
+Aquisição autoritativa (centro-a-centro): alcance 6 + folga de corpo **7** = **13 studs** no degrau 1 (cone 92° leve / 80° pesado). Cadeia leve ~1,5× mais lenta (jab 495 ms, finalizador 930 ms) para o corpo carregar o soco. Dummy de treino não concede XP nem kill de carreira.
 
 ### 5.2 Ataque pesado
 

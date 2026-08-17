@@ -209,8 +209,8 @@ Pesado: `0,52 → 0,68`, com antecipação `0,17 → 0,26` e impacto `0,285 → 
 Ele é a ferramenta de quebra de guarda e precisa ler como tal **antes** de
 conectar.
 
-**Teto que não pode ser rompido:** `LIGHT_WINDOW` do `CombatService` é 0,65 s.
-Todos os quatro degraus ficam abaixo disso (0,330 / 0,400 / 0,500 / 0,620) — se
+**Teto que não pode ser rompido:** `LIGHT_WINDOW` do `CombatService` é 1,00 s.
+Todos os quatro degraus ficam abaixo disso (0,495 / 0,600 / 0,750 / 0,930) — se
 uma duração passar a janela, o jogador precisa interromper a própria animação
 para encadear, e a cadeia deixa de ser jogável.
 
@@ -249,12 +249,12 @@ continua dono de HP, número e morte.
 
 `claimedTargetId` no `BasicAttackIntent` é pista, não alvo. O cone do servidor
 vence quando acerta; a pista só entra no miss espacial, e só se a posição
-conhecida ainda cabe em `alcance + 7 studs` e no cone alargado em 15°. 20
+conhecida ainda cabe em `alcance + 8 studs` e no cone alargado em 20°. 26
 studs continuam miss. A fronteira PvP e a vida ≤ 0 recusam a pista.
 
-O cone autoritativo do golpe leve usa alcance efetivo **11 studs** (6 + folga
-de corpo 5) e meio-ângulo 78°; o pesado 11,5 / 68°. Folga 3 deixava o jogador
-colado (centro-a-centro ~11) fora do hit.
+O cone autoritativo do golpe leve usa alcance efetivo **13 studs** (6 + folga
+de corpo 7) e meio-ângulo 92°; o pesado 13,5 / 80°. O jab lê mais lento
+(495 ms) para o acerto no bicho não depender de timing de quadro.
 
 O `CombatEvent` agora carrega `view`: `dealt` para quem bateu, `taken` para o
 outro jogador. Quem apanha sente câmera/som/hit-stop no mesmo frame em que o

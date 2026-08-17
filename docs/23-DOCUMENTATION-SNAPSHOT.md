@@ -1,5 +1,14 @@
 # Snapshot Canônico da Documentação — 17/08/2026
 
+## Rodada de 17/08 (Grok) — soco mais lento e acerto mais fácil
+
+1. **Cadeia leve ~1,5× mais lenta:** 0,495 / 0,600 / 0,750 / 0,930 s.
+   Janela `LIGHT_WINDOW` 0,65 → **1,00 s** (apresentação e servidor iguais).
+2. **Acerto:** folga de corpo 5→**7** (alcance leve **13**), cone **92°/80°**,
+   folga de pista 8 studs + 20°. Costas e 26 studs continuam miss.
+
+---
+
 ## Rodada de 17/08 (Grok) — carreira, missões extras, nível dos bots, muralha, hitbox
 
 1. **Placar de carreira (J):** monstros, chefes, dano, tempo de jogo, quedas,
@@ -7,8 +16,8 @@
 2. **Missões** `quest_grove` / `quest_remnant` e identidade **Tecelão de Ecos**.
 3. **Nível do bot** no Billboard (`Nv. 8` / `Nv. 18`).
 4. **Muralha** Limestone + Sandstone + Basalt (não Slate único).
-5. **Golpe:** folga de corpo 3→5 (alcance 11) e cone 78°/68° — o “colado”
-   a ~11 studs passa a conectar.
+5. **Golpe:** folga de corpo 3→5 (alcance 11) e cone 78°/68° — depois
+   recalibrado para 13 studs / 92° (ver bloco do topo).
 6. **Persistência da carreira:** `releaseProfile` sempre grava; créditos
    sujam o perfil. Dano de técnica (Cometa/Cadência) e contra do Pulso
    entram no placar. `getCareer` persiste o placar mesmo depois de
@@ -295,7 +304,7 @@ runtime pelo Álvaro:** com ela, a guarda passou a levantar os punhos ao apertar
 
 **Peso dos socos.** Ver `docs/17` §2.10. Antecipação e recuperação ~30-40%
 maiores, velocidade do trecho carga→impacto preservada, todos os degraus ainda
-abaixo da janela de 0,65 s do `CombatService`.
+abaixo da janela de 1,00 s do `CombatService`.
 
 **VFX publicado — os assets deixaram de ser fallback.** Os oito atlas CC0/CC-BY
 que estavam no repo desde 14/08 esperando publicação (`docs/20`) foram enviados

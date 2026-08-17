@@ -42,7 +42,7 @@ O balanceamento começa com um avatar de referência:
 | Dash | 12 studs em 0,22 s |
 | Recarga base do dash | 3,0 s |
 | Cadeia de ataque básico | 4 golpes: 5 + 5 + 6 + 10 |
-| Janela para continuar a cadeia | 0,65 s |
+| Janela para continuar a cadeia | 1,00 s |
 | Recuperação do quarto golpe | 0,55 s |
 | Buffer de entrada | 150 ms PC/console; 220 ms mobile |
 

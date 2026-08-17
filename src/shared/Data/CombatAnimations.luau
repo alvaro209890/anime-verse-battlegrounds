@@ -62,7 +62,7 @@ local ACTION_SECONDS: { [string]: number } = {
 	Ability3Counter = 0.44,
 }
 
-local LIGHT_CHAIN_SECONDS: { number } = { 0.330, 0.400, 0.500, 0.620 }
+local LIGHT_CHAIN_SECONDS: { number } = { 0.495, 0.600, 0.750, 0.930 }
 
 local function clip(values: {
 	action: string,

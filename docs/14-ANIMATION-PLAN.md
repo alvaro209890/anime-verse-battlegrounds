@@ -93,7 +93,7 @@ Substitui a pose única de ataque leve por quatro golpes encadeáveis. Continua 
 | 3 | chute circular | 0,380 s | 0,110 s | perna sobe, tronco contrabalança ao lado oposto |
 | 4 | finalizador giratório | 0,480 s | 0,135 s | giro de 74°, chute com a outra perna |
 
-Encadeia dentro de **0,65 s**, espelhando `LIGHT_WINDOW` do `CombatService`. Dash, guarda e técnicas quebram a cadeia, como no servidor. O degrau é decisão de apresentação: quem resolve o `lightStep` autoritativo continua sendo o servidor.
+Encadeia dentro de **1,00 s**, espelhando `LIGHT_WINDOW` do `CombatService`. A cadeia leve dura 0,495 / 0,600 / 0,750 / 0,930 s (cerca de 1,5× a trilha anterior) para o soco ler carga. Dash, guarda e técnicas quebram a cadeia, como no servidor. O degrau é decisão de apresentação: quem resolve o `lightStep` autoritativo continua sendo o servidor.
 
 Três mecanismos sustentam a sensação de peso, todos em número:
 

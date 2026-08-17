@@ -84,7 +84,7 @@ end
 -- forem os do jogo, então o primeiro teste confere a fonte: mexeu lá e esqueceu
 -- aqui, a suíte quebra em vez de simular um combate que não existe.
 local BASIC_RANGE_STUDS = 6
-local BODY_ALLOWANCE_STUDS = 5
+local BODY_ALLOWANCE_STUDS = 7
 local LIGHT_REACH: { number } = {
 	BASIC_RANGE_STUDS + BODY_ALLOWANCE_STUDS,
 	BASIC_RANGE_STUDS + BODY_ALLOWANCE_STUDS,
@@ -92,8 +92,8 @@ local LIGHT_REACH: { number } = {
 	BASIC_RANGE_STUDS + BODY_ALLOWANCE_STUDS + 1,
 }
 local HEAVY_REACH = BASIC_RANGE_STUDS + BODY_ALLOWANCE_STUDS + 0.5
-local LIGHT_HALF_ANGLE = 78
-local HEAVY_HALF_ANGLE = 68
+local LIGHT_HALF_ANGLE = 92
+local HEAVY_HALF_ANGLE = 80
 -- A distância histórica do playtest de 14/08, que é o caso que abre a suíte.
 local PLAYTEST_DISTANCE_STUDS = 41.2
 
@@ -342,11 +342,11 @@ end
 test("fonte: alcance e cone da simulação são os do handler real", function()
 	local source = fs.readFile("src/server/init.server.lua")
 	assertTrue(source:find("local BASIC_RANGE_STUDS = 6", 1, true) ~= nil, "alcance base do golpe")
-	assertTrue(source:find("local BODY_ALLOWANCE_STUDS = 5", 1, true) ~= nil, "folga de corpo")
-	assertTrue(source:find("local BASIC_LIGHT_HALF_ANGLE_DEGREES = 78", 1, true) ~= nil, "cone leve")
-	assertTrue(source:find("local BASIC_HEAVY_HALF_ANGLE_DEGREES = 68", 1, true) ~= nil, "cone pesado")
-	assertEq(LIGHT_REACH[1], 11, "alcance leve efetivo")
-	assertEq(HEAVY_REACH, 11.5, "alcance pesado efetivo")
+	assertTrue(source:find("local BODY_ALLOWANCE_STUDS = 7", 1, true) ~= nil, "folga de corpo")
+	assertTrue(source:find("local BASIC_LIGHT_HALF_ANGLE_DEGREES = 92", 1, true) ~= nil, "cone leve")
+	assertTrue(source:find("local BASIC_HEAVY_HALF_ANGLE_DEGREES = 80", 1, true) ~= nil, "cone pesado")
+	assertEq(LIGHT_REACH[1], 13, "alcance leve efetivo")
+	assertEq(HEAVY_REACH, 13.5, "alcance pesado efetivo")
 end)
 
 -- ── 1. O caso histórico: longe demais, cadeia inteira muda ──────────────────
@@ -471,10 +471,10 @@ test("pesado: a distância é a única diferença entre o mudo e o completo", fu
 	assertTrue(perto.camera.trauma > leve.camera.trauma, "pesado básico sacode mais que o jab")
 end)
 
-test("borda do alcance: 11 studs conecta, 11,6 não (leve, degrau 1)", function()
-	local dentro = newSim(10.9)
+test("borda do alcance: 13 studs conecta, 13,6 não (leve, degrau 1)", function()
+	local dentro = newSim(12.9)
 	assertEq(serverBasicAttack(dentro, "light").outcome, "hit", "dentro do alcance")
-	local fora = newSim(11.7)
+	local fora = newSim(13.7)
 	assertEq(serverBasicAttack(fora, "light").outcome, "miss", "fora do alcance")
 end)
 
@@ -801,13 +801,13 @@ test("dois jogadores: o dano do alvo nunca ultrapassa o publicado no evento", fu
 	)
 end)
 
-test("12 studs com pista: o cone autoritativo erra e a folga de latência recupera o hit", function()
-	local semPista = newSim(12, "player")
+test("15 studs com pista: o cone autoritativo erra e a folga de latência recupera o hit", function()
+	local semPista = newSim(15, "player")
 	local miss = serverBasicAttack(semPista, "light")
-	assertEq(miss.outcome, "miss", "sem pista, 12 studs passam do alcance 11")
+	assertEq(miss.outcome, "miss", "sem pista, 15 studs passam do alcance 13")
 	assertSilentImpact(semPista, "sem pista")
 
-	local comPista = newSim(12, "player")
+	local comPista = newSim(15, "player")
 	comPista.claimedTargetId = comPista.targetId
 	local hit = serverBasicAttack(comPista, "light")
 	assertEq(hit.outcome, "hit", "pista dentro da folga conecta")
@@ -816,8 +816,8 @@ test("12 studs com pista: o cone autoritativo erra e a folga de latência recupe
 	assertTrue(PlayerCombatAnimator.hitStopActive(comPista.now, comPista.animator.hitStopUntil), "feeling no acerto")
 end)
 
-test("20 studs com pista: a folga não autoriza o impossível", function()
-	local sim = newSim(20, "player")
+test("26 studs com pista: a folga não autoriza o impossível", function()
+	local sim = newSim(26, "player")
 	sim.claimedTargetId = sim.targetId
 	local event = serverBasicAttack(sim, "light")
 	assertEq(event.outcome, "miss", "pista longe demais continua miss")

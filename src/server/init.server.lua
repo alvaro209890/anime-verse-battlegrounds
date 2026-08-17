@@ -157,7 +157,7 @@ SpatialService.init({ geometry = Geometry })
 -- raio dos dois: ~1,5 stud do jogador + ~1,5 stud do alvo (torso 2,2 × escala
 -- 0,9 do Estilhaço). Sem essa folga, encostar no inimigo ainda media mais que
 -- o alcance e o golpe passava reto — foi o que o playtest das 15h mostrou.
-local BODY_ALLOWANCE_STUDS = 5
+local BODY_ALLOWANCE_STUDS = 7
 local BASIC_RANGE_STUDS = 6
 -- Cresce com o degrau da cadeia, como a amplitude da pose.
 local BASIC_LIGHT_REACH_STUDS: { number } = {
@@ -170,14 +170,14 @@ local BASIC_HEAVY_REACH_STUDS = BASIC_RANGE_STUDS + BODY_ALLOWANCE_STUDS + 0.5
 -- Cadência Quebrada declara range 6 no catálogo: mesma folga de corpo.
 local CADENCE_REACH_STUDS = BASIC_RANGE_STUDS + BODY_ALLOWANCE_STUDS
 -- Abertura horizontal (meio-ângulo). O pesado é mais preciso que a cadeia.
-local BASIC_LIGHT_HALF_ANGLE_DEGREES = 78
-local BASIC_HEAVY_HALF_ANGLE_DEGREES = 68
+local BASIC_LIGHT_HALF_ANGLE_DEGREES = 92
+local BASIC_HEAVY_HALF_ANGLE_DEGREES = 80
 -- Intervalo mínimo do servidor entre golpes básicos (alerta 14/08): alinhado
--- ao LIGHT_WINDOW do CombatService (0,65 s). A cadeia leve continua dentro da
+-- ao LIGHT_WINDOW do CombatService (1,00 s). A cadeia leve continua dentro da
 -- janela; uma NOVA cadeia (ou um pesado) só sai depois da pausa. Sem isto, um
 -- macro de cliente no teto do rate limit (8 intents/s) executava todo intent
 -- e atingia ~64-96 DPS.
-local BASIC_MIN_INTERVAL = 0.65
+local BASIC_MIN_INTERVAL = 1.00
 
 -- Log de combate só no Studio com F0Debug (mesmo gate das técnicas de teste).
 local combatDebugEnabled = StudioDebug.isEnabled(
