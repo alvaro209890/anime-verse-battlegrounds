@@ -773,6 +773,128 @@ for i = 1, 6 do
 	)
 end
 
+-- Montanhas de identidade por célula. Sem luz nova (teto 16). Sem colisão.
+local SNOW = { 236, 236, 242 }
+local PEAK_SLATE = { 72, 68, 64 }
+local PEAK_LIME = { 150, 138, 116 }
+
+local function biomePeak(
+	prefix: string,
+	x: number,
+	z: number,
+	width: number,
+	height: number,
+	depth: number,
+	baseRgb: { number },
+	midRgb: { number },
+	midMaterial: string,
+	snow: boolean
+): ()
+	push(
+		piece(
+			prefix .. "_Base",
+			"Block",
+			{ x = width, y = height * 0.32, z = depth },
+			{ x = x, y = height * 0.16, z = z },
+			0,
+			baseRgb,
+			"Slate",
+			0,
+			false,
+			nil
+		)
+	)
+	push(
+		piece(
+			prefix .. "_Mid",
+			"Block",
+			{ x = width * 0.64, y = height * 0.36, z = depth * 0.66 },
+			{ x = x, y = height * 0.32 + height * 0.18, z = z },
+			0,
+			midRgb,
+			midMaterial,
+			0,
+			false,
+			nil
+		)
+	)
+	push(
+		piece(
+			prefix .. "_Peak",
+			"Block",
+			{ x = width * 0.30, y = height * 0.22, z = depth * 0.32 },
+			{ x = x, y = height * 0.68 + height * 0.11, z = z },
+			0,
+			PEAK_SLATE,
+			"Basalt",
+			0,
+			false,
+			nil
+		)
+	)
+	push(
+		piece(
+			prefix .. "_Cap",
+			"Ball",
+			{ x = width * 0.20, y = height * 0.12, z = depth * 0.20 },
+			{ x = x, y = height * 0.92, z = z },
+			0,
+			if snow then SNOW else PEAK_LIME,
+			if snow then "Snow" else "Sandstone",
+			0,
+			false,
+			nil
+		)
+	)
+end
+
+-- Bosque: serra arborizada no fundo leste.
+biomePeak("WoodsRidge_01", 498, -400, 36, 52, 26, MOSS, LEAF, "Limestone", false)
+biomePeak("WoodsRidge_02", 492, -140, 32, 44, 24, WOOD, LEAF, "Limestone", false)
+push(
+	piece(
+		"WoodsRidge_01_Tree",
+		"Ball",
+		{ x = 10, y = 7, z = 10 },
+		{ x = 490, y = 28, z = -396 },
+		0,
+		LEAF,
+		"Grass",
+		0.06,
+		false,
+		nil
+	)
+)
+
+-- Lumen: recorte escuro com acento neon, sem nova luz.
+biomePeak("LumenRidge_01", -120, -682, 34, 48, 24, ASPHALT, { 64, 40, 88 }, "SmoothPlastic", false)
+biomePeak("LumenRidge_02", 118, -678, 32, 42, 22, ASPHALT, { 48, 36, 72 }, "SmoothPlastic", false)
+push(
+	piece(
+		"LumenRidge_01_Trim",
+		"Block",
+		{ x = 18, y = 1.2, z = 1.2 },
+		{ x = -120, y = 36, z = -682 },
+		0,
+		NEON_MAGENTA,
+		"Neon",
+		0.2,
+		false,
+		nil
+	)
+)
+
+-- Cinza: rocha seca / indústria no fundo norte.
+biomePeak("GreyRidge_01", 450, -682, 38, 50, 26, SMOKE, IRON, "Basalt", false)
+biomePeak("GreyRidge_02", 210, -678, 34, 40, 24, IRON, SMOKE, "Basalt", false)
+
+-- Porto: falésia de ferro no horizonte oeste.
+biomePeak("PortRidge_01", -518, -180, 34, 46, 24, IRON, RUST, "Rock", false)
+biomePeak("PortRidge_02", -508, 56, 30, 38, 22, IRON, RUST, "Rock", false)
+
+-- Academia: colina de arenito no fundo do campus.
+biomePeak("AcademyRidge_01", 158, 218, 32, 36, 22, CREAM, GOLD, "Sandstone", false)
+
 function BiomeDecorations.all(): { BiomePiece }
 	return PIECES
 end

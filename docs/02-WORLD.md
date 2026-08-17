@@ -120,6 +120,14 @@ flor). O Bosque dos Ecos saiu da grade 6×3 e virou mata com LCG. Lumen ganhou
 vasos, Porto juncos, Setor Cinza erva, Academia sebes e árvores de alameda.
 Nada colide; o teto W2 de 6000 parts permanece.
 
+**Relevo e serras (17/08):** a planície deixou de ser um único chão reto. Cordilheira
+norte com 7 picos (neve nos mais altos) + elos, serras leste/oeste, 8 colinas e
+12 lomadas internas — **117 peças** em `WildDecorations` (catálogo 1269 peças,
+7 luzes). Cada célula de bioma ganhou serra própria (Bosque arborizada, Lumen
+com recorte neon, Cinza seca, Porto de ferro, Academia de arenito) — **38 peças**
+em `BiomeDecorations`. Y=0 jogável intacto; nada colide; chão das serras é o
+piso de zona já existente.
+
 ## 4. Tipos de zona e transição PvP
 
 ### 4.1 Regras por tipo

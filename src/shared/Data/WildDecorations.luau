@@ -54,6 +54,11 @@ local WildDecorations = {}
 local STONE: { number } = { 78, 74, 70 }
 local STONE_DARK: { number } = { 54, 52, 50 }
 local BASALT: { number } = { 46, 44, 48 }
+local LIMESTONE: { number } = { 168, 154, 132 }
+local SANDSTONE: { number } = { 176, 164, 142 }
+local SNOW: { number } = { 236, 236, 242 }
+local GRASS_RIDGE: { number } = { 74, 108, 70 }
+local MOSS_HILL: { number } = { 62, 92, 58 }
 local EMBER: { number } = { 244, 168, 96 }
 local EMBER_DEEP: { number } = { 208, 104, 52 }
 local RIFT: { number } = { 104, 220, 238 }
@@ -869,6 +874,274 @@ do
 				grassTuft(("WildTuft_%03d"):format(cover), x, z, between(1.2, 2.2), tintFor(cover))
 			end
 		end
+	end
+end
+
+-- ── Serras e relevo (17/08) ────────────────────────────────────────────────
+-- O chão jogável continua em Y=0. Estas peças são só silhueta: WorldService
+-- já materializa com CanCollide=false. Sem luz nova (teto de 8 na planície).
+-- Picos grandes, poucas parts — orçamento W2.
+
+local function ridgePeak(
+	prefix: string,
+	x: number,
+	z: number,
+	width: number,
+	depth: number,
+	height: number,
+	snow: boolean,
+	slopeX: number,
+	slopeZ: number
+): ()
+	local baseH = height * 0.30
+	local midH = height * 0.34
+	local peakH = height * 0.24
+	local capH = height * 0.12
+	push(
+		deco(
+			prefix .. "_Base",
+			"Part",
+			"Block",
+			{ x = width, y = baseH, z = depth },
+			{ x = x, y = baseH / 2, z = z },
+			0,
+			STONE,
+			"Slate",
+			0,
+			nil
+		)
+	)
+	push(
+		deco(
+			prefix .. "_Mid",
+			"Part",
+			"Block",
+			{ x = width * 0.68, y = midH, z = depth * 0.70 },
+			{ x = x, y = baseH + midH / 2, z = z },
+			0,
+			LIMESTONE,
+			"Limestone",
+			0,
+			nil
+		)
+	)
+	push(
+		deco(
+			prefix .. "_Slope",
+			"WedgePart",
+			"Block",
+			{ x = width * 0.52, y = midH * 0.62, z = depth * 0.48 },
+			{ x = x + slopeX, y = baseH + midH * 0.31, z = z + slopeZ },
+			0,
+			STONE_DARK,
+			"Basalt",
+			0,
+			nil
+		)
+	)
+	push(
+		deco(
+			prefix .. "_Peak",
+			"Part",
+			"Block",
+			{ x = width * 0.32, y = peakH, z = depth * 0.34 },
+			{ x = x, y = baseH + midH + peakH / 2, z = z },
+			0,
+			BASALT,
+			"Basalt",
+			0,
+			nil
+		)
+	)
+	if snow then
+		push(
+			deco(
+				prefix .. "_Snow",
+				"Part",
+				"Ball",
+				{ x = width * 0.22, y = capH, z = depth * 0.22 },
+				{ x = x, y = baseH + midH + peakH + capH * 0.28, z = z },
+				0,
+				SNOW,
+				"Snow",
+				0,
+				nil
+			)
+		)
+	else
+		push(
+			deco(
+				prefix .. "_Cap",
+				"Part",
+				"Ball",
+				{ x = width * 0.18, y = capH * 0.7, z = depth * 0.18 },
+				{ x = x, y = baseH + midH + peakH + capH * 0.2, z = z },
+				0,
+				SANDSTONE,
+				"Sandstone",
+				0,
+				nil
+			)
+		)
+	end
+end
+
+local function hill(prefix: string, x: number, z: number, width: number, height: number, depth: number): ()
+	push(
+		deco(
+			prefix .. "_Rise",
+			"Part",
+			"Block",
+			{ x = width, y = height, z = depth },
+			{ x = x, y = height / 2, z = z },
+			0,
+			STONE,
+			"Ground",
+			0,
+			nil
+		)
+	)
+	push(
+		deco(
+			prefix .. "_Turf",
+			"Part",
+			"Block",
+			{ x = width * 0.82, y = height * 0.38, z = depth * 0.80 },
+			{ x = x, y = height + height * 0.12, z = z },
+			0,
+			GRASS_RIDGE,
+			"Grass",
+			0,
+			nil
+		)
+	)
+	push(
+		deco(
+			prefix .. "_Boulder",
+			"Part",
+			"Ball",
+			{ x = width * 0.22, y = height * 0.42, z = depth * 0.22 },
+			{ x = x + width * 0.18, y = height + height * 0.22, z = z - depth * 0.12 },
+			0,
+			MOSS_HILL,
+			"Slate",
+			0,
+			nil
+		)
+	)
+end
+
+local function mound(prefix: string, x: number, z: number, width: number, depth: number): ()
+	push(
+		deco(
+			prefix,
+			"Part",
+			"Block",
+			{ x = width, y = 2.4, z = depth },
+			{ x = x, y = 1.2, z = z },
+			0,
+			MOSS_HILL,
+			"Ground",
+			0,
+			nil
+		)
+	)
+end
+
+-- Serra norte: fundo do horizonte, picos de alturas diferentes + neve.
+do
+	local north = {
+		{ x = -196, z = -414, w = 38, d = 26, h = 72, snow = true },
+		{ x = -132, z = -406, w = 32, d = 24, h = 54, snow = false },
+		{ x = -68, z = -418, w = 40, d = 28, h = 84, snow = true },
+		{ x = 8, z = -408, w = 30, d = 22, h = 48, snow = false },
+		{ x = 74, z = -416, w = 42, d = 28, h = 78, snow = true },
+		{ x = 138, z = -404, w = 34, d = 24, h = 58, snow = false },
+		{ x = 196, z = -412, w = 36, d = 26, h = 70, snow = true },
+	}
+	for index, spec in north do
+		ridgePeak(("RidgeN_%02d"):format(index), spec.x, spec.z, spec.w, spec.d, spec.h, spec.snow, 0, spec.d * 0.22)
+	end
+	-- Elos da cordilheira: lê como serra, não como sete cones isolados.
+	local links = {
+		{ x = -164, z = -410, w = 28, d = 14 },
+		{ x = -100, z = -412, w = 30, d = 14 },
+		{ x = -30, z = -412, w = 26, d = 12 },
+		{ x = 42, z = -412, w = 28, d = 13 },
+		{ x = 106, z = -410, w = 28, d = 14 },
+		{ x = 168, z = -408, w = 26, d = 13 },
+	}
+	for index, spec in links do
+		push(
+			deco(
+				("RidgeN_Link_%02d"):format(index),
+				"Part",
+				"Block",
+				{ x = spec.w, y = 18, z = spec.d },
+				{ x = spec.x, y = 9, z = spec.z },
+				0,
+				STONE_DARK,
+				"Slate",
+				0,
+				nil
+			)
+		)
+	end
+end
+
+-- Serra leste (olha pro Bosque) e oeste (olha pro Porto).
+do
+	local east = {
+		{ x = 218, z = -372, h = 62, snow = true },
+		{ x = 216, z = -292, h = 46, snow = false },
+		{ x = 218, z = -214, h = 58, snow = false },
+		{ x = 214, z = -138, h = 40, snow = false },
+	}
+	for index, spec in east do
+		ridgePeak(("RidgeE_%02d"):format(index), spec.x, spec.z, 30, 24, spec.h, spec.snow, -8, 0)
+	end
+	local west = {
+		{ x = -218, z = -368, h = 60, snow = true },
+		{ x = -216, z = -286, h = 44, snow = false },
+		{ x = -218, z = -198, h = 56, snow = false },
+		{ x = -214, z = -118, h = 38, snow = false },
+	}
+	for index, spec in west do
+		ridgePeak(("RidgeW_%02d"):format(index), spec.x, spec.z, 30, 24, spec.h, spec.snow, 8, 0)
+	end
+end
+
+-- Colinas internas: ondulação na planície, longe da cratera, da rota e das âncoras.
+do
+	local hills = {
+		{ x = 168, z = -252, w = 22, h = 9, d = 18 },
+		{ x = -172, z = -248, w = 24, h = 10, d = 18 },
+		{ x = 188, z = -172, w = 20, h = 8, d = 16 },
+		{ x = -192, z = -178, w = 22, h = 9, d = 16 },
+		{ x = 128, z = -336, w = 24, h = 11, d = 18 },
+		{ x = -136, z = -328, w = 22, h = 10, d = 17 },
+		{ x = 86, z = -388, w = 20, h = 8, d = 15 },
+		{ x = -198, z = -18, w = 18, h = 7, d = 14 },
+	}
+	for index, spec in hills do
+		hill(("Hill_%02d"):format(index), spec.x, spec.z, spec.w, spec.h, spec.d)
+	end
+	local mounds = {
+		{ x = 110, z = -220 },
+		{ x = -118, z = -228 },
+		{ x = 148, z = -300 },
+		{ x = -154, z = -292 },
+		{ x = 70, z = -268 },
+		{ x = -78, z = -274 },
+		{ x = 200, z = -90 },
+		{ x = -205, z = -88 },
+		{ x = 96, z = -160 },
+		{ x = -102, z = -168 },
+		{ x = -170, z = -8 },
+		{ x = 52, z = -348 },
+	}
+	for index, spec in mounds do
+		mound(("Mound_%02d"):format(index), spec.x, spec.z, 22 + (index % 3) * 3, 16 + (index % 2) * 3)
 	end
 end
 

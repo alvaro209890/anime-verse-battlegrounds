@@ -245,6 +245,17 @@ test("planície: decoração externa valida contra zonas, cratera e âncoras rea
 	assertTrue(#WildDecorations.all() >= 60, "planície decorada de verdade")
 	assertTrue(WildDecorations.pieceCount() >= 400, "vegetação densa o bastante para ler como campo")
 	assertTrue(WildDecorations.pieceCount() <= 2800, "vegetação cabe no teto de 6000 parts")
+	local ridges = 0
+	for _, decoration in WildDecorations.all() do
+		if
+			string.find(decoration.name, "Ridge", 1, true)
+			or string.find(decoration.name, "Hill_", 1, true)
+			or string.find(decoration.name, "Mound_", 1, true)
+		then
+			ridges += 1
+		end
+	end
+	assertTrue(ridges >= 80, "serras e relevo na planície")
 end)
 
 test("bioma: células têm chão, nomes e decoração sem colisão", function()
@@ -270,6 +281,13 @@ test("bioma: células têm chão, nomes e decoração sem colisão", function()
 	assertEq(#errors, 0, table.concat(errors, "; "))
 	assertTrue(#BiomeDecorations.all() >= 40, "biomas com marcos visíveis")
 	assertTrue(BiomeDecorations.lightCount() <= 16, "teto de luz de bioma")
+	local biomeRidges = 0
+	for _, item in BiomeDecorations.all() do
+		if string.find(item.name, "Ridge", 1, true) then
+			biomeRidges += 1
+		end
+	end
+	assertTrue(biomeRidges >= 16, "cada célula tem serra de identidade")
 	for _, item in BiomeDecorations.all() do
 		assertFalse(item.canCollide, item.name .. " não pode colidir")
 	end

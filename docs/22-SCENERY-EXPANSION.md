@@ -8,6 +8,11 @@
 > entre máquinas. Sorteio real tornaria a validação intermitente, que é o pior
 > estado possível para um gate.
 >
+> **Relevo (17/08):** serras e colinas entram no mesmo catálogo `WildDecorations`
+> / `BiomeDecorations` — Blocks e WedgeParts grandes, sem colisão, sem luz nova.
+> 1269 peças na planície (7 luzes) + 352 de bioma (10 luzes). O piso jogável
+> permanece Y=0; o horizonte deixa de ser um campo vazio.
+
 > Custo de contagem de partes da ampliação em si: **zero**. `buildFloors` cria
 > uma Part por volume de zona, então o piso apenas fica maior. O que a
 > ampliação cobra é decoração — campo vazio grande é pior que campo pequeno

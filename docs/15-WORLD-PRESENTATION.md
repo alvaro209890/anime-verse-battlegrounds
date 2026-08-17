@@ -8,6 +8,7 @@ Esta entrega torna o place reconhecível e navegável antes da produção cara d
 
 O recorte entrega:
 
+- serras no horizonte e colinas na planície (catálogo, sem colisão, sem luz nova);
 - uma rota clara entre spawn, treino, Portão Norte, Portão Oeste e cratera;
 - piso gerado para todos os volumes jogáveis, incluindo as duas transições e o braço livre oeste;
 - marcos físicos redundantes com o HUD de zona;

@@ -1,6 +1,6 @@
 # 12 — Testes e evidências
 
-> **Snapshot de implementação:** 2026-08-17. Quatro suítes Lune: `tests/run.luau` **268 casos de domínio**, `tests/animation.luau` **79 de animação/apresentação**, `tests/security_fuzz.luau` **71 de fuzz adversarial** e `tests/combat_e2e.luau` **23 de simulação de combate ponta a ponta** — total automatizado de **441 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada: carreira persiste no leave sem `markDirty` manual; Cometa/Cadência creditam dano no `AbilityService`.
+> **Snapshot de implementação:** 2026-08-17. Quatro suítes Lune: `tests/run.luau` **268 casos de domínio**, `tests/animation.luau` **79 de animação/apresentação**, `tests/security_fuzz.luau` **71 de fuzz adversarial** e `tests/combat_e2e.luau` **23 de simulação de combate ponta a ponta** — total automatizado de **441 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada: serras e relevo na planície (Wild 1269 peças / 7 luzes) e identidade de montanha por bioma (352 / 10).
 
 ## 1. Estado da execução
 

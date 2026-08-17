@@ -75,6 +75,12 @@ planície passou de sorteio uniforme para bosques com espaçamento mínimo +
 sub-bosque (grama, samambaia, tronco caído, flor). As tochas da rota
 permanecem 7 luzes. O gate headless agora exige ≥ 400 peças e ≤ 2800.
 
+**Serras e relevo (17/08):** 7 picos na cordilheira norte (neve nos mais altos) +
+6 elos, 4 picos a leste, 4 a oeste, 8 colinas e 12 lomadas — 81+24+12 peças de
+relevo. Biomas: 38 peças `*Ridge*` (Bosque, Lumen, Cinza, Porto, Academia).
+Nada colide, nada no ringue, sem luz extra. Catálogo medido: Wild **1269**
+peças / **7** luzes; Biome **352** / **10**.
+
 ### O que a validação pura trava
 
 Estas não são preferências de estilo; quebrar qualquer uma quebra o jogo, e por

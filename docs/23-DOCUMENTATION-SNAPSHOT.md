@@ -1,5 +1,15 @@
 # Snapshot Canônico da Documentação — 17/08/2026
 
+## Rodada de 17/08 (Grok) — serras e relevo, fim do chão reto
+
+Cordilheira no horizonte da planície (7 picos + elos, neve nos altos), serras
+leste/oeste, colinas e lomadas internas. Identidade por bioma (Bosque, Lumen,
+Cinza, Porto, Academia). Dados em `WildDecorations` / `BiomeDecorations`;
+WorldService só materializa. 1269 peças na planície (7 luzes) + 352 de bioma
+(10 luzes). Y=0, âncoras, cratera e rotas intactos.
+
+---
+
 ## Rodada de 17/08 (Grok) — soco mais lento e acerto mais fácil
 
 1. **Cadeia leve ~1,5× mais lenta:** 0,495 / 0,600 / 0,750 / 0,930 s.
