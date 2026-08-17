@@ -1,10 +1,10 @@
 # 12 — Testes e evidências
 
-> **Snapshot de implementação:** 2026-08-17. Quatro suítes Lune: `tests/run.luau` **267 casos de domínio**, `tests/animation.luau` **79 de animação/apresentação**, `tests/security_fuzz.luau` **71 de fuzz adversarial** e `tests/combat_e2e.luau` **23 de simulação de combate ponta a ponta** — total automatizado de **440 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada: placar de carreira persistido, muralha com materiais distintos, nível nos bots, missões extras, Tecelão de Ecos no catálogo e alcance de golpe 11 (folga de corpo 5).
+> **Snapshot de implementação:** 2026-08-17. Quatro suítes Lune: `tests/run.luau` **268 casos de domínio**, `tests/animation.luau` **79 de animação/apresentação**, `tests/security_fuzz.luau` **71 de fuzz adversarial** e `tests/combat_e2e.luau` **23 de simulação de combate ponta a ponta** — total automatizado de **441 casos**, sem transformar essa soma em evidência de runtime Roblox. Nesta rodada: carreira persiste no leave sem `markDirty` manual; Cometa/Cadência creditam dano no `AbilityService`.
 
 ## 1. Estado da execução
 
-No snapshot de implementação atual, a verificação automatizada registrou 267/267 em `tests/run.luau`, 79/79 em `tests/animation.luau`, 71/71 em `tests/security_fuzz.luau` e 23/23 em `tests/combat_e2e.luau`. Selene e StyLua continuam gates separados e foram executados neste release: Selene com 0 erros/0 warnings e StyLua com `--check` limpo em `src tests plugins scripts`. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
+No snapshot de implementação atual, a verificação automatizada registrou 268/268 em `tests/run.luau`, 79/79 em `tests/animation.luau`, 71/71 em `tests/security_fuzz.luau` e 23/23 em `tests/combat_e2e.luau`. Selene e StyLua continuam gates separados e foram executados neste release: Selene com 0 erros/0 warnings e StyLua com `--check` limpo em `src tests plugins scripts`. O ambiente e o commit devem ser registrados junto de qualquer evidência futura.
 
 **Registro histórico, não evidência do snapshot atual:** uma rodada anterior teve confirmação em Play pelo jogador, com `avb-debug sync` = 56/56, de que a animação de golpe movia o corpo e o personagem não girava sozinho. Essa evidência pertence ao estado anterior documentado em `docs/14` e não deve ser usada para declarar o commit `d7c44e8` validado em runtime. Neste snapshot, o Play atual continua pendente.
 

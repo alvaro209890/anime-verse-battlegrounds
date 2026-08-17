@@ -286,15 +286,15 @@ function SaveService.tick(userId: number, currentNow: number): boolean
 	return SaveService.saveProfile(userId)
 end
 
--- Salva se sujo e libera o lock (leave, docs/13 §11.2 item 1).
+-- Sempre persiste no leave (carreira/tempo não podem depender de outro
+-- sistema ter chamado markDirty). Depois libera o lock (§11.2 item 1).
 function SaveService.releaseProfile(userId: number): ()
 	local profile = SaveService.openProfiles[userId]
 	if not profile then
 		return
 	end
-	if profile.dirty then
-		SaveService.saveProfile(userId)
-	end
+	profile.dirty = true
+	SaveService.saveProfile(userId)
 	profile.handle.EndSession()
 	SaveService.openProfiles[userId] = nil
 end

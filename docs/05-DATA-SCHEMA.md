@@ -91,7 +91,7 @@ Em F0/v1 existem envelope, progressão mínima, personagens/habilidades da fatia
 | `ranked` | mapa seasonId → PlayerSeasonState | F6 | Histórico limitado às temporadas retidas |
 | `entitlements` | EntitlementState | Hardening/soft launch | Cosméticos, emotes e +3 presets; nenhum poder ou inventário funcional pago |
 
-Não guardar display name, chat, lista completa de kills ou telemetria bruta no perfil. Históricos sem uso transacional têm retenção externa e limitada. `career` guarda **totais agregados** (não a lista de mortes): `monsterKills`, `bossKills`, `damageDealt`, `playTimeSeconds`, `deaths`, `techniquesUsed`, `consolidations`, `questsCompleted`. Dummy e instrutor não incrementam kill. Só o servidor escreve; o cliente só replica.
+Não guardar display name, chat, lista completa de kills ou telemetria bruta no perfil. Históricos sem uso transacional têm retenção externa e limitada. `career` guarda **totais agregados** (não a lista de mortes): `monsterKills`, `bossKills`, `damageDealt`, `playTimeSeconds`, `deaths`, `techniquesUsed`, `consolidations`, `questsCompleted`. Dummy e instrutor não incrementam kill. Só o servidor escreve; o cliente só replica. Cada crédito chama `onPersist` (`SaveService.markDirty`); o leave (`releaseProfile`) grava a carreira mesmo sem outro sistema ter sujado o perfil. Dano de Cometa/Cadência entra pelo `AbilityService`; o contra do Pulso credita o dono da postura.
 
 ### 4.1 PlayerProgression
 

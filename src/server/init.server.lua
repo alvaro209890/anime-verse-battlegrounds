@@ -265,6 +265,7 @@ SaveService.init({
 	end,
 })
 print("[Bootstrap] SaveService iniciado (ProfileStore)")
+CareerService.onPersist = SaveService.markDirty
 
 -- 3. Gateway de rede — cria remotes registrados ANTES de qualquer fireClient
 RemoteGateway.init({
@@ -598,6 +599,9 @@ local function applyPulseCounterToPlayer(userId: number, defender: any, currentN
 	if not counter.ok then
 		return false
 	end
+	if type(defender.id) == "string" and counter.damage and counter.damage > 0 then
+		CareerService.creditFromFighterId(defender.id, counter.damage)
+	end
 
 	-- PvP: quem levou o contra é `userId`; quem apara é o dono da postura.
 	if type(defender.id) == "string" then
@@ -665,6 +669,7 @@ AbilityService.init({
 		return CombatService.getFighter("npc_training_dummy")
 	end,
 	tryCometShoulder = CombatService.tryCometShoulder,
+	creditCareerDamage = CareerService.creditDamage,
 	onCombatHit = function(userId: number, targetId: string, damage: number, abilityId: string, outcome: string?)
 		local player = game.Players:GetPlayerByUserId(userId)
 		if not player then
@@ -1070,6 +1075,9 @@ local function applyPulseCounterToNpc(defenderUserId: number, attackerId: string
 	local counter = CombatService.tryPulseCounter(attacker, currentNow)
 	if not counter.ok then
 		return
+	end
+	if counter.damage and counter.damage > 0 then
+		CareerService.creditDamage(defenderUserId, counter.damage)
 	end
 
 	-- PvE (caso comum da F0): o jogador aparou um Estilhaço. Este é o momento em

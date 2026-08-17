@@ -17,6 +17,9 @@ export type CareerTotals = {
 local CareerService = {
 	totals = {} :: { [number]: CareerTotals },
 	sessionStartedAt = {} :: { [number]: number },
+	-- Bootstrap liga a SaveService.markDirty. Sem isso, leave/autosave
+	-- perdem dano, técnicas, tempo e quedas se ninguém mais sujou o perfil.
+	onPersist = nil :: ((number) -> ())?,
 }
 
 local function empty(): CareerTotals
@@ -35,6 +38,14 @@ end
 function CareerService.init(): ()
 	table.clear(CareerService.totals)
 	table.clear(CareerService.sessionStartedAt)
+	CareerService.onPersist = nil
+end
+
+local function persist(userId: number): ()
+	local hook = CareerService.onPersist
+	if type(hook) == "function" then
+		hook(userId)
+	end
 end
 
 function CareerService.registerPlayer(userId: number, now: number): ()
@@ -59,6 +70,7 @@ function CareerService.flushPlayTime(userId: number, now: number): ()
 	local elapsed = now - started
 	if elapsed > 0 then
 		totals.playTimeSeconds += elapsed
+		persist(userId)
 	end
 	CareerService.sessionStartedAt[userId] = now
 end
@@ -95,6 +107,7 @@ function CareerService.creditKill(userId: number, npcId: string, isBoss: boolean
 	else
 		totals.monsterKills += 1
 	end
+	persist(userId)
 end
 
 function CareerService.creditDamage(userId: number, amount: number): ()
@@ -103,12 +116,25 @@ function CareerService.creditDamage(userId: number, amount: number): ()
 		return
 	end
 	totals.damageDealt += math.floor(amount)
+	persist(userId)
+end
+
+function CareerService.creditFromFighterId(fighterId: string, amount: number): ()
+	local userIdText = string.match(fighterId, "^player:(%d+)$")
+	if not userIdText then
+		return
+	end
+	local userId = tonumber(userIdText)
+	if userId then
+		CareerService.creditDamage(userId, amount)
+	end
 end
 
 function CareerService.creditDeath(userId: number): ()
 	local totals = CareerService.totals[userId]
 	if totals then
 		totals.deaths += 1
+		persist(userId)
 	end
 end
 
@@ -116,6 +142,7 @@ function CareerService.creditTechnique(userId: number): ()
 	local totals = CareerService.totals[userId]
 	if totals then
 		totals.techniquesUsed += 1
+		persist(userId)
 	end
 end
 
@@ -123,6 +150,7 @@ function CareerService.creditConsolidation(userId: number): ()
 	local totals = CareerService.totals[userId]
 	if totals then
 		totals.consolidations += 1
+		persist(userId)
 	end
 end
 
@@ -130,6 +158,7 @@ function CareerService.creditQuest(userId: number): ()
 	local totals = CareerService.totals[userId]
 	if totals then
 		totals.questsCompleted += 1
+		persist(userId)
 	end
 end
 

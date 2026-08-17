@@ -49,6 +49,8 @@ export type AbilityDeps = {
 	getAbilityTarget: ((number) -> any?)?,
 	tryCometShoulder: ((any, any, number, string) -> any)?,
 	onCombatHit: ((number, string, number, string, string?) -> ())?,
+	-- Placar de carreira: dano real da técnica (Cometa/Cadência/Pulso).
+	creditCareerDamage: ((number, number) -> ())?,
 	onCombatKill: ((number, string, string) -> ())?,
 	-- Camada espacial (item 5): resolve o avanço de 7 studs, commita a posição
 	-- e devolve alvo + lado do golpe. Ausente = fatia headless usa
@@ -129,6 +131,9 @@ local function notifyCombatHit(
 	end
 	if killed and type(target.diedAt) == "number" and target.diedAt <= 0 then
 		target.diedAt = now()
+	end
+	if deps.creditCareerDamage and damage > 0 then
+		deps.creditCareerDamage(attackerUserId, damage)
 	end
 	if deps.onCombatHit then
 		deps.onCombatHit(attackerUserId, target.id, damage, abilityId, outcome)
@@ -318,7 +323,11 @@ local function cometShoulderRunner(attacker: ServerPlayerState, target: ServerPl
 	if not target then
 		return
 	end
-	deps.applyDamage(target, 14, attacker.userId)
+	local killed = deps.applyDamage(target, 14, attacker.userId)
+	if type((target :: any).id) ~= "string" then
+		(target :: any).id = "player:" .. tostring((target :: any).userId or 0)
+	end
+	notifyCombatHit(attacker.userId, target, 14, "comet_shoulder", killed, if killed then "death" else "hit")
 end
 
 local function brokenCadenceRunner(attacker: ServerPlayerState, target: ServerPlayerState?, payload: AbilityPayload)

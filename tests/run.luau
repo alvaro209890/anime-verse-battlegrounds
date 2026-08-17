@@ -2572,6 +2572,7 @@ local function makeAbilityDeps(unlock: ((number, string) -> boolean)?)
 		end,
 		now = clockNow,
 		isAbilityUnlocked = unlock,
+		creditCareerDamage = CareerService.creditDamage,
 	}
 end
 
@@ -6116,7 +6117,7 @@ test("carreira: totais autoritativos persistem no snapshot", function()
 	CareerService.unregisterPlayer(1600, 200)
 end)
 
-test("save: carreira entra no ProfileRoot e volta no rejoin", function()
+test("save: carreira persiste no leave sem markDirty manual", function()
 	fakeNow = 68000
 	ProgressionService.init()
 	ProgressionService.setNow(clockNow)
@@ -6125,12 +6126,15 @@ test("save: carreira entra no ProfileRoot e volta no rejoin", function()
 	CareerService.creditKill(1610, "enemy_wandering_shard", false)
 	CareerService.creditKill(1610, "enemy_anchored_shard", true)
 	CareerService.creditDamage(1610, 42)
+	CareerService.creditTechnique(1610)
+	CareerService.creditDeath(1610)
 	local store = makeMockStore()
 	SaveService.init(makeSaveDeps(store))
 	ProgressionService.registerPlayer(1610)
 	local profile = SaveService.loadProfile(1610)
 	assertTrue(profile ~= nil, "perfil")
-	SaveService.markDirty(1610)
+	assertFalse((SaveService.getProfile(1610) :: any) == nil, "sessão aberta")
+	-- Sem SaveService.markDirty: o leave tem de gravar carreira sozinho.
 	SaveService.releaseProfile(1610)
 	CareerService.unregisterPlayer(1610, fakeNow)
 	ProgressionService.unregisterPlayer(1610)
@@ -6147,11 +6151,70 @@ test("save: carreira entra no ProfileRoot e volta no rejoin", function()
 		assertEq(view.monsterKills, 1, "errante persistiu")
 		assertEq(view.bossKills, 1, "elite persistiu")
 		assertEq(view.damageDealt, 42, "dano persistiu")
+		assertEq(view.techniquesUsed, 1, "técnica persistiu")
+		assertEq(view.deaths, 1, "queda persistiu")
 	end
 	SaveService.releaseProfile(1610)
 	CareerService.unregisterPlayer(1610, fakeNow + 10)
 	ProgressionService.setNow(nil)
 	ProgressionService.unregisterPlayer(1610)
+end)
+
+test("carreira: Cometa e Cadência creditam dano no AbilityService", function()
+	fakeNow = 70000
+	CareerService.init()
+	CareerService.registerPlayer(1622, fakeNow)
+	ResourceService.init(makeResourceDeps())
+	CooldownService.clear(1622)
+	CombatService.clear()
+	CombatService.createFighter("player:1622", "player", 100, 100)
+	local shard = CombatService.createFighter("npc:career-shard", "npc", 200, 0)
+	local deps = makeAbilityDeps()
+	deps.getAttackerFighter = function(userId: number)
+		return CombatService.getFighter(CombatService.playerFighterId(userId))
+	end
+	deps.getFighterById = CombatService.getFighter
+	deps.getAbilityTarget = function(_userId: number)
+		return CombatService.getFighter("npc:career-shard")
+	end
+	deps.tryCometShoulder = CombatService.tryCometShoulder
+	deps.tryCadenceHit = function(attacker: any, target: any, currentNow: number, damage: number, _facing: string)
+		return CombatService.tryCadenceHit(attacker, target, currentNow, damage, "front")
+	end
+	deps.setPulseStance = CombatService.setPulseStance
+	AbilityService.init(deps)
+	local attacker = ResourceService.createState(1622, "umbral_aether")
+	assertTrue(attacker ~= nil, "attacker")
+	if not attacker then
+		return
+	end
+	local cometOk, cometReason = AbilityService.tryActivate(attacker, "comet_shoulder")
+	assertTrue(cometOk, "cometa: " .. tostring(cometReason))
+	local afterComet = CareerService.viewFor(1622, fakeNow)
+	assertTrue(afterComet ~= nil, "view cometa")
+	if afterComet then
+		assertEq(afterComet.damageDealt, 14, "Cometa no placar")
+	end
+	CooldownService.clear(1622)
+	local cadOk, cadReason = AbilityService.tryActivate(attacker, "broken_cadence", shard)
+	assertTrue(cadOk, "cadência: " .. tostring(cadReason))
+	AbilityService.tick(fakeNow + 0.14)
+	AbilityService.tick(fakeNow + 0.32)
+	local afterCad = CareerService.viewFor(1622, fakeNow)
+	assertTrue(afterCad ~= nil, "view cadência")
+	if afterCad then
+		assertEq(afterCad.damageDealt, 30, "14 + 7 + 9")
+	end
+	CooldownService.clear(1622)
+	local pulseOk, pulseReason = AbilityService.tryActivate(attacker, "pulse_return")
+	assertTrue(pulseOk, "pulso: " .. tostring(pulseReason))
+	CareerService.creditFromFighterId("player:1622", 10)
+	local afterPulse = CareerService.viewFor(1622, fakeNow)
+	if afterPulse then
+		assertEq(afterPulse.damageDealt, 40, "contra do Pulso no placar")
+	end
+	CareerService.unregisterPlayer(1622, fakeNow)
+	CombatService.clear()
 end)
 
 test("bots: nível vem do catálogo e não é string vazia", function()

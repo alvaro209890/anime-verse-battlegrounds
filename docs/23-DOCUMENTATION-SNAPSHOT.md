@@ -9,6 +9,9 @@
 4. **Muralha** Limestone + Sandstone + Basalt (não Slate único).
 5. **Golpe:** folga de corpo 3→5 (alcance 11) e cone 78°/68° — o “colado”
    a ~11 studs passa a conectar.
+6. **Persistência da carreira:** `releaseProfile` sempre grava; créditos
+   sujam o perfil. Dano de técnica (Cometa/Cadência) e contra do Pulso
+   entram no placar.
 
 ---
 
