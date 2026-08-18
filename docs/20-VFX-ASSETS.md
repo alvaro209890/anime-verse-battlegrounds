@@ -19,6 +19,18 @@
 > estado correto; a nova proíbe o que ela realmente queria proibir, que é ID
 > inventado. **A atribuição CC-BY abaixo continua obrigatória nos créditos.**
 
+> **Revalidação 17/08/2026 (Play no Studio).** Os oito IDs existem
+> (economy 200, dono `kira_death222`, AssetTypeId=1). Nenhum está bloqueado
+> nem sumiu. A sonda do cliente (`ImageLabel` + `ContentProvider:PreloadAsync`)
+> deu `IsLoaded=true` nos oito e a faixa na tela mostrou o atlas de verdade
+> (orbes, anéis, raio, explosões, slash, spark, scorch) — **não** o ícone
+> vazio de moderação. Os três Kenney já têm thumbnail `Completed` na API
+> pública. Os cinco do `AbilityVfx` ainda vêm `Pending` nessa API (mesmo
+> placeholder), mas no Play o pixel é o da textura publicada; **não** houve
+> re-upload. A sonda do `AbilityVfxPlayer` agora deixa passar esses IDs.
+> Crédito CC-BY (yiannisd, Clint Bellanger) segue no JSON e neste doc; o
+> MENU do jogo ainda não lista os créditos.
+
 **Projeto:** Anime Verse Battlegrounds  
 **Atualização examinada:** `bb147a6` → `73d8b96`  
 **Data da revisão:** 14 de agosto de 2026
