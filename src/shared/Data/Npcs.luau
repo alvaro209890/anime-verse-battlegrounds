@@ -34,12 +34,14 @@ export type NpcDefinition = {
 	-- Nível exibido acima da cabeça (Billboard). Dado de catálogo, não inventado no cliente.
 	displayLevel: number?,
 	-- Elite (docs/13 §9.3 — Estilhaço Ancorado). Campos opcionais; só o elite
-	-- os preenche. `elitePattern` alterna slam/combo no CombatService.
+	-- os preenche. `elitePattern` cicla combo/slam/shock no CombatService.
 	attackPattern: string?,
 	eliteSlamDamage: number?,
 	eliteSlamTelegraphMs: number?,
 	eliteComboDamage: number?,
 	eliteComboTelegraphMs: number?,
+	eliteShockDamage: number?,
+	eliteShockTelegraphMs: number?,
 	-- XP "uma vez por 3 min por jogador" (§9.3): cooldown de crédito.
 	xpCooldownSeconds: number?,
 	-- Leeching (§9.3): crédito se causou ≥ 1% da vida (`leechDamagePct`) ou
@@ -106,9 +108,10 @@ local Npcs: { [string]: NpcDefinition } = {
 		aggroRadiusStuds = 30,
 	},
 	-- Estilhaço Ancorado — elite da cratera (docs/13 §9.3). Fica na âncora
-	-- `anchor_elite` (não persegue: moveSpeed ausente), alterna slam (dano 14,
-	-- telegraph 700 ms, `unblockable` para o Retorno de Pulso, guarda reduz 30%)
-	-- com combo leve 6+6 (telegraph 300 ms). Respawn 180 s. XP 80 uma vez por
+	-- `anchor_elite` (não persegue: moveSpeed ausente), cicla combo 6+6
+	-- (telegraph 300 ms), slam (dano 14, telegraph 700 ms, `unblockable` para
+	-- o Pulso, guarda reduz 30%) e onda `shock` (dano 10, telegraph 550 ms,
+	-- guardável). Respawn 180 s. XP 80 uma vez por
 	-- 3 min por jogador, com leeching: crédito se causou ≥ 1% da vida ou ficou
 	-- 8 s no raio 20 da cratera. Sem último golpe.
 	enemy_anchored_shard = {
@@ -134,12 +137,42 @@ local Npcs: { [string]: NpcDefinition } = {
 		eliteSlamTelegraphMs = 700,
 		eliteComboDamage = 6,
 		eliteComboTelegraphMs = 300,
+		eliteShockDamage = 10,
+		eliteShockTelegraphMs = 550,
 		leechDamagePct = 0.01,
 		leechStaySeconds = 8,
 		maxAlive = 1,
 		zoneId = "zone_plain_free",
 		combatClearRadius = 20,
 		aggroRadiusStuds = 30,
+	},
+	-- Fogo-fátuo do Bosque — caçador rápido da célula leste. Não altera o
+	-- baseline F0 dos Estilhaços (CatalogService trava 60/8/4 e o elite).
+	-- Patrulha a clareira e fura com `wisp_pierce` (alcance 6, telegraph 350 ms).
+	enemy_grove_wisp = {
+		id = "enemy_grove_wisp",
+		displayNameKey = "enemy.grove_wisp.name",
+		kind = "enemy",
+		displayLevel = 10,
+		maxHealth = 36,
+		maxGuard = 0,
+		attackDamage = 6,
+		attackRange = 6,
+		attackPeriodSeconds = 0.9,
+		telegraphMs = 350,
+		grantsXp = true,
+		enabled = true,
+		moveSpeed = 14,
+		respawnSeconds = 40,
+		recoverySeconds = 0.5,
+		xpUnconsolidated = 18,
+		xpFullKills = 6,
+		xpReducedKills = 6,
+		xpReducedValue = 8,
+		maxAlive = 2,
+		zoneId = "zone_echo_woods",
+		combatClearRadius = 16,
+		aggroRadiusStuds = 28,
 	},
 }
 

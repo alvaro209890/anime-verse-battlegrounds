@@ -27,6 +27,7 @@ export type EnemyDeps = {
 	getNpc: (string) -> any?,
 	getAnchor: (string) -> any?,
 	shardAnchors: () -> { string },
+	wispAnchors: (() -> { string })?,
 	spatial: any,
 	combat: any,
 	geometry: any,
@@ -47,6 +48,7 @@ export type EnemyRecord = {
 
 local SHARD_NPC_ID = "enemy_wandering_shard"
 local ELITE_NPC_ID = "enemy_anchored_shard"
+local WISP_NPC_ID = "enemy_grove_wisp"
 local ELITE_ANCHOR_ID = "anchor_elite"
 -- Padrão Blox Fruits: o NPC só puxa e só persegue dentro de ~30 studs.
 -- Um único raio para começar e largar — fora dele o bot volta pra âncora.
@@ -73,6 +75,61 @@ EnemyService.DefaultAggroRadiusStuds = DEFAULT_AGGRO_RADIUS_STUDS
 
 function EnemyService.withinAggro(distance: number?, radius: number): boolean
 	return type(distance) == "number" and radius > 0 and distance <= radius
+end
+
+-- Ponto da patrulha em torno da âncora (órbita no plano). Sem alvo o bot
+-- anda em círculo em vez de ficar parado — o mundo lê como vivo.
+function EnemyService.patrolPoint(anchor: Vec3, now: number, radius: number, periodSeconds: number): Vec3
+	local period = if periodSeconds > 0 then periodSeconds else 8
+	local tau = ((now % period) / period) * math.pi * 2
+	return {
+		x = anchor.x + math.cos(tau) * radius,
+		y = anchor.y,
+		z = anchor.z + math.sin(tau) * radius,
+	}
+end
+
+export type ChaserPattern = {
+	pattern: string,
+	abilityId: string,
+	damage: number,
+	telegraphSeconds: number,
+}
+
+-- Terceiro golpe do Errante é `rift` (dano 10, telegraph 550 ms). O catálogo
+-- F0 continua 8/400 — CatalogService trava o baseline; o extra mora no ciclo.
+function EnemyService.chaserPattern(npcId: string, cycleCount: number, def: any): ChaserPattern
+	if npcId == WISP_NPC_ID then
+		return {
+			pattern = "pierce",
+			abilityId = "wisp_pierce",
+			damage = if def then def.attackDamage else 6,
+			telegraphSeconds = if def then (def.telegraphMs or 350) / 1000 else 0.35,
+		}
+	end
+	local step = cycleCount % 3
+	if step == 1 then
+		return {
+			pattern = "pounce",
+			abilityId = "shard_pounce",
+			damage = if def then def.attackDamage else 8,
+			telegraphSeconds = if def then (def.telegraphMs or 400) / 1000 else 0.4,
+		}
+	end
+	if step == 2 then
+		return {
+			pattern = "rift",
+			abilityId = "shard_rift",
+			damage = 10,
+			telegraphSeconds = 0.55,
+		}
+	end
+	return {
+		pattern = "rend",
+		abilityId = "shard_rend",
+		damage = if def then def.attackDamage else 8,
+		telegraphSeconds = if def then (def.telegraphMs or 400) / 1000 else 0.4,
+	}
 end
 
 local function aggroRadiusFor(npcId: string): number
@@ -230,6 +287,45 @@ function EnemyService.spawnElite(): boolean
 	return true
 end
 
+-- Dois Fogos-fátuo no Bosque. Idempotente; sem `wispAnchors` no deps não cria.
+function EnemyService.spawnWisps(): number
+	local deps = EnemyService.deps
+	if not deps or not deps.wispAnchors then
+		return 0
+	end
+	local def = deps.getNpc(WISP_NPC_ID)
+	if not def or not def.enabled then
+		return 0
+	end
+	local maxAlive = def.maxAlive or 0
+	local spawned = 0
+	for _, anchorId in deps.wispAnchors() do
+		if not deps.combat.canSpawnNpc(WISP_NPC_ID .. "@", maxAlive) then
+			break
+		end
+		local fighterId = EnemyService.fighterId(WISP_NPC_ID, anchorId, 1)
+		if not EnemyService.enemies[fighterId] then
+			local anchor = deps.getAnchor(anchorId)
+			if anchor then
+				deps.combat.createFighter(fighterId, "npc", def.maxHealth, def.maxGuard)
+				deps.spatial.setTransform(fighterId, {
+					x = anchor.position.x,
+					y = anchor.position.y,
+					z = anchor.position.z,
+				}, { x = 0, y = 0, z = 1 })
+				registerEnemy(fighterId, WISP_NPC_ID, anchor)
+				EnemyService.shardCycleCount[fighterId] = 0
+				spawned += 1
+				emit(
+					fighterId,
+					{ kind = "spawn", anchorId = anchorId, durationSeconds = 0.6, visualPattern = "arrival" }
+				)
+			end
+		end
+	end
+	return spawned
+end
+
 -- Registra dano causado ao elite por um jogador (leeching §9.3). Chamado pelo
 -- bootstrap quando um golpe acerta o elite; o crédito não depende do último
 -- golpe.
@@ -247,6 +343,11 @@ end
 function EnemyService.isElite(fighterId: string): boolean
 	local record = EnemyService.enemies[fighterId]
 	return record ~= nil and record.npcId == ELITE_NPC_ID
+end
+
+function EnemyService.isWisp(fighterId: string): boolean
+	local record = EnemyService.enemies[fighterId]
+	return record ~= nil and record.npcId == WISP_NPC_ID
 end
 
 -- Alvo mais próximo elegível. Sem aggro através da fronteira (§9): um jogador
@@ -275,7 +376,7 @@ local function nearestTarget(record: EnemyRecord, targets: { EnemyTarget }): (En
 	return best, bestDistance
 end
 
-local function returnToAnchor(record: EnemyRecord, def: any, deltaSeconds: number): ()
+local function returnToAnchor(record: EnemyRecord, def: any, deltaSeconds: number, now: number): ()
 	local deps = EnemyService.deps
 	if not deps then
 		return
@@ -285,11 +386,15 @@ local function returnToAnchor(record: EnemyRecord, def: any, deltaSeconds: numbe
 	if not from or not anchor then
 		return
 	end
-	if deps.geometry.horizontalDistance(from, anchor.position) <= 0.25 then
+	local dest = anchor.position
+	if deps.geometry.horizontalDistance(from, anchor.position) <= 0.6 then
+		dest = EnemyService.patrolPoint(anchor.position, now, 6, 8)
+	end
+	if deps.geometry.horizontalDistance(from, dest) <= 0.2 then
 		return
 	end
-	local moved = deps.geometry.moveToward(from, anchor.position, def.moveSpeed or 12, deltaSeconds, 0)
-	local look = deps.geometry.normalize(deps.geometry.sub(anchor.position, moved))
+	local moved = deps.geometry.moveToward(from, dest, def.moveSpeed or 12, deltaSeconds, 0)
+	local look = deps.geometry.normalize(deps.geometry.sub(dest, moved))
 	deps.spatial.setTransform(record.fighterId, moved, look)
 end
 
@@ -312,16 +417,12 @@ local function combatNearAnchor(record: EnemyRecord, targets: { EnemyTarget }, r
 	return false
 end
 
--- Um passo da AI de todos os Estilhaços errantes. `deltaSeconds` é o tempo
--- desde o último tick (o bootstrap passa o do Heartbeat; os testes passam um
--- valor fixo). Retorna quantos ataques conectaram, para telemetria.
+-- Um passo da AI de todos os caçadores (Errante + Fogo-fátuo). `deltaSeconds`
+-- é o tempo desde o último tick (o bootstrap passa o do Heartbeat; os testes
+-- passam um valor fixo). Retorna quantos ataques conectaram, para telemetria.
 function EnemyService.tick(now: number, deltaSeconds: number): number
 	local deps = EnemyService.deps
 	if not deps then
-		return 0
-	end
-	local def = deps.getNpc(SHARD_NPC_ID)
-	if not def then
 		return 0
 	end
 	local targets = deps.listTargets()
@@ -331,7 +432,11 @@ function EnemyService.tick(now: number, deltaSeconds: number): number
 		-- O Estilhaço Ancorado tem máquina de estado e respawn próprios em
 		-- tickElite. Processá-lo aqui também moveria o elite e aplicaria o
 		-- baseline de 45 s dos Errantes sobre o respawn autoritativo de 180 s.
-		if record.npcId ~= SHARD_NPC_ID then
+		if record.npcId == ELITE_NPC_ID then
+			continue
+		end
+		local def = deps.getNpc(record.npcId)
+		if not def or type(def.moveSpeed) ~= "number" then
 			continue
 		end
 		local fighter = deps.combat.getFighter(record.fighterId)
@@ -361,6 +466,8 @@ function EnemyService.tick(now: number, deltaSeconds: number): number
 				end
 			else
 				local target, distance = nearestTarget(record, targets)
+				local pattern =
+					EnemyService.chaserPattern(record.npcId, EnemyService.shardCycleCount[record.fighterId] or 0, def)
 				if target and distance then
 					-- Move só fora do compromisso: telegraph e recovery travam.
 					if fighter.aiPhase == "idle" then
@@ -383,25 +490,23 @@ function EnemyService.tick(now: number, deltaSeconds: number): number
 							now,
 							distance,
 							true,
-							def.attackDamage,
+							pattern.damage,
 							def.attackRange,
-							def.telegraphMs / 1000,
+							pattern.telegraphSeconds,
 							def.recoverySeconds or 0.6
 						)
 						if result.ok and result.phase == "telegraph" then
-							local pounce = (EnemyService.shardCycleCount[record.fighterId] or 0) % 2 == 1
 							emit(record.fighterId, {
 								kind = "telegraph",
 								targetId = target.fighterId,
-								durationSeconds = def.telegraphMs / 1000,
-								visualPattern = if pounce then "pounce" else "rend",
-								abilityId = if pounce then "shard_pounce" else "shard_rend",
+								durationSeconds = pattern.telegraphSeconds,
+								visualPattern = pattern.pattern,
+								abilityId = pattern.abilityId,
 							})
 						elseif result.ok and result.phase == "attack" then
 							if result.iframe ~= true and result.damage > 0 then
 								hits += 1
 							end
-							local pounce = (EnemyService.shardCycleCount[record.fighterId] or 0) % 2 == 1
 							emit(record.fighterId, {
 								kind = "attack",
 								targetId = target.fighterId,
@@ -410,8 +515,8 @@ function EnemyService.tick(now: number, deltaSeconds: number): number
 								iframe = result.iframe == true,
 								pulseCounter = result.pulseCounter == true,
 								durationSeconds = 0.35,
-								visualPattern = if pounce then "pounce" else "rend",
-								abilityId = if pounce then "shard_pounce" else "shard_rend",
+								visualPattern = pattern.pattern,
+								abilityId = pattern.abilityId,
 							})
 							EnemyService.shardCycleCount[record.fighterId] = (
 								EnemyService.shardCycleCount[record.fighterId] or 0
@@ -419,20 +524,21 @@ function EnemyService.tick(now: number, deltaSeconds: number): number
 						end
 					end
 				else
-					-- Sem alvo no raio: encerra o compromisso e volta à âncora.
+					-- Sem alvo no raio: encerra o compromisso e volta à âncora
+					-- (ou patrulha quando já está nela).
 					deps.combat.tryShardCycle(
 						fighter,
 						fighter,
 						now,
 						math.huge,
 						false,
-						def.attackDamage,
+						pattern.damage,
 						def.attackRange,
-						def.telegraphMs / 1000,
+						pattern.telegraphSeconds,
 						def.recoverySeconds or 0.6
 					)
 					if fighter.aiPhase == "idle" then
-						returnToAnchor(record, def, deltaSeconds)
+						returnToAnchor(record, def, deltaSeconds, now)
 					end
 				end
 			end
@@ -525,23 +631,32 @@ function EnemyService.tickElite(now: number, deltaSeconds: number): number
 				slamDamage = def.eliteSlamDamage or 12,
 				slamTelegraphSeconds = (def.eliteSlamTelegraphMs or 700) / 1000,
 				slamBlockedPct = 0.7,
+				shockDamage = def.eliteShockDamage or 10,
+				shockTelegraphSeconds = (def.eliteShockTelegraphMs or 550) / 1000,
 			})
 			if result.ok and result.phase == "telegraph" then
-				local visualPattern = if fighter.elitePattern == "slam" then "slam" else "combo"
-				local durationSeconds = if visualPattern == "slam"
-					then (def.eliteSlamTelegraphMs or 700) / 1000
-					else (def.eliteComboTelegraphMs or 300) / 1000
+				local visualPattern = fighter.elitePattern
+				local durationSeconds = (def.eliteComboTelegraphMs or 300) / 1000
+				local abilityId = "anchored_combo"
+				if visualPattern == "slam" then
+					durationSeconds = (def.eliteSlamTelegraphMs or 700) / 1000
+					abilityId = "anchored_slam"
+				elseif visualPattern == "shock" then
+					durationSeconds = (def.eliteShockTelegraphMs or 550) / 1000
+					abilityId = "anchored_shock"
+				end
 				emit(fighterId, {
 					kind = "telegraph",
 					targetId = target.fighterId,
 					durationSeconds = durationSeconds,
 					visualPattern = visualPattern,
-					abilityId = if visualPattern == "slam" then "anchored_slam" else "anchored_combo",
+					abilityId = abilityId,
 				})
 			elseif result.ok and result.phase == "attack" then
 				if result.iframe ~= true and result.damage > 0 then
 					hits += 1
 				end
+				local visualPattern = fighter.elitePattern
 				emit(fighterId, {
 					kind = "attack",
 					targetId = target.fighterId,
@@ -550,8 +665,10 @@ function EnemyService.tickElite(now: number, deltaSeconds: number): number
 					iframe = result.iframe == true,
 					pulseCounter = result.pulseCounter == true,
 					durationSeconds = 0.4,
-					visualPattern = if fighter.elitePattern == "slam" then "slam" else "combo",
-					abilityId = if fighter.elitePattern == "slam" then "anchored_slam" else "anchored_combo",
+					visualPattern = visualPattern,
+					abilityId = if visualPattern == "slam"
+						then "anchored_slam"
+						else (if visualPattern == "shock" then "anchored_shock" else "anchored_combo"),
 				})
 			end
 		end
@@ -565,6 +682,8 @@ function EnemyService.tickElite(now: number, deltaSeconds: number): number
 			slamDamage = def.eliteSlamDamage or 12,
 			slamTelegraphSeconds = (def.eliteSlamTelegraphMs or 700) / 1000,
 			slamBlockedPct = 0.7,
+			shockDamage = def.eliteShockDamage or 10,
+			shockTelegraphSeconds = (def.eliteShockTelegraphMs or 550) / 1000,
 		})
 	end
 	return hits

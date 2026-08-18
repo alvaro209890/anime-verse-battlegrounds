@@ -1301,7 +1301,10 @@ test("npc: catálogo de habilidades e assets gratuitos é válido", function()
 	local assetsOk, assetsReason = EnemyVfxAssets.validate()
 	assertTrue(assetsOk, assetsReason or "assets de NPC válidos")
 	assertEq(EnemyAbilities.forEvent("enemy_wandering_shard", "pounce").id, "shard_pounce", "Pounce resolve")
+	assertEq(EnemyAbilities.forEvent("enemy_wandering_shard", "rift").id, "shard_rift", "Rift resolve")
 	assertEq(EnemyAbilities.forEvent("enemy_anchored_shard", "slam").id, "anchored_slam", "Slam resolve")
+	assertEq(EnemyAbilities.forEvent("enemy_anchored_shard", "shock").id, "anchored_shock", "Shock resolve")
+	assertEq(EnemyAbilities.forEvent("enemy_grove_wisp", "pierce").id, "wisp_pierce", "Pierce resolve")
 	for _, asset in EnemyVfxAssets.all() do
 		assertTrue(fs.isFile(asset.sourceFile), "asset Kenney existe: " .. asset.sourceFile)
 	end

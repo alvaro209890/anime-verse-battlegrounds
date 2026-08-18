@@ -44,8 +44,8 @@ export type FighterState = {
 	pulseStanceUntil: number,
 	pulseStanceUsed: boolean,
 	pulseRecoveryUntil: number,
-	-- Padrão do ciclo do elite (docs/13 §9.3): alterna combo leve e slam.
-	elitePattern: "combo" | "slam",
+	-- Padrão do ciclo do elite (docs/13 §9.3): combo → slam → shock.
+	elitePattern: "combo" | "slam" | "shock",
 	-- Bônus de Impacto (0..0.06). Só jogador; NPC fica 0.
 	damageBonus: number,
 }
@@ -589,9 +589,9 @@ function CombatService.tryShardCycle(
 end
 
 -- Estilhaço Ancorado — elite da cratera (docs/13 §9.3). Máquina igual à do
--- shard, mas com DOIS ataques alternados por ciclo: combo leve 5+5
--- (telegraph 300 ms) e slam (telegraph 700 ms, dano 12, `unblockable` para o
--- Retorno de Pulso, guarda reduz apenas 30% → 70% do dano passa).
+-- shard, com TRÊS ataques em ciclo: combo leve 6+6 (telegraph 300 ms), slam
+-- (telegraph 700 ms, dano 14, `unblockable` para o Pulso, guarda reduz 30%)
+-- e onda `shock` (telegraph 550 ms, dano 10, guardável).
 -- `params` espelha as colunas do catálogo (Npcs.luau).
 export type EliteCycleParams = {
 	range: number,
@@ -602,6 +602,8 @@ export type EliteCycleParams = {
 	slamTelegraphSeconds: number,
 	-- Guarda reduz 30%: o dano que passa bloqueado é 70% do slam (§9.3).
 	slamBlockedPct: number,
+	shockDamage: number?,
+	shockTelegraphSeconds: number?,
 }
 
 function CombatService.tryEliteCycle(
@@ -631,13 +633,22 @@ function CombatService.tryEliteCycle(
 		end
 		elite.aiPhase = "idle"
 		-- Ciclo completo: alterna o padrão do próximo ataque.
-		elite.elitePattern = if elite.elitePattern == "slam" then "combo" else "slam"
+		if elite.elitePattern == "slam" then
+			elite.elitePattern = "shock"
+		elseif elite.elitePattern == "shock" then
+			elite.elitePattern = "combo"
+		else
+			elite.elitePattern = "slam"
+		end
 	end
 	if elite.aiPhase == "idle" then
 		elite.aiPhase = "telegraph"
-		local telegraph = if elite.elitePattern == "slam"
-			then params.slamTelegraphSeconds
-			else params.comboTelegraphSeconds
+		local telegraph = params.comboTelegraphSeconds
+		if elite.elitePattern == "slam" then
+			telegraph = params.slamTelegraphSeconds
+		elseif elite.elitePattern == "shock" then
+			telegraph = params.shockTelegraphSeconds or 0.55
+		end
 		elite.aiPhaseUntil = now + telegraph
 		return { ok = true, damage = 0, phase = "telegraph" }
 	end
@@ -660,6 +671,10 @@ function CombatService.tryEliteCycle(
 				false,
 				true
 			)
+		elseif elite.elitePattern == "shock" then
+			-- Onda: um único golpe guardável (não atravessa o Pulso).
+			local shockDamage = params.shockDamage or 10
+			result = applyHit(target, now, shockDamage, shockDamage, math.floor(shockDamage * 0.4), "front", true)
 		else
 			-- Combo leve 5+5: dois golpes no mesmo active; o segundo só sai
 			-- se o primeiro não matou.

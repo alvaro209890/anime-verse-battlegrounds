@@ -277,6 +277,18 @@ local Anchors: { [string]: AnchorDefinition } = {
 		zoneId = "zone_academy_safe",
 		position = { x = 50, y = 0, z = 140 },
 	},
+	-- Clareiras do Fogo-fátuo (Bosque). Longe do santuário (380, −260) e
+	-- das árvores reservadas no LCG de BiomeDecorations.
+	anchor_wisp_1 = {
+		id = "anchor_wisp_1",
+		zoneId = "zone_echo_woods",
+		position = { x = 320, y = 0, z = -180 },
+	},
+	anchor_wisp_2 = {
+		id = "anchor_wisp_2",
+		zoneId = "zone_echo_woods",
+		position = { x = 440, y = 0, z = -340 },
+	},
 }
 
 -- Pontos de spawn de Estilhaço, na ordem de uso pelo EnemyService.
@@ -291,6 +303,8 @@ local SHARD_ANCHORS: { string } = {
 
 -- Portões, para a regra "nenhum ponto de Estilhaço a menos de 20 studs".
 local GATE_ANCHORS: { string } = { "anchor_gate_north", "anchor_gate_west" }
+
+local WISP_ANCHORS: { string } = { "anchor_wisp_1", "anchor_wisp_2" }
 
 -- F0-BASELINE (docs/13-F0-SLICE.md §8.1) — medidas de layout do greybox.
 -- Studs; eixo z negativo é norte.
@@ -344,6 +358,10 @@ end
 
 function ZoneCatalog.gateAnchors(): { string }
 	return table.clone(GATE_ANCHORS)
+end
+
+function ZoneCatalog.wispAnchors(): { string }
+	return table.clone(WISP_ANCHORS)
 end
 
 local function contains(b: Box, p: Vec3): boolean

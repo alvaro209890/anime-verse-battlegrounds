@@ -1,4 +1,15 @@
-# Snapshot Canônico da Documentação — 17/08/2026
+# Snapshot Canônico da Documentação — 18/08/2026
+
+## Rodada de 18/08 (Grok) — bots, poderes e células mais densas
+
+Sem Play no Studio (pedido do Álvaro). Incremento só em dados/serviços/testes:
+
+1. **Bots.** Estilhaço Errante cicla talho → salto → **fenda** (`shard_rift`, dano 10 / 550 ms). Sem alvo, patrulha a âncora (órbita de 6 studs). Elite ganha **onda** (`anchored_shock`, dano 10, guardável) depois do slam. Novo NPC `enemy_grove_wisp` (2 no Bosque, Nv. 10, 36 HP, `wisp_pierce`, loot `umbral_dust`).
+2. **Poderes / VFX.** Camadas extra honestas: `comet_dust`, `cadence_spark`, `counter_arc` (raio e brilho ≤ alcance).
+3. **Cenário.** Densidade de leitura em Bosque / Porto / Cinza / Academia (lanternas, cais, correias, bancos). Sem PointLight nova, sem colisão. Clareiras do Fátuo reservadas no LCG.
+4. Baseline F0 dos Estilhaços **intacto** (60/8/4 e elite 120/14/700). Suite e CI no mesmo commit.
+
+---
 
 ## Rodada de 17/08 (Grok) — Distrito Lumen, primeira célula urbana densa (F1)
 

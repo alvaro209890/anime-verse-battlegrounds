@@ -561,11 +561,12 @@ test("ci: o script local reproduz a ordem do workflow", function()
 	end
 end)
 
-test("apresentação: quatro atores e estilo do mundo passam validação", function()
+test("apresentação: cinco atores e estilo do mundo passam validação", function()
 	local ok, reason = WorldPresentation.validate()
 	assertTrue(ok, reason)
-	assertEq(#WorldPresentation.allActors(), 4, "quatro receitas")
+	assertEq(#WorldPresentation.allActors(), 5, "cinco receitas")
 	assertEq(WorldPresentation.getActor("enemy_wandering_shard").shape, "shard", "inimigo low-poly")
+	assertEq(WorldPresentation.getActor("enemy_grove_wisp").shape, "shard", "Fogo-fátuo low-poly")
 	assertTrue(WorldPresentation.style().craterSegments >= 12, "cratera legível")
 end)
 
@@ -705,10 +706,13 @@ test("skin: estilhaços têm receita própria em cima do corpo comum", function(
 	assertTrue(has(wandering, "RiftRing"), "fenda ciano tem o anel de fenda")
 	assertFalse(has(wandering, "Crown_1"), "coroa é exclusiva do elite")
 	assertTrue(has(anchored, "Crown_5") and has(anchored, "AnchorCollar"), "coroa e colar do elite")
+	local wisp = WorldPresentation.shardGearFor("enemy_grove_wisp")
+	assertTrue(has(wisp, "WispVeil") and has(wisp, "WispCore"), "Fogo-fátuo tem véu e núcleo")
+	assertFalse(has(wisp, "Crown_1"), "Fátuo não herda a coroa")
 end)
 
 test("skin: nenhuma peça de estilhaço passa do alcance real do golpe (docs/17)", function()
-	for _, npcId in { "enemy_wandering_shard", "enemy_anchored_shard" } do
+	for _, npcId in { "enemy_wandering_shard", "enemy_anchored_shard", "enemy_grove_wisp" } do
 		local definition = Npcs.get(npcId)
 		assertTrue(definition ~= nil, npcId .. " existe no catálogo")
 		if definition then
@@ -3472,7 +3476,8 @@ test("dados: malha de zonas, PvP só em kind=free, âncoras da spec, spawn no ba
 			assertEq(zone.kind, "free", "PvP só em zona livre")
 		end
 	end
-	-- 7 âncoras persistidas de §8.3 + os 6 pontos de Estilhaço de §8.1 + 5 marcos.
+	-- 7 âncoras persistidas de §8.3 + os 6 pontos de Estilhaço de §8.1 + 5 marcos
+	-- + 2 clareiras do Fogo-fátuo.
 	local required = {
 		"anchor_bastion_spawn",
 		"anchor_bastion_return",
@@ -3487,9 +3492,10 @@ test("dados: malha de zonas, PvP só em kind=free, âncoras da spec, spawn no ba
 	end
 	assertEq(
 		#Zones.allAnchors(),
-		#required + #Zones.shardAnchors() + 5,
-		"âncoras persistidas + Estilhaço + marcos de bioma"
+		#required + #Zones.shardAnchors() + #Zones.wispAnchors() + 5,
+		"âncoras persistidas + Estilhaço + marcos + Fátuo"
 	)
+	assertEq(#Zones.wispAnchors(), 2, "duas clareiras de Fogo-fátuo")
 	local spawn = Zones.getAnchor("anchor_bastion_spawn")
 	assertTrue(spawn ~= nil, "anchor_bastion_spawn existe")
 	if spawn then
@@ -5006,6 +5012,7 @@ test("inimigo: spawn respeita o teto de 4 vivos e usa as âncoras", function()
 	assertEq(spawned, 4, "spawna até o teto de 4")
 	assertEq(#EnemyService.list(), 4, "4 registrados")
 	assertEq(EnemyService.spawnInitial(), 0, "segunda chamada não duplica")
+	assertEq(EnemyService.spawnWisps(), 0, "sem wispAnchors no deps não cria Fátuo")
 	local first = EnemyService.list()[1]
 	assertEq(first.fighterId, "enemy_wandering_shard@anchor_shard_1#1", "id carrega a âncora")
 	assertEq(first.zoneId, "zone_plain_free", "vive na planície")
@@ -5016,6 +5023,50 @@ test("inimigo: spawn respeita o teto de 4 vivos e usa as âncoras", function()
 		assertEq(position.x, anchor.position.x, "x da âncora")
 		assertEq(position.z, anchor.position.z, "z da âncora")
 	end
+end)
+
+test("inimigo: patrulha em órbita e terceiro golpe rift / Fogo-fátuo", function()
+	local rend = EnemyService.chaserPattern("enemy_wandering_shard", 0, Npcs.get("enemy_wandering_shard"))
+	local pounce = EnemyService.chaserPattern("enemy_wandering_shard", 1, Npcs.get("enemy_wandering_shard"))
+	local rift = EnemyService.chaserPattern("enemy_wandering_shard", 2, Npcs.get("enemy_wandering_shard"))
+	assertEq(rend.abilityId, "shard_rend", "ciclo 0 = talho")
+	assertEq(pounce.abilityId, "shard_pounce", "ciclo 1 = salto")
+	assertEq(rift.abilityId, "shard_rift", "ciclo 2 = fenda")
+	assertEq(rift.damage, 10, "fenda bate 10")
+	assertEq(rift.telegraphSeconds, 0.55, "fenda telegrafa 550 ms")
+	local pierce = EnemyService.chaserPattern("enemy_grove_wisp", 0, Npcs.get("enemy_grove_wisp"))
+	assertEq(pierce.abilityId, "wisp_pierce", "Fátuo fura")
+	assertEq(pierce.damage, 6, "Fátuo dano 6")
+
+	local point = EnemyService.patrolPoint({ x = 0, y = 0, z = 0 }, 2, 6, 8)
+	assertTrue(math.abs(point.x * point.x + point.z * point.z - 36) < 0.05, "órbita de raio 6")
+	assertEq(point.y, 0, "patrulha no plano")
+
+	CombatService.clear()
+	SpatialService.init({ geometry = Geometry })
+	EnemyService.init({
+		getNpc = Npcs.get,
+		getAnchor = Zones.getAnchor,
+		shardAnchors = Zones.shardAnchors,
+		wispAnchors = Zones.wispAnchors,
+		spatial = SpatialService,
+		combat = CombatService,
+		geometry = Geometry,
+		listTargets = function(): { any }
+			return {}
+		end,
+	})
+	assertEq(EnemyService.spawnWisps(), 2, "dois Fogos-fátuo")
+	assertEq(EnemyService.spawnWisps(), 0, "não duplica")
+	local wisp = EnemyService.list()
+	local sawWisp = false
+	for _, record in wisp do
+		if record.npcId == "enemy_grove_wisp" then
+			sawWisp = true
+			assertEq(record.zoneId, "zone_echo_woods", "vive no Bosque")
+		end
+	end
+	assertTrue(sawWisp, "Fátuo registrado")
 end)
 
 test("inimigo: persegue a 12 studs/s e ataca só depois do telegraph", function()
@@ -5404,6 +5455,15 @@ test("combate: elite alterna combo 6+6 e slam 14, com guarda cortada em 30%", fu
 	assertEq(slamHit.ok, true, "slam conecta")
 	assertEq(slamHit.damage, 14, "dano 14")
 	assertEq(player.health, 74, "HP após o slam")
+	-- Ciclo 3: onda shock (10), guardável. Recovery do slam termina em
+	-- 1001.91 + 0.8 = 1002.71.
+	local shockTelegraph = CombatService.tryEliteCycle(elite, player, 1002.8, 5, true, params)
+	assertEq(shockTelegraph.phase, "telegraph", "shock em telegraph")
+	assertEq(elite.elitePattern, "shock", "padrão virou shock")
+	local shockHit = CombatService.tryEliteCycle(elite, player, 1003.4, 5, true, params)
+	assertEq(shockHit.ok, true, "shock conecta")
+	assertEq(shockHit.damage, 10, "onda 10")
+	assertEq(player.health, 64, "HP após a onda")
 end)
 
 test("combate: Pulso interrompe o combo do elite no primeiro golpe", function()

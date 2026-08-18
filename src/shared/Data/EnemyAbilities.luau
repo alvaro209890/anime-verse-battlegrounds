@@ -6,7 +6,7 @@ export type EnemyAbility = {
 	id: string,
 	npcId: string,
 	displayNameKey: string,
-	pattern: "rend" | "pounce" | "combo" | "slam",
+	pattern: "rend" | "pounce" | "rift" | "combo" | "slam" | "shock" | "pierce",
 	telegraphSeconds: number,
 	attackSeconds: number,
 	recoverySeconds: number,
@@ -59,6 +59,39 @@ local ABILITIES: { [string]: EnemyAbility } = {
 		color = { 255, 118, 92 },
 		assetKey = "kenney_scorch",
 	},
+	shard_rift = {
+		id = "shard_rift",
+		npcId = "enemy_wandering_shard",
+		displayNameKey = "enemy.ability.shard_rift.name",
+		pattern = "rift",
+		telegraphSeconds = 0.55,
+		attackSeconds = 0.40,
+		recoverySeconds = 0.60,
+		color = { 168, 92, 255 },
+		assetKey = "kenney_scorch",
+	},
+	anchored_shock = {
+		id = "anchored_shock",
+		npcId = "enemy_anchored_shard",
+		displayNameKey = "enemy.ability.anchored_shock.name",
+		pattern = "shock",
+		telegraphSeconds = 0.55,
+		attackSeconds = 0.40,
+		recoverySeconds = 0.80,
+		color = { 255, 186, 92 },
+		assetKey = "kenney_spark",
+	},
+	wisp_pierce = {
+		id = "wisp_pierce",
+		npcId = "enemy_grove_wisp",
+		displayNameKey = "enemy.ability.wisp_pierce.name",
+		pattern = "pierce",
+		telegraphSeconds = 0.35,
+		attackSeconds = 0.30,
+		recoverySeconds = 0.50,
+		color = { 120, 220, 180 },
+		assetKey = "kenney_slash",
+	},
 }
 
 local EnemyAbilities = {}
@@ -69,10 +102,25 @@ end
 
 function EnemyAbilities.forEvent(npcId: string, visualPattern: string?): EnemyAbility?
 	if npcId == "enemy_wandering_shard" then
-		return if visualPattern == "pounce" then ABILITIES.shard_pounce else ABILITIES.shard_rend
+		if visualPattern == "pounce" then
+			return ABILITIES.shard_pounce
+		end
+		if visualPattern == "rift" then
+			return ABILITIES.shard_rift
+		end
+		return ABILITIES.shard_rend
 	end
 	if npcId == "enemy_anchored_shard" then
-		return if visualPattern == "slam" then ABILITIES.anchored_slam else ABILITIES.anchored_combo
+		if visualPattern == "slam" then
+			return ABILITIES.anchored_slam
+		end
+		if visualPattern == "shock" then
+			return ABILITIES.anchored_shock
+		end
+		return ABILITIES.anchored_combo
+	end
+	if npcId == "enemy_grove_wisp" then
+		return ABILITIES.wisp_pierce
 	end
 	return nil
 end

@@ -18,6 +18,7 @@ Cada NPC agora possui uma skin declarada em `WorldPresentation.luau`, com paleta
 |---|---|---|---|
 | `enemy_wandering_shard` | **Fenda Ciano** | Ciano (104, 220, 238) | Halo ciano orbitando o núcleo mineral, casca de rocha arredondando o volume, anel de fenda e duas lascas soltas. |
 | `enemy_anchored_shard` | **Coroa do Vazio** | Laranja (255, 118, 92) | Coroa de cinco pontas de alturas alternadas, colar de ancoragem em basalto com quatro cravos e manto de pedra. |
+| `enemy_grove_wisp` | **Véu do Bosque** | Verde (120, 220, 180) | Núcleo pequeno, véu neon e dois fios de vidro — silhueta abaixo do alcance 6. |
 | `npc_training_dummy` | **Saco de Treino** | Vermelho (226, 78, 78) | Alvo Neon vermelho no peito. |
 | `npc_threshold_instructor`| **Guardiã do Limiar** | Violeta (138, 96, 196) | Cabelo longo + rabo, casaco com saia em camadas, neon só nas bordas (capuz/gola/punhos/hem). |
 
@@ -29,8 +30,11 @@ Os inimigos agora alternam entre padrões de ataque, cada um com sua própria po
 |---|---|---|---|---|
 | `shard_rend` | Comum | Rend | `kenney_slash` | Talho rápido com inclinação frontal. |
 | `shard_pounce` | Comum | Pounce | `kenney_spark` | Salto agressivo com aura de faíscas. |
+| `shard_rift` | Comum | Rift | `kenney_scorch` | Terceiro golpe do ciclo: telegraph 550 ms, dano 10. |
 | `anchored_combo` | Boss | Combo | `kenney_slash` | Sequência de dois talhos rápidos. |
 | `anchored_slam` | Boss | Slam | `kenney_scorch` | Esmagamento pesado com flash de luz laranja. |
+| `anchored_shock` | Boss | Shock | `kenney_spark` | Onda guardável (dano 10, telegraph 550 ms) depois do slam. |
+| `wisp_pierce` | Fátuo | Pierce | `kenney_slash` | Estocada curta do Fogo-fátuo no Bosque. |
 
 ## Assets Gratuitos (CC0)
 
@@ -51,8 +55,8 @@ Utilizamos o **Particle Pack** da Kenney, licenciado sob **Creative Commons CC0*
 ## Roteiro de Playtest
 
 1. **Spawn**: Verifique se o halo ciano aparece nos Shards e a coroa laranja no Boss.
-2. **Combate Comum**: Observe a alternância entre o talho (Rend) e o salto (Pounce).
-3. **Boss**: Verifique o telegraph longo do Slam (luz laranja crescendo) vs o Combo rápido.
+2. **Combate Comum**: Observe o ciclo talho → salto → fenda. Sem alvo, o bot patrulha a âncora.
+3. **Boss**: Combo, Slam e depois a onda Shock. O Fogo-fátuo vive nas clareiras do Bosque.
 4. **Limpeza**: Mate um inimigo e verifique se o VFX de habilidade é interrompido e limpo corretamente.
 5. **IDs Roblox**: Quando os assets Kenney forem publicados, preencha os IDs em `EnemyVfxAssets.luau` para substituir as partículas default.
 

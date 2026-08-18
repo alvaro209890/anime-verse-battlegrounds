@@ -135,7 +135,9 @@ O que **não** entrou (de propósito):
 - segunda célula ou outra cidade;
 - nome ou silhueta de cidade real.
 
-Próximo passo da malha: profiling da célula (§5 etapa 4) antes de duplicar.
+Em 18/08 as outras quatro células ganharam densidade de leitura (sem
+segunda célula urbana nem sistema de compra). O profiling de streaming
+(§5 etapa 4) continua o próximo gate de mundo antes de duplicar o Lumen.
 
 Os assets externos citados são candidatos de pesquisa. A presença de um link ou imagem de referência não significa que o arquivo foi importado, publicado, licenciado por uma conta Roblox ou adicionado ao place. Para produção, cada modelo deve ter origem, licença, escala, colisão, triagem de segurança e custo registrados.
 

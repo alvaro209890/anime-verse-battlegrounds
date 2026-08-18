@@ -549,7 +549,11 @@ do
 		seed = (seed * 1103515245 + 12345) % 2147483648
 		return seed / 2147483648
 	end
-	local occupied: { { x: number, z: number, r: number } } = { { x = 380, z = -260, r = 10 } }
+	local occupied: { { x: number, z: number, r: number } } = {
+		{ x = 380, z = -260, r = 10 },
+		{ x = 320, z = -180, r = 8 },
+		{ x = 440, z = -340, r = 8 },
+	}
 	local function claim(x: number, z: number, radius: number): boolean
 		if x < 252 or x > 508 or z < -428 or z > -92 then
 			return false
@@ -1021,6 +1025,125 @@ for i = 1, 6 do
 		)
 	)
 end
+
+-- ── Densidade extra (18/08): postos de leitura por célula ─────────────────
+-- Sem PointLight (teto 16). Sem colisão. Fora das âncoras de Fátuo/santuário.
+
+pushBlock("WoodsShrineRing", 0.35, 0.35, 16, 380, 0.22, -260, MOSS, "Slate", 0.08)
+pushBlock("WoodsShrineStep", 6, 0.4, 6, 380, 0.25, -248, { 70, 88, 64 }, "Limestone", 0)
+for i = 1, 4 do
+	local angle = (i - 1) / 4 * math.pi * 2
+	push(
+		piece(
+			("WoodsLantern_%02d"):format(i),
+			"Cylinder",
+			{ x = 2.4, y = 0.55, z = 0.55 },
+			{ x = 380 + math.cos(angle) * 14, y = 2.4, z = -260 + math.sin(angle) * 14 },
+			0,
+			{ 180, 220, 140 },
+			"Neon",
+			0.15,
+			false,
+			nil
+		)
+	)
+end
+for i = 1, 3 do
+	pushBlock(("WoodsLog_%02d"):format(i), 7 + i, 0.7, 0.8, 300 + i * 28, 0.4, -210 - i * 18, WOOD, "Wood", 0)
+end
+for i = 1, 6 do
+	pushBall(
+		("WoodsMist_%02d"):format(i),
+		2.2 + (i % 3) * 0.3,
+		350 + (i % 3) * 22,
+		1.4,
+		-300 - math.floor((i - 1) / 3) * 24,
+		{ 150, 210, 180 },
+		0.45
+	)
+end
+
+pushBlock("PortCraneMast", 1.4, 22, 1.4, -470, 11, -40, IRON, "Metal", 0)
+pushBlock("PortCraneArm", 28, 1.1, 1.1, -456, 21, -40, RUST, "Metal", 0)
+pushBlock("PortWarehouse_W", 22, 9, 14, -300, 4.5, 20, { 96, 82, 70 }, "CorrodedMetal", 0)
+pushBlock("PortWarehouse_E", 18, 8, 12, -300, 4, -120, { 88, 76, 66 }, "CorrodedMetal", 0)
+for i = 1, 6 do
+	push(
+		piece(
+			("PortBollard_%02d"):format(i),
+			"Cylinder",
+			{ x = 1.6, y = 0.7, z = 0.7 },
+			{ x = -430 + i * 12, y = 0.9, z = -78 },
+			0,
+			IRON,
+			"Metal",
+			0,
+			false,
+			nil
+		)
+	)
+end
+for i = 1, 4 do
+	pushBlock(("PortCrateB_%02d"):format(i), 2.6, 2.2, 2.6, -400 + i * 8, 1.2, -52, RUST, "WoodPlanks", 0)
+end
+
+for i = 1, 8 do
+	pushBlock(
+		("GreyFence_%02d"):format(i),
+		0.4,
+		2.4,
+		0.4,
+		200 + (i % 4) * 40,
+		1.2,
+		-480 - math.floor((i - 1) / 4) * 50,
+		SMOKE,
+		"Metal",
+		0
+	)
+end
+pushBlock("GreyConveyor_A", 36, 0.7, 3.2, 300, 0.55, -540, IRON, "Metal", 0)
+pushBlock("GreyConveyor_B", 28, 0.7, 3.2, 360, 0.55, -560, IRON, "Metal", 0)
+for i = 1, 3 do
+	pushBall(("GreyRust_%02d"):format(i), 3.4, 250 + i * 30, 0.8, -530, RUST, 0)
+end
+for i = 1, 4 do
+	pushBall(("GreyLamp_%02d"):format(i), 1.1, 230 + i * 42, 7.2, -505, { 255, 170, 70 }, 0.1)
+end
+
+for i = 1, 4 do
+	pushBlock(("AcademyBench_%02d"):format(i), 5.5, 0.7, 1.4, 20 + i * 18, 0.45, 110, CREAM, "WoodPlanks", 0)
+end
+push(
+	piece(
+		"AcademySideRing",
+		"Cylinder",
+		{ x = 0.3, y = 16, z = 16 },
+		{ x = 10, y = 0.2, z = 180 },
+		0,
+		GOLD,
+		"Sandstone",
+		0.12,
+		false,
+		nil
+	)
+)
+for i = 1, 4 do
+	push(
+		piece(
+			("AcademyLamp_%02d"):format(i),
+			"Cylinder",
+			{ x = 3.6, y = 0.45, z = 0.45 },
+			{ x = 20 + (i % 2) * 60, y = 3.4, z = 90 + math.floor((i - 1) / 2) * 70 },
+			0,
+			GOLD,
+			"Neon",
+			0.12,
+			false,
+			nil
+		)
+	)
+end
+pushBlock("AcademyPlinth", 8, 0.6, 8, 50, 0.35, 168, CREAM, "Marble", 0)
 
 -- Montanhas de identidade por célula. Sem luz nova (teto 16). Sem colisão.
 local SNOW = { 236, 236, 242 }

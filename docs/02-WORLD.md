@@ -108,14 +108,16 @@ Regras do mundo aberto multi-cidade:
 **Primeiro alvo após o F0:** o **Distrito Lumen** (F1/F2) — prova o pipeline de
 cidade urbana densa com streaming antes de comprometer a Vila Sombria.
 
-**Greybox da malha (17/08):** as cinco células (Lumen, Bosque, Porto, Setor
+**Greybox da malha (17/08, densidade 18/08):** as cinco células (Lumen, Bosque, Porto, Setor
 Cinza, Academia) existem como volumes + piso + marcos em `Zones.luau` /
 `BiomeDecorations.luau`. O Lumen saiu do greybox esparso e passou a célula
 urbana densa (docs/24 §7): 494 peças no prefixo `Lumen*`, 2 PointLights
 (coroa 28 studs, cristal da praça 16), 0 sombras, prédios ocos, rua livre
 em |x|<13, vielas com jog, praça de asfalto (não anel neon), Mercado e
-Forja só visuais. As outras quatro células continuam greybox + serra. Isso
-ainda não é a cidade inteira nem o gate de streaming/memória.
+Forja só visuais. Em 18/08 as outras quatro células ganharam postos de
+leitura (santuário/lanternas, cais/armazéns, correias, bancos) e o Bosque
+ganhou o Fogo-fátuo em duas clareiras. Isso ainda não é a cidade inteira
+nem o gate de streaming/memória.
 
 **Vegetação (17/08):** a planície deixou o sorteio uniforme e passou a bosques
 com ocupação (mínimo de espaçamento) + sub-bosque (grama, samambaia, tronco,

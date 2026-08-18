@@ -153,6 +153,23 @@ local Actors: { [string]: ActorRecipe } = {
 		attackLeanDegrees = 34,
 		deathTiltDegrees = 78,
 	},
+	enemy_grove_wisp = {
+		id = "enemy_grove_wisp",
+		shape = "shard",
+		scale = 0.72,
+		bodyRgb = { 48, 88, 62 },
+		accentRgb = { 140, 220, 170 },
+		coreRgb = { 210, 255, 220 },
+		skinNameKey = "skin.grove_wisp",
+		auraRgb = { 120, 220, 180 },
+		auraScale = 0.82,
+		idleBobStuds = 0.42,
+		idleCyclesPerSecond = 1.05,
+		strideDegrees = 16,
+		telegraphLeanDegrees = 14,
+		attackLeanDegrees = 30,
+		deathTiltDegrees = 70,
+	},
 	enemy_anchored_shard = {
 		id = "enemy_anchored_shard",
 		shape = "shard",
@@ -706,14 +723,46 @@ do
 	)
 end
 
+-- Véu do Bosque: dois fios de néon e um núcleo pequeno. Sem anel no chão
+-- (não lê como área). Alcance do golpe é 6 — a silhueta fica bem abaixo.
+local GROVE_WISP_GEAR: { ShardPiece } = {
+	shard("WispVeil", "Part", "Cylinder", { 0.12, 1.8, 1.8 }, { 0, 0.4, 0 }, { 0, 0, 90 }, "aura", "Neon", 0.15, true),
+	shard("WispCore", "Part", "Ball", { 0.7, 0.7, 0.7 }, { 0, 0.55, 0 }, { 0, 0, 0 }, "core", "Neon", 0.05, false),
+	shard(
+		"WispThreadA",
+		"Part",
+		"Block",
+		{ 0.18, 1.4, 0.18 },
+		{ -0.55, 1.15, 0.2 },
+		{ 0, 0, 18 },
+		"accent",
+		"Glass",
+		0.2,
+		false
+	),
+	shard(
+		"WispThreadB",
+		"Part",
+		"Block",
+		{ 0.18, 1.2, 0.18 },
+		{ 0.5, 1.05, -0.15 },
+		{ 0, 0, -22 },
+		"accent",
+		"Glass",
+		0.2,
+		false
+	),
+}
+
 local ShardSkins: { [string]: { ShardPiece } } = {
 	enemy_wandering_shard = WANDERING_SHARD_GEAR,
 	enemy_anchored_shard = ANCHORED_SHARD_GEAR,
+	enemy_grove_wisp = GROVE_WISP_GEAR,
 }
 
--- Sem skin declarada o WorldService montaria um estilhaço sem corpo: os dois
+-- Sem skin declarada o WorldService montaria um estilhaço sem corpo: os
 -- inimigos jogáveis são obrigatórios, como os dois rigs do spawn.
-local SHARD_REQUIRED: { string } = { "enemy_wandering_shard", "enemy_anchored_shard" }
+local SHARD_REQUIRED: { string } = { "enemy_wandering_shard", "enemy_anchored_shard", "enemy_grove_wisp" }
 
 local Rigs: { [string]: RigRecipe } = {
 	npc_threshold_instructor = {
@@ -984,6 +1033,7 @@ function Presentation.validate(): (boolean, string?)
 		"npc_threshold_instructor",
 		"enemy_wandering_shard",
 		"enemy_anchored_shard",
+		"enemy_grove_wisp",
 	}
 	for _, npcId in expected do
 		if not Actors[npcId] then

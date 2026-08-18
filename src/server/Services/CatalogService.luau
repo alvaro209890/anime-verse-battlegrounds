@@ -18,6 +18,7 @@ export type CatalogDeps = {
 		allAnchors: () -> { any },
 		zoneAtPosition: ((any) -> string?)?,
 		shardAnchors: (() -> { string })?,
+		wispAnchors: (() -> { string })?,
 		gateAnchors: (() -> { string })?,
 	}?,
 	Quests: { get: (string) -> any?, all: () -> { any }, chain: () -> { string } }?,
@@ -512,6 +513,15 @@ function CatalogService.shardAnchors(): { string }
 	end
 	CatalogService.validate()
 	return deps.Zones.shardAnchors()
+end
+
+function CatalogService.wispAnchors(): { string }
+	local deps = CatalogService.deps
+	if not deps or not deps.Zones or not deps.Zones.wispAnchors then
+		return {}
+	end
+	CatalogService.validate()
+	return deps.Zones.wispAnchors()
 end
 
 function CatalogService.getQuest(questId: string): any?

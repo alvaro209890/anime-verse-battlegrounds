@@ -1130,6 +1130,7 @@ EnemyService.init({
 	getNpc = CatalogService.getNpc,
 	getAnchor = CatalogService.getAnchor,
 	shardAnchors = CatalogService.shardAnchors,
+	wispAnchors = CatalogService.wispAnchors,
 	spatial = SpatialService,
 	combat = CombatService,
 	geometry = Geometry,
@@ -1187,6 +1188,7 @@ EnemyService.init({
 EnemyService.spawnInitial()
 -- Item 9: o elite da cratera entra no mundo junto (docs/13 §9.3).
 EnemyService.spawnElite()
+EnemyService.spawnWisps()
 print("[Bootstrap] Estilhaços no mundo")
 
 -- Mira declarada pelo cliente (golpe e técnica).
