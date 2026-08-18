@@ -151,6 +151,32 @@ function CombatService.applyVitals(id: string, maxHealth: number, maxGuard: numb
 	return fighter
 end
 
+-- Regeneração de vida/guarda do jogador. NPC não regenera. Morto não
+-- regenera. Só avisa mudança quando o inteiro visível na HUD muda, para o
+-- tick de 0,5 s não spammar StateDelta a cada fração.
+function CombatService.regenVitals(id: string, healthPerSec: number, guardPerSec: number, dt: number): boolean
+	local fighter = CombatService.fighters[id]
+	if not fighter or fighter.kind ~= "player" or fighter.health <= 0 then
+		return false
+	end
+	if type(dt) ~= "number" or dt ~= dt or dt <= 0 then
+		return false
+	end
+	local hpRate = if type(healthPerSec) == "number" and healthPerSec == healthPerSec
+		then math.max(0, healthPerSec)
+		else 0
+	local gdRate = if type(guardPerSec) == "number" and guardPerSec == guardPerSec then math.max(0, guardPerSec) else 0
+	local beforeHealth = math.floor(fighter.health)
+	local beforeGuard = math.floor(fighter.guard)
+	if hpRate > 0 and fighter.health < fighter.maxHealth then
+		fighter.health = math.min(fighter.maxHealth, fighter.health + hpRate * dt)
+	end
+	if gdRate > 0 and fighter.guard < fighter.maxGuard then
+		fighter.guard = math.min(fighter.maxGuard, fighter.guard + gdRate * dt)
+	end
+	return math.floor(fighter.health) ~= beforeHealth or math.floor(fighter.guard) ~= beforeGuard
+end
+
 local function outgoing(attacker: FighterState, raw: number): number
 	local bonus = attacker.damageBonus or 0
 	if raw <= 0 or bonus <= 0 then

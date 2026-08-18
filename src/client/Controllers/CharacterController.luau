@@ -3,8 +3,9 @@
 -- mira. O cliente nunca envia acerto, dano ou distância final. Desde 17/08
 -- pode mandar `claimedTargetId` como pista (docs/17 §2.11): o servidor só
 -- aceita se o cone autoritativo falhou e a posição ainda cabe na folga.
--- Corrida (Shift/L3) só muda Humanoid.WalkSpeed local; o servidor limita o
--- envelope pelo teto de Locomotion.runSpeed (docs/13 §5: 16 / 22).
+-- Corrida (Shift/L3 hold OU botão CORRER) só muda Humanoid.WalkSpeed local;
+-- o servidor limita o envelope pelo teto de Locomotion.runSpeed
+-- (docs/13 §5: 16 / 22).
 
 export type Controller = {
 	state: any,
@@ -15,6 +16,8 @@ export type Controller = {
 	runService: any?,
 	lockTarget: any?,
 	sprinting: boolean,
+	sprintHeld: boolean,
+	sprintLocked: boolean,
 	walkSpeed: number,
 	runSpeed: number,
 	connection: any?,
@@ -54,6 +57,8 @@ function CharacterController.new(deps: {
 		runService = deps.runService,
 		lockTarget = nil,
 		sprinting = false,
+		sprintHeld = false,
+		sprintLocked = false,
 		walkSpeed = deps.walkSpeed or DEFAULT_WALK_SPEED,
 		runSpeed = deps.runSpeed or DEFAULT_RUN_SPEED,
 		connection = nil,
@@ -86,9 +91,19 @@ function CharacterController.applyLocomotionSpeed(controller: Controller): ()
 	humanoid.WalkSpeed = if controller.sprinting then controller.runSpeed else controller.walkSpeed
 end
 
-function CharacterController.setSprinting(controller: Controller, sprinting: boolean): ()
-	controller.sprinting = sprinting == true
+function CharacterController.refreshSprint(controller: Controller): ()
+	controller.sprinting = controller.sprintHeld == true or controller.sprintLocked == true
 	CharacterController.applyLocomotionSpeed(controller)
+end
+
+function CharacterController.setSprinting(controller: Controller, sprinting: boolean): ()
+	controller.sprintHeld = sprinting == true
+	CharacterController.refreshSprint(controller)
+end
+
+function CharacterController.toggleSprintLock(controller: Controller): ()
+	controller.sprintLocked = not controller.sprintLocked
+	CharacterController.refreshSprint(controller)
 end
 
 local function isCombatTarget(target: any?): boolean
@@ -207,8 +222,8 @@ local function reconcileCamera(controller: Controller, character: Model): ()
 			camera.CameraType = Enum.CameraType.Custom
 			camera.CameraSubject = humanoid
 		end
-		-- Respawns voltam na velocidade atual (caminhada ou corrida se Shift
-		-- ainda estiver segurado — o InputEnded solta se o teclado resetar).
+		-- Respawns voltam na velocidade atual (caminhada, Shift ainda
+		-- segurado, ou corrida travada no botão).
 		humanoid.WalkSpeed = if controller.sprinting then controller.runSpeed else controller.walkSpeed
 	end
 
@@ -368,6 +383,8 @@ function CharacterController.onAction(controller: Controller, action: string): (
 		CharacterController.setSprinting(controller, true)
 	elseif action == "SprintUp" then
 		CharacterController.setSprinting(controller, false)
+	elseif action == "ToggleSprint" then
+		CharacterController.toggleSprintLock(controller)
 	elseif action == "ToggleLock" then
 		-- Segunda ativação sempre solta. A primeira só trava se houver alvo
 		-- de combate à frente; senão permanece livre (não "prende no vazio").

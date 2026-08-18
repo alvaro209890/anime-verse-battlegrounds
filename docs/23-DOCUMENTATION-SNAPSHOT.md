@@ -1,5 +1,19 @@
 # Snapshot Canônico da Documentação — 18/08/2026
 
+## Rodada de 18/08 (Grok) — STATUS, regen, corrida e animações
+
+Painel EVOLUÇÃO refeito: não cobre mais o FECHAR, subtítulo mostra consolidação
+pendente (em vez de "Mate Estilhaços…" com a barra cheia), linha de XP no
+painel, `+` sempre visível (apagado sem pontos), Umbral `+N recurso`, impacto
+mostra 0,06% por ponto. Regen automática de vida/guarda no servidor escala com
+o nível da conta; Umbral 2/6 ganha o mesmo multiplicador. Botão CORRER trava
+a corrida sem Shift (Shift/L3 continuam hold). Cadeia leve e dash com mais
+corpo; timings iguais. Suite **276 + 80**, Selene 0/0/0. Play no Studio
+precisa de rebuild do place (`build-studio.ps1`) — o painel antigo ainda
+está no `.rbxl` aberto.
+
+---
+
 ## Rodada de 18/08 (Grok) — Vila Sombria + auditoria de progressão
 
 Primeira célula da Vila Sombria (`zone_veil_safe`): vale a sudoeste, duas

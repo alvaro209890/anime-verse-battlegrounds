@@ -10,6 +10,7 @@ export type SemanticAction =
 	| "Dash"
 	| "SprintDown"
 	| "SprintUp"
+	| "ToggleSprint"
 	| "Ability1"
 	| "Ability2"
 	| "Ability3"
@@ -52,6 +53,7 @@ local NON_COMBAT: { [string]: boolean } = {
 	Interact = true,
 	SprintDown = true,
 	SprintUp = true,
+	ToggleSprint = true,
 }
 
 local InputController = {}

@@ -16,6 +16,12 @@ apresentação local — o servidor continuou 100% autoritativo.
 
 ## 2. O que mudou
 
+### 2.0 Amplitude do básico e do dash (18/08)
+
+Jab, direto, chute, finalizador e dash comprimem mais, entram mais no passo e
+inclinam o tronco. Os timings da cadeia (0,495–0,930 s) e do dash (0,32 s,
+amostras 0,03 / 0,11 / 0,20) não mudaram — só as poses.
+
 ### 2.1 Easing por fase (`PlayerCombatAnimator`)
 
 - Antecipação usa `easeInCubic` — o corpo "enrola" e acelera até a pose armada.

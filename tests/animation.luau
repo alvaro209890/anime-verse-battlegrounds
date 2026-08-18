@@ -1451,6 +1451,8 @@ test("apresentação: dash tem preparação, passada e recuperação distintas",
 	local neutral = PlayerCombatAnimator.sample("Dash", PlayerCombatAnimator.Durations.Dash, false)
 	assertTrue(prep.rootForwardStuds < 0, "dash comprime antes de sair")
 	assertTrue(drive.rootForwardStuds > prep.rootForwardStuds, "dash entra no passo")
+	assertTrue(prep.rootPitchDegrees < 0, "dash abaixa o tronco na compressão")
+	assertTrue(drive.rootPitchDegrees > 20, "dash inclina o corpo na passada")
 	assertTrue(
 		math.abs(drive.rightKneePitchDegrees) > math.abs(prep.rightKneePitchDegrees),
 		"dash levanta a perna de impulso"

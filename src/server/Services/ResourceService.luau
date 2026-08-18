@@ -29,6 +29,8 @@ export type ResourceDeps = {
 		wait: ((number) -> number)?,
 	},
 	now: (() -> number)?,
+	-- Multiplicador de regen de Umbral pelo nível da conta. Ausente = 1.
+	resourceMulFor: ((number) -> number)?,
 }
 
 local ResourceService = {
@@ -107,17 +109,23 @@ function ResourceService.getRegenRate(playerUserId: number): number
 	if not family then
 		return 0
 	end
+	local rate = family.regenOutOfCombatPerSec
 	if state.combat then
-		return family.regenInCombatPerSec
+		rate = family.regenInCombatPerSec
+	elseif state.lastCombatAt > 0 then
+		local delay = family.outOfCombatDelaySeconds
+		if delay > 0 and (now() - state.lastCombatAt) < delay then
+			rate = 0
+		end
 	end
-	if state.lastCombatAt <= 0 then
-		return family.regenOutOfCombatPerSec
+	local mulFor = deps and deps.resourceMulFor
+	if mulFor then
+		local mul = mulFor(playerUserId)
+		if type(mul) == "number" and mul == mul and mul > 0 then
+			rate *= mul
+		end
 	end
-	local delay = family.outOfCombatDelaySeconds
-	if delay > 0 and (now() - state.lastCombatAt) < delay then
-		return 0
-	end
-	return family.regenOutOfCombatPerSec
+	return rate
 end
 
 function ResourceService.init(deps: ResourceDeps): ()

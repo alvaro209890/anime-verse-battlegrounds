@@ -1079,6 +1079,24 @@ test("progressão: curva Blox Fruits e teto GDD de 6%", function()
 		"unknown_track",
 		"trilha ATK recusada"
 	)
+	assertEq(ProgressionCatalog.trackEffectAmount("umbral", 0), 0, "zero pontos não inventa recurso")
+	assertEq(ProgressionCatalog.trackEffectAmount("umbral", 4), 8, "+2 recurso por ponto")
+	assertEq(ProgressionCatalog.trackEffectAmount("impact", 1), 0.06, "1 ponto = 0,06% (não arredonda pra 0,1)")
+	assertEq(ProgressionCatalog.trackEffectAmount("resonance", 100), 6, "teto 6%")
+	local idle = ProgressionCatalog.regenRates(1, false, 10)
+	assertEq(idle.healthPerSec, 4, "HP fora de combate no nível 1")
+	assertEq(idle.guardPerSec, 12, "guarda fora de combate no nível 1")
+	assertEq(idle.resourceMul, 1, "Umbral sem bônus no nível 1")
+	local fight = ProgressionCatalog.regenRates(1, true, 0)
+	assertTrue(fight.healthPerSec < idle.healthPerSec, "em combate a vida pinga")
+	assertTrue(fight.guardPerSec < idle.guardPerSec, "em combate a guarda pinga")
+	local delay = ProgressionCatalog.regenRates(10, false, 1)
+	assertEq(delay.healthPerSec, 0, "atraso de 3 s sem vida")
+	assertEq(delay.guardPerSec, 0, "atraso de 3 s sem guarda")
+	local high = ProgressionCatalog.regenRates(51, false, 10)
+	assertTrue(high.healthPerSec > idle.healthPerSec, "nível acelera a vida")
+	assertTrue(high.resourceMul > 1, "nível acelera o Umbral")
+	assertEq(ProgressionCatalog.resourceRegenMul(51), 1.75, "+1,5% por nível acima de 1")
 end)
 
 test("dados: remotes registrados com contrato", function()
@@ -1291,6 +1309,57 @@ test("cliente: SprintDown/Up não vira remote e só mexe na velocidade local", f
 	assertEq(controller.sprinting, false, "soltou a corrida")
 	assertEq(humanoid.WalkSpeed, 16, "volta a caminhar")
 	assertEq(#sent, 8, "SprintUp também não manda remote")
+end)
+
+test("cliente: ToggleSprint trava a corrida sem Shift e não manda remote", function()
+	local state = ClientState.new(clockNow)
+	ClientState.applySnapshot(state, { ready = true })
+	local input = InputController.new(state, clockNow)
+	local sent: { any } = {}
+	local humanoid = {
+		WalkSpeed = 16,
+		MoveDirection = { Magnitude = 0 },
+	}
+	local controller = CharacterController.new({
+		state = state,
+		input = input,
+		inputSubscribe = InputController.subscribe,
+		send = function(remoteName: string, action: string, payload: { [string]: any })
+			table.insert(sent, { remoteName = remoteName, action = action, payload = payload })
+		end,
+		players = {
+			LocalPlayer = {
+				Character = {
+					FindFirstChildOfClass = function(_self: any, className: string)
+						return if className == "Humanoid" then humanoid else nil
+					end,
+					FindFirstChild = function(_self: any, _name: string)
+						return nil
+					end,
+				},
+			},
+		},
+		walkSpeed = Locomotion.walkSpeed,
+		runSpeed = Locomotion.runSpeed,
+	})
+
+	local okToggle, reasonToggle = InputController.dispatch(input, "ToggleSprint", {})
+	assertTrue(okToggle, reasonToggle or "ToggleSprint aceito")
+	assertEq(controller.sprintLocked, true, "trava ligada")
+	assertEq(controller.sprinting, true, "corre sem Shift")
+	assertEq(humanoid.WalkSpeed, 22, "WalkSpeed de corrida travada")
+	assertEq(#sent, 0, "toggle não manda remote")
+
+	local okUp = InputController.dispatch(input, "SprintUp", {})
+	assertTrue(okUp, "SprintUp não desliga a trava")
+	assertEq(controller.sprinting, true, "trava sobrevive ao soltar Shift")
+	assertEq(humanoid.WalkSpeed, 22, "continua em 22")
+
+	InputController.dispatch(input, "ToggleSprint", {})
+	assertEq(controller.sprintLocked, false, "segunda ativação solta")
+	assertEq(controller.sprinting, false, "volta a caminhar")
+	assertEq(humanoid.WalkSpeed, 16, "WalkSpeed de caminhada")
+	assertEq(#sent, 0, "soltar a trava também é local")
 end)
 
 test("cliente: nada no golpe gira o corpo do personagem", function()
@@ -1616,6 +1685,10 @@ test("cliente: Locale cobre todo texto do HUD F0 em PT-BR e EN", function()
 		"hud.control_attack",
 		"hud.control_guard",
 		"hud.control_dash",
+		"hud.control_run",
+		"hud.control_run_on",
+		"hud.status_xp",
+		"hud.status_regen",
 		"hud.help_button",
 		"hud.help_title",
 		"hud.help_hint",
@@ -2423,6 +2496,23 @@ test("combate: costas ignoram guarda", function()
 	assertEq(tgt.guard, 100, "guarda não consome")
 end)
 
+test("combate: regen de vida/guarda só no jogador vivo e só avisa inteiro novo", function()
+	CombatService.clear()
+	local player = CombatService.createFighter("p:regen", "player", 100, 100)
+	local npc = CombatService.createFighter("n:regen", "npc", 60, 0)
+	player.health = 80
+	player.guard = 50
+	npc.health = 20
+	assertEq(CombatService.regenVitals("n:regen", 20, 20, 1), false, "NPC não regenera")
+	assertEq(npc.health, 20, "HP do NPC intacto")
+	assertTrue(CombatService.regenVitals("p:regen", 4, 12, 1), "1 s no nível 1 fecha inteiros")
+	assertEq(math.floor(player.health), 84, "vida +4")
+	assertEq(math.floor(player.guard), 62, "guarda +12")
+	assertEq(CombatService.regenVitals("p:regen", 0.4, 0.4, 0.5), false, "fração não dispara HUD")
+	player.health = 0
+	assertEq(CombatService.regenVitals("p:regen", 20, 20, 1), false, "morto não regenera")
+end)
+
 test("combate: pesado 12 HP, 28 guarda, 2 se bloqueado", function()
 	CombatService.clear()
 	local atk = CombatService.createFighter("p:a", "player", 100, 100)
@@ -2733,6 +2823,35 @@ test("recurso: regen 2 em combate, 0 na janela, 6 fora", function()
 	assertEq(ResourceService.getRegenRate(15), 0, "atraso de 3 s")
 	fakeNow = 3003
 	assertEq(ResourceService.getRegenRate(15), 6, "fora de combate")
+end)
+
+test("recurso: regen de Umbral escala com o nível quando o hook existe", function()
+	fakeNow = 3100
+	ResourceService.init({
+		getFamily = function(familyId: string)
+			return EnergyFamilies.get(familyId)
+		end,
+		taskImpl = {
+			spawn = function() end,
+			defer = function(fn)
+				fn()
+			end,
+			wait = function()
+				return 0
+			end,
+		},
+		now = function()
+			return fakeNow
+		end,
+		resourceMulFor = function()
+			return ProgressionCatalog.resourceRegenMul(51)
+		end,
+	})
+	local state = ResourceService.createState(16, "umbral_aether")
+	assertTrue(state ~= nil, "estado criado")
+	assertEq(ResourceService.getRegenRate(16), 10.5, "6 × 1,75 no nível 51")
+	ResourceService.setCombat(16, true)
+	assertEq(ResourceService.getRegenRate(16), 3.5, "2 × 1,75 em combate")
 end)
 
 -- ══ Testes: AbilityService (fluxo completo com deps reais) ──────────────────

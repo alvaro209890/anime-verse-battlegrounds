@@ -215,4 +215,70 @@ function ProgressionCatalog.scaleResourceCost(raw: number, costMul: number): num
 	return math.max(1, math.floor(raw * mul + 0.5))
 end
 
+-- Texto da trilha no painel STATUS: impacto/ressonância em % (duas casas);
+-- as outras em pontos de barra (+2 por ponto).
+function ProgressionCatalog.trackEffectAmount(trackId: string, points: number): number
+	local amount = math.max(0, math.floor(points))
+	if trackId == "impact" or trackId == "resonance" then
+		return math.floor(amount * ProgressionCatalog.DAMAGE_PCT_PER_POINT * 10000 + 0.5) / 100
+	end
+	return amount * ProgressionCatalog.HP_PER_POINT
+end
+
+-- Regeneração automática de vida/guarda/Umbral (docs/01 §7.1.1).
+-- Fora de combate preenche a barra; em combate só pinga. O nível da conta
+-- acelera o ritmo — não o teto de dano (GDD-DEC-005).
+ProgressionCatalog.COMBAT_LINGER_SECONDS = 4
+ProgressionCatalog.VITAL_REGEN_DELAY_SECONDS = 3
+ProgressionCatalog.HP_REGEN_OUT_BASE = 4
+ProgressionCatalog.HP_REGEN_OUT_PER_LEVEL = 0.2
+ProgressionCatalog.HP_REGEN_IN_BASE = 0.5
+ProgressionCatalog.HP_REGEN_IN_PER_LEVEL = 0.04
+ProgressionCatalog.GUARD_REGEN_OUT_BASE = 12
+ProgressionCatalog.GUARD_REGEN_OUT_PER_LEVEL = 0.3
+ProgressionCatalog.GUARD_REGEN_IN_BASE = 2
+ProgressionCatalog.GUARD_REGEN_IN_PER_LEVEL = 0.08
+ProgressionCatalog.RESOURCE_REGEN_PER_LEVEL = 0.015
+
+export type RegenRates = {
+	healthPerSec: number,
+	guardPerSec: number,
+	resourceMul: number,
+}
+
+function ProgressionCatalog.resourceRegenMul(level: number): number
+	local lvl = math.clamp(math.floor(level), 1, ProgressionCatalog.MAX_LEVEL)
+	return 1 + (lvl - 1) * ProgressionCatalog.RESOURCE_REGEN_PER_LEVEL
+end
+
+function ProgressionCatalog.regenRates(level: number, inCombat: boolean, secondsSinceCombat: number): RegenRates
+	local lvl = math.clamp(math.floor(level), 1, ProgressionCatalog.MAX_LEVEL)
+	local mul = ProgressionCatalog.resourceRegenMul(lvl)
+	if inCombat then
+		return {
+			healthPerSec = ProgressionCatalog.HP_REGEN_IN_BASE + (lvl - 1) * ProgressionCatalog.HP_REGEN_IN_PER_LEVEL,
+			guardPerSec = ProgressionCatalog.GUARD_REGEN_IN_BASE
+				+ (lvl - 1) * ProgressionCatalog.GUARD_REGEN_IN_PER_LEVEL,
+			resourceMul = mul,
+		}
+	end
+	local since = secondsSinceCombat
+	if type(since) ~= "number" or since ~= since or since < 0 then
+		since = math.huge
+	end
+	if since < ProgressionCatalog.VITAL_REGEN_DELAY_SECONDS then
+		return {
+			healthPerSec = 0,
+			guardPerSec = 0,
+			resourceMul = mul,
+		}
+	end
+	return {
+		healthPerSec = ProgressionCatalog.HP_REGEN_OUT_BASE + (lvl - 1) * ProgressionCatalog.HP_REGEN_OUT_PER_LEVEL,
+		guardPerSec = ProgressionCatalog.GUARD_REGEN_OUT_BASE
+			+ (lvl - 1) * ProgressionCatalog.GUARD_REGEN_OUT_PER_LEVEL,
+		resourceMul = mul,
+	}
+end
+
 return ProgressionCatalog

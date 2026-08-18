@@ -310,6 +310,8 @@ Efeitos (baseline de playtest, metade do Blox Fruits no que é atributo bruto):
 | Guarda | +2 guarda máxima | 100 pontos |
 | Ressonância | −0,06% custo de Umbral | 6% |
 
+Vida, guarda e Umbral regeneram sozinhos no servidor (`ProgressionCatalog.regenRates`). Fora de combate, após 3 s, o nível 1 recupera 4 HP/s e 12 de guarda/s; cada nível acima de 1 soma 0,2 HP/s e 0,3 de guarda/s. Em combate o ritmo cai para um pingo (0,5 + 0,04×(nível−1) HP/s). O Umbral da família (2/6) ganha +1,5% por nível acima de 1. Isso muda recuperação, não o teto de dano (GDD-DEC-005).
+
 O nível **não** cai na morte. Pontos gastos não são confiscados. XP não consolidado enche a barra como prévia e o Marco de Retorno converte a prévia em nível + pontos. Redefinir pontos só na zona segura (GDD §7.4). Ranqueado continua normalizando esses ganhos (§9).
 
 Na tela: o kill mostra `+N XP` flutuante (mesmo ancoradouro do dano). O tracker da task anuncia o prêmio (`+40 XP`). Consolidar e cruzar a curva dispara um flash dourado de 1,6 s com o novo nível.

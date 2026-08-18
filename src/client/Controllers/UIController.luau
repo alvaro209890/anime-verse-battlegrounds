@@ -5,6 +5,8 @@
 local LevelUpPlayer = require(script.Parent.Parent.Presentation.LevelUpPlayer)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UiPalette = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Data"):WaitForChild("UiPalette"))
+local ProgressionCatalog =
+	require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Data"):WaitForChild("ProgressionCatalog"))
 
 local UIController = {}
 
@@ -224,13 +226,14 @@ function UIController.new(deps: { [string]: any }): any
 		})
 	end
 
-	local touch = frame("TouchControls", gui, UDim2.fromOffset(250, 80), UDim2.new(1, -268, 1, -194))
+	local touch = frame("TouchControls", gui, UDim2.fromOffset(256, 80), UDim2.new(1, -274, 1, -194))
 	touch.BackgroundTransparency = 1
 	-- Sem botão de atacar (decisão do Álvaro, 13/08): ataque simples é o clique
 	-- do mouse / toque no mundo (InputController dispara BasicLight). A tela
-	-- fica limpa; Guard e Dash continuam como botões de apoio no toque.
+	-- fica limpa; Guard, Dash e Correr continuam como botões de apoio.
 	local guard = button("Guard", touch, UDim2.fromOffset(76, 58), UDim2.fromOffset(88, 18))
 	local dash = button("Dash", touch, UDim2.fromOffset(76, 58), UDim2.fromOffset(4, 18))
+	local run = button("Run", touch, UDim2.fromOffset(76, 58), UDim2.fromOffset(172, 18))
 	local function isPointer(input: InputObject): boolean
 		return input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1
 	end
@@ -256,6 +259,9 @@ function UIController.new(deps: { [string]: any }): any
 	end)
 	dash.Activated:Connect(function()
 		deps.inputApi.dispatch(deps.input, "Dash", {})
+	end)
+	run.Activated:Connect(function()
+		deps.inputApi.dispatch(deps.input, "ToggleSprint", {})
 	end)
 
 	local zoneHold = button("ZoneHold", gui, UDim2.fromOffset(300, 42), UDim2.new(0.5, -150, 1, -178))
@@ -376,7 +382,7 @@ function UIController.new(deps: { [string]: any }): any
 	local bagClose = button("CloseBag", bagPanel, UDim2.new(1, -24, 0, 30), UDim2.fromOffset(12, 318))
 	bagClose.ZIndex = 19
 	helpButton.TextSize = 16
-	local statusPanel = frame("StatusPanel", gui, UDim2.fromOffset(420, 430), UDim2.new(0.5, -210, 0.5, -215))
+	local statusPanel = frame("StatusPanel", gui, UDim2.fromOffset(440, 456), UDim2.new(0.5, -220, 0.5, -228))
 	statusPanel.Visible = false
 	statusPanel.ZIndex = 18
 	statusPanel.BackgroundColor3 = rgb(UiPalette.panel)
@@ -391,10 +397,15 @@ function UIController.new(deps: { [string]: any }): any
 	statusPoints.TextSize = 13
 	statusPoints.TextColor3 = MUTED
 	statusPoints.ZIndex = 19
+	local statusXp = label("XpLine", statusPanel, UDim2.new(1, -16, 0, 18), UDim2.fromOffset(8, 54))
+	statusXp.TextXAlignment = Enum.TextXAlignment.Center
+	statusXp.TextSize = 12
+	statusXp.TextColor3 = MUTED
+	statusXp.ZIndex = 19
 	local TRACKS = { "vitality", "umbral", "impact", "guard", "resonance" }
 	local trackViews = {}
 	for index, trackId in TRACKS do
-		local y = 60 + (index - 1) * 52
+		local y = 76 + (index - 1) * 50
 		local row = frame("Track_" .. trackId, statusPanel, UDim2.new(1, -20, 0, 46), UDim2.fromOffset(10, y))
 		row.BackgroundColor3 = rgb(UiPalette.panelRaised)
 		row.ZIndex = 19
@@ -426,19 +437,19 @@ function UIController.new(deps: { [string]: any }): any
 			plus = plus,
 		})
 	end
-	local respecButton = button("Respec", statusPanel, UDim2.new(1, -24, 0, 32), UDim2.fromOffset(12, 328))
+	local respecButton = button("Respec", statusPanel, UDim2.new(1, -24, 0, 32), UDim2.fromOffset(12, 332))
 	respecButton.ZIndex = 19
 	respecButton.Activated:Connect(function()
 		if deps.onSpend then
 			deps.onSpend("respec")
 		end
 	end)
-	local statusHint = label("Hint", statusPanel, UDim2.new(1, -16, 0, 48), UDim2.fromOffset(8, 366))
+	local statusHint = label("Hint", statusPanel, UDim2.new(1, -16, 0, 32), UDim2.fromOffset(8, 370))
 	statusHint.TextWrapped = true
 	statusHint.TextSize = 12
 	statusHint.TextColor3 = MUTED
 	statusHint.ZIndex = 19
-	local statusClose = button("CloseStatus", statusPanel, UDim2.new(1, -24, 0, 30), UDim2.fromOffset(12, 390))
+	local statusClose = button("CloseStatus", statusPanel, UDim2.new(1, -24, 0, 30), UDim2.fromOffset(12, 408))
 	statusClose.ZIndex = 19
 	local helpPanel = frame("HelpPanel", gui, UDim2.fromOffset(460, 560), UDim2.new(0.5, -230, 0.5, -280))
 	helpPanel.Visible = false
@@ -510,6 +521,7 @@ function UIController.new(deps: { [string]: any }): any
 		touch = touch,
 		guard = guard,
 		dash = dash,
+		run = run,
 		zoneHold = zoneHold,
 		hint = hint,
 		unlockAim = unlockAim,
@@ -537,6 +549,7 @@ function UIController.new(deps: { [string]: any }): any
 		statusPanel = statusPanel,
 		statusTitle = statusTitle,
 		statusPoints = statusPoints,
+		statusXp = statusXp,
 		trackViews = trackViews,
 		respecButton = respecButton,
 		statusHint = statusHint,
@@ -720,30 +733,41 @@ function UIController.render(controller: any, elapsed: number): ()
 	controller.statusPanel.Visible = controller.statusVisible == true
 	if controller.statusVisible then
 		controller.statusTitle.Text = controller.locale.get("hud.status_title", localeId)
-		controller.statusPoints.Text = if (state.unspentPoints or 0) > 0
-			then controller.locale.format("hud.status_points", { n = state.unspentPoints }, localeId)
+		local unspent = state.unspentPoints or 0
+		local pending = state.pendingLevels or 0
+		controller.statusPoints.Text = if unspent > 0
+			then controller.locale.format("hud.status_points", { n = unspent }, localeId)
+			elseif pending > 1 then controller.locale.format("hud.xp_ready_many", { levels = pending }, localeId)
+			elseif pending == 1 then controller.locale.format("hud.xp_ready", { levels = 1 }, localeId)
 			else controller.locale.get("hud.status_no_points", localeId)
+		local xpLine = controller.locale.format(
+			"hud.status_xp",
+			{ level = state.accountLevel or 1, into = into, need = need },
+			localeId
+		)
+		if (state.unconsolidatedXp or 0) > 0 then
+			xpLine = xpLine
+				.. "  "
+				.. controller.locale.format("hud.xp_field", { amount = state.unconsolidatedXp }, localeId)
+		end
+		controller.statusXp.Text = xpLine
 		local spent = state.spent or {}
+		local canSpend = unspent > 0
 		for _, view in controller.trackViews do
 			local points = spent[view.id] or 0
 			view.name.Text = controller.locale.get("hud.track." .. view.id, localeId)
 			view.value.Text = tostring(points)
-			local fxAmount = if view.id == "impact" or view.id == "resonance"
-				then math.floor(points * 0.06 * 10 + 0.5) / 10
-				else points * 2
+			local fxAmount = ProgressionCatalog.trackEffectAmount(view.id, points)
 			view.fx.Text = controller.locale.format("hud.track." .. view.id .. ".fx", { n = fxAmount }, localeId)
-			view.plus.Visible = (state.unspentPoints or 0) > 0
+			view.plus.Visible = true
+			view.plus.Active = canSpend
+			view.plus.AutoButtonColor = canSpend
+			view.plus.TextColor3 = if canSpend then TEXT else MUTED
+			view.plus.BackgroundTransparency = if canSpend then 0.08 else 0.45
 		end
 		controller.respecButton.Text = controller.locale.get("hud.status_respec", localeId)
 		controller.statusClose.Text = controller.locale.get("hud.settings_close", localeId)
-		local pending = state.pendingLevels or 0
-		if pending > 1 then
-			controller.statusHint.Text = controller.locale.format("hud.xp_ready_many", { levels = pending }, localeId)
-		elseif pending == 1 then
-			controller.statusHint.Text = controller.locale.format("hud.xp_ready", { levels = 1 }, localeId)
-		else
-			controller.statusHint.Text = controller.locale.get("hud.help_status", localeId)
-		end
+		controller.statusHint.Text = controller.locale.get("hud.status_regen", localeId)
 	end
 	local objective = state.objective
 	if objective and objective.state ~= "completed" then
@@ -885,6 +909,12 @@ function UIController.render(controller: any, elapsed: number): ()
 	controller.touch.Visible = true
 	controller.guard.Text = controller.locale.get("hud.control_guard", localeId)
 	controller.dash.Text = controller.locale.get("hud.control_dash", localeId)
+	local runLocked = false
+	if controller.characterController then
+		runLocked = controller.characterController.sprintLocked == true
+	end
+	controller.run.Text = controller.locale.get(if runLocked then "hud.control_run_on" else "hud.control_run", localeId)
+	controller.run.BackgroundColor3 = if runLocked then rgb(UiPalette.xp) else PANEL
 	-- O prompt de travessia vale em qualquer plataforma. Enquanto era só Touch,
 	-- o jogador de PC batia num portão invisível sem nenhuma explicação
 	-- (docs/18 §7): o servidor recusava a entrada e ele voltava andando.

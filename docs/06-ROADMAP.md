@@ -176,6 +176,7 @@ runtime**:
 | Dois clientes, latência, Android, gamepad | ✅ | R1 executado: dois clientes, latência simulada, Android e gamepad reais (sessão 17/08) |
 | Desempenho da planície ampliada | ✅ | W2 medido com MicroProfiler (`stepAnimation`/script/render); medidas registradas na ficha `docs/26` (sessão 17/08) |
 | Corrida hold-to-run (Shift / L3) | ✅ | 16→22 studs/s (`Locomotion`); envelope com teto 22; headless 243 |
+| Botão CORRER (toggle) | ✅ | trava sem Shift; Shift/L3 continuam hold; local, sem remote |
 
 **Correções que a rodada de runtime revelou** — todas eram invisíveis no
 headless, e duas estavam *travadas por teste*:

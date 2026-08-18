@@ -54,6 +54,7 @@ local SpawnDecorations = require(ReplicatedStorage.Shared.Data.SpawnDecorations)
 local WildDecorations = require(ReplicatedStorage.Shared.Data.WildDecorations)
 local BiomeDecorations = require(ReplicatedStorage.Shared.Data.BiomeDecorations)
 local Locomotion = require(ReplicatedStorage.Shared.Data.Locomotion)
+local ProgressionCatalog = require(ReplicatedStorage.Shared.Data.ProgressionCatalog)
 local SceneryPresentation = require(ReplicatedStorage.Shared.Data.SceneryPresentation)
 local WorldTextures = require(ReplicatedStorage.Shared.Data.WorldTextures)
 local DayNightCycle = require(ReplicatedStorage.Shared.Data.DayNightCycle)
@@ -362,6 +363,10 @@ print("[Bootstrap] QuestService iniciado")
 ResourceService.init({
 	getFamily = CatalogService.getFamily,
 	taskImpl = task,
+	resourceMulFor = function(userId: number): number
+		local view = ProgressionService.viewFor(userId)
+		return ProgressionCatalog.resourceRegenMul(if view then view.accountLevel else 1)
+	end,
 	onResourceChanged = function(playerUserId: number, current: number, max: number, depleted: boolean)
 		local player = game.Players:GetPlayerByUserId(playerUserId)
 		if not player then
@@ -421,6 +426,36 @@ local function fireVitalsForFighter(fighterId: string, viewerUserId: number?): (
 				maxHealth = fighter.maxHealth,
 			})
 		end
+	end
+end
+
+local function markPlayerCombat(userId: number): ()
+	ResourceService.setCombat(userId, true)
+end
+
+local function applyLevelRegen(userId: number, dt: number, now: number): ()
+	if not PlayerSessionService.isReady(userId) then
+		return
+	end
+	local resource = ResourceService.getState(userId)
+	local fighterId = CombatService.playerFighterId(userId)
+	local fighter = CombatService.getFighter(fighterId)
+	if not resource or not fighter then
+		return
+	end
+	if
+		resource.combat
+		and resource.lastCombatAt > 0
+		and (now - resource.lastCombatAt) >= ProgressionCatalog.COMBAT_LINGER_SECONDS
+	then
+		ResourceService.setCombat(userId, false)
+	end
+	local since = if resource.lastCombatAt <= 0 then math.huge else now - resource.lastCombatAt
+	local view = ProgressionService.viewFor(userId)
+	local level = if view then view.accountLevel else 1
+	local rates = ProgressionCatalog.regenRates(level, resource.combat, since)
+	if CombatService.regenVitals(fighterId, rates.healthPerSec, rates.guardPerSec, dt) then
+		fireVitalsForFighter(fighterId)
 	end
 end
 
@@ -692,11 +727,13 @@ AbilityService.init({
 			return
 		end
 		local hitAt = os.clock()
+		markPlayerCombat(userId)
 		if ZoneService.markHostileAction(userId, hitAt) and promoteHostileTransition then
 			promoteHostileTransition(userId, hitAt)
 		end
 		local targetUserIdText = string.match(targetId, "^player:(%d+)$")
 		if targetUserIdText then
+			markPlayerCombat(tonumber(targetUserIdText) :: number)
 			ZoneService.markPvpCombat(userId, hitAt)
 			ZoneService.markPvpCombat(tonumber(targetUserIdText) :: number, hitAt)
 		elseif damage > 0 and EnemyService.isElite(targetId) then
@@ -1172,6 +1209,9 @@ EnemyService.init({
 		if event.kind == "attack" and type(event.targetId) == "string" and event.iframe ~= true then
 			fireVitalsForFighter(event.targetId)
 			local targetUserId = string.match(event.targetId, "^player:(%d+)$")
+			if targetUserId then
+				markPlayerCombat(tonumber(targetUserId) :: number)
+			end
 			local targetPlayer = if targetUserId
 				then game.Players:GetPlayerByUserId(tonumber(targetUserId) :: number)
 				else nil
@@ -1368,12 +1408,14 @@ RemoteGateway.onClientIntent(Remotes.Names.BasicAttackIntent, function(player: P
 		else (if target then CombatService.tryLight(attacker, target, now, facing) else nil)
 
 	if result and result.ok and target then
+		markPlayerCombat(player.UserId)
 		if ZoneService.markHostileAction(player.UserId, now) and promoteHostileTransition then
 			promoteHostileTransition(player.UserId, now)
 		end
 		local targetUserIdText = string.match(target.id, "^player:(%d+)$")
 		if targetUserIdText then
 			local targetUserId = tonumber(targetUserIdText) :: number
+			markPlayerCombat(targetUserId)
 			ZoneService.markPvpCombat(player.UserId, now)
 			ZoneService.markPvpCombat(targetUserId, now)
 		end
@@ -1799,11 +1841,21 @@ end)
 -- HumanoidRootPart replicado, e a fronteira é decidida pelo mesmo
 -- `zoneAtPosition` que gerou os volumes no Studio.
 local lastTick = os.clock()
+local vitalRegenAccum = 0
 
 RunService.Heartbeat:Connect(function()
 	local now = os.clock()
 	local delta = now - lastTick
 	lastTick = now
+
+	vitalRegenAccum += delta
+	if vitalRegenAccum >= 0.5 then
+		local regenDt = vitalRegenAccum
+		vitalRegenAccum = 0
+		for _, player in game.Players:GetPlayers() do
+			applyLevelRegen(player.UserId, regenDt, now)
+		end
+	end
 
 	for _, player in game.Players:GetPlayers() do
 		local userId = player.UserId

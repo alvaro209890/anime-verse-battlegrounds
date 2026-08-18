@@ -1,8 +1,8 @@
 --!strict
 -- Velocidades de locomoção F0-BASELINE (docs/13-F0-SLICE.md §5).
 -- Caminhada 16 / corrida 22 studs/s. O cliente troca Humanoid.WalkSpeed ao
--- segurar Shift (ou L3 no gamepad); o servidor NUNCA confia no WalkSpeed
--- replicado acima de `runSpeed` para o envelope de movimento.
+-- segurar Shift/L3 ou ao travar o botão CORRER; o servidor NUNCA confia no
+-- WalkSpeed replicado acima de `runSpeed` para o envelope de movimento.
 
 local Locomotion = {
 	walkSpeed = 16,
