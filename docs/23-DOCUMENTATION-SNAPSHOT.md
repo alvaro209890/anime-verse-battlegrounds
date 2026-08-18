@@ -1,5 +1,50 @@
 # Snapshot Canônico da Documentação — 17/08/2026
 
+## Rodada de 17/08 (Grok) — Distrito Lumen, primeira célula urbana densa (F1)
+
+Commit `801f5fb` no main (CI verde). Catálogo `BiomeDecorations`: **494 peças
+Lumen\*** (rua principal, 14 fachadas + 8 skyline, 2 vielas com jog de linha de
+visão, praça de asfalto, **Mercado e Forja** visuais, marco `LumenTower`
+9×50×9 + coroa neon). 2 PointLights (coroa 28 studs, cristal 16), 0 sombras,
+0 colisão. Play no Studio: 494 materializadas, 2535 BaseParts no Workspace
+(teto W2 6000). `build.rbxl` 407.098 B. Docs 24 §7 e 02 §3.4 no mesmo commit.
+Suite 270+79+71. **Não é a cidade inteira**: sem sistema de compra/forja
+(só leitura visual, de propósito); profiling de streaming/memória/render é a
+etapa 4 do docs/24 (pendente). Honestidade visual: praça deixou de ser disco
+Neon (lia como alcance); luzes reais só na coroa e no cristal, com
+`rangeStuds` declarado.
+
+---
+
+## Rodada de 17/08 (Grok) — revalidação dos 8 assets VFX publicados
+
+Commit `920af2f` no main (CI verde). Os 8 atlas publicados (5 AbilityVfx +
+3 EnemyVfxAssets) foram revalidados via thumbnail API + sonda ImageLabel no
+Play: **todos renderizam os pixels de verdade — nenhum re-upload necessário**
+(antes: "asset publicado ≠ asset utilizável", emissor apontava para textura
+vazia). Kenney slash/spark/scorch com thumbnail Completed; os 5 da AbilityVfx
+ainda Pending na moderação mas carregam no cliente. Registro atualizado em
+`assets/published-vfx-assets.json` (revalidatedAt + thumbnailState/
+rendersInPlay/action por asset) e `docs/20-VFX-ASSETS.md`. Crédito CC-BY
+(energy_ball, lightning_shock) só no JSON/docs, não no MENU.
+
+---
+
+## Rodada de 17/08 (Hermes-server + Grok) — orquestração via janela do Grok
+
+Sessão de desenvolvimento conduzida do server-desktop (Hermes) comandando a
+janela "Analyze Local … - grok" no PC Windows (`pcque001imap`) via
+schtasks /IT + OCR + clipboard: prompts colados (mundo → UI → validação →
+Lumen → VFX), `/compact` quando o contexto estourava, watchdog de estado
+(título da janela decide WORKING/DONE; o corpo mantém histórico que polui o
+OCR) e encadeamento automático de prompts. Ferramentas criadas nesta sessão
+(no server): `grok-paste/grok-send/grok-cmd.ps1` + `grok-watch.sh` + cron
+`avb-grok-watch` — documentadas na skill `anime-verse-battlegrounds` do
+Hermes. Lição: Enter via SendKeys perde foco entre execuções separadas do
+runner — digitar+enviar na MESMA execução (grok_cmd.ps1) funciona.
+
+---
+
 ## Rodada de 17/08 (Grok) — pass visual da UI
 
 Paleta única `UiPalette`: vida/guarda/umbral/dano/destaque/perigo. HUD com
