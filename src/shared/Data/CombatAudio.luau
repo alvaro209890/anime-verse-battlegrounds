@@ -290,6 +290,15 @@ local IMPACT_BY_ABILITY: { [string]: string } = {
 	broken_cadence = "impact_light",
 	-- O ataque básico dos inimigos também precisa de retorno tátil.
 	basic_enemy = "impact_light",
+	shard_rend = "impact_light",
+	shard_pounce = "impact_light",
+	shard_rift = "impact_heavy",
+	anchored_combo = "impact_light",
+	anchored_slam = "impact_heavy",
+	anchored_shock = "impact_heavy",
+	wisp_pierce = "impact_light",
+	port_cleave = "impact_light",
+	port_hook = "impact_heavy",
 }
 
 -- Deixa de impacto a partir do desfecho autoritativo do servidor.
@@ -320,6 +329,9 @@ function CombatAudio.validate(): (boolean, string?)
 		end
 		if def.sourceFile == "" then
 			return false, ("deixa %s não declara arquivo de origem"):format(id)
+		end
+		if string.match(def.assetId, "^rbxassetid://%d+$") == nil then
+			return false, ("deixa %s sem asset tocável (%s)"):format(id, def.assetId)
 		end
 		if def.pitchMin > def.pitchMax then
 			return false, ("deixa %s tem pitchMin > pitchMax"):format(id)

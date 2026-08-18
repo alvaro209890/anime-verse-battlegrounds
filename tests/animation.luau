@@ -1380,6 +1380,46 @@ test("vfx: cada camada usa asset preparado conhecido e atlas existente", functio
 	assertTrue(ok, reason or "catálogo de VFX válido")
 end)
 
+test("assets: todo VFX publicado está liberado, ligado e tocável", function()
+	local bruto = fs.readFile("assets/published-vfx-assets.json")
+	local publicados = lerPublicados()
+	assertTrue(string.find(bruto, '"thumbnailState": "Pending"', 1, true) == nil, "nenhum atlas ficou Pending")
+	local completed = 0
+	for _ in string.gmatch(bruto, '"thumbnailState":%s*"Completed"') do
+		completed += 1
+	end
+	assertEq(completed, 8, "oito atlas Completed no registro")
+	local usados: { [string]: boolean } = {}
+	for _, key in AbilityVfx.usedAssetKeys() do
+		usados[key] = true
+		local spec = AbilityVfx.assetFor(key)
+		assertTrue(spec ~= nil, "camada aponta para asset do catálogo: " .. key)
+		if spec then
+			assertEq(AbilityVfx.resolveTexture(spec), spec.assetId, "catálogo resolve a textura publicada: " .. key)
+			assertEq(publicados[key], spec.assetId, "AbilityVfx casa com o registro: " .. key)
+		end
+	end
+	for _, asset in EnemyVfxAssets.all() do
+		usados[asset.key] = true
+		assertTrue(string.match(asset.assetId or "", "^rbxassetid://%d+$") ~= nil, "EnemyVfx tem ID: " .. asset.key)
+		assertEq(publicados[asset.key], asset.assetId, "EnemyVfx casa com o registro: " .. asset.key)
+	end
+	for _, ability in EnemyAbilities.all() do
+		assertTrue(usados[ability.assetKey] == true, ability.id .. " usa asset publicado")
+	end
+	for chave in publicados do
+		assertTrue(usados[chave] == true, "asset publicado órfão: " .. chave)
+	end
+	local audioOk, audioReason = CombatAudio.validate()
+	assertTrue(audioOk, audioReason or "áudio validado")
+	for _, cue in CombatAudio.all() do
+		assertTrue(fs.isFile(cue.sourceFile), "arquivo de origem existe: " .. cue.sourceFile)
+		for _, extra in cue.variantFiles do
+			assertTrue(fs.isFile(extra), "variante existe: " .. extra)
+		end
+	end
+end)
+
 test("vfx: defesa e dash usam receitas locais sem declarar acerto", function()
 	local guard = AbilityVfx.get("guard_raise")
 	local dash = AbilityVfx.get("dash_run")

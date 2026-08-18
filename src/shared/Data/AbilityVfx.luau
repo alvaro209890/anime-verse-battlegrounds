@@ -628,11 +628,37 @@ function AbilityVfx.forAction(action: string): TechniqueVfx?
 	return ByAction[action]
 end
 
+function AbilityVfx.resolveTexture(spec: AssetSpec?): string?
+	if not spec or type(spec.assetId) ~= "string" then
+		return nil
+	end
+	if string.match(spec.assetId, "^rbxassetid://%d+$") == nil then
+		return nil
+	end
+	return spec.assetId
+end
+
 function AbilityVfx.assetFor(assetKey: string?): AssetSpec?
 	if type(assetKey) ~= "string" then
 		return nil
 	end
 	return ASSETS[assetKey]
+end
+
+function AbilityVfx.usedAssetKeys(): { string }
+	local seen: { [string]: boolean } = {}
+	local out: { string } = {}
+	for _, technique in Techniques do
+		for _, entry in technique.layers do
+			local key = entry.assetKey
+			if type(key) == "string" and not seen[key] then
+				seen[key] = true
+				table.insert(out, key)
+			end
+		end
+	end
+	table.sort(out)
+	return out
 end
 
 function AbilityVfx.allAssets(): { AssetSpec }

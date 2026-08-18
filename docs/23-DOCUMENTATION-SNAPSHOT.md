@@ -1,5 +1,15 @@
 # Snapshot Canônico da Documentação — 18/08/2026
 
+## Rodada de 18/08 (Grok) — todos os VFX/áudio publicados ligados e testados
+
+O player de VFX aplica o `rbxassetid` na hora (os 8 atlas estão Completed).
+Trilha também recebe a textura. Teste `assets: todo VFX publicado está
+liberado, ligado e tocável` percorre AbilityVfx + EnemyVfx + CombatAudio:
+ID no registro, thumbnail Completed, arquivo de origem no disco, nenhum
+órfão. Impacto sonoro cobre as habilidades de NPC. Sem Studio.
+
+---
+
 ## Rodada de 18/08 (Grok) — VFX liberados + Sucateiro do Porto
 
 1. **Assets.** Os 8 atlas publicados passaram a `thumbnailState=Completed` na API pública (`thumbnails.roblox.com`). Os 5 do AbilityVfx (energy_ball, power_ring, lightning_shock, explosion_0003, explosion_0005) saíram de Pending. Thumbnails no CDN são os sprites reais (orbe, anéis, raio, explosões). Sem re-upload. Crédito CC-BY agora no MENU (`hud.credits_vfx`).

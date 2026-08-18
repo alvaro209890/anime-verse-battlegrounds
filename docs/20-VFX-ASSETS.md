@@ -36,6 +36,10 @@
 > (energy_ball, power_ring, lightning_shock, explosion_0003, explosion_0005)
 > saíram de Pending. Economy: AssetTypeId=1, nomes `Assistant_*.png`. Sem
 > re-upload. Crédito CC-BY passou a aparecer no MENU (`hud.credits_vfx`).
+>
+> **Ligação 18/08:** o `AbilityVfxPlayer` aplica o `assetId` na hora (sonda só
+> avisa se o ID sumir). Teste percorre AbilityVfx + EnemyVfx + CombatAudio:
+> ID no registro, `Completed`, arquivo no disco, nenhum órfão.
 
 **Projeto:** Anime Verse Battlegrounds  
 **Atualização examinada:** `bb147a6` → `73d8b96`  

@@ -78,20 +78,24 @@ local FLIPBOOK_MODES = {
 	PingPong = Enum.ParticleFlipbookMode.PingPong,
 }
 
--- ⚠️ ID publicado NÃO é o mesmo que textura utilizável.
+-- 18/08: os oito atlas estão Completed na API de thumbnail. O ID publicado
+-- passa a ser a textura de verdade — usar o fallback enquanto a sonda roda
+-- escondia o asset liberado. A sonda continua em background só para avisar
+-- se um ID sumir; ela não bloqueia mais o emissor.
 --
--- Em 17/08 os oito atlas foram publicados e os IDs entraram no catálogo. O
--- resultado em Play foi PIOR que antes: um asset recém-enviado fica pendente de
--- moderação no Roblox e não resolve, então o emissor ficava apontando para uma
--- textura vazia — partícula invisível, onde antes havia o fallback procedural
--- funcionando. Medido: `IsLoaded=false` nos cinco atlas cinco segundos depois de
--- criados.
---
--- Por isso o ID sozinho não autoriza uso. Cada asset é sondado uma vez, e só é
--- adotado depois de carregar de verdade. Enquanto não carregar — moderação
--- pendente, asset removido, jogador offline — vale o fallback. Quando a
--- moderação liberar, passa a valer sem precisar de novo build.
+-- Em 17/08 o ID sozinho era pior que o fallback (Pending = textura vazia).
+-- Essa guarda vale só enquanto o registro disser Pending.
 local ASSET_PROBE_TIMEOUT = 10
+
+local function resolveTexture(spec: any): string?
+	if not spec or type(spec.assetId) ~= "string" then
+		return nil
+	end
+	if string.match(spec.assetId, "^rbxassetid://%d+$") == nil then
+		return nil
+	end
+	return spec.assetId
+end
 
 local function probeAsset(vfx: Player, key: string, assetId: string): ()
 	if vfx.assetProbes[key] ~= nil then
@@ -126,7 +130,8 @@ local function publishedAssetId(vfx: Player, entry: any): (string?, any?)
 	if not spec or type(spec.assetId) ~= "string" then
 		return nil, spec
 	end
-	if string.match(spec.assetId, "^rbxassetid://%d+$") == nil then
+	local assetId = resolveTexture(spec)
+	if not assetId then
 		if not vfx.assetWarnings[entry.assetKey or entry.id] then
 			vfx.assetWarnings[entry.assetKey or entry.id] = true
 			warn(("[AbilityVfxPlayer] asset %s ignorado: ID inválido"):format(entry.assetKey or entry.id))
@@ -135,12 +140,9 @@ local function publishedAssetId(vfx: Player, entry: any): (string?, any?)
 	end
 	local key = entry.assetKey or entry.id
 	if vfx.assetProbeGui then
-		probeAsset(vfx, key, spec.assetId)
-		if vfx.assetProbes[key] ~= true then
-			return nil, spec
-		end
+		probeAsset(vfx, key, assetId)
 	end
-	return spec.assetId, spec
+	return assetId, spec
 end
 
 local function applyFlipbook(emitter: ParticleEmitter, spec: any): ()
@@ -298,6 +300,10 @@ local function buildNode(vfx: Player, entry: any): any?
 			NumberSequenceKeypoint.new(0, 0.15),
 			NumberSequenceKeypoint.new(1, 1),
 		})
+		local trailAssetId = publishedAssetId(vfx, entry)
+		if trailAssetId then
+			trail.Texture = trailAssetId
+		end
 		trail.Enabled = false
 		trail.Parent = attachment
 		return trail
