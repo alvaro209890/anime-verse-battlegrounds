@@ -251,6 +251,10 @@ continua dono de HP, número e morte.
 vence quando acerta; a pista só entra no miss espacial, e só se a posição
 conhecida ainda cabe em `alcance + 8 studs` e no cone alargado em 20°. 26
 studs continuam miss. A fronteira PvP e a vida ≤ 0 recusam a pista.
+O schema aceita o id do inimigo (`npcId@anchorId#n`); recusar `@`/`#`
+descartava o soco inteiro quando o cliente via um monstro à frente.
+O schema aceita o id do inimigo (`npcId@anchorId#n`); recusar `@`/`#`
+descartava o soco inteiro quando o cliente via um monstro à frente.
 
 O cone autoritativo do golpe leve usa alcance efetivo **13 studs** (6 + folga
 de corpo 7) e meio-ângulo 92°; o pesado 13,5 / 80°. O jab lê mais lento

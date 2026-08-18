@@ -81,6 +81,19 @@ local function validId(value: any): boolean
 	return type(value) == "string" and #value >= 1 and #value <= 64 and string.match(value, "^[%w_:%-]+$") ~= nil
 end
 
+-- Fighter de inimigo: "<npcId>@<anchorId>#<n>" (EnemyService). Sem @ e # o
+-- schema recusava o BasicAttackIntent inteiro quando o cliente mandava a
+-- pista do monstro à frente — o soco animava e o HP não mexia.
+local function validFighterId(value: any): boolean
+	if validId(value) then
+		return true
+	end
+	return type(value) == "string"
+		and #value >= 1
+		and #value <= 64
+		and string.match(value, "^[%w_%-]+@[%w_%-]+#%d+$") ~= nil
+end
+
 -- Vetor plano no chão: finito, componentes em [-1,1] e magnitude entre 0,1 e 1
 -- (com folga de arredondamento). O dash sempre usou esta regra como direção;
 -- desde 14/08 o golpe e a técnica a usam como MIRA — o corpo do jogador não
@@ -123,7 +136,7 @@ local function validateBasic(payload: { [string]: any }): boolean
 	if payload.aim ~= nil and not validAimVector(payload.aim) then
 		return false
 	end
-	if payload.claimedTargetId ~= nil and not validId(payload.claimedTargetId) then
+	if payload.claimedTargetId ~= nil and not validFighterId(payload.claimedTargetId) then
 		return false
 	end
 	return (payload.kind == "light" or payload.kind == "heavy")

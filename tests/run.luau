@@ -2175,6 +2175,26 @@ test("segurança: mira declarada entra no contrato de golpe e técnica", functio
 		nil,
 		"pista com espaço recusada"
 	)
+	assertTrue(inspecionar("BasicAttackIntent", {
+		kind = "light",
+		phase = "press",
+		aim = { x = 0, z = -1 },
+		claimedTargetId = "enemy_wandering_shard@anchor_shard_1#1",
+	}, 10) ~= nil, "pista de estilhaço (id com @ e #) é válida")
+	assertTrue(inspecionar("BasicAttackIntent", {
+		kind = "light",
+		phase = "press",
+		claimedTargetId = "enemy_grove_wisp@anchor_wisp_2#1",
+	}, 11) ~= nil, "pista de fátuo é válida")
+	assertEq(
+		inspecionar("BasicAttackIntent", {
+			kind = "light",
+			phase = "press",
+			claimedTargetId = "enemy_wandering_shard@anchor_shard_1",
+		}, 12),
+		nil,
+		"id de inimigo sem índice recusado"
+	)
 end)
 
 test("segurança: rejeita vetor impossível, NaN e payload ambíguo", function()
