@@ -1,5 +1,11 @@
 # 15 — Fundação de mundo e apresentação F0
 
+> **18/08 — ColorMaps publicadas.** `upload_image` no Studio publicou os 12
+> mapas PBR de `docs/assets/roblox-ready/textures`. As 3 ColorMaps entram no
+> runtime via `WorldTextures` (`Texture` no piso, muralha, portões, Marco e
+> cratera). Overlay VFX (anel/orbe/raio/queimadura) fica por cima. Registro:
+> `assets/published-world-assets.json`.
+
 > **Estado canônico em 2026-08-16:** implementado em código e validado por Selene, StyLua, 241 testes de domínio, 73 de animação/apresentação, 67 de fuzz, 19 de combate ponta a ponta e build Rojo. O artefato de verificação possui 318.988 bytes; isso prova somente a saída do build, não boot ou runtime. A expansão de cenário, os VFX, as skins (agora dirigidas por dados também para os Estilhaços), a reforma visual do spawn, a decoração da planície/rotas/cratera e os cinco sinais de fronteira estão implementados, mas **não houve Play atual no Studio neste snapshot**.
 
 ## 1. Objetivo e limite

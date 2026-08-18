@@ -66,6 +66,8 @@ local Zones: { [string]: ZoneDefinition } = {
 		displayNameKey = "zone.bastion.name",
 		kind = "safe",
 		pvp = false,
+		floorRgb = { 48, 54, 68 },
+		floorMaterial = "Slate",
 		volumes = {
 			box(-40, -32, 40, 32),
 			-- Plinto leste/sul: a caixa deixa de ter void colado no muro.
@@ -109,6 +111,8 @@ local Zones: { [string]: ZoneDefinition } = {
 		displayNameKey = "zone.plain.name",
 		kind = "free",
 		pvp = true,
+		floorRgb = { 92, 82, 70 },
+		floorMaterial = "Ground",
 		volumes = {
 			box(-240, -440, 240, -40),
 			box(-240, -40, -48, 8),
@@ -141,8 +145,8 @@ local Zones: { [string]: ZoneDefinition } = {
 		displayNameKey = "zone.woods.name",
 		kind = "free",
 		pvp = true,
-		floorRgb = { 48, 78, 52 },
-		floorMaterial = "Grass",
+		floorRgb = { 42, 72, 46 },
+		floorMaterial = "LeafyGrass",
 		volumes = { box(240, -440, 520, -80) },
 	},
 	-- Porto Ferro — oeste do braço (docs/02 §3.4). Livre, docas.

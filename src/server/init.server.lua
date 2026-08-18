@@ -55,6 +55,7 @@ local WildDecorations = require(ReplicatedStorage.Shared.Data.WildDecorations)
 local BiomeDecorations = require(ReplicatedStorage.Shared.Data.BiomeDecorations)
 local Locomotion = require(ReplicatedStorage.Shared.Data.Locomotion)
 local SceneryPresentation = require(ReplicatedStorage.Shared.Data.SceneryPresentation)
+local WorldTextures = require(ReplicatedStorage.Shared.Data.WorldTextures)
 local DayNightCycle = require(ReplicatedStorage.Shared.Data.DayNightCycle)
 local Zones = require(ReplicatedStorage.Shared.Data.Zones)
 
@@ -91,6 +92,10 @@ end
 local sceneryOk, sceneryReason = SceneryPresentation.validate()
 if not sceneryOk then
 	error("catálogo de cenário inválido: " .. (sceneryReason or "unknown"))
+end
+local worldTexOk, worldTexReason = WorldTextures.validate()
+if not worldTexOk then
+	error("catálogo de texturas do mundo inválido: " .. (worldTexReason or "unknown"))
 end
 local dayNightOk, dayNightReason = DayNightCycle.validate()
 if not dayNightOk then

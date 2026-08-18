@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "publishedAt": "2026-08-18",
+  "publishedBy": "Grok — Studio MCP upload_image a partir de docs/assets/roblox-ready/textures",
+  "policy": "Todo ColorMap em WorldTextures.luau precisa constar aqui. Um ID que não está neste arquivo é um ID inventado.",
+  "assets": [
+    {
+      "key": "slate_cracked_floor_color",
+      "assetId": "rbxassetid://115496526822547",
+      "uploadedFile": "docs/assets/roblox-ready/textures/avb_slate_cracked_floor_color.png",
+      "kind": "color_map",
+      "consumer": "WorldTextures"
+    },
+    {
+      "key": "runed_stone_wall_color",
+      "assetId": "rbxassetid://101527668600692",
+      "uploadedFile": "docs/assets/roblox-ready/textures/avb_runed_stone_wall_color.png",
+      "kind": "color_map",
+      "consumer": "WorldTextures"
+    },
+    {
+      "key": "crystal_emissive_strip_color",
+      "assetId": "rbxassetid://91160842506298",
+      "uploadedFile": "docs/assets/roblox-ready/textures/avb_crystal_emissive_strip_color.png",
+      "kind": "color_map",
+      "consumer": "WorldTextures"
+    },
+    {
+      "key": "slate_cracked_floor_normal",
+      "assetId": "rbxassetid://119882758123452",
+      "uploadedFile": "docs/assets/roblox-ready/textures/avb_slate_cracked_floor_normal.png",
+      "kind": "normal_map",
+      "consumer": "SurfaceAppearance futuro"
+    },
+    {
+      "key": "runed_stone_wall_normal",
+      "assetId": "rbxassetid://76048223934186",
+      "uploadedFile": "docs/assets/roblox-ready/textures/avb_runed_stone_wall_normal.png",
+      "kind": "normal_map",
+      "consumer": "SurfaceAppearance futuro"
+    },
+    {
+      "key": "crystal_emissive_strip_normal",
+      "assetId": "rbxassetid://93862217217007",
+      "uploadedFile": "docs/assets/roblox-ready/textures/avb_crystal_emissive_strip_normal.png",
+      "kind": "normal_map",
+      "consumer": "SurfaceAppearance futuro"
+    },
+    {
+      "key": "slate_cracked_floor_roughness",
+      "assetId": "rbxassetid://72315162780855",
+      "uploadedFile": "docs/assets/roblox-ready/textures/avb_slate_cracked_floor_roughness.png",
+      "kind": "roughness_map",
+      "consumer": "SurfaceAppearance futuro"
+    },
+    {
+      "key": "runed_stone_wall_roughness",
+      "assetId": "rbxassetid://77585417545892",
+      "uploadedFile": "docs/assets/roblox-ready/textures/avb_runed_stone_wall_roughness.png",
+      "kind": "roughness_map",
+      "consumer": "SurfaceAppearance futuro"
+    },
+    {
+      "key": "crystal_emissive_strip_roughness",
+      "assetId": "rbxassetid://130998631324009",
+      "uploadedFile": "docs/assets/roblox-ready/textures/avb_crystal_emissive_strip_roughness.png",
+      "kind": "roughness_map",
+      "consumer": "SurfaceAppearance futuro"
+    },
+    {
+      "key": "slate_cracked_floor_metalness",
+      "assetId": "rbxassetid://88683153649122",
+      "uploadedFile": "docs/assets/roblox-ready/textures/avb_slate_cracked_floor_metalness.png",
+      "kind": "metalness_map",
+      "consumer": "SurfaceAppearance futuro",
+      "note": "mesmo hash que runed_stone_wall_metalness — Roblox devolveu o mesmo ID"
+    },
+    {
+      "key": "runed_stone_wall_metalness",
+      "assetId": "rbxassetid://88683153649122",
+      "uploadedFile": "docs/assets/roblox-ready/textures/avb_runed_stone_wall_metalness.png",
+      "kind": "metalness_map",
+      "consumer": "SurfaceAppearance futuro",
+      "note": "mesmo hash que slate_cracked_floor_metalness"
+    },
+    {
+      "key": "crystal_emissive_strip_metalness",
+      "assetId": "rbxassetid://83399169977297",
+      "uploadedFile": "docs/assets/roblox-ready/textures/avb_crystal_emissive_strip_metalness.png",
+      "kind": "metalness_map",
+      "consumer": "SurfaceAppearance futuro"
+    }
+  ]
+}

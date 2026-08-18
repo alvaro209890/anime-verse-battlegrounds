@@ -28,6 +28,7 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local InteractionBinding = require(ReplicatedStorage.Shared.InteractionBinding)
 local WorldBootstrapContract = require(ReplicatedStorage.Shared.WorldBootstrapContract)
+local WorldTextures = require(ReplicatedStorage.Shared.Data.WorldTextures)
 
 export type WorldDeps = {
 	zones: any,
@@ -641,6 +642,67 @@ local function materialOf(name: string): Enum.Material
 	return if typeof(material) == "EnumItem" then material else Enum.Material.SmoothPlastic
 end
 
+-- ColorMap + overlay publicados. Só leitura: Texture não colide e não muda zona.
+local function paintFace(
+	part: BasePart,
+	faceName: string,
+	assetId: string,
+	transparency: number,
+	rgb: any,
+	tile: number,
+	prefix: string
+): ()
+	local face = (Enum.NormalId :: any)[faceName]
+	if typeof(face) ~= "EnumItem" then
+		return
+	end
+	local tex = Instance.new("Texture")
+	tex.Name = prefix .. faceName
+	tex.Texture = assetId
+	tex.Face = face
+	tex.StudsPerTileU = tile
+	tex.StudsPerTileV = tile
+	tex.Transparency = transparency
+	tex.Color3 = toColor(rgb)
+	tex.Parent = part
+end
+
+local function applySurface(part: BasePart, skin: any): ()
+	if not skin then
+		return
+	end
+	if type(skin.material) == "string" then
+		part.Material = materialOf(skin.material)
+	end
+	local faces = WorldTextures.facesOf(skin)
+	if type(skin.baseAssetId) == "string" and skin.baseTransparency < 1 then
+		for _, faceName in faces do
+			paintFace(
+				part,
+				faceName,
+				skin.baseAssetId,
+				skin.baseTransparency,
+				skin.baseRgb,
+				skin.studsPerTile,
+				"AvbBase_"
+			)
+		end
+	end
+	if type(skin.overlayAssetId) == "string" and skin.overlayTransparency < 1 then
+		for _, faceName in faces do
+			paintFace(
+				part,
+				faceName,
+				skin.overlayAssetId,
+				skin.overlayTransparency,
+				skin.overlayRgb,
+				skin.studsPerTile,
+				"AvbSurface_"
+			)
+		end
+	end
+end
+
 -- Peças do rig não participam de física nem de query: quem responde por
 -- colisão, alvo e alcance continua sendo a Root ancorada do ator.
 local function tameRigPart(part: BasePart): ()
@@ -1098,6 +1160,7 @@ local function buildFloors(root: Folder, greybox: any, style: any, zones: any, s
 			floor.Material = if type(zone.floorMaterial) == "string"
 				then materialOf(zone.floorMaterial)
 				else (if zone.kind == "free" then Enum.Material.Ground else Enum.Material.Slate)
+			applySurface(floor, WorldTextures.forZone(zone.id))
 			floor.Parent = folder
 		end
 	end
@@ -1111,6 +1174,7 @@ local function buildFloors(root: Folder, greybox: any, style: any, zones: any, s
 		true
 	)
 	training.Material = Enum.Material.Slate
+	applySurface(training, WorldTextures.named("TrainingPad"))
 	training.Parent = folder
 
 	-- Praça e rotas tornam spawn → treino → dois portões legíveis sem minimapa.
@@ -1123,6 +1187,7 @@ local function buildFloors(root: Folder, greybox: any, style: any, zones: any, s
 		true
 	)
 	plaza.Material = Enum.Material.Slate
+	applySurface(plaza, WorldTextures.named("SpawnPlaza"))
 	plaza.Shape = Enum.PartType.Cylinder
 	plaza.CFrame = CFrame.new(plaza.Position) * CFrame.Angles(0, 0, math.pi / 2)
 	plaza.Parent = folder
@@ -1136,6 +1201,7 @@ local function buildFloors(root: Folder, greybox: any, style: any, zones: any, s
 		true
 	)
 	northPath.Material = Enum.Material.Slate
+	applySurface(northPath, WorldTextures.named("PathNorthGate"))
 	northPath.Parent = folder
 	local trainingPath = makePart(
 		"PathTraining",
@@ -1146,6 +1212,7 @@ local function buildFloors(root: Folder, greybox: any, style: any, zones: any, s
 		true
 	)
 	trainingPath.Material = Enum.Material.Slate
+	applySurface(trainingPath, WorldTextures.named("PathTraining"))
 	trainingPath.Parent = folder
 	local westPath = makePart(
 		"PathWestGate",
@@ -1156,6 +1223,7 @@ local function buildFloors(root: Folder, greybox: any, style: any, zones: any, s
 		true
 	)
 	westPath.Material = Enum.Material.Slate
+	applySurface(westPath, WorldTextures.named("PathWestGate"))
 	westPath.Parent = folder
 	local wildPath = makePart(
 		"PathToCrater",
@@ -1165,6 +1233,7 @@ local function buildFloors(root: Folder, greybox: any, style: any, zones: any, s
 		"Free",
 		true
 	)
+	applySurface(wildPath, WorldTextures.named("PathToCrater"))
 	wildPath.Parent = folder
 
 	-- Base de terreno contínua para a expansão do mundo: é visualmente mais
@@ -1179,6 +1248,7 @@ local function buildFloors(root: Folder, greybox: any, style: any, zones: any, s
 	)
 	terrain.Material = Enum.Material.Ground
 	terrain.Transparency = 0
+	applySurface(terrain, WorldTextures.named("PlainTerrain"))
 	terrain.Parent = folder
 	for index = 1, sceneryStyle.rockCount do
 		local column = (index - 1) % 11
@@ -1228,6 +1298,7 @@ local function buildFloors(root: Folder, greybox: any, style: any, zones: any, s
 	)
 	basin.Shape = Enum.PartType.Cylinder
 	basin.CFrame = CFrame.new(basin.Position) * CFrame.Angles(0, 0, math.pi / 2)
+	applySurface(basin, WorldTextures.named("EliteCraterBasin"))
 	basin.Parent = folder
 	for index = 1, style.craterSegments do
 		local angle = (index - 1) / style.craterSegments * math.pi * 2
@@ -1241,6 +1312,7 @@ local function buildFloors(root: Folder, greybox: any, style: any, zones: any, s
 			true
 		)
 		stone.CFrame = CFrame.new(stone.Position) * CFrame.Angles(0, -angle, 0)
+		applySurface(stone, WorldTextures.named("EliteCraterRim"))
 		stone.Parent = folder
 	end
 end
@@ -1266,6 +1338,7 @@ local function buildWalls(root: Folder, greybox: any, scenery: any, spawnDecorat
 	local function wall(name: string, size: Vector3, position: Vector3): ()
 		local part = makePart(name, size, position, wallColor, "GateBlock", true)
 		part.Material = (Enum.Material :: any)[sceneryStyle.wallMaterial or "Limestone"] or Enum.Material.Limestone
+		applySurface(part, WorldTextures.named("BastionWall"))
 		part.Parent = folder
 		local cap = makePart(
 			name .. "_Cap",
@@ -1415,12 +1488,30 @@ local function buildLandmarks(root: Folder, greybox: any, style: any): ()
 	end
 
 	-- Portais físicos redundantes com a troca de solo/UI da fronteira.
-	stone("NorthGateLeft", Vector3.new(2.5, 12, 3), Vector3.new(-7.25, 6, -32), COLORS.darkStone)
-	stone("NorthGateRight", Vector3.new(2.5, 12, 3), Vector3.new(7.25, 6, -32), COLORS.darkStone)
-	stone("NorthGateBeam", Vector3.new(17, 2.5, 3), Vector3.new(0, 11.5, -32), COLORS.lightStone)
-	stone("WestGateNorth", Vector3.new(3, 12, 2.5), Vector3.new(-40, 6, -6.25), COLORS.darkStone)
-	stone("WestGateSouth", Vector3.new(3, 12, 2.5), Vector3.new(-40, 6, 6.25), COLORS.darkStone)
-	stone("WestGateBeam", Vector3.new(3, 2.5, 15), Vector3.new(-40, 11.5, 0), COLORS.lightStone)
+	applySurface(
+		stone("NorthGateLeft", Vector3.new(2.5, 12, 3), Vector3.new(-7.25, 6, -32), COLORS.darkStone),
+		WorldTextures.named("GateStone")
+	)
+	applySurface(
+		stone("NorthGateRight", Vector3.new(2.5, 12, 3), Vector3.new(7.25, 6, -32), COLORS.darkStone),
+		WorldTextures.named("GateStone")
+	)
+	applySurface(
+		stone("NorthGateBeam", Vector3.new(17, 2.5, 3), Vector3.new(0, 11.5, -32), COLORS.lightStone),
+		WorldTextures.named("GateStone")
+	)
+	applySurface(
+		stone("WestGateNorth", Vector3.new(3, 12, 2.5), Vector3.new(-40, 6, -6.25), COLORS.darkStone),
+		WorldTextures.named("GateStone")
+	)
+	applySurface(
+		stone("WestGateSouth", Vector3.new(3, 12, 2.5), Vector3.new(-40, 6, 6.25), COLORS.darkStone),
+		WorldTextures.named("GateStone")
+	)
+	applySurface(
+		stone("WestGateBeam", Vector3.new(3, 2.5, 15), Vector3.new(-40, 11.5, 0), COLORS.lightStone),
+		WorldTextures.named("GateStone")
+	)
 
 	-- Postes claros fazem a zona de transição legível também sem cor.
 	for index = 1, style.boundaryPostCount do
@@ -1437,8 +1528,10 @@ local function buildLandmarks(root: Folder, greybox: any, style: any): ()
 	-- Marco de Retorno: obelisco simples, distinto das âncoras invisíveis.
 	local returnBase = stone("ReturnBase", Vector3.new(6, 1, 6), Vector3.new(0, 0.5, 12), COLORS.darkStone)
 	returnBase.CollisionGroup = "Safe"
+	applySurface(returnBase, WorldTextures.named("ReturnBase"))
 	local returnSpire = stone("ReturnSpire", Vector3.new(2, 7, 2), Vector3.new(0, 4.5, 12), COLORS.lightStone)
 	returnSpire.CollisionGroup = "Safe"
+	applySurface(returnSpire, WorldTextures.named("ReturnSpire"))
 	local returnCore =
 		makePart("ReturnCore", Vector3.new(1.15, 1.15, 1.15), Vector3.new(0, 7.5, 12), COLORS.boundary, "Safe", false)
 	returnCore.Shape = Enum.PartType.Ball
@@ -1475,6 +1568,7 @@ local function buildLandmarks(root: Folder, greybox: any, style: any): ()
 	spawn.Color = COLORS.lightStone
 	spawn.Material = Enum.Material.Slate
 	spawn.CollisionGroup = "Safe"
+	applySurface(spawn, WorldTextures.named("BastionSpawn"))
 	spawn.Parent = folder
 end
 

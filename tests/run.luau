@@ -43,6 +43,9 @@ local WorldPresentation = require("../src/shared/Data/WorldPresentation")
 local SpawnDecorations = require("../src/shared/Data/SpawnDecorations")
 local WildDecorations = require("../src/shared/Data/WildDecorations")
 local BiomeDecorations = require("../src/shared/Data/BiomeDecorations")
+local WorldTextures = require("../src/shared/Data/WorldTextures")
+local AbilityVfx = require("../src/shared/Data/AbilityVfx")
+local EnemyVfxAssets = require("../src/shared/Data/EnemyVfxAssets")
 local ProgressionCatalog = require("../src/shared/Data/ProgressionCatalog")
 local Items = require("../src/shared/Data/Items")
 local UiPalette = require("../src/shared/Data/UiPalette")
@@ -291,6 +294,64 @@ test("bioma: células têm chão, nomes e decoração sem colisão", function()
 	assertTrue(biomeRidges >= 16, "cada célula tem serra de identidade")
 	for _, item in BiomeDecorations.all() do
 		assertFalse(item.canCollide, item.name .. " não pode colidir")
+	end
+end)
+
+test("mundo: overlays de piso usam só atlas publicados", function()
+	local ok, reason = WorldTextures.validate()
+	assertTrue(ok, reason or "catálogo de superfícies válido")
+	assertEq(Zones.get("zone_echo_woods").floorMaterial, "LeafyGrass", "Bosque com grama frondosa")
+	assertEq(Zones.get("zone_bastion_safe").floorMaterial, "Slate", "Bastião com ardósia")
+	assertEq(Zones.get("zone_plain_free").floorMaterial, "Ground", "planície com terra")
+	local training = WorldTextures.named("TrainingPad")
+	assertTrue(training ~= nil, "pad de treino tem pele")
+	if training then
+		assertEq(training.baseAssetId, WorldTextures.SlateFloor, "pad usa ColorMap de ardósia")
+		assertEq(training.overlayAssetId, WorldTextures.PowerRing, "pad usa anel publicado")
+		assertTrue(training.overlayTransparency < 1, "anel visível")
+	end
+	local lumen = WorldTextures.forZone("zone_lumen_safe")
+	assertTrue(lumen ~= nil, "Lumen tem pele")
+	if lumen then
+		assertEq(lumen.overlayAssetId, WorldTextures.Lightning, "rua Lumen usa raio publicado")
+	end
+	local crater = WorldTextures.named("EliteCraterBasin")
+	assertTrue(crater ~= nil, "cratera tem pele")
+	if crater then
+		assertEq(crater.overlayAssetId, WorldTextures.Scorch, "bacia usa queimadura publicada")
+	end
+	local wall = WorldTextures.named("BastionWall")
+	assertTrue(wall ~= nil, "muro tem pele")
+	if wall then
+		assertEq(wall.baseAssetId, WorldTextures.RunedWall, "muro usa ColorMap de runas")
+		assertEq(#WorldTextures.facesOf(wall), 2, "muro texturiza duas faces")
+	end
+	assertEq(#WorldTextures.colorMapIds(), 3, "três ColorMaps publicadas")
+	local registro = fs.readFile("assets/published-world-assets.json")
+	for _, assetId in WorldTextures.colorMapIds() do
+		local digits = string.match(assetId, "%d+")
+		assertTrue(digits ~= nil and string.find(registro, digits, 1, true) ~= nil, "ColorMap no registro: " .. assetId)
+	end
+	for _, skin in WorldTextures.all() do
+		if skin.overlayAssetId then
+			local resolved: string? = nil
+			if skin.overlayAssetId == WorldTextures.Scorch then
+				local enemy = EnemyVfxAssets.get("kenney_scorch")
+				if enemy then
+					resolved = enemy.assetId
+				end
+			else
+				local key = if skin.overlayAssetId == WorldTextures.EnergyBall
+					then "energy_ball"
+					else (if skin.overlayAssetId == WorldTextures.PowerRing
+						then "power_ring"
+						else "lightning_shock")
+				local spec = AbilityVfx.assetFor(key)
+				resolved = AbilityVfx.resolveTexture(spec)
+			end
+			assertTrue(resolved ~= nil, "overlay resolve no catálogo: " .. skin.id)
+			assertEq(resolved, skin.overlayAssetId, "ID bate com o publicado")
+		end
 	end
 end)
 
@@ -6385,7 +6446,6 @@ test("muralha: paleta usa mais de um material, não Slate único", function()
 end)
 
 test("técnicas F0: as três existem, têm VFX e desbloqueiam no caminho real", function()
-	local AbilityVfx = require("../src/shared/Data/AbilityVfx")
 	ProgressionService.init()
 	ProgressionService.registerPlayer(1601)
 	for _, abilityId in { "comet_shoulder", "broken_cadence", "pulse_return" } do

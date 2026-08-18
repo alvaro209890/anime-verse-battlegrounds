@@ -1,5 +1,16 @@
 # Snapshot Canônico da Documentação — 18/08/2026
 
+## Rodada de 18/08 (Grok) — upload PBR + texturas do mundo
+
+Studio aberto via tarefa interativa; `upload_image` publicou 12 mapas de
+`docs/assets/roblox-ready/textures` (3 ColorMaps + 9 normal/roughness/metalness).
+IDs em `assets/published-world-assets.json`. Runtime: `WorldTextures` aplica
+ColorMap de ardósia no Bastião/pad/praça/caminhos, runas na muralha/portões,
+cristal no Marco; overlays VFX (anel/orbe/raio/`kenney_scorch`) por cima.
+Materiais por bioma (LeafyGrass, Cobblestone, Granite, Salt, Marble, Rock).
+
+---
+
 ## Rodada de 18/08 (Grok) — todos os VFX/áudio publicados ligados e testados
 
 O player de VFX aplica o `rbxassetid` na hora (os 8 atlas estão Completed).

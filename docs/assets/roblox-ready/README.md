@@ -2,7 +2,10 @@
 
 Este diretório contém **variantes tecnicamente preparadas** a partir das referências conceituais em `docs/assets`. A conversão normaliza tamanho e formato e deriva mapas PBR candidatos para uso futuro em `SurfaceAppearance`.
 
-> **Importante:** nenhum arquivo deste diretório está ligado automaticamente ao runtime, a um `MeshPart`, a um decal ou a um ID `rbxassetid://`. A importação final, a publicação dos assets e a validação visual continuam sendo etapas do Roblox Studio.
+> **18/08:** as 3 ColorMaps e os 9 mapas PBR foram publicados via Studio
+> `upload_image`. IDs reais em `assets/published-world-assets.json`. O runtime
+> usa só as ColorMaps em `Texture` (`WorldTextures.luau`). Normal/roughness/
+> metalness ficam registrados para `SurfaceAppearance` em MeshPart.
 
 ## Estrutura
 
