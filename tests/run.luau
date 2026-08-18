@@ -268,10 +268,22 @@ test("bioma: células têm chão, nomes e decoração sem colisão", function()
 	assertTrue(Zones.get("zone_iron_port") ~= nil, "Porto")
 	assertTrue(Zones.get("zone_grey_sector") ~= nil, "Cinza")
 	assertTrue(Zones.get("zone_academy_safe") ~= nil, "Academia")
+	assertTrue(Zones.get("zone_veil_safe") ~= nil, "Vila Sombria")
 	assertEq(Locale.get("zone.lumen.name"), "Distrito Lumen", "nome Lumen")
 	assertEq(Locale.get("zone.woods.name", "en"), "Echo Woods", "nome bosque EN")
+	assertEq(Locale.get("zone.veil.name"), "Vila Sombria", "nome vila")
+	assertEq(Locale.get("zone.veil.name", "en"), "Veil Hamlet", "nome vila EN")
 	local volumes = {}
-	for _, zoneId in { "zone_lumen_safe", "zone_echo_woods", "zone_iron_port", "zone_grey_sector", "zone_academy_safe" } do
+	for _, zoneId in
+		{
+			"zone_lumen_safe",
+			"zone_echo_woods",
+			"zone_iron_port",
+			"zone_grey_sector",
+			"zone_academy_safe",
+			"zone_veil_safe",
+		}
+	do
 		local zone = Zones.get(zoneId)
 		assertTrue(zone ~= nil, zoneId)
 		if zone then
@@ -295,6 +307,15 @@ test("bioma: células têm chão, nomes e decoração sem colisão", function()
 	for _, item in BiomeDecorations.all() do
 		assertFalse(item.canCollide, item.name .. " não pode colidir")
 	end
+	local veil = 0
+	for _, item in BiomeDecorations.all() do
+		if string.sub(item.name, 1, 4) == "Veil" then
+			veil += 1
+			assertTrue(item.position.x >= -400 and item.position.x <= -82, item.name .. " X fora da vila")
+			assertTrue(item.position.z >= 82 and item.position.z <= 270, item.name .. " Z fora da vila")
+		end
+	end
+	assertTrue(veil >= 40, "Vila Sombria tem leitura de aldeia")
 end)
 
 test("mundo: overlays de piso usam só atlas publicados", function()
@@ -3555,14 +3576,14 @@ local function makeZoneDeps(events: { any }?)
 end
 
 test("dados: malha de zonas, PvP só em kind=free, âncoras da spec, spawn no bastião", function()
-	assertTrue(#Zones.all() >= 8, "Bastião + transição + planície + 5 células de bioma")
+	assertTrue(#Zones.all() >= 9, "Bastião + transição + planície + 6 células de bioma")
 	for _, zone in Zones.all() do
 		if zone.pvp then
 			assertEq(zone.kind, "free", "PvP só em zona livre")
 		end
 	end
 	-- 7 âncoras persistidas de §8.3 + os 6 pontos de Estilhaço de §8.1 + 5 marcos
-	-- + 2 clareiras do Fogo-fátuo.
+	-- + 2 clareiras do Fogo-fátuo + 3 da Vila Sombria.
 	local required = {
 		"anchor_bastion_spawn",
 		"anchor_bastion_return",
@@ -3577,9 +3598,10 @@ test("dados: malha de zonas, PvP só em kind=free, âncoras da spec, spawn no ba
 	end
 	assertEq(
 		#Zones.allAnchors(),
-		#required + #Zones.shardAnchors() + #Zones.wispAnchors() + #Zones.portAnchors() + 5,
-		"âncoras persistidas + Estilhaço + marcos + Fátuo + Sucateiro"
+		#required + #Zones.shardAnchors() + #Zones.wispAnchors() + #Zones.portAnchors() + 8,
+		"âncoras persistidas + Estilhaço + marcos + Fátuo + Sucateiro + Vila"
 	)
+	assertTrue(Zones.getAnchor("anchor_veil_well") ~= nil, "poço da Vila Sombria")
 	assertEq(#Zones.wispAnchors(), 2, "duas clareiras de Fogo-fátuo")
 	assertEq(#Zones.portAnchors(), 2, "dois pontos de Sucateiro")
 	local spawn = Zones.getAnchor("anchor_bastion_spawn")
@@ -4671,6 +4693,9 @@ test("greybox: volumes resolvem a zona de cada âncora", function()
 	assertEq(Zones.zoneAtPosition(vec(-390, 0, -70)), "zone_iron_port", "porto")
 	assertEq(Zones.zoneAtPosition(vec(320, 0, -570)), "zone_grey_sector", "setor cinza")
 	assertEq(Zones.zoneAtPosition(vec(50, 0, 140)), "zone_academy_safe", "academia")
+	assertEq(Zones.zoneAtPosition(vec(-275, 0, 190)), "zone_veil_safe", "poço da Vila Sombria")
+	assertEq(Zones.zoneAtPosition(vec(-280, 0, 96)), "zone_veil_safe", "saída norte da vila")
+	assertEq(Zones.zoneAtPosition(vec(-116, 0, 190)), "zone_veil_safe", "saída leste da vila")
 	assertEq(Zones.zoneAtPosition(vec(0, 0, -450)), "zone_threshold_transition", "faixa Lumen")
 end)
 
@@ -6090,6 +6115,202 @@ test("progressão: gasta pontos nas trilhas e respec só na segura", function()
 	local restored = ProgressionService.viewFor(1400)
 	assertTrue(restored ~= nil and restored.accountLevel >= 3, "nível restaurado")
 	ProgressionService.unregisterPlayer(1400)
+end)
+
+test("progressão: ciclo completo de XP, nível e pontos", function()
+	fakeNow = 90000
+	ProgressionService.init()
+	ProgressionService.registerPlayer(1800)
+
+	-- Campo não sobe nível nem solta ponto. 85 < 86.
+	ProgressionService.awardXp(1800, 85)
+	local early = ProgressionService.viewFor(1800)
+	assertTrue(early ~= nil, "view inicial")
+	if early then
+		assertEq(early.accountLevel, 1, "nível só depois de consolidar")
+		assertEq(early.unspentPoints, 0, "sem ponto no campo")
+		assertEq(early.pendingLevels, 0, "85 não fecha o nível 1")
+		assertEq(early.previewLevel, 1, "preview ainda 1")
+		assertEq(early.xpIntoLevel, 85, "barra mostra o campo")
+	end
+	local okBalance, balReason = ProgressionCatalog.pointsBalance(1, ProgressionCatalog.emptySpent(), 0)
+	assertTrue(okBalance, balReason or "nível 1 equilibrado")
+
+	-- +1 fecha o nível no preview, pontos ainda 0.
+	ProgressionService.awardXp(1800, 1)
+	local preview = ProgressionService.viewFor(1800)
+	if preview then
+		assertEq(preview.previewLevel, 2, "preview sobe")
+		assertEq(preview.pendingLevels, 1, "1 nível pendente")
+		assertEq(preview.accountLevel, 1, "conta ainda 1")
+		assertEq(preview.unspentPoints, 0, "ponto só na consolidação")
+		assertEq(preview.xpIntoLevel, 86, "barra cheia até consolidar")
+	end
+
+	local receipt = ProgressionService.consolidate(1800, fakeNow)
+	assertTrue(receipt ~= nil, "recibo")
+	if receipt then
+		assertEq(receipt.consolidated, 86, "moveu 86")
+		assertEq(receipt.levelsGained, 1, "subiu 1")
+		assertEq(receipt.pointsGranted, 3, "3 pontos")
+		assertEq(receipt.accountLevel, 2, "nível 2")
+	end
+	local leveled = ProgressionService.viewFor(1800)
+	if leveled then
+		assertEq(leveled.accountLevel, 2, "conta 2")
+		assertEq(leveled.unspentPoints, 3, "3 livres")
+		assertEq(leveled.pendingLevels, 0, "nada pendente")
+		local balanced, why = ProgressionCatalog.pointsBalance(2, leveled.spent, leveled.unspentPoints)
+		assertTrue(balanced, why or "saldo após level-up")
+	end
+
+	-- Dummy não paga XP. Estilhaço paga 25 com decréscimo por âncora.
+	local dummy = Npcs.get("npc_training_dummy")
+	local shard = Npcs.get("enemy_wandering_shard")
+	assertTrue(dummy ~= nil and dummy.grantsXp == false, "dummy sem XP")
+	local dummyAward = ProgressionService.creditNpcKill(1800, dummy, "anchor_training")
+	assertEq(dummyAward.granted, 0, "dummy não credita")
+	assertEq(dummyAward.reason, "no_xp_source", "motivo dummy")
+	local firstKill = ProgressionService.creditNpcKill(1800, shard, "anchor_shard_1")
+	assertEq(firstKill.granted, 25, "primeiro kill 25")
+	for _ = 1, 5 do
+		ProgressionService.creditNpcKill(1800, shard, "anchor_shard_1")
+	end
+	local reduced = ProgressionService.creditNpcKill(1800, shard, "anchor_shard_1")
+	assertEq(reduced.granted, 12, "sétimo kill reduzido")
+	local otherAnchor = ProgressionService.creditNpcKill(1800, shard, "anchor_shard_2")
+	assertEq(otherAnchor.granted, 25, "outra âncora começa cheia")
+
+	-- Morte: só come o não consolidado. Segura 0. Livre 10% / 15%. Cap 200.
+	local beforeDeath = ProgressionService.getUnconsolidatedXp(1800)
+	assertTrue(beforeDeath > 0, "tem campo para perder")
+	local safeDeath = ProgressionService.applyDeathPenalty(1800, "safe", false)
+	assertEq(safeDeath.lost, 0, "vila/bastião não perde")
+	local veilDeath = ProgressionService.applyDeathPenalty(1800, "safe", true)
+	assertEq(veilDeath.lost, 0, "Vila Sombria é segura")
+	local pve = ProgressionService.applyDeathPenalty(1800, "free", false)
+	assertEq(pve.lost, math.floor(beforeDeath * 0.10), "PvE 10%")
+	ProgressionService.awardXp(1800, 3000)
+	local huge = ProgressionService.getUnconsolidatedXp(1800)
+	local pvp = ProgressionService.applyDeathPenalty(1800, "free", true)
+	local rawPvp = math.floor(huge * 0.15)
+	assertEq(pvp.lost, math.min(rawPvp, 200), "cap 200")
+	assertEq(pvp.capped, rawPvp > 200, "flag de cap")
+	assertEq(ProgressionService.getLedger(1800).consolidated, 86, "consolidado intacto na morte")
+
+	-- Gasto 1/2/3, recusas, teto, vitais, respec devolve o ganho.
+	local spendBad = ProgressionService.spendPoints(1800, "vitality", 0)
+	assertEq(spendBad.reason, "invalid_amount", "zero inválido")
+	local spendFour = ProgressionService.spendPoints(1800, "vitality", 4)
+	assertEq(spendFour.reason, "invalid_amount", "4 de uma vez inválido")
+	local spendOk = ProgressionService.spendPoints(1800, "vitality", 3)
+	assertEq(spendOk.ok, true, "gastou 3 em vitalidade")
+	if spendOk.vitals then
+		assertEq(spendOk.vitals.maxHealth, 106, "100+3×2")
+	end
+	local afterSpend = ProgressionService.viewFor(1800)
+	if afterSpend then
+		local balanced, why = ProgressionCatalog.pointsBalance(2, afterSpend.spent, afterSpend.unspentPoints)
+		assertTrue(balanced, why or "saldo após gasto")
+		assertEq(afterSpend.unspentPoints, 0, "gastou os 3")
+	end
+	local noMore = ProgressionService.spendPoints(1800, "umbral", 1)
+	assertEq(noMore.reason, "no_points", "sem saldo")
+	local respecField = ProgressionService.respecPoints(1800, false)
+	assertEq(respecField.reason, "not_safe", "respec só na segura")
+	local respecOk = ProgressionService.respecPoints(1800, true)
+	assertEq(respecOk.ok, true, "respec")
+	if respecOk.vitals then
+		assertEq(respecOk.vitals.maxHealth, 100, "vida base")
+	end
+	local afterRespec = ProgressionService.viewFor(1800)
+	if afterRespec then
+		assertEq(afterRespec.unspentPoints, 3, "pontos devolveram")
+		local balanced, why = ProgressionCatalog.pointsBalance(2, afterRespec.spent, afterRespec.unspentPoints)
+		assertTrue(balanced, why or "saldo após respec")
+	end
+
+	-- Teto GDD: 100 impacto = 6%. Curva 2×n^2,3+84.
+	assertEq(ProgressionCatalog.xpToNextLevel(2), 93, "nível 2")
+	assertEq(ProgressionCatalog.xpToNextLevel(3), 109, "nível 3")
+	local maxed = ProgressionCatalog.emptySpent()
+	maxed.impact = 100
+	assertEq(ProgressionCatalog.vitalsFor(maxed).damageBonus, 0.06, "teto impacto")
+	assertEq(ProgressionCatalog.scaleDamage(14, 0.06), 15, "cometa com teto")
+	assertEq(ProgressionCatalog.canSpend(maxed, 3, "impact", 1), "track_cap", "trilha 100")
+
+	-- Persistência: sessão (emitted) zera; nível/pontos/gastos voltam.
+	ProgressionService.spendPoints(1800, "guard", 2)
+	local snap = ProgressionService.snapshotForSave(1800)
+	assertTrue(snap ~= nil, "snapshot")
+	if snap then
+		assertEq(snap.accountLevel, 2, "nível persistido")
+		assertEq(snap.consolidatedXp, 86, "XP banco persistido")
+	end
+	local emittedBefore = ProgressionService.getLedger(1800).emitted
+	assertTrue(emittedBefore > 0, "sessão emitiu")
+	ProgressionService.unregisterPlayer(1800)
+	ProgressionService.registerPlayer(1800)
+	if snap then
+		ProgressionService.restoreFromSave(1800, snap)
+	end
+	assertEq(ProgressionService.getLedger(1800).emitted, 0, "teto de sessão recomeça")
+	local back = ProgressionService.viewFor(1800)
+	if back then
+		assertEq(back.accountLevel, 2, "nível voltou")
+		assertEq(back.spent.guard, 2, "guarda persistiu")
+		assertEq(back.unspentPoints, 1, "1 ponto livre")
+		assertEq(back.vitals.maxGuard, 104, "vital de guarda")
+		local balanced, why = ProgressionCatalog.pointsBalance(2, back.spent, back.unspentPoints)
+		assertTrue(balanced, why or "saldo restaurado")
+	end
+
+	-- Restore podre (gastou mais do que ganhou) zera trilhas.
+	ProgressionService.unregisterPlayer(1801)
+	ProgressionService.registerPlayer(1801)
+	ProgressionService.restoreFromSave(1801, {
+		consolidatedXp = 86,
+		unconsolidatedXp = 0,
+		lastConsolidationAt = 1,
+		tutorialFlags = {},
+		unlockedAbilities = {},
+		accountLevel = 2,
+		unspentProgressionPoints = 0,
+		spentTracks = {
+			vitality = 50,
+			umbral = 0,
+			impact = 0,
+			guard = 0,
+			resonance = 0,
+		},
+	})
+	local cleaned = ProgressionService.viewFor(1801)
+	if cleaned then
+		assertEq(cleaned.spent.vitality, 0, "gasto impossível descartado")
+		assertEq(cleaned.unspentPoints, 3, "saldo reconcilia para o ganho real")
+		local balanced, why = ProgressionCatalog.pointsBalance(2, cleaned.spent, cleaned.unspentPoints)
+		assertTrue(balanced, why or "restore podre reconcilia")
+	end
+
+	-- Vários níveis num único consolidate.
+	ProgressionService.registerPlayer(1802)
+	local need = ProgressionCatalog.cumulativeXpForLevel(5)
+	ProgressionService.awardXp(1802, need)
+	local multi = ProgressionService.consolidate(1802, fakeNow + 10)
+	if multi then
+		assertEq(multi.accountLevel, 5, "nível 5 de uma vez")
+		assertEq(multi.levelsGained, 4, "1→5")
+		assertEq(multi.pointsGranted, 12, "4×3")
+	end
+	local multiView = ProgressionService.viewFor(1802)
+	if multiView then
+		local balanced, why = ProgressionCatalog.pointsBalance(5, multiView.spent, multiView.unspentPoints)
+		assertTrue(balanced, why or "vários níveis")
+	end
+
+	ProgressionService.unregisterPlayer(1800)
+	ProgressionService.unregisterPlayer(1801)
+	ProgressionService.unregisterPlayer(1802)
 end)
 
 test("dados: SpendProgressionIntent tem contrato C→S", function()

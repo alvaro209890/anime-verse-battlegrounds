@@ -129,6 +129,23 @@ function ProgressionCatalog.spentTotal(spent: SpentTracks): number
 	return spent.vitality + spent.umbral + spent.impact + spent.guard + spent.resonance
 end
 
+-- Invariante: pontos ganhos no nível = gastos + não gastos. Sem isto o HUD
+-- e o respec podem mentir depois de um restore podre.
+function ProgressionCatalog.pointsBalance(level: number, spent: SpentTracks, unspent: number): (boolean, string?)
+	if type(unspent) ~= "number" or unspent ~= unspent or unspent < 0 or unspent ~= math.floor(unspent) then
+		return false, "unspent_invalid"
+	end
+	local earned = ProgressionCatalog.earnedPoints(level)
+	local used = ProgressionCatalog.spentTotal(spent)
+	if used < 0 then
+		return false, "spent_negative"
+	end
+	if used + unspent ~= earned then
+		return false, "imbalance"
+	end
+	return true, nil
+end
+
 function ProgressionCatalog.maxPointsInTrack(): number
 	return ProgressionCatalog.MAX_LEVEL
 end

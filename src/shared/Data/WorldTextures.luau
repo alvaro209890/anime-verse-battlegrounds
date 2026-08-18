@@ -245,6 +245,17 @@ local ZONE_FLOORS: { [string]: SurfaceSkin } = {
 		overlayTransparency = 0.82,
 		overlayRgb = { 212, 168, 72 },
 	}),
+	zone_veil_safe = skin({
+		id = "zone_veil_safe",
+		material = "LeafyGrass",
+		studsPerTile = 12,
+		baseAssetId = SLATE_FLOOR,
+		baseTransparency = 0.62,
+		baseRgb = { 48, 62, 52 },
+		overlayAssetId = ENERGY_BALL,
+		overlayTransparency = 0.8,
+		overlayRgb = { 90, 70, 130 },
+	}),
 	zone_threshold_transition = skin({
 		id = "zone_threshold_transition",
 		material = "Salt",

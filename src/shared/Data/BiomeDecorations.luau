@@ -1145,6 +1145,145 @@ for i = 1, 4 do
 end
 pushBlock("AcademyPlinth", 8, 0.6, 8, 50, 0.35, 168, CREAM, "Marble", 0)
 
+-- ── Vila Sombria (docs/02 §3.4) ────────────────────────────────────────────
+-- Célula segura escondida: X −400..−150, Z 110..270 + aventais. Sem PointLight
+-- (teto 16 já está no Bosque/Lumen). Sem colisão. Duas saídas: norte (Porto)
+-- e leste (Academia). Marco vertical = Véu.
+
+local VEIL_WOOD = { 48, 40, 36 }
+local VEIL_ROOF = { 28, 32, 48 }
+local VEIL_PAPER = { 186, 176, 150 }
+local VEIL_MOSS = { 40, 72, 54 }
+local VEIL_PURPLE = { 88, 62, 128 }
+
+local function veilHut(id: number, x: number, z: number): ()
+	local w = 10 + (id % 3)
+	local d = 8 + (id % 2)
+	local h = 5.5 + (id % 3) * 0.4
+	pushBlock(("VeilHut_%02d_Body"):format(id), w, h, d, x, h / 2, z, VEIL_WOOD, "Wood", 0)
+	pushBlock(("VeilHut_%02d_Roof"):format(id), w + 1.6, 0.7, d + 1.6, x, h + 0.6, z, VEIL_ROOF, "Slate", 0)
+	pushBlock(
+		("VeilHut_%02d_Eave"):format(id),
+		w + 2.4,
+		0.28,
+		d + 0.4,
+		x,
+		h + 0.2,
+		z,
+		VEIL_PURPLE,
+		"SmoothPlastic",
+		0.15
+	)
+	pushBlock(("VeilHut_%02d_Window"):format(id), 1.6, 1.4, 0.2, x, 2.4, z + d / 2 + 0.12, VEIL_PAPER, "Neon", 0.25)
+end
+
+veilHut(1, -340, 160)
+veilHut(2, -320, 228)
+veilHut(3, -228, 148)
+veilHut(4, -208, 236)
+veilHut(5, -248, 252)
+veilHut(6, -352, 248)
+
+-- Marco: obelisco do Véu no poço (âncora well).
+push(
+	piece(
+		"VeilWellRing",
+		"Cylinder",
+		{ x = 0.45, y = 7.5, z = 7.5 },
+		{ x = -275, y = 0.28, z = 190 },
+		0,
+		VEIL_MOSS,
+		"Slate",
+		0.08,
+		false,
+		nil
+	)
+)
+push(
+	piece(
+		"VeilSpire",
+		"Cylinder",
+		{ x = 14, y = 2.2, z = 2.2 },
+		{ x = -275, y = 7, z = 190 },
+		0,
+		VEIL_ROOF,
+		"Basalt",
+		0,
+		false,
+		nil
+	)
+)
+pushBall("VeilOrb", 2.6, -275, 14.4, 190, VEIL_PURPLE, 0.12)
+pushBlock("VeilWellLip", 4.2, 0.7, 4.2, -275, 0.4, 190, VEIL_WOOD, "WoodPlanks", 0)
+
+-- Caminhos das duas saídas (leitura sem minimapa).
+for i = 1, 6 do
+	pushBlock(
+		("VeilPathNorth_%02d"):format(i),
+		5.5,
+		0.22,
+		7,
+		-280,
+		0.14,
+		118 + i * 10,
+		{ 58, 54, 48 },
+		"Cobblestone",
+		0
+	)
+end
+for i = 1, 6 do
+	pushBlock(("VeilPathEast_%02d"):format(i), 8, 0.22, 5.2, -200 + i * 10, 0.14, 190, { 58, 54, 48 }, "Cobblestone", 0)
+end
+
+-- Cerca viva e lanternas (Neon, sem PointLight).
+for i = 1, 8 do
+	pushBlock(
+		("VeilHedge_%02d"):format(i),
+		2.4,
+		1.8,
+		0.7,
+		-390 + (i % 4) * 28,
+		0.95,
+		118 + math.floor((i - 1) / 4) * 140,
+		VEIL_MOSS,
+		"LeafyGrass",
+		0
+	)
+end
+for i = 1, 6 do
+	push(
+		piece(
+			("VeilLantern_%02d"):format(i),
+			"Cylinder",
+			{ x = 2.8, y = 0.4, z = 0.4 },
+			{ x = -360 + (i % 3) * 50, y = 3.2, z = 140 + math.floor((i - 1) / 3) * 80 },
+			0,
+			VEIL_PURPLE,
+			"Neon",
+			0.18,
+			false,
+			nil
+		)
+	)
+end
+for i = 1, 5 do
+	pushBall(
+		("VeilMist_%02d"):format(i),
+		3.4 + (i % 2),
+		-310 + i * 18,
+		1.6,
+		170 + (i % 3) * 12,
+		{ 120, 140, 160 },
+		0.55
+	)
+end
+pushBlock("VeilGateNorth_L", 1.2, 6.5, 1.2, -288, 3.3, 104, VEIL_WOOD, "Wood", 0)
+pushBlock("VeilGateNorth_R", 1.2, 6.5, 1.2, -272, 3.3, 104, VEIL_WOOD, "Wood", 0)
+pushBlock("VeilGateNorth_Beam", 18, 0.7, 1, -280, 6.6, 104, VEIL_PURPLE, "SmoothPlastic", 0.1)
+pushBlock("VeilGateEast_L", 1.2, 6.5, 1.2, -132, 3.3, 182, VEIL_WOOD, "Wood", 0)
+pushBlock("VeilGateEast_R", 1.2, 6.5, 1.2, -132, 3.3, 198, VEIL_WOOD, "Wood", 0)
+pushBlock("VeilGateEast_Beam", 1, 0.7, 18, -132, 6.6, 190, VEIL_PURPLE, "SmoothPlastic", 0.1)
+
 -- Montanhas de identidade por célula. Sem luz nova (teto 16). Sem colisão.
 local SNOW = { 236, 236, 242 }
 local PEAK_SLATE = { 72, 68, 64 }
@@ -1266,6 +1405,10 @@ biomePeak("PortRidge_02", -508, 56, 30, 38, 22, IRON, RUST, "Rock", false)
 
 -- Academia: colina de arenito no fundo do campus.
 biomePeak("AcademyRidge_01", 158, 218, 32, 36, 22, CREAM, GOLD, "Sandstone", false)
+
+-- Vila Sombria: encosta sul do vale.
+biomePeak("VeilRidge_01", -360, 258, 30, 34, 20, VEIL_MOSS, VEIL_ROOF, "Slate", false)
+biomePeak("VeilRidge_02", -180, 258, 28, 30, 18, VEIL_WOOD, VEIL_MOSS, "Rock", false)
 
 function BiomeDecorations.all(): { BiomePiece }
 	return PIECES

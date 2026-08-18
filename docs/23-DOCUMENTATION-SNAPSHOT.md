@@ -1,5 +1,15 @@
 # Snapshot Canônico da Documentação — 18/08/2026
 
+## Rodada de 18/08 (Grok) — Vila Sombria + auditoria de progressão
+
+Primeira célula da Vila Sombria (`zone_veil_safe`): vale a sudoeste, duas
+saídas (Porto / Academia), marco do Véu, 6 casas, caminhos. Sem serviço de
+técnicas (só leitura). `ProgressionCatalog.pointsBalance` trava
+ganhos = gastos + livres. Suite cobre campo vs consolidação, dummy sem XP,
+decréscimo por âncora, morte, gasto 1–3, respec, restore e vários níveis.
+
+---
+
 ## Rodada de 18/08 (Grok) — upload PBR + texturas do mundo
 
 Studio aberto via tarefa interativa; `upload_image` publicou 12 mapas de

@@ -78,7 +78,7 @@ Arquétipos e nomes provisórios (nomes públicos originais obrigatórios — Ga
 |---|---|---|---|---|
 | **Bastião do Limiar** | posto avançado de pedra | segura | spawn inicial, treino, primeira cadeia de missão | F0 (atual) |
 | **Distrito Lumen** | metrópole de letreiros neon e vielas (atmosfera de centro urbano japonês contemporâneo) | segura + borda livre | comércio, quadro de missões avançado, torneio local, primeira grande cidade | F1/F2 |
-| **Vila Sombria** | vila escondida em vale, telhados curvos e muralha de madeira (atmosfera de vila ninja) | segura | cadeias de técnicas, academia local, floresta de treino ao redor | F2 |
+| **Vila Sombria** | vila escondida em vale, telhados curvos e muralha de madeira (atmosfera de vila ninja) | segura | cadeias de técnicas, academia local, floresta de treino ao redor | F2 — primeira célula no catálogo (18/08): `zone_veil_safe`, duas saídas, marco do Véu. Sem serviço de técnicas ainda |
 | **Porto Ferro** | cidade portuária, docas e mercado (atmosfera de porto de aventura) | segura + borda livre | rotas marítimas, eventos de entrega, acesso a arquipélago | pós-lançamento |
 | **Setor Cinza** | distrito industrial, fábricas e plataformas (atmosfera cyberpunk industrial) | livre | materiais de forja, PvP urbano vertical, boss de fábrica | pós-lançamento |
 | **Academia Alvorada** | campus escolar com arena e dormitórios (atmosfera de academia de combate) | segura | torneio, ranking, maestria e social | pós-lançamento |

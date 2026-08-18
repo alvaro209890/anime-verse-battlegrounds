@@ -39,6 +39,7 @@ local Strings: { [string]: { [string]: string } } = {
 		["zone.port.name"] = "Porto Ferro",
 		["zone.grey.name"] = "Setor Cinza",
 		["zone.academy.name"] = "Academia Alvorada",
+		["zone.veil.name"] = "Vila Sombria",
 
 		-- NPCs
 		["npc.threshold_instructor.name"] = "Instrutora do Limiar",
@@ -198,6 +199,7 @@ local Strings: { [string]: { [string]: string } } = {
 		["zone.port.name"] = "Iron Port",
 		["zone.grey.name"] = "Grey Sector",
 		["zone.academy.name"] = "Dawn Academy",
+		["zone.veil.name"] = "Veil Hamlet",
 
 		["npc.threshold_instructor.name"] = "Threshold Instructress",
 		["npc.training_dummy.name"] = "Training Dummy",

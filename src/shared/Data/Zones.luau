@@ -179,6 +179,22 @@ local Zones: { [string]: ZoneDefinition } = {
 		floorMaterial = "Sandstone",
 		volumes = { box(-80, 48, 180, 240) },
 	},
+	-- Vila Sombria — vila escondida a sudoeste (docs/02 §3.4). Segura.
+	-- Duas saídas: norte para o Porto, leste para a Academia. Sem overlap
+	-- com as caixas vizinhas (porto z≤80, academia x≥−80).
+	zone_veil_safe = {
+		id = "zone_veil_safe",
+		displayNameKey = "zone.veil.name",
+		kind = "safe",
+		pvp = false,
+		floorRgb = { 36, 44, 40 },
+		floorMaterial = "LeafyGrass",
+		volumes = {
+			box(-400, 110, -150, 270),
+			box(-360, 82, -200, 110), -- avental norte → Porto
+			box(-150, 140, -82, 240), -- avental leste → Academia
+		},
+	},
 }
 
 local Anchors: { [string]: AnchorDefinition } = {
@@ -280,6 +296,21 @@ local Anchors: { [string]: AnchorDefinition } = {
 		id = "anchor_academy_yard",
 		zoneId = "zone_academy_safe",
 		position = { x = 50, y = 0, z = 140 },
+	},
+	anchor_veil_well = {
+		id = "anchor_veil_well",
+		zoneId = "zone_veil_safe",
+		position = { x = -275, y = 0, z = 190 },
+	},
+	anchor_veil_north = {
+		id = "anchor_veil_north",
+		zoneId = "zone_veil_safe",
+		position = { x = -280, y = 0, z = 96 },
+	},
+	anchor_veil_east = {
+		id = "anchor_veil_east",
+		zoneId = "zone_veil_safe",
+		position = { x = -116, y = 0, z = 190 },
 	},
 	-- Clareiras do Fogo-fátuo (Bosque). Longe do santuário (380, −260) e
 	-- das árvores reservadas no LCG de BiomeDecorations.
@@ -400,6 +431,7 @@ function ZoneCatalog.zoneAtPosition(position: Vec3): string?
 	-- Distrito Lumen (norte da planície) seria engolido pela livre.
 	local order = {
 		"zone_threshold_transition",
+		"zone_veil_safe",
 		"zone_lumen_safe",
 		"zone_academy_safe",
 		"zone_echo_woods",
