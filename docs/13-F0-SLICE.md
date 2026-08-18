@@ -30,7 +30,7 @@ Itens 1–13 estão fechados em código/headless. O snapshot de implementação 
 |---|---|---|
 | `src/shared/Data/Abilities.luau` | `comet_shoulder`, `broken_cadence`, `pulse_return`; `eclipse_beat` desligada | feito |
 | `src/shared/Data/EnergyFamilies.luau` | Umbral regen 2/6, Fluxo 6 / 120 ms, cap 1,5 s | feito |
-| `src/shared/Data/Npcs.luau` | dummy 10000 HP; `enemy_wandering_shard` 60 HP / dano 8 / alcance 4 / telegraph 400 ms; `npc_threshold_instructor` (ofertante) | **item 9 feito**: `enemy_anchored_shard` (120 HP, slam 14/700 ms, combo 6+6/300 ms, shock 10/550 ms, respawn 180 s, XP 80 cooldown 180 s, leeching 1%/8 s). Extra 18/08: `enemy_grove_wisp` (36 HP, pierce 6/350 ms, 2 no Bosque) — pathfinding/Studio pendente |
+| `src/shared/Data/Npcs.luau` | dummy 10000 HP; `enemy_wandering_shard` 60 HP / dano 8 / alcance 4 / telegraph 400 ms; `npc_threshold_instructor` (ofertante) | **item 9 feito**: `enemy_anchored_shard` (120 HP, slam 14/700 ms, combo 6+6/300 ms, shock 10/550 ms, respawn 180 s, XP 80 cooldown 180 s, leeching 1%/8 s). Extra 18/08: `enemy_grove_wisp` (36 HP, pierce 6/350 ms, 2 no Bosque) e `enemy_port_scrapper` (48 HP, cleave/hook, 2 no Porto) — pathfinding/Studio pendente |
 | `src/shared/Data/Zones.luau` | 8 zonas (Bastião, transição, planície + Lumen/Bosque/Porto/Cinza/Academia), aventais dos portões, 7 âncoras F0 + 6 Estilhaços + 5 marcos de bioma + 2 Fátuo | feito |
 | `src/shared/Geometry.luau` | distância, costas, esfera, cápsula, caixa, lunge e passo de perseguição | feito |
 | `SpatialService` | registro de posição/olhar; hitbox à frente, cápsula do trajeto, `resolveCometShoulder` | feito no domínio; leitura do `HumanoidRootPart` só roda no Studio |

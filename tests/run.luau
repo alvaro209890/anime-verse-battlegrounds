@@ -561,12 +561,13 @@ test("ci: o script local reproduz a ordem do workflow", function()
 	end
 end)
 
-test("apresentação: cinco atores e estilo do mundo passam validação", function()
+test("apresentação: seis atores e estilo do mundo passam validação", function()
 	local ok, reason = WorldPresentation.validate()
 	assertTrue(ok, reason)
-	assertEq(#WorldPresentation.allActors(), 5, "cinco receitas")
+	assertEq(#WorldPresentation.allActors(), 6, "seis receitas")
 	assertEq(WorldPresentation.getActor("enemy_wandering_shard").shape, "shard", "inimigo low-poly")
 	assertEq(WorldPresentation.getActor("enemy_grove_wisp").shape, "shard", "Fogo-fátuo low-poly")
+	assertEq(WorldPresentation.getActor("enemy_port_scrapper").shape, "shard", "Sucateiro low-poly")
 	assertTrue(WorldPresentation.style().craterSegments >= 12, "cratera legível")
 end)
 
@@ -709,10 +710,12 @@ test("skin: estilhaços têm receita própria em cima do corpo comum", function(
 	local wisp = WorldPresentation.shardGearFor("enemy_grove_wisp")
 	assertTrue(has(wisp, "WispVeil") and has(wisp, "WispCore"), "Fogo-fátuo tem véu e núcleo")
 	assertFalse(has(wisp, "Crown_1"), "Fátuo não herda a coroa")
+	local scrapper = WorldPresentation.shardGearFor("enemy_port_scrapper")
+	assertTrue(has(scrapper, "ScrapHook") and has(scrapper, "ScrapPlate"), "Sucateiro tem gancho e placa")
 end)
 
 test("skin: nenhuma peça de estilhaço passa do alcance real do golpe (docs/17)", function()
-	for _, npcId in { "enemy_wandering_shard", "enemy_anchored_shard", "enemy_grove_wisp" } do
+	for _, npcId in { "enemy_wandering_shard", "enemy_anchored_shard", "enemy_grove_wisp", "enemy_port_scrapper" } do
 		local definition = Npcs.get(npcId)
 		assertTrue(definition ~= nil, npcId .. " existe no catálogo")
 		if definition then
@@ -1547,6 +1550,7 @@ test("cliente: Locale cobre todo texto do HUD F0 em PT-BR e EN", function()
 		"hud.settings_shake_off",
 		"hud.settings_where",
 		"hud.debug_kit",
+		"hud.credits_vfx",
 	}
 	for _, key in keys do
 		assertTrue(Locale.hasKey(key), key .. " existe")
@@ -3492,10 +3496,11 @@ test("dados: malha de zonas, PvP só em kind=free, âncoras da spec, spawn no ba
 	end
 	assertEq(
 		#Zones.allAnchors(),
-		#required + #Zones.shardAnchors() + #Zones.wispAnchors() + 5,
-		"âncoras persistidas + Estilhaço + marcos + Fátuo"
+		#required + #Zones.shardAnchors() + #Zones.wispAnchors() + #Zones.portAnchors() + 5,
+		"âncoras persistidas + Estilhaço + marcos + Fátuo + Sucateiro"
 	)
 	assertEq(#Zones.wispAnchors(), 2, "duas clareiras de Fogo-fátuo")
+	assertEq(#Zones.portAnchors(), 2, "dois pontos de Sucateiro")
 	local spawn = Zones.getAnchor("anchor_bastion_spawn")
 	assertTrue(spawn ~= nil, "anchor_bastion_spawn existe")
 	if spawn then
@@ -5037,6 +5042,10 @@ test("inimigo: patrulha em órbita e terceiro golpe rift / Fogo-fátuo", functio
 	local pierce = EnemyService.chaserPattern("enemy_grove_wisp", 0, Npcs.get("enemy_grove_wisp"))
 	assertEq(pierce.abilityId, "wisp_pierce", "Fátuo fura")
 	assertEq(pierce.damage, 6, "Fátuo dano 6")
+	local cleave = EnemyService.chaserPattern("enemy_port_scrapper", 0, Npcs.get("enemy_port_scrapper"))
+	local hook = EnemyService.chaserPattern("enemy_port_scrapper", 1, Npcs.get("enemy_port_scrapper"))
+	assertEq(cleave.abilityId, "port_cleave", "Sucateiro talha")
+	assertEq(hook.abilityId, "port_hook", "Sucateiro gancho")
 
 	local point = EnemyService.patrolPoint({ x = 0, y = 0, z = 0 }, 2, 6, 8)
 	assertTrue(math.abs(point.x * point.x + point.z * point.z - 36) < 0.05, "órbita de raio 6")
@@ -5049,6 +5058,7 @@ test("inimigo: patrulha em órbita e terceiro golpe rift / Fogo-fátuo", functio
 		getAnchor = Zones.getAnchor,
 		shardAnchors = Zones.shardAnchors,
 		wispAnchors = Zones.wispAnchors,
+		portAnchors = Zones.portAnchors,
 		spatial = SpatialService,
 		combat = CombatService,
 		geometry = Geometry,
@@ -5058,6 +5068,8 @@ test("inimigo: patrulha em órbita e terceiro golpe rift / Fogo-fátuo", functio
 	})
 	assertEq(EnemyService.spawnWisps(), 2, "dois Fogos-fátuo")
 	assertEq(EnemyService.spawnWisps(), 0, "não duplica")
+	assertEq(EnemyService.spawnScrappers(), 2, "dois Sucateiros")
+	assertEq(EnemyService.spawnScrappers(), 0, "Sucateiro não duplica")
 	local wisp = EnemyService.list()
 	local sawWisp = false
 	for _, record in wisp do

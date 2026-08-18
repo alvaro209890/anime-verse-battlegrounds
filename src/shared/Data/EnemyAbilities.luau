@@ -6,7 +6,7 @@ export type EnemyAbility = {
 	id: string,
 	npcId: string,
 	displayNameKey: string,
-	pattern: "rend" | "pounce" | "rift" | "combo" | "slam" | "shock" | "pierce",
+	pattern: "rend" | "pounce" | "rift" | "combo" | "slam" | "shock" | "pierce" | "cleave" | "hook",
 	telegraphSeconds: number,
 	attackSeconds: number,
 	recoverySeconds: number,
@@ -92,6 +92,28 @@ local ABILITIES: { [string]: EnemyAbility } = {
 		color = { 120, 220, 180 },
 		assetKey = "kenney_slash",
 	},
+	port_cleave = {
+		id = "port_cleave",
+		npcId = "enemy_port_scrapper",
+		displayNameKey = "enemy.ability.port_cleave.name",
+		pattern = "cleave",
+		telegraphSeconds = 0.42,
+		attackSeconds = 0.35,
+		recoverySeconds = 0.55,
+		color = { 196, 120, 72 },
+		assetKey = "kenney_slash",
+	},
+	port_hook = {
+		id = "port_hook",
+		npcId = "enemy_port_scrapper",
+		displayNameKey = "enemy.ability.port_hook.name",
+		pattern = "hook",
+		telegraphSeconds = 0.50,
+		attackSeconds = 0.35,
+		recoverySeconds = 0.55,
+		color = { 220, 160, 80 },
+		assetKey = "kenney_spark",
+	},
 }
 
 local EnemyAbilities = {}
@@ -121,6 +143,9 @@ function EnemyAbilities.forEvent(npcId: string, visualPattern: string?): EnemyAb
 	end
 	if npcId == "enemy_grove_wisp" then
 		return ABILITIES.wisp_pierce
+	end
+	if npcId == "enemy_port_scrapper" then
+		return if visualPattern == "hook" then ABILITIES.port_hook else ABILITIES.port_cleave
 	end
 	return nil
 end

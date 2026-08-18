@@ -28,8 +28,14 @@
 > pública. Os cinco do `AbilityVfx` ainda vêm `Pending` nessa API (mesmo
 > placeholder), mas no Play o pixel é o da textura publicada; **não** houve
 > re-upload. A sonda do `AbilityVfxPlayer` agora deixa passar esses IDs.
-> Crédito CC-BY (yiannisd, Clint Bellanger) segue no JSON e neste doc; o
-> MENU do jogo ainda não lista os créditos.
+> Crédito CC-BY (yiannisd, Clint Bellanger) segue no JSON e neste doc.
+
+> **Liberação 18/08/2026 (API pública, sem Studio).** `thumbnails.roblox.com`
+> devolve `state=Completed` nos **oito** IDs, com PNG real no CDN
+> (`tr.rbxcdn.com/180DAY-…`), não placeholder. Os cinco do AbilityVfx
+> (energy_ball, power_ring, lightning_shock, explosion_0003, explosion_0005)
+> saíram de Pending. Economy: AssetTypeId=1, nomes `Assistant_*.png`. Sem
+> re-upload. Crédito CC-BY passou a aparecer no MENU (`hud.credits_vfx`).
 
 **Projeto:** Anime Verse Battlegrounds  
 **Atualização examinada:** `bb147a6` → `73d8b96`  

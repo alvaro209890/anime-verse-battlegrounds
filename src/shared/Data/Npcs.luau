@@ -174,6 +174,33 @@ local Npcs: { [string]: NpcDefinition } = {
 		combatClearRadius = 16,
 		aggroRadiusStuds = 28,
 	},
+	-- Sucateiro do Porto — caçador lento das docas. Dois no cais; gancho e
+	-- talho. Não mexe no baseline F0.
+	enemy_port_scrapper = {
+		id = "enemy_port_scrapper",
+		displayNameKey = "enemy.port_scrapper.name",
+		kind = "enemy",
+		displayLevel = 12,
+		maxHealth = 48,
+		maxGuard = 0,
+		attackDamage = 7,
+		attackRange = 5,
+		attackPeriodSeconds = 1.05,
+		telegraphMs = 420,
+		grantsXp = true,
+		enabled = true,
+		moveSpeed = 10,
+		respawnSeconds = 50,
+		recoverySeconds = 0.55,
+		xpUnconsolidated = 22,
+		xpFullKills = 6,
+		xpReducedKills = 6,
+		xpReducedValue = 10,
+		maxAlive = 2,
+		zoneId = "zone_iron_port",
+		combatClearRadius = 16,
+		aggroRadiusStuds = 26,
+	},
 }
 
 local NpcCatalog = {}

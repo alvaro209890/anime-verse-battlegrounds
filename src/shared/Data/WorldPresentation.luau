@@ -153,6 +153,23 @@ local Actors: { [string]: ActorRecipe } = {
 		attackLeanDegrees = 34,
 		deathTiltDegrees = 78,
 	},
+	enemy_port_scrapper = {
+		id = "enemy_port_scrapper",
+		shape = "shard",
+		scale = 0.84,
+		bodyRgb = { 88, 72, 58 },
+		accentRgb = { 176, 112, 64 },
+		coreRgb = { 240, 200, 140 },
+		skinNameKey = "skin.port_scrapper",
+		auraRgb = { 196, 120, 72 },
+		auraScale = 0.88,
+		idleBobStuds = 0.16,
+		idleCyclesPerSecond = 0.55,
+		strideDegrees = 12,
+		telegraphLeanDegrees = 12,
+		attackLeanDegrees = 28,
+		deathTiltDegrees = 68,
+	},
 	enemy_grove_wisp = {
 		id = "enemy_grove_wisp",
 		shape = "shard",
@@ -754,15 +771,46 @@ local GROVE_WISP_GEAR: { ShardPiece } = {
 	),
 }
 
+local PORT_SCRAPPER_GEAR: { ShardPiece } = {
+	shard(
+		"ScrapPlate",
+		"Part",
+		"Block",
+		{ 1.4, 0.28, 1.1 },
+		{ 0, 0.85, 0.15 },
+		{ 0, 12, 0 },
+		"body",
+		"CorrodedMetal",
+		0,
+		false
+	),
+	shard(
+		"ScrapHook",
+		"WedgePart",
+		"Block",
+		{ 0.35, 1.5, 0.45 },
+		{ 0.85, 0.4, -0.7 },
+		{ 0, 35, -18 },
+		"accent",
+		"Metal",
+		0,
+		false
+	),
+	shard("ScrapCore", "Part", "Ball", { 0.55, 0.55, 0.55 }, { 0, 0.35, 0 }, { 0, 0, 0 }, "core", "Neon", 0.08, false),
+	shard("ScrapHalo", "Part", "Cylinder", { 0.1, 2.0, 2.0 }, { 0, 0.15, 0 }, { 0, 0, 90 }, "aura", "Neon", 0.2, true),
+}
+
 local ShardSkins: { [string]: { ShardPiece } } = {
 	enemy_wandering_shard = WANDERING_SHARD_GEAR,
 	enemy_anchored_shard = ANCHORED_SHARD_GEAR,
 	enemy_grove_wisp = GROVE_WISP_GEAR,
+	enemy_port_scrapper = PORT_SCRAPPER_GEAR,
 }
 
 -- Sem skin declarada o WorldService montaria um estilhaço sem corpo: os
 -- inimigos jogáveis são obrigatórios, como os dois rigs do spawn.
-local SHARD_REQUIRED: { string } = { "enemy_wandering_shard", "enemy_anchored_shard", "enemy_grove_wisp" }
+local SHARD_REQUIRED: { string } =
+	{ "enemy_wandering_shard", "enemy_anchored_shard", "enemy_grove_wisp", "enemy_port_scrapper" }
 
 local Rigs: { [string]: RigRecipe } = {
 	npc_threshold_instructor = {
@@ -867,6 +915,7 @@ local SHARD_MATERIALS: { [string]: boolean } = {
 	Ice = true,
 	Metal = true,
 	SmoothPlastic = true,
+	CorrodedMetal = true,
 }
 
 function Presentation.rigFor(npcId: string): RigRecipe?
@@ -1034,6 +1083,7 @@ function Presentation.validate(): (boolean, string?)
 		"enemy_wandering_shard",
 		"enemy_anchored_shard",
 		"enemy_grove_wisp",
+		"enemy_port_scrapper",
 	}
 	for _, npcId in expected do
 		if not Actors[npcId] then

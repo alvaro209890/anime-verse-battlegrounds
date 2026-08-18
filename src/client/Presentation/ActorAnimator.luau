@@ -52,9 +52,9 @@ function ActorAnimator.sample(
 			patternWeight = 1.15
 		elseif visualPattern == "combo" then
 			patternWeight = 0.72
-		elseif visualPattern == "pounce" or visualPattern == "rift" then
+		elseif visualPattern == "pounce" or visualPattern == "rift" or visualPattern == "hook" then
 			patternWeight = 1.2
-		elseif visualPattern == "pierce" then
+		elseif visualPattern == "pierce" or visualPattern == "cleave" then
 			patternWeight = 1.1
 		end
 		lean = -recipe.telegraphLeanDegrees * patternWeight * anticipation
@@ -77,9 +77,9 @@ function ActorAnimator.sample(
 			patternWeight = 1.12
 		elseif visualPattern == "combo" then
 			patternWeight = 0.78
-		elseif visualPattern == "pounce" or visualPattern == "rift" then
+		elseif visualPattern == "pounce" or visualPattern == "rift" or visualPattern == "hook" then
 			patternWeight = 1.35
-		elseif visualPattern == "pierce" then
+		elseif visualPattern == "pierce" or visualPattern == "cleave" then
 			patternWeight = 1.18
 		end
 		lean = recipe.attackLeanDegrees * patternWeight * strike
@@ -89,9 +89,9 @@ function ActorAnimator.sample(
 		elseif visualPattern == "shock" then
 			bob -= recipe.idleBobStuds * 0.7 * strike
 			spin += 40 * strike
-		elseif visualPattern == "pounce" or visualPattern == "rift" then
+		elseif visualPattern == "pounce" or visualPattern == "rift" or visualPattern == "hook" then
 			bob += recipe.idleBobStuds * 1.4 * strike
-		elseif visualPattern == "pierce" then
+		elseif visualPattern == "pierce" or visualPattern == "cleave" then
 			bob += recipe.idleBobStuds * 0.5 * strike
 			lean += recipe.attackLeanDegrees * 0.25 * strike
 		end

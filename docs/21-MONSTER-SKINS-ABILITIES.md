@@ -19,6 +19,7 @@ Cada NPC agora possui uma skin declarada em `WorldPresentation.luau`, com paleta
 | `enemy_wandering_shard` | **Fenda Ciano** | Ciano (104, 220, 238) | Halo ciano orbitando o núcleo mineral, casca de rocha arredondando o volume, anel de fenda e duas lascas soltas. |
 | `enemy_anchored_shard` | **Coroa do Vazio** | Laranja (255, 118, 92) | Coroa de cinco pontas de alturas alternadas, colar de ancoragem em basalto com quatro cravos e manto de pedra. |
 | `enemy_grove_wisp` | **Véu do Bosque** | Verde (120, 220, 180) | Núcleo pequeno, véu neon e dois fios de vidro — silhueta abaixo do alcance 6. |
+| `enemy_port_scrapper` | **Gancho de Ferrugem** | Ferrugem (196, 120, 72) | Placa corroída, gancho de metal e núcleo âmbar — silhueta abaixo do alcance 5. |
 | `npc_training_dummy` | **Saco de Treino** | Vermelho (226, 78, 78) | Alvo Neon vermelho no peito. |
 | `npc_threshold_instructor`| **Guardiã do Limiar** | Violeta (138, 96, 196) | Cabelo longo + rabo, casaco com saia em camadas, neon só nas bordas (capuz/gola/punhos/hem). |
 
@@ -35,6 +36,8 @@ Os inimigos agora alternam entre padrões de ataque, cada um com sua própria po
 | `anchored_slam` | Boss | Slam | `kenney_scorch` | Esmagamento pesado com flash de luz laranja. |
 | `anchored_shock` | Boss | Shock | `kenney_spark` | Onda guardável (dano 10, telegraph 550 ms) depois do slam. |
 | `wisp_pierce` | Fátuo | Pierce | `kenney_slash` | Estocada curta do Fogo-fátuo no Bosque. |
+| `port_cleave` | Sucateiro | Cleave | `kenney_slash` | Talho lento do cais. |
+| `port_hook` | Sucateiro | Hook | `kenney_spark` | Gancho do segundo golpe. |
 
 ## Assets Gratuitos (CC0)
 

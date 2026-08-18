@@ -1,5 +1,13 @@
 # Snapshot Canônico da Documentação — 18/08/2026
 
+## Rodada de 18/08 (Grok) — VFX liberados + Sucateiro do Porto
+
+1. **Assets.** Os 8 atlas publicados passaram a `thumbnailState=Completed` na API pública (`thumbnails.roblox.com`). Os 5 do AbilityVfx (energy_ball, power_ring, lightning_shock, explosion_0003, explosion_0005) saíram de Pending. Thumbnails no CDN são os sprites reais (orbe, anéis, raio, explosões). Sem re-upload. Crédito CC-BY agora no MENU (`hud.credits_vfx`).
+2. **Bots.** `enemy_port_scrapper` — 2 no Porto Ferro (cais leste e farol), Nv. 12, 48 HP, talho/gancho. Patrulha como os outros caçadores.
+3. Suite e CI no mesmo commit. Sem Studio.
+
+---
+
 ## Rodada de 18/08 (Grok) — bots, poderes e células mais densas
 
 Sem Play no Studio (pedido do Álvaro). Incremento só em dados/serviços/testes:

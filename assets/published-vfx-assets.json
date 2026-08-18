@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "publishedAt": "2026-08-17",
   "publishedBy": "upload por script (MCP Roblox Studio), a partir do arquivo versionado no repo",
-  "revalidatedAt": "2026-08-17",
-  "revalidatedBy": "Grok — thumbnail API + sonda ImageLabel no Play (Studio)",
+  "revalidatedAt": "2026-08-18",
+  "revalidatedBy": "Grok — thumbnails.roblox.com (os 5 AbilityVfx saíram de Pending; os 8 estão Completed com PNG real no CDN, não placeholder)",
   "policy": "Todo assetId em AbilityVfx.luau e EnemyVfxAssets.luau precisa constar aqui, com o arquivo de origem e a licenca. Um ID que nao esta neste arquivo e um ID inventado, e o teste de animacao reprova.",
   "attributionRequired": [
     "Energy Ball - yiannisd, OpenGameArt.org, CC-BY 3.0",
@@ -17,7 +17,7 @@
       "license": "CC-BY 3.0",
       "credit": "yiannisd, OpenGameArt.org",
       "consumer": "AbilityVfx",
-      "thumbnailState": "Pending",
+      "thumbnailState": "Completed",
       "rendersInPlay": true,
       "action": "none"
     },
@@ -28,7 +28,7 @@
       "license": "CC0",
       "credit": "Oiboo, OpenGameArt.org",
       "consumer": "AbilityVfx",
-      "thumbnailState": "Pending",
+      "thumbnailState": "Completed",
       "rendersInPlay": true,
       "action": "none"
     },
@@ -39,7 +39,7 @@
       "license": "CC-BY 3.0",
       "credit": "Clint Bellanger, OpenGameArt.org",
       "consumer": "AbilityVfx",
-      "thumbnailState": "Pending",
+      "thumbnailState": "Completed",
       "rendersInPlay": true,
       "action": "none"
     },
@@ -50,7 +50,7 @@
       "license": "CC0",
       "credit": "dirkwybe, OpenGameArt.org",
       "consumer": "AbilityVfx",
-      "thumbnailState": "Pending",
+      "thumbnailState": "Completed",
       "rendersInPlay": true,
       "action": "none"
     },
@@ -61,7 +61,7 @@
       "license": "CC0",
       "credit": "dirkwybe, OpenGameArt.org",
       "consumer": "AbilityVfx",
-      "thumbnailState": "Pending",
+      "thumbnailState": "Completed",
       "rendersInPlay": true,
       "action": "none"
     },

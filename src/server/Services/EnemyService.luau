@@ -28,6 +28,7 @@ export type EnemyDeps = {
 	getAnchor: (string) -> any?,
 	shardAnchors: () -> { string },
 	wispAnchors: (() -> { string })?,
+	portAnchors: (() -> { string })?,
 	spatial: any,
 	combat: any,
 	geometry: any,
@@ -49,6 +50,7 @@ export type EnemyRecord = {
 local SHARD_NPC_ID = "enemy_wandering_shard"
 local ELITE_NPC_ID = "enemy_anchored_shard"
 local WISP_NPC_ID = "enemy_grove_wisp"
+local SCRAPPER_NPC_ID = "enemy_port_scrapper"
 local ELITE_ANCHOR_ID = "anchor_elite"
 -- Padrão Blox Fruits: o NPC só puxa e só persegue dentro de ~30 studs.
 -- Um único raio para começar e largar — fora dele o bot volta pra âncora.
@@ -105,6 +107,22 @@ function EnemyService.chaserPattern(npcId: string, cycleCount: number, def: any)
 			abilityId = "wisp_pierce",
 			damage = if def then def.attackDamage else 6,
 			telegraphSeconds = if def then (def.telegraphMs or 350) / 1000 else 0.35,
+		}
+	end
+	if npcId == SCRAPPER_NPC_ID then
+		if cycleCount % 2 == 1 then
+			return {
+				pattern = "hook",
+				abilityId = "port_hook",
+				damage = 8,
+				telegraphSeconds = 0.50,
+			}
+		end
+		return {
+			pattern = "cleave",
+			abilityId = "port_cleave",
+			damage = if def then def.attackDamage else 7,
+			telegraphSeconds = if def then (def.telegraphMs or 420) / 1000 else 0.42,
 		}
 	end
 	local step = cycleCount % 3
@@ -287,23 +305,22 @@ function EnemyService.spawnElite(): boolean
 	return true
 end
 
--- Dois Fogos-fátuo no Bosque. Idempotente; sem `wispAnchors` no deps não cria.
-function EnemyService.spawnWisps(): number
+local function spawnPack(npcId: string, anchors: { string }?): number
 	local deps = EnemyService.deps
-	if not deps or not deps.wispAnchors then
+	if not deps or type(anchors) ~= "table" then
 		return 0
 	end
-	local def = deps.getNpc(WISP_NPC_ID)
+	local def = deps.getNpc(npcId)
 	if not def or not def.enabled then
 		return 0
 	end
 	local maxAlive = def.maxAlive or 0
 	local spawned = 0
-	for _, anchorId in deps.wispAnchors() do
-		if not deps.combat.canSpawnNpc(WISP_NPC_ID .. "@", maxAlive) then
+	for _, anchorId in anchors do
+		if not deps.combat.canSpawnNpc(npcId .. "@", maxAlive) then
 			break
 		end
-		local fighterId = EnemyService.fighterId(WISP_NPC_ID, anchorId, 1)
+		local fighterId = EnemyService.fighterId(npcId, anchorId, 1)
 		if not EnemyService.enemies[fighterId] then
 			local anchor = deps.getAnchor(anchorId)
 			if anchor then
@@ -313,7 +330,7 @@ function EnemyService.spawnWisps(): number
 					y = anchor.position.y,
 					z = anchor.position.z,
 				}, { x = 0, y = 0, z = 1 })
-				registerEnemy(fighterId, WISP_NPC_ID, anchor)
+				registerEnemy(fighterId, npcId, anchor)
 				EnemyService.shardCycleCount[fighterId] = 0
 				spawned += 1
 				emit(
@@ -324,6 +341,24 @@ function EnemyService.spawnWisps(): number
 		end
 	end
 	return spawned
+end
+
+-- Dois Fogos-fátuo no Bosque. Idempotente; sem `wispAnchors` no deps não cria.
+function EnemyService.spawnWisps(): number
+	local deps = EnemyService.deps
+	if not deps or not deps.wispAnchors then
+		return 0
+	end
+	return spawnPack(WISP_NPC_ID, deps.wispAnchors())
+end
+
+-- Dois Sucateiros no Porto. Idempotente; sem `portAnchors` não cria.
+function EnemyService.spawnScrappers(): number
+	local deps = EnemyService.deps
+	if not deps or not deps.portAnchors then
+		return 0
+	end
+	return spawnPack(SCRAPPER_NPC_ID, deps.portAnchors())
 end
 
 -- Registra dano causado ao elite por um jogador (leeching §9.3). Chamado pelo

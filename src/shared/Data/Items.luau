@@ -64,6 +64,7 @@ local LOOT_BY_NPC: { [string]: { LootDrop } } = {
 	enemy_wandering_shard = { { itemId = "shard_fragment", amount = 1 } },
 	enemy_anchored_shard = { { itemId = "void_splinter", amount = 1 } },
 	enemy_grove_wisp = { { itemId = "umbral_dust", amount = 1 } },
+	enemy_port_scrapper = { { itemId = "shard_fragment", amount = 1 } },
 }
 
 local ItemCatalog = {}

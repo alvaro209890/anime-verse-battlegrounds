@@ -440,7 +440,7 @@ function UIController.new(deps: { [string]: any }): any
 	statusHint.ZIndex = 19
 	local statusClose = button("CloseStatus", statusPanel, UDim2.new(1, -24, 0, 30), UDim2.fromOffset(12, 390))
 	statusClose.ZIndex = 19
-	local helpPanel = frame("HelpPanel", gui, UDim2.fromOffset(460, 500), UDim2.new(0.5, -230, 0.5, -250))
+	local helpPanel = frame("HelpPanel", gui, UDim2.fromOffset(460, 560), UDim2.new(0.5, -230, 0.5, -280))
 	helpPanel.Visible = false
 	helpPanel.ZIndex = 20
 	helpPanel.BackgroundColor3 = rgb(UiPalette.panel)
@@ -478,7 +478,12 @@ function UIController.new(deps: { [string]: any }): any
 	lockInPanel.ZIndex = 21
 	local shakeToggle = button("ShakeToggle", helpPanel, UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 352))
 	shakeToggle.ZIndex = 21
-	local closeButton = button("Close", helpPanel, UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 440))
+	local helpCredits = label("Credits", helpPanel, UDim2.new(1, -24, 0, 40), UDim2.fromOffset(12, 468))
+	helpCredits.TextWrapped = true
+	helpCredits.TextSize = 11
+	helpCredits.TextColor3 = MUTED
+	helpCredits.ZIndex = 21
+	local closeButton = button("Close", helpPanel, UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 512))
 	closeButton.ZIndex = 21
 
 	local controller = {
@@ -544,6 +549,7 @@ function UIController.new(deps: { [string]: any }): any
 		helpLineKeys = HELP_LINE_KEYS,
 		lockInPanel = lockInPanel,
 		shakeToggle = shakeToggle,
+		helpCredits = helpCredits,
 		closeButton = closeButton,
 		helpVisible = false,
 		displayedHealth = 0,
@@ -889,6 +895,7 @@ function UIController.render(controller: any, elapsed: number): ()
 	controller.hint.Text = controller.locale.get("hud.help_hint", localeId)
 	controller.helpButton.Text = controller.locale.get("hud.menu_button", localeId)
 	controller.helpTitle.Text = controller.locale.get("hud.help_title", localeId)
+	controller.helpCredits.Text = controller.locale.get("hud.credits_vfx", localeId)
 	controller.closeButton.Text = controller.locale.get("hud.settings_close", localeId)
 	controller.helpPanel.Visible = controller.helpVisible == true
 	for index, key in controller.helpLineKeys do

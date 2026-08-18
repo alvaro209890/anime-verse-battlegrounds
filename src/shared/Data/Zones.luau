@@ -289,6 +289,18 @@ local Anchors: { [string]: AnchorDefinition } = {
 		zoneId = "zone_echo_woods",
 		position = { x = 440, y = 0, z = -340 },
 	},
+	-- Sucateiros do Porto: leste do cais e oeste junto ao farol, fora dos
+	-- armazéns e da grua.
+	anchor_scrapper_1 = {
+		id = "anchor_scrapper_1",
+		zoneId = "zone_iron_port",
+		position = { x = -270, y = 0, z = -40 },
+	},
+	anchor_scrapper_2 = {
+		id = "anchor_scrapper_2",
+		zoneId = "zone_iron_port",
+		position = { x = -510, y = 0, z = -90 },
+	},
 }
 
 -- Pontos de spawn de Estilhaço, na ordem de uso pelo EnemyService.
@@ -305,6 +317,8 @@ local SHARD_ANCHORS: { string } = {
 local GATE_ANCHORS: { string } = { "anchor_gate_north", "anchor_gate_west" }
 
 local WISP_ANCHORS: { string } = { "anchor_wisp_1", "anchor_wisp_2" }
+
+local PORT_ANCHORS: { string } = { "anchor_scrapper_1", "anchor_scrapper_2" }
 
 -- F0-BASELINE (docs/13-F0-SLICE.md §8.1) — medidas de layout do greybox.
 -- Studs; eixo z negativo é norte.
@@ -362,6 +376,10 @@ end
 
 function ZoneCatalog.wispAnchors(): { string }
 	return table.clone(WISP_ANCHORS)
+end
+
+function ZoneCatalog.portAnchors(): { string }
+	return table.clone(PORT_ANCHORS)
 end
 
 local function contains(b: Box, p: Vec3): boolean
