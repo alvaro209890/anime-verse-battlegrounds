@@ -274,16 +274,11 @@ test("bioma: células têm chão, nomes e decoração sem colisão", function()
 	assertEq(Locale.get("zone.veil.name"), "Vila Sombria", "nome vila")
 	assertEq(Locale.get("zone.veil.name", "en"), "Veil Hamlet", "nome vila EN")
 	local volumes = {}
-	for _, zoneId in
-		{
-			"zone_lumen_safe",
-			"zone_echo_woods",
-			"zone_iron_port",
-			"zone_grey_sector",
-			"zone_academy_safe",
-			"zone_veil_safe",
-		}
-	do
+	local hasVeil = false
+	for _, zoneId in Zones.biomeZoneIds() do
+		if zoneId == "zone_veil_safe" then
+			hasVeil = true
+		end
 		local zone = Zones.get(zoneId)
 		assertTrue(zone ~= nil, zoneId)
 		if zone then
@@ -292,7 +287,21 @@ test("bioma: células têm chão, nomes e decoração sem colisão", function()
 			end
 		end
 	end
+	assertTrue(hasVeil, "bootstrap inclui a Vila Sombria — senão o Play aborta e o spawn cai no void")
 	local _, _, anchors, crater = wildFixture()
+	local withoutVeil = {}
+	for _, zoneId in Zones.biomeZoneIds() do
+		if zoneId ~= "zone_veil_safe" then
+			local zone = Zones.get(zoneId)
+			if zone then
+				for _, volume in zone.volumes do
+					table.insert(withoutVeil, volume)
+				end
+			end
+		end
+	end
+	local voidErrors = BiomeDecorations.validate(BiomeDecorations.all(), withoutVeil, anchors, crater)
+	assertTrue(#voidErrors > 0, "esquecer a vila na validação do boot derruba o servidor")
 	local errors = BiomeDecorations.validate(BiomeDecorations.all(), volumes, anchors, crater)
 	assertEq(#errors, 0, table.concat(errors, "; "))
 	assertTrue(#BiomeDecorations.all() >= 40, "biomas com marcos visíveis")

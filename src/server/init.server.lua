@@ -109,7 +109,7 @@ if not shardSkinOk then
 	error("skin de estilhaço inválida: " .. (shardSkinReason or "unknown"))
 end
 local biomeVolumes = {}
-for _, zoneId in { "zone_lumen_safe", "zone_echo_woods", "zone_iron_port", "zone_grey_sector", "zone_academy_safe" } do
+for _, zoneId in Zones.biomeZoneIds() do
 	local zone = Zones.get(zoneId)
 	if zone then
 		for _, volume in zone.volumes do

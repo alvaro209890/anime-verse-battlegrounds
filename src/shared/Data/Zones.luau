@@ -409,6 +409,27 @@ function ZoneCatalog.gateAnchors(): { string }
 	return table.clone(GATE_ANCHORS)
 end
 
+-- Células de cidade/bioma. O greybox (Bastião, planície, transição) não entra:
+-- a decoração de `BiomeDecorations` mora só nestas caixas. O bootstrap do
+-- servidor TEM de usar esta lista — esquecer uma célula aborta o boot e o
+-- jogador nasce no void (Vila Sombria, 18/08).
+local GREYBOX_ZONE: { [string]: boolean } = {
+	zone_bastion_safe = true,
+	zone_plain_free = true,
+	zone_threshold_transition = true,
+}
+
+function ZoneCatalog.biomeZoneIds(): { string }
+	local ids: { string } = {}
+	for _, zone in Zones do
+		if GREYBOX_ZONE[zone.id] ~= true then
+			table.insert(ids, zone.id)
+		end
+	end
+	table.sort(ids)
+	return ids
+end
+
 function ZoneCatalog.wispAnchors(): { string }
 	return table.clone(WISP_ANCHORS)
 end
