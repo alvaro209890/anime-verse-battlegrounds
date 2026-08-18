@@ -294,6 +294,60 @@ test("bioma: células têm chão, nomes e decoração sem colisão", function()
 	end
 end)
 
+test("lumen: célula urbana densa — rua, vielas, praça, marco e dois serviços", function()
+	local byName = {}
+	local lumen = 0
+	local lumenLights = 0
+	local shadowed = 0
+	for _, item in BiomeDecorations.all() do
+		if string.sub(item.name, 1, 5) == "Lumen" then
+			lumen += 1
+			byName[item.name] = item
+			assertTrue(item.position.x >= -160 and item.position.x <= 160, item.name .. " X fora da zona")
+			assertTrue(item.position.z >= -700 and item.position.z <= -460, item.name .. " Z fora da zona")
+			assertFalse(item.canCollide, item.name .. " colide")
+			if item.light then
+				lumenLights += 1
+				assertTrue(item.light.rangeStuds > 0, item.name .. " luz sem alcance")
+				if item.light.shadows then
+					shadowed += 1
+				end
+			end
+		end
+	end
+	assertTrue(lumen >= 280, "célula densa o bastante")
+	assertTrue(byName.LumenPlaza ~= nil, "praça")
+	assertTrue(byName.LumenTower ~= nil, "marco")
+	assertTrue(byName.LumenCrown ~= nil, "coroa")
+	assertTrue(byName.LumenPlazaCrystal ~= nil, "ponto de encontro")
+	assertTrue(byName.LumenVendor_Sign ~= nil, "serviço mercado")
+	assertTrue(byName.LumenForge_Sign ~= nil, "serviço forja")
+	assertTrue(byName.LumenAlleyW_Jog ~= nil, "viela oeste")
+	assertTrue(byName.LumenAlleyE_Jog ~= nil, "viela leste")
+	assertTrue(byName.LumenGatePostW ~= nil and byName.LumenGatePostE ~= nil, "borda sul")
+	assertTrue(lumenLights <= 3, "luzes reais só nos pontos-chave")
+	assertEq(shadowed, 0, "nenhuma sombra extra no Lumen")
+	assertTrue(byName.LumenCrown.light ~= nil, "coroa ilumina")
+	if byName.LumenCrown.light then
+		assertTrue(byName.LumenCrown.light.rangeStuds <= 28, "coroa não declara mais alcance que o concedido")
+	end
+	if byName.LumenPlazaCrystal.light then
+		assertTrue(
+			byName.LumenPlazaCrystal.light.rangeStuds <= 16,
+			"cristal da praça não declara mais alcance que o concedido"
+		)
+	end
+	for _, item in BiomeDecorations.all() do
+		if string.find(item.name, "LumenBld", 1, true) or string.find(item.name, "LumenSky", 1, true) then
+			assertTrue(math.abs(item.position.x) >= 16, item.name .. " invade a rua principal")
+		end
+	end
+	assertTrue(byName.LumenGatePostW.position.x <= -24, "vão sul oeste livre")
+	assertTrue(byName.LumenGatePostE.position.x >= 24, "vão sul leste livre")
+	assertTrue(byName.LumenAlleyW_Jog.position.x < -80, "jog oeste quebra a visão")
+	assertTrue(byName.LumenAlleyE_Jog.position.x > 80, "jog leste quebra a visão")
+end)
+
 test("planície: nada colide, nada entra no ringue do elite e a luz tem teto", function()
 	local _, _, _, crater = wildFixture()
 	for _, decoration in WildDecorations.all() do

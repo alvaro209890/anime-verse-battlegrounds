@@ -70,7 +70,7 @@ O lançamento não promete todas essas regiões. A lista é uma malha de expans�
 > tela de carregamento** (streaming por célula). O F0 continua no Bastião do
 > Limiar; esta seção é a malha de expansão do cenário.
 >
-> O atlas visual e a ordem de produção por células estão em `docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md`. A primeira prova do Distrito Lumen deve conter uma rua principal, duas rotas laterais, uma praça, dois serviços e um marco vertical; a imagem conceitual não é evidência de implementação.
+> O atlas visual e a ordem de produção por células estão em `docs/24-DOMAIN-EXPANSION-ILLUSTRATION.md`. A primeira célula do Distrito Lumen (17/08) materializa rua principal, duas vielas com visão quebrada, praça, dois postos visuais (Mercado e Forja) e o marco `LumenTower`+coroa. A imagem conceitual continua referência, não planta.
 
 Arquétipos e nomes provisórios (nomes públicos originais obrigatórios — Gate P1):
 
@@ -110,9 +110,12 @@ cidade urbana densa com streaming antes de comprometer a Vila Sombria.
 
 **Greybox da malha (17/08):** as cinco células (Lumen, Bosque, Porto, Setor
 Cinza, Academia) existem como volumes + piso + marcos em `Zones.luau` /
-`BiomeDecorations.luau`. Não substituem o gate de densidade de uma cidade
-completa: é o chão jogável e a identidade visual para não cair no void e para
-o mundo ler como Blox Fruits (biomas distintos, marco vertical por célula).
+`BiomeDecorations.luau`. O Lumen saiu do greybox esparso e passou a célula
+urbana densa (docs/24 §7): 494 peças no prefixo `Lumen*`, 2 PointLights
+(coroa 28 studs, cristal da praça 16), 0 sombras, prédios ocos, rua livre
+em |x|<13, vielas com jog, praça de asfalto (não anel neon), Mercado e
+Forja só visuais. As outras quatro células continuam greybox + serra. Isso
+ainda não é a cidade inteira nem o gate de streaming/memória.
 
 **Vegetação (17/08):** a planície deixou o sorteio uniforme e passou a bosques
 com ocupação (mínimo de espaçamento) + sub-bosque (grama, samambaia, tronco,

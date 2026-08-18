@@ -1,12 +1,13 @@
 # Atlas Visual — Expansão de Domínio
 
 **Projeto:** Anime Verse Battlegrounds  
-**Estado:** conceito visual e planejamento de produção  
+**Estado:** primeira célula urbana densa do Distrito Lumen materializada em dados (17/08/2026); imagens de conceito continuam referência, não asset jogável
+
 **Escopo:** Bastião do Limiar → Planície Estilhaçada → Distrito Lumen  
 **Autor:** Manus AI  
-**Data:** 2026-08-14
+**Data:** 2026-08-14 (célula F1: 2026-08-17)
 
-> Este documento é uma ilustração de direção de arte e composição de mundo. As imagens geradas por IA abaixo são referências originais de conceito; elas **não representam uma integração já realizada no Roblox Studio**, nem substituem o greybox, os volumes autoritativos, o streaming ou os gates W1/A1/R1/W2.
+> Este documento é uma ilustração de direção de arte e composição de mundo. As imagens geradas por IA abaixo são referências originais de conceito; elas **não são textura nem planta importada**. A primeira célula do Lumen existe como catálogo em `BiomeDecorations.luau` (ver §7). Volumes de zona, streaming e gates W2 de memória/render continuam independentes desta arte.
 
 ## 1. Visão geral
 
@@ -31,7 +32,7 @@ A imagem geral deve ser usada como **capa do planejamento de mundo**, referênci
 
 ![Distrito Lumen](assets/domain-expansion-district-lumen.png)
 
-Esta imagem define a linguagem de uma cidade densa sem exigir que a primeira implementação já seja uma cidade completa. O primeiro greybox deve conter uma rua principal, duas rotas laterais com linha de visão quebrada, uma praça, um marco vertical reconhecível e dois serviços. A verticalidade visual não deve virar verticalidade de combate antes de profiling de streaming, memória, câmera e gamepad.
+Esta imagem define a linguagem de uma cidade densa sem exigir que a primeira implementação já seja uma cidade completa. A primeira célula (17/08, §7) contém uma rua principal, duas vielas com linha de visão quebrada, uma praça, o marco `LumenTower`+coroa e dois postos visuais (Mercado e Forja). A verticalidade é só silhueta — sem plataformas de luta em altura. A imagem **não** foi copiada como asset.
 
 ### Praça segura
 
@@ -86,13 +87,55 @@ O diagrama é estrutural: ele orienta zonas, rotas e dependências; não é uma 
 
 ## 5. Ordem de produção futura
 
-A primeira etapa deve ser consolidar a praça coberta do Bastião e o portão norte usando peças nativas e os parâmetros já existentes em `SceneryPresentation`. A segunda deve produzir a rota oeste e o terreno externo da Planície sem alterar os volumes de zona. A terceira deve prototipar uma única célula do Distrito Lumen com uma rua, uma praça, dois serviços e duas rotas de saída. A quarta deve medir streaming, memória, render, física e legibilidade em PC integrado, Android e gamepad antes de duplicar módulos.
+A primeira etapa deve ser consolidar a praça coberta do Bastião e o portão norte usando peças nativas e os parâmetros já existentes em `SceneryPresentation`. A segunda deve produzir a rota oeste e o terreno externo da Planície sem alterar os volumes de zona. A terceira — **feita em 17/08** — prototipa uma única célula do Distrito Lumen com uma rua, uma praça, dois postos visuais e duas vielas. A quarta deve medir streaming, memória, render, física e legibilidade em PC integrado, Android e gamepad antes de duplicar módulos.
 
 A expansão não deve começar por uma grande cidade completa. O critério correto é uma célula urbana pequena, densa e com função sistêmica. Se essa célula não sustentar rotas, serviços, leitura de risco e combate legível, a arte deve ser reduzida antes de ampliar o mapa.
 
 ## 6. Limites e não-alucinação
 
-As imagens deste documento **não** provam que Distrito Lumen, seus serviços, passarelas ou ruínas já existem no jogo. Elas também não definem dimensões de hitbox, streaming, pathfinding, colisão, DataStore, telemetria ou desempenho. Toda integração futura precisa gerar código, testes, build e evidência de runtime separados.
+As imagens deste documento **não** são evidência de runtime nem planta para copiar. A célula da §7 existe como dados e testes; Play no Studio e profiling de streaming/memória/câmera/gamepad continuam evidência à parte. As imagens também não definem hitbox, pathfinding, DataStore ou telemetria.
+
+## 7. Célula urbana Lumen (F1, 17/08/2026)
+
+Terceira etapa da §5. Catálogo puro em `src/shared/Data/BiomeDecorations.luau`; `WorldService` só materializa. Zona `zone_lumen_safe` inalterada: box(-160, -700, 160, -460), kind safe, piso Asphalt {28,24,42}. Âncoras, spawn de inimigo e números de combate não mudaram.
+
+O que a célula contém:
+
+| Elemento | Onde / como | Colisão | Luz real |
+|---|---|---|---|
+| Rua principal | eixo X=0, livre abs(x)<13, Z -470..-670 (praça no meio) | não | lampiões emissivos |
+| Fachadas | 14 prédios ocos (W01-W07, E01-E07), alturas 11-26, variantes distintas | não | letreiros Neon |
+| Skyline | 8 prédios altos (28-40) longe da rua — só silhueta | não | nervura Neon |
+| Viela oeste | abertura z≈-508..-493 → jog em (-104, -548) → praça | não | 2 bolas emissivas |
+| Viela leste | abertura z≈-523..-511 → jog em (116, -576) → praça | não | 2 bolas emissivas |
+| Praça | disco asfalto 40 + cruz de inlay (não é anel de alcance) | não | cristal 16 studs |
+| Marco | `LumenTower` 9×50×9, coroa, 4 nervuras, flecha | não | coroa 28 studs |
+| Mercado | leste da praça (x≈54, z≈-598): bancada, toldo, caixas, letreiro | não | só Neon |
+| Forja | oeste da praça (x≈-54, z≈-598): lar, chaminé, brasa bola, letreiro | não | só Neon |
+| Borda sul | vão x -24..24, postes ±28, lintel, 6 postes de orla | não | caps Neon |
+
+Contagens **medidas** no catálogo (não chutadas):
+
+| Conjunto | Peças | PointLights | Sombras |
+|---|---:|---:|---:|
+| Prefixo `Lumen*` | 494 | 2 (`LumenCrown` 28 studs, `LumenPlazaCrystal` 16 studs) | 0 |
+| `BiomeDecorations.all()` | 788 | 5 (teto 16) | 0 no Lumen |
+| `WildDecorations.all()` | 1269 | 7 | — |
+| Soma dos dois catálogos | 2057 | 12 | — |
+
+Teto W2 do Workspace: 6000. Greybox (pisos, muros, atores, spawn) soma por cima destes 2057 e continua abaixo do teto. Letreiros e lampiões de rua **não** ganharam `PointLight` — só material Neon. Nenhuma luz declara alcance maior que o campo `rangeStuds`. Decoração não desenha anel lido como hitbox (praça deixou de ser disco Neon).
+
+Suite no mesmo commit: 270 domínio + 79 animação + 71 fuzz; Selene 0/0/0; StyLua nos arquivos tocados; `rojo build -o build.rbxl` 407.098 B.
+
+O que **não** entrou (de propósito):
+
+- prompt / remote / sistema de compra ou forja — os postos são leitura visual;
+- verticalidade de combate (passarelas `CanCollide=false`, sem piso de luta em altura);
+- medição de streaming, memória, render, câmera ou gamepad — isso é a quarta etapa;
+- segunda célula ou outra cidade;
+- nome ou silhueta de cidade real.
+
+Próximo passo da malha: profiling da célula (§5 etapa 4) antes de duplicar.
 
 Os assets externos citados são candidatos de pesquisa. A presença de um link ou imagem de referência não significa que o arquivo foi importado, publicado, licenciado por uma conta Roblox ou adicionado ao place. Para produção, cada modelo deve ter origem, licença, escala, colisão, triagem de segurança e custo registrados.
 

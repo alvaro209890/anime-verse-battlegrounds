@@ -2,6 +2,8 @@
 -- Decoração das células de bioma (docs/02 §3.4, docs/24).
 -- Dados puros: o WorldService só materializa. Nada colide, nada entra no
 -- ringue do elite nem nas âncoras de Estilhaço, nada invade portão.
+-- F1: a célula do Distrito Lumen é urbana densa (rua, duas vielas, praça,
+-- marco, dois serviços). Outros biomas continuam greybox + serra.
 
 export type BiomeLight = {
 	brightness: number,
@@ -70,27 +72,214 @@ local function push(item: BiomePiece): ()
 	table.insert(PIECES, item)
 end
 
--- ── Distrito Lumen: rua, praça, marco neon ────────────────────────────────
+-- ── Distrito Lumen: célula urbana densa (F1, docs/24, docs/02 §3.4) ────────
+-- Zona zone_lumen_safe: X −160..160, Z −700..−460. Rua principal no eixo
+-- X=0 (livre |x|<13). Prédios ocos — fachada, lados, teto, janela, letreiro.
+-- Nada colide. Letreiros são Neon emissivo; PointLight só na coroa e no
+-- cristal da praça (docs/15: máx. 2 sombras por célula — aqui zero).
+-- Disco da praça é asfalto, não anel neon (docs/17: não lê como alcance).
+
+local CONCRETE_A = { 46, 42, 58 }
+local CONCRETE_B = { 38, 34, 50 }
+local CONCRETE_C = { 54, 48, 66 }
+local WINDOW_WARM = { 255, 186, 110 }
+local WINDOW_COOL = { 140, 220, 255 }
+local AWNING = { 92, 36, 78 }
+local EMBER = { 255, 140, 70 }
+
+local function pushBlock(
+	name: string,
+	sx: number,
+	sy: number,
+	sz: number,
+	px: number,
+	py: number,
+	pz: number,
+	rgb: { number },
+	material: string,
+	transparency: number
+): ()
+	push(
+		piece(
+			name,
+			"Block",
+			{ x = sx, y = sy, z = sz },
+			{ x = px, y = py, z = pz },
+			0,
+			rgb,
+			material,
+			transparency,
+			false,
+			nil
+		)
+	)
+end
+
+local function pushBall(
+	name: string,
+	diameter: number,
+	px: number,
+	py: number,
+	pz: number,
+	rgb: { number },
+	transparency: number
+): ()
+	push(
+		piece(
+			name,
+			"Ball",
+			{ x = diameter, y = diameter, z = diameter },
+			{ x = px, y = py, z = pz },
+			0,
+			rgb,
+			"Neon",
+			transparency,
+			false,
+			nil
+		)
+	)
+end
+
+-- Prédio oco. `frontX` é a face que olha a rua (|frontX| >= 18).
+-- O lote cresce para longe do eixo X=0. Variantes mudam cor, acento e extra.
+local function lumenBuilding(
+	id: string,
+	frontX: number,
+	z: number,
+	along: number,
+	depth: number,
+	height: number,
+	variant: number
+): ()
+	local away = if frontX < 0 then -1 else 1
+	local cx = frontX + away * (depth * 0.5)
+	local body = if variant % 3 == 1 then CONCRETE_A elseif variant % 3 == 2 then CONCRETE_B else CONCRETE_C
+	local bodyMat = if variant % 3 == 2 then "SmoothPlastic" elseif variant % 3 == 0 then "Slate" else "Concrete"
+	local accent = if variant % 2 == 0 then NEON_MAGENTA else NEON
+	local wall = 0.7
+	local baseY = 0.16
+
+	pushBlock(
+		id .. "_Front",
+		wall,
+		height,
+		along,
+		frontX + away * (wall * 0.5),
+		baseY + height * 0.5,
+		z,
+		body,
+		bodyMat,
+		0
+	)
+	pushBlock(
+		id .. "_Back",
+		wall,
+		height * 0.98,
+		along * 0.92,
+		frontX + away * (depth - wall * 0.5),
+		baseY + height * 0.49,
+		z,
+		body,
+		"SmoothPlastic",
+		0
+	)
+	pushBlock(
+		id .. "_SideN",
+		depth - wall,
+		height * 0.96,
+		wall,
+		cx,
+		baseY + height * 0.48,
+		z - along * 0.5,
+		body,
+		"Concrete",
+		0
+	)
+	pushBlock(
+		id .. "_SideS",
+		depth - wall,
+		height * 0.94,
+		wall,
+		cx,
+		baseY + height * 0.47 + 0.04,
+		z + along * 0.5,
+		body,
+		bodyMat,
+		0
+	)
+	pushBlock(id .. "_Roof", depth + 0.9, 0.65, along + 0.9, cx, baseY + height + 0.18, z, ASPHALT, "SmoothPlastic", 0)
+
+	local winCount = math.floor(height / 5)
+	if winCount < 1 then
+		winCount = 1
+	elseif winCount > 4 then
+		winCount = 4
+	end
+	for w = 1, winCount do
+		local wy = 2.5 + (w - 1) * ((height - 3.2) / winCount)
+		local warm = (variant + w) % 2 == 0
+		local winRgb = if warm then WINDOW_WARM else WINDOW_COOL
+		local winMat = if (variant + w) % 3 == 0 then "Neon" else "SmoothPlastic"
+		local zOff = if w % 2 == 0 then 2.1 else -2.1
+		pushBlock(
+			id .. "_Win" .. tostring(w),
+			0.32,
+			1.55,
+			2.1,
+			frontX - away * 0.22,
+			wy,
+			z + zOff,
+			winRgb,
+			winMat,
+			0.12
+		)
+		if along > 15 then
+			pushBlock(
+				id .. "_WinB" .. tostring(w),
+				0.32,
+				1.35,
+				1.8,
+				frontX - away * 0.22,
+				wy + 0.12,
+				z - zOff * 1.35,
+				winRgb,
+				winMat,
+				0.16
+			)
+		end
+	end
+
+	pushBlock(id .. "_Door", 0.28, 3.1, 1.9, frontX - away * 0.16, 1.7, z, ASPHALT, "SmoothPlastic", 0)
+	pushBlock(id .. "_Sign", 0.38, 1.55, along * 0.52, frontX - away * 0.42, height * 0.70, z, accent, "Neon", 0.08)
+	pushBlock(
+		id .. "_Rib",
+		0.34,
+		height * 0.84,
+		0.34,
+		frontX + away * 0.45,
+		baseY + height * 0.44,
+		z - along * 0.42,
+		accent,
+		"Neon",
+		0.12
+	)
+
+	if height <= 14 then
+		pushBlock(id .. "_Awning", 3.1, 0.32, along * 0.68, frontX - away * 1.55, 3.55, z, AWNING, "SmoothPlastic", 0)
+		pushBlock(id .. "_AwningTrim", 3.2, 0.14, along * 0.70, frontX - away * 1.55, 3.76, z, accent, "Neon", 0.14)
+	end
+	if height >= 20 then
+		pushBlock(id .. "_Fin", 1.15, 3.8 + (variant % 3) * 0.7, 0.45, cx, baseY + height + 2.3, z, accent, "Neon", 0.1)
+	end
+end
+
+-- Praça: piso de asfalto (não é anel de alcance). Torre + coroa no centro.
 push(
 	piece(
 		"LumenPlaza",
 		"Cylinder",
-		{ x = 0.3, y = 36, z = 36 },
-		{ x = 0, y = 0.2, z = -580 },
-		0,
-		{ 48, 36, 72 },
-		"Neon",
-		0.15,
-		false,
-		nil
-	)
-)
-push(
-	piece(
-		"LumenTower",
-		"Block",
-		{ x = 8, y = 42, z = 8 },
-		{ x = 0, y = 21, z = -580 },
+		{ x = 0.36, y = 40, z = 40 },
+		{ x = 0, y = 0.22, z = -580 },
 		0,
 		ASPHALT,
 		"SmoothPlastic",
@@ -99,12 +288,27 @@ push(
 		nil
 	)
 )
+pushBlock("LumenPlazaRing", 22, 0.18, 22, 0, 0.34, -580, { 40, 32, 56 }, "SmoothPlastic", 0)
+-- Inlays lineares (cruz), nunca um círculo neon.
+pushBlock("LumenPlazaInlayN", 0.45, 0.16, 16, 0, 0.42, -590, NEON, "Neon", 0.2)
+pushBlock("LumenPlazaInlayS", 0.45, 0.16, 16, 0, 0.42, -570, NEON, "Neon", 0.2)
+pushBlock("LumenPlazaInlayW", 16, 0.16, 0.45, -8, 0.43, -580, NEON_MAGENTA, "Neon", 0.22)
+pushBlock("LumenPlazaInlayE", 16, 0.16, 0.45, 8, 0.43, -580, NEON_MAGENTA, "Neon", 0.22)
+
+-- Marco vertical: torre elevada + coroa + nervuras + flecha.
+pushBlock("LumenPlinth", 16, 2.1, 16, 0, 1.1, -580, CONCRETE_B, "Concrete", 0)
+pushBlock("LumenTower", 9, 50, 9, 0, 27.2, -580, ASPHALT, "SmoothPlastic", 0)
+pushBlock("LumenBand", 12, 1.15, 12, 0, 28.4, -580, NEON, "Neon", 0.1)
+pushBlock("LumenRibN", 0.55, 42, 0.55, 0, 24.2, -584.6, NEON, "Neon", 0.12)
+pushBlock("LumenRibS", 0.55, 42, 0.55, 0, 24.2, -575.4, NEON, "Neon", 0.12)
+pushBlock("LumenRibW", 0.55, 42, 0.55, -4.6, 24.25, -580, NEON_MAGENTA, "Neon", 0.12)
+pushBlock("LumenRibE", 0.55, 42, 0.55, 4.6, 24.25, -580, NEON_MAGENTA, "Neon", 0.12)
 push(
 	piece(
 		"LumenCrown",
 		"Block",
-		{ x = 14, y = 3, z = 14 },
-		{ x = 0, y = 43, z = -580 },
+		{ x = 15, y = 2.8, z = 15 },
+		{ x = 0, y = 53.2, z = -580 },
 		0,
 		NEON_MAGENTA,
 		"Neon",
@@ -118,146 +322,191 @@ push(
 		}
 	)
 )
+pushBlock("LumenSpire", 1.8, 9.5, 1.8, 0, 59.4, -580, ASPHALT, "SmoothPlastic", 0)
+pushBall("LumenSpireTip", 2.2, 0, 64.6, -580, NEON, 0.08)
+
+-- Ponto de encontro da praça (sul da torre) — única luz nova da célula.
+pushBlock("LumenPlazaMeet", 2.4, 0.7, 2.4, 0, 0.58, -562, CONCRETE_A, "Concrete", 0)
 push(
 	piece(
-		"LumenSignN",
-		"Block",
-		{ x = 18, y = 4, z = 0.6 },
-		{ x = 0, y = 14, z = -548 },
+		"LumenPlazaCrystal",
+		"Ball",
+		{ x = 1.8, y = 2.4, z = 1.8 },
+		{ x = 0, y = 2.15, z = -562 },
 		0,
 		NEON,
 		"Neon",
 		0.08,
 		false,
-		nil
+		{
+			brightness = 0.95,
+			rangeStuds = 16,
+			rgb = NEON,
+			shadows = false,
+		}
 	)
 )
-push(
-	piece(
-		"LumenSignS",
-		"Block",
-		{ x = 18, y = 4, z = 0.6 },
-		{ x = 0, y = 14, z = -612 },
-		0,
-		NEON_MAGENTA,
-		"Neon",
-		0.08,
-		false,
-		nil
+
+-- Bancos e cristais da praça (não cercam a torre com anel de combate).
+for i, spot in
+	{
+		{ name = "NW", x = -11, z = -591 },
+		{ name = "NE", x = 11, z = -591 },
+		{ name = "SW", x = -11, z = -569 },
+		{ name = "SE", x = 11, z = -569 },
+	}
+do
+	pushBlock("LumenBench" .. spot.name, 3.4, 0.55, 1.15, spot.x, 0.55, spot.z, CONCRETE_C, "SmoothPlastic", 0)
+	pushBlock(
+		"LumenBench" .. spot.name .. "Back",
+		3.4,
+		1.15,
+		0.35,
+		spot.x,
+		1.15,
+		spot.z + (if i <= 2 then -0.6 else 0.6),
+		CONCRETE_B,
+		"SmoothPlastic",
+		0
 	)
-)
-for i = 1, 6 do
-	local x = -70 + (i - 1) * 28
-	push(
-		piece(
-			("LumenLampW_%02d"):format(i),
-			"Block",
-			{ x = 0.5, y = 9, z = 0.5 },
-			{ x = x, y = 4.5, z = -530 },
-			0,
-			ASPHALT,
-			"SmoothPlastic",
-			0,
-			false,
-			nil
-		)
-	)
-	push(
-		piece(
-			("LumenGlowW_%02d"):format(i),
-			"Ball",
-			{ x = 1.4, y = 1.4, z = 1.4 },
-			{ x = x, y = 9.4, z = -530 },
-			0,
-			NEON,
-			"Neon",
-			0.1,
-			false,
-			{
-				brightness = 0.9,
-				rangeStuds = 12,
-				rgb = NEON,
-				shadows = false,
-			}
-		)
-	)
-	push(
-		piece(
-			("LumenLampE_%02d"):format(i),
-			"Block",
-			{ x = 0.5, y = 9, z = 0.5 },
-			{ x = x, y = 4.5, z = -630 },
-			0,
-			ASPHALT,
-			"SmoothPlastic",
-			0,
-			false,
-			nil
-		)
-	)
-	push(
-		piece(
-			("LumenGlowE_%02d"):format(i),
-			"Ball",
-			{ x = 1.4, y = 1.4, z = 1.4 },
-			{ x = x, y = 9.4, z = -630 },
-			0,
-			NEON_MAGENTA,
-			"Neon",
-			0.1,
-			false,
-			nil
-		)
-	)
+	local lampX = spot.x * 1.55
+	local lampZ = spot.z + (if i <= 2 then -3.5 else 3.5)
+	pushBlock("LumenPlazaLamp" .. spot.name, 0.4, 6.2, 0.4, lampX, 3.2, lampZ, ASPHALT, "SmoothPlastic", 0)
+	pushBall("LumenPlazaGlow" .. spot.name, 1.15, lampX, 6.5, lampZ, if i % 2 == 0 then NEON_MAGENTA else NEON, 0.12)
 end
-for i = 1, 4 do
-	push(
-		piece(
-			("LumenStall_%02d"):format(i),
-			"Block",
-			{ x = 6, y = 3.2, z = 4 },
-			{ x = -40 + i * 18, y = 1.6, z = -560 },
-			12 * i,
-			{ 64, 40, 88 },
-			"SmoothPlastic",
-			0,
-			false,
-			nil
-		)
-	)
+
+-- Rua principal: faixas lineares (não anéis) e lampiões na calçada |x|=15.
+for i = 1, 9 do
+	local zz = -472 - (i - 1) * 22
+	if zz < -564 and zz > -598 then
+		continue
+	end
+	if zz < -698 or zz > -464 then
+		continue
+	end
+	pushBlock(("LumenStreetDashW_%02d"):format(i), 0.38, 0.14, 9.5, -5.2, 0.12, zz, NEON, "Neon", 0.28)
+	pushBlock(("LumenStreetDashE_%02d"):format(i), 0.38, 0.14, 9.5, 5.2, 0.13, zz, NEON, "Neon", 0.28)
 end
-for i = 1, 8 do
-	local side = if i <= 4 then -48 else 48
-	local z = -640 + ((i - 1) % 4) * 28
-	push(
-		piece(
-			("LumenPlanter_%02d"):format(i),
-			"Block",
-			{ x = 3.2, y = 0.8, z = 3.2 },
-			{ x = side, y = 0.45, z = z },
-			0,
-			ASPHALT,
-			"SmoothPlastic",
-			0,
-			false,
-			nil
-		)
-	)
-	push(
-		piece(
-			("LumenBush_%02d"):format(i),
-			"Ball",
-			{ x = 2.6, y = 2.0, z = 2.6 },
-			{ x = side, y = 1.7, z = z },
-			0,
-			if i % 2 == 0 then NEON else NEON_MAGENTA,
-			"Neon",
-			0.25,
-			false,
-			nil
-		)
-	)
+for i, zz in { -476, -500, -524, -548, -608, -632, -656, -678 } do
+	pushBlock(("LumenStreetLampW_%02d"):format(i), 0.45, 7.4, 0.45, -15.2, 3.8, zz, ASPHALT, "SmoothPlastic", 0)
+	pushBall(("LumenStreetGlowW_%02d"):format(i), 1.2, -15.2, 7.7, zz, NEON, 0.12)
+	pushBlock(("LumenStreetLampE_%02d"):format(i), 0.45, 7.2, 0.45, 15.2, 3.7, zz, ASPHALT, "SmoothPlastic", 0)
+	pushBall(("LumenStreetGlowE_%02d"):format(i), 1.2, 15.2, 7.55, zz, NEON_MAGENTA, 0.12)
 end
+
+-- Fachadas da rua (oeste / leste). Alturas e recuos diferentes — não é grade.
+-- Boca da viela oeste entre W01 e W02 (z ≈ −508..−493). Leste entre E02 e E03.
+lumenBuilding("LumenBldW01", -18.5, -486, 14, 14, 12, 1)
+lumenBuilding("LumenBldW02", -20.5, -518, 16, 16, 18, 2)
+lumenBuilding("LumenBldW03", -18.5, -540, 14, 13, 11, 3)
+lumenBuilding("LumenBldW04", -22.0, -560, 18, 18, 22, 4)
+lumenBuilding("LumenBldW05", -19.5, -616, 16, 15, 16, 1)
+lumenBuilding("LumenBldW06", -23.0, -638, 20, 17, 24, 2)
+lumenBuilding("LumenBldW07", -18.5, -662, 16, 14, 14, 3)
+
+lumenBuilding("LumenBldE01", 19.0, -484, 14, 15, 14, 2)
+lumenBuilding("LumenBldE02", 18.5, -504, 14, 12, 11, 1)
+lumenBuilding("LumenBldE03", 22.0, -534, 18, 17, 20, 4)
+lumenBuilding("LumenBldE04", 19.0, -556, 14, 14, 15, 3)
+lumenBuilding("LumenBldE05", 21.0, -614, 18, 16, 18, 2)
+lumenBuilding("LumenBldE06", 18.5, -636, 16, 13, 12, 1)
+lumenBuilding("LumenBldE07", 24.0, -660, 18, 18, 26, 4)
+
+-- Skyline (verticalidade VISUAL, sem piso de combate). Longe da rua.
+lumenBuilding("LumenSky01", -86, -492, 16, 14, 32, 4)
+lumenBuilding("LumenSky02", -112, -530, 18, 16, 38, 2)
+lumenBuilding("LumenSky03", -98, -572, 14, 13, 28, 3)
+lumenBuilding("LumenSky04", -90, -648, 16, 15, 36, 4)
+lumenBuilding("LumenSky05", 88, -488, 16, 14, 30, 1)
+lumenBuilding("LumenSky06", 114, -524, 18, 16, 40, 4)
+lumenBuilding("LumenSky07", 100, -570, 14, 13, 26, 2)
+lumenBuilding("LumenSky08", 108, -650, 16, 15, 34, 3)
+
+-- Viela oeste: abertura na rua → oeste → jog norte → cotovelo → praça.
+-- O jog quebra a linha de visão (docs/02 §3.3). Corredor ~10 studs livre.
+pushBlock("LumenAlleyW_WallA", 0.7, 10, 22, -52, 5.1, -500, CONCRETE_B, "Concrete", 0)
+pushBlock("LumenAlleyW_WallB", 28, 11, 0.7, -68, 5.6, -512, CONCRETE_A, "SmoothPlastic", 0)
+pushBlock("LumenAlleyW_Jog", 12, 16, 10, -104, 8.1, -548, CONCRETE_C, "Slate", 0)
+pushBlock("LumenAlleyW_Wing", 8, 13, 14, -112, 6.6, -560, CONCRETE_B, "Concrete", 0)
+pushBlock("LumenAlleyW_Elbow", 10, 14, 8, -86, 7.1, -628, CONCRETE_A, "SmoothPlastic", 0)
+pushBlock("LumenAlleyW_Cap", 0.6, 9, 16, -42, 4.6, -608, CONCRETE_C, "Concrete", 0)
+pushBlock("LumenAlleyW_Lamp1", 0.4, 6.4, 0.4, -78, 3.3, -520, ASPHALT, "SmoothPlastic", 0)
+pushBall("LumenAlleyW_Glow1", 1.05, -78, 6.7, -520, NEON, 0.14)
+pushBlock("LumenAlleyW_Lamp2", 0.4, 6.4, 0.4, -96, 3.3, -620, ASPHALT, "SmoothPlastic", 0)
+pushBall("LumenAlleyW_Glow2", 1.05, -96, 6.7, -620, NEON_MAGENTA, 0.14)
+
+-- Viela leste: jog em Z diferente da oeste, para não espelhar a planta.
+pushBlock("LumenAlleyE_WallA", 0.7, 10, 18, 54, 5.1, -518, CONCRETE_A, "Concrete", 0)
+pushBlock("LumenAlleyE_WallB", 30, 11, 0.7, 72, 5.6, -528, CONCRETE_C, "SmoothPlastic", 0)
+pushBlock("LumenAlleyE_Jog", 12, 17, 10, 116, 8.6, -576, CONCRETE_B, "Slate", 0)
+pushBlock("LumenAlleyE_Wing", 8, 12, 16, 124, 6.1, -590, CONCRETE_A, "Concrete", 0)
+pushBlock("LumenAlleyE_Elbow", 10, 13, 8, 88, 6.6, -632, CONCRETE_C, "SmoothPlastic", 0)
+pushBlock("LumenAlleyE_Cap", 0.6, 9, 16, 44, 4.6, -610, CONCRETE_B, "Concrete", 0)
+pushBlock("LumenAlleyE_Lamp1", 0.4, 6.4, 0.4, 80, 3.3, -540, ASPHALT, "SmoothPlastic", 0)
+pushBall("LumenAlleyE_Glow1", 1.05, 80, 6.7, -540, NEON_MAGENTA, 0.14)
+pushBlock("LumenAlleyE_Lamp2", 0.4, 6.4, 0.4, 100, 3.3, -624, ASPHALT, "SmoothPlastic", 0)
+pushBall("LumenAlleyE_Glow2", 1.05, 100, 6.7, -624, NEON, 0.14)
+
+-- Passarelas só sobre as vielas (y alto, sem colisão — não é piso de luta).
+pushBlock("LumenBridgeW", 18, 0.7, 3.2, -70, 22.4, -508, CONCRETE_B, "SmoothPlastic", 0)
+pushBlock("LumenBridgeWRail", 18, 0.9, 0.25, -70, 23.2, -506.5, NEON, "Neon", 0.2)
+pushBlock("LumenBridgeE", 18, 0.7, 3.2, 74, 23.1, -526, CONCRETE_A, "SmoothPlastic", 0)
+pushBlock("LumenBridgeERail", 18, 0.9, 0.25, 74, 23.9, -524.5, NEON_MAGENTA, "Neon", 0.2)
+
+-- Serviço 1 — Mercado (leste da praça). Bancada + toldo + caixas + letreiro.
+pushBlock("LumenVendor_Back", 0.6, 6.4, 10, 58, 3.3, -598, CONCRETE_C, "Concrete", 0)
+pushBlock("LumenVendor_Counter", 3.4, 1.15, 8.5, 54.2, 1.05, -598, CONCRETE_A, "SmoothPlastic", 0)
+pushBlock("LumenVendor_Awning", 6.5, 0.35, 10.5, 53.4, 4.15, -598, AWNING, "SmoothPlastic", 0)
+pushBlock("LumenVendor_AwningTrim", 6.6, 0.14, 10.6, 53.4, 4.36, -598, NEON, "Neon", 0.12)
+pushBlock("LumenVendor_Sign", 0.45, 4.8, 3.6, 51.6, 7.4, -598, NEON, "Neon", 0.06)
+pushBlock("LumenVendor_CrateA", 1.8, 1.5, 1.8, 55.6, 0.85, -593.2, { 64, 40, 88 }, "SmoothPlastic", 0)
+pushBlock("LumenVendor_CrateB", 1.5, 1.2, 1.5, 53.4, 0.72, -603.4, { 72, 48, 96 }, "SmoothPlastic", 0)
+pushBlock("LumenVendor_Shelf", 0.4, 2.4, 6, 57.4, 3.4, -598, CONCRETE_B, "SmoothPlastic", 0)
+pushBall("LumenVendor_Lantern", 1.1, 53.2, 3.9, -598, WINDOW_WARM, 0.1)
+
+-- Serviço 2 — Forja (oeste da praça). Lar + chaminé + brasa (bola, sem anel).
+pushBlock("LumenForge_Hearth", 6.2, 2.0, 6.2, -54, 1.1, -598, ASPHALT, "Basalt", 0)
+pushBlock("LumenForge_Chimney", 2.1, 11, 2.1, -56.4, 7.4, -600.4, CONCRETE_B, "Concrete", 0)
+pushBlock("LumenForge_Anvil", 3.1, 1.35, 1.8, -51.6, 2.35, -596.4, SMOKE, "Metal", 0)
+pushBlock("LumenForge_Sign", 0.45, 4.8, 3.6, -49.2, 7.4, -598, NEON_MAGENTA, "Neon", 0.06)
+pushBlock("LumenForge_Rack", 0.35, 3.2, 4.4, -57.6, 2.4, -595.2, IRON, "Metal", 0)
+pushBlock("LumenForge_Back", 0.6, 6.2, 8, -58.4, 3.2, -598, CONCRETE_A, "Concrete", 0)
+pushBall("LumenForge_Ember", 1.5, -54, 2.6, -598, EMBER, 0.05)
+
+-- Borda sul (planície): vão x −24..24 livre. Postes + lintel — docs/02 §4.2.
+pushBlock("LumenArrivePad", 46, 0.16, 8, 0, 0.14, -470, { 28, 24, 42 }, "Asphalt", 0)
+pushBlock("LumenGatePostW", 2.8, 12, 2.8, -28, 6.1, -464, CONCRETE_B, "Concrete", 0)
+pushBlock("LumenGatePostE", 2.8, 12, 2.8, 28, 6.1, -464, CONCRETE_B, "Concrete", 0)
+pushBlock("LumenGateCapW", 3.2, 1.1, 3.2, -28, 12.6, -464, NEON, "Neon", 0.1)
+pushBlock("LumenGateCapE", 3.2, 1.1, 3.2, 28, 12.6, -464, NEON, "Neon", 0.1)
+pushBlock("LumenGateLintel", 52, 1.15, 1.15, 0, 13.1, -464, NEON, "Neon", 0.12)
+for i, gx in { -52, -80, -118, 52, 80, 118 } do
+	pushBlock(("LumenBorderPost_%02d"):format(i), 1.6, 7.5, 1.6, gx, 3.85, -462.5, CONCRETE_A, "SmoothPlastic", 0)
+	pushBall(("LumenBorderGlow_%02d"):format(i), 0.95, gx, 7.8, -462.5, if gx < 0 then NEON else NEON_MAGENTA, 0.16)
+end
+
+-- Vasos na calçada (fora da rua e das bocas de viela).
+for i, pot in
+	{
+		{ x = -15.2, z = -488 },
+		{ x = -15.2, z = -544 },
+		{ x = -15.2, z = -624 },
+		{ x = -15.2, z = -668 },
+		{ x = 15.2, z = -492 },
+		{ x = 15.2, z = -544 },
+		{ x = 15.2, z = -624 },
+		{ x = 15.2, z = -668 },
+	}
+do
+	pushBlock(("LumenPlanter_%02d"):format(i), 1.8, 0.7, 1.8, pot.x, 0.48, pot.z, ASPHALT, "SmoothPlastic", 0)
+	pushBall(("LumenBush_%02d"):format(i), 1.5, pot.x, 1.45, pot.z, if i % 2 == 0 then NEON else NEON_MAGENTA, 0.28)
+end
+
+-- Caixas nas vielas (não na rua).
+pushBlock("LumenAlleyCrateW1", 1.6, 1.3, 1.6, -64, 0.75, -522, { 58, 36, 80 }, "SmoothPlastic", 0)
+pushBlock("LumenAlleyCrateW2", 1.4, 1.1, 1.4, -90, 0.65, -624, { 64, 40, 88 }, "SmoothPlastic", 0)
+pushBlock("LumenAlleyCrateE1", 1.6, 1.3, 1.6, 68, 0.75, -538, { 58, 36, 80 }, "SmoothPlastic", 0)
+pushBlock("LumenAlleyCrateE2", 1.4, 1.1, 1.4, 96, 0.65, -628, { 64, 40, 88 }, "SmoothPlastic", 0)
 
 -- ── Bosque dos Ecos ────────────────────────────────────────────────────────
 push(
