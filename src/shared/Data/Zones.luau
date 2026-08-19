@@ -365,7 +365,10 @@ local Greybox: GreyboxLayout = {
 	gateNorthWidth = 12,
 	gateWestWidth = 10,
 	transitionDepth = 8,
-	plainSize = { x = 160, z = 120 },
+	-- Base visual ampla para as células F1: Bastião, planície, Lumen, Bosque,
+	-- Porto, Setor Cinza, Academia e Vila Sombria. Os pisos autoritativos ainda
+	-- vêm dos volumes acima; esta base só evita horizonte cortado e void visual.
+	plainSize = { x = 1080, z = 980 },
 	eliteCraterRadius = 20,
 	eliteCraterOffsetNorth = 70,
 	collisionGroups = { "Safe", "Transition", "Free", "GateBlock" },

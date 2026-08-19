@@ -127,6 +127,32 @@ local function makePart(
 	return part
 end
 
+local function makeWedge(
+	name: string,
+	size: Vector3,
+	position: Vector3,
+	color: Color3,
+	material: Enum.Material,
+	collisionGroup: string,
+	canCollide: boolean
+): BasePart
+	local part = Instance.new("WedgePart")
+	part.Name = name
+	part.Anchored = true
+	part.CanCollide = canCollide
+	part.CanTouch = false
+	part.CanQuery = canCollide
+	part.Size = size
+	part.Position = position
+	part.Color = color
+	part.Material = material
+	part.CastShadow = true
+	part.TopSurface = Enum.SurfaceType.Smooth
+	part.BottomSurface = Enum.SurfaceType.Smooth
+	part.CollisionGroup = collisionGroup
+	return part
+end
+
 local function makeVisualPart(
 	className: "Part" | "WedgePart",
 	name: string,
@@ -1286,6 +1312,75 @@ local function buildFloors(root: Folder, greybox: any, style: any, zones: any, s
 		tuft.Parent = folder
 	end
 
+	-- Relevo visual em camadas: a base continua cobrindo os volumes canônicos,
+	-- mas a leitura do mundo deixa de ser uma placa plana. Os taludes ficam fora
+	-- da faixa principal de navegação e usam wedges/terraces para criar sombra,
+	-- silhueta e transições de altura sem alterar zoneAtPosition.
+	local reliefFolder = Instance.new("Folder")
+	reliefFolder.Name = "Relief"
+	reliefFolder.Parent = folder
+	local reliefStone = toColor(sceneryStyle.terrainAccent)
+	local reliefDark = COLORS.darkStone
+	local reliefGrass = Color3.fromRGB(68, 92, 70)
+	local function ridge(name: string, x: number, z: number, width: number, length: number, height: number, angle: number)
+		local base = makePart(
+			name .. "_Base",
+			Vector3.new(width, math.max(0.8, height * 0.42), length),
+			Vector3.new(x, math.max(0.4, height * 0.21), z),
+			reliefDark,
+			"Free",
+			false
+		)
+		base.Material = Enum.Material.Basalt
+		base.CFrame = CFrame.new(base.Position) * CFrame.Angles(0, math.rad(angle), 0)
+		base.Parent = reliefFolder
+		local slope = makeWedge(
+			name .. "_Slope",
+			Vector3.new(width * 0.92, height, length * 0.66),
+			Vector3.new(x, height * 0.5, z - length * 0.17),
+			reliefStone,
+			Enum.Material.Slate,
+			"Free",
+			false
+		)
+		slope.CFrame = CFrame.new(slope.Position) * CFrame.Angles(0, math.rad(angle), 0)
+		slope.Parent = reliefFolder
+		local cap = makePart(
+			name .. "_GrassCap",
+			Vector3.new(width * 0.55, 0.16, length * 0.42),
+			Vector3.new(x, height + 0.08, z - length * 0.28),
+			reliefGrass,
+			"Free",
+			false
+		)
+		cap.Material = Enum.Material.Grass
+		cap.CFrame = CFrame.new(cap.Position) * CFrame.Angles(0, math.rad(angle), 0)
+		cap.Parent = reliefFolder
+	end
+	local function terrace(name: string, x: number, z: number, width: number, depth: number, height: number)
+		for level = 1, 3 do
+			local inset = (level - 1) * 1.4
+			local step = makePart(
+				("%s_%02d"):format(name, level),
+				Vector3.new(width - inset * 2, 0.7, depth - inset * 2),
+				Vector3.new(x, height * (level / 3) - 0.35, z),
+				if level == 3 then reliefStone else reliefDark,
+				"Free",
+				false
+			)
+			step.Material = if level == 3 then Enum.Material.Slate else Enum.Material.Basalt
+			step.Parent = reliefFolder
+		end
+	end
+	-- Bancos laterais preservam um corredor aberto no centro e formam uma
+	-- bacia natural em direção à cratera.
+	ridge("ReliefWestBank", -57, -80, 18, 54, 5.5, 8)
+	ridge("ReliefEastBank", 57, -78, 18, 58, 7.0, -7)
+	ridge("ReliefNorthWestHill", -48, -132, 28, 38, 9.0, 12)
+	ridge("ReliefNorthEastHill", 46, -141, 24, 44, 6.5, -14)
+	terrace("ReliefCraterSouthTerrace", 0, -131, 42, 14, 3.6)
+	terrace("ReliefCraterWestTerrace", -25, -103, 12, 26, 2.8)
+
 	-- Cratera baixa com aro segmentado: reconhecível, atravessável e sem o
 	-- bloco maciço que prendia o personagem no centro do encontro.
 	local basin = makePart(
@@ -1375,6 +1470,89 @@ local function buildWalls(root: Folder, greybox: any, scenery: any, spawnDecorat
 		accent.Transparency = 0.08
 		accent.Parent = folder
 	end
+
+	local function gateTower(prefix: string, position: Vector3, facing: number, heightBoost: number)
+		local towerBase = makePart(
+			prefix .. "_TowerBase",
+			Vector3.new(7, heightBoost, 7),
+			Vector3.new(position.X, heightBoost / 2, position.Z),
+			wallCapColor,
+			"GateBlock",
+			false
+		)
+		towerBase.Material = Enum.Material.Limestone
+		towerBase.Parent = folder
+		for level = 1, 3 do
+			local ledge = makePart(
+			("%s_Ledge_%02d"):format(prefix, level),
+			Vector3.new(8.2 - level * 0.55, 0.45, 8.2 - level * 0.55),
+			Vector3.new(position.X, heightBoost * (level / 3) - 0.2, position.Z),
+			if level == 2 then wallAccentColor else wallCapColor,
+			"Safe",
+			false
+			)
+			ledge.Material = if level == 2 then Enum.Material.Basalt else Enum.Material.Sandstone
+			ledge.Parent = folder
+		end
+		local crown = makePart(
+			prefix .. "_Crown",
+			Vector3.new(5.8, 1.0, 5.8),
+			Vector3.new(position.X, heightBoost + 0.5, position.Z),
+			wallCapColor,
+			"Safe",
+			false
+		)
+		crown.Material = Enum.Material.Sandstone
+		crown.Parent = folder
+		local spire = makePart(
+			prefix .. "_Crystal",
+			Vector3.new(1.2, 4.2, 1.2),
+			Vector3.new(position.X, heightBoost + 2.6, position.Z),
+			wallAccentColor,
+			"Safe",
+			false
+		)
+		spire.Material = Enum.Material.Neon
+		spire.Shape = Enum.PartType.Ball
+		spire.Parent = folder
+		local banner = makePart(
+			prefix .. "_Banner",
+			Vector3.new(2.1, 4.8, 0.12),
+			Vector3.new(position.X, heightBoost * 0.7, position.Z - 3.55),
+			wallAccentColor,
+			"Safe",
+			false
+		)
+		banner.Material = Enum.Material.Fabric
+		banner.Transparency = 0.05
+		banner.CFrame = CFrame.new(banner.Position) * CFrame.Angles(0, math.rad(facing), math.rad(-3))
+		banner.Parent = folder
+	end
+	local function buttress(prefix: string, position: Vector3, rotation: number)
+		for side = -1, 1, 2 do
+			local wedge = makeWedge(
+				("%s_%s"):format(prefix, if side < 0 then "L" else "R"),
+				Vector3.new(2.2, 7.5, 3.4),
+				position + Vector3.new(side * 2.1, 3.7, 0),
+				wallColor,
+				Enum.Material.Limestone,
+				"GateBlock",
+				false
+			)
+			wedge.CFrame = CFrame.new(wedge.Position) * CFrame.Angles(0, math.rad(rotation), 0)
+			wedge.Parent = folder
+		end
+	end
+
+	-- Torres escalonadas e contrafortes dão escala vertical e enquadram cada
+	-- portal; são decorativos e não fecham o corredor de travessia.
+	gateTower("NorthGateWest", Vector3.new(-9.5, 0, -32), 0, height + 7)
+	gateTower("NorthGateEast", Vector3.new(9.5, 0, -32), 180, height + 7)
+	gateTower("WestGateNorth", Vector3.new(-40, 0, -8.5), 90, height + 6)
+	gateTower("WestGateSouth", Vector3.new(-40, 0, 8.5), -90, height + 6)
+	buttress("NorthWallButtressA", Vector3.new(-25, 0, -halfZ - 1.3), 0)
+	buttress("NorthWallButtressB", Vector3.new(25, 0, -halfZ - 1.3), 0)
+	buttress("EastWallButtress", Vector3.new(halfX + 1.3, 0, 12), 90)
 
 	-- Norte: dois trechos deixando o vão do portão no meio.
 	local northSegment = halfX - gateNorthHalf
@@ -1973,6 +2151,104 @@ local function buildWildDecorations(root: Folder, wildDecorations: any): ()
 	end
 end
 
+local function buildBiomeRelief(root: Folder): ()
+	local folder = Instance.new("Folder")
+	folder.Name = "BiomeRelief"
+	folder.Parent = root
+
+	local function mound(
+		name: string,
+		position: Vector3,
+		width: number,
+		length: number,
+		height: number,
+		baseColor: Color3,
+		capColor: Color3,
+		material: Enum.Material
+	)
+		local base = makePart(
+			name .. "_Base",
+			Vector3.new(width, math.max(1, height * 0.42), length),
+			position + Vector3.new(0, height * 0.2, 0),
+			baseColor,
+			"Free",
+			false
+		)
+		base.Material = Enum.Material.Basalt
+		base.CFrame = CFrame.new(base.Position) * CFrame.Angles(0, math.rad((position.X + position.Z) % 17), 0)
+		base.Parent = folder
+		local slope = makeWedge(
+			name .. "_Slope",
+			Vector3.new(width * 0.9, height, length * 0.64),
+			position + Vector3.new(0, height * 0.5, -length * 0.16),
+			baseColor,
+			material,
+			"Free",
+			false
+		)
+		slope.CFrame = CFrame.new(slope.Position) * CFrame.Angles(0, math.rad((position.X + position.Z) % 17), 0)
+		slope.Parent = folder
+		local cap = makePart(
+			name .. "_Cap",
+			Vector3.new(width * 0.46, 0.2, length * 0.28),
+			position + Vector3.new(0, height + 0.1, -length * 0.28),
+			capColor,
+			"Free",
+			false
+		)
+		cap.Material = material
+		cap.Parent = folder
+	end
+
+	local function terrace(name: string, position: Vector3, width: number, depth: number, height: number, color: Color3, material: Enum.Material)
+		for level = 1, 4 do
+			local inset = (level - 1) * 1.1
+			local step = makePart(
+				("%s_%02d"):format(name, level),
+				Vector3.new(width - inset * 2, 0.8, depth - inset * 2),
+				position + Vector3.new(0, height * level / 4 - 0.4, 0),
+				color,
+				"Free",
+				false
+			)
+			step.Material = material
+			step.Parent = folder
+		end
+	end
+
+	-- Bosque dos Ecos: vales assimétricos, clareiras elevadas e massa verde.
+	mound("EchoWoodsWestHill", Vector3.new(285, 0, -150), 54, 90, 12, Color3.fromRGB(42, 66, 48), Color3.fromRGB(62, 126, 66), Enum.Material.Grass)
+	mound("EchoWoodsEastHill", Vector3.new(470, 0, -355), 66, 72, 16, Color3.fromRGB(36, 58, 42), Color3.fromRGB(56, 116, 60), Enum.Material.Grass)
+	terrace("EchoWoodsShrineSteps", Vector3.new(380, 0, -260), 34, 28, 4, Color3.fromRGB(54, 76, 58), Enum.Material.Slate)
+
+	-- Porto Ferro: plataformas de cais, aterros e falésias industriais.
+	mound("IronPortWestCliff", Vector3.new(-500, 0, -150), 58, 78, 14, Color3.fromRGB(65, 70, 76), Color3.fromRGB(126, 76, 54), Enum.Material.Rock)
+	mound("IronPortSouthBank", Vector3.new(-300, 0, 42), 72, 46, 8, Color3.fromRGB(70, 62, 60), Color3.fromRGB(150, 88, 52), Enum.Material.Concrete)
+	terrace("IronPortPierApproach", Vector3.new(-390, 0, -70), 30, 22, 3, Color3.fromRGB(82, 84, 88), Enum.Material.Metal)
+
+	-- Setor Cinza: terraços industriais e plataformas quebradas, com forte
+	-- leitura de níveis para enquadrar o horizonte do Distrito Lumen.
+	mound("GreySectorNorthBank", Vector3.new(220, 0, -650), 74, 54, 15, Color3.fromRGB(56, 58, 64), Color3.fromRGB(104, 108, 116), Enum.Material.Basalt)
+	mound("GreySectorEastBank", Vector3.new(450, 0, -560), 58, 84, 11, Color3.fromRGB(48, 50, 56), Color3.fromRGB(94, 98, 108), Enum.Material.Metal)
+	terrace("GreySectorStackYard", Vector3.new(320, 0, -570), 42, 36, 5, Color3.fromRGB(62, 64, 70), Enum.Material.Basalt)
+
+	-- Academia Alvorada: escadarias de arenito e jardins em terraços.
+	terrace("AcademyGrandSteps", Vector3.new(50, 0, 138), 52, 34, 7, Color3.fromRGB(176, 158, 122), Enum.Material.Sandstone)
+	mound("AcademySouthGarden", Vector3.new(120, 0, 220), 62, 46, 6, Color3.fromRGB(134, 112, 78), Color3.fromRGB(196, 176, 132), Enum.Material.Grass)
+
+	-- Vila Sombria: colinas fechando um vale estreito, com cobertura verde
+	-- escura e rocha aparente nas bordas.
+	mound("VeilNorthRidge", Vector3.new(-285, 0, 112), 76, 34, 12, Color3.fromRGB(40, 52, 46), Color3.fromRGB(76, 106, 74), Enum.Material.Slate)
+	mound("VeilSouthRidge", Vector3.new(-265, 0, 252), 92, 40, 15, Color3.fromRGB(34, 44, 40), Color3.fromRGB(66, 92, 64), Enum.Material.Grass)
+	terrace("VeilWellApproach", Vector3.new(-275, 0, 190), 30, 26, 3, Color3.fromRGB(50, 58, 52), Enum.Material.Slate)
+
+	-- Distrito Lumen: desnível urbano e plataformas de skyline; a rua central
+	-- continua livre, mas o entorno ganha uma silhueta de cidade em camadas.
+	terrace("LumenNorthRise", Vector3.new(0, 0, -670), 96, 30, 8, Color3.fromRGB(38, 34, 50), Enum.Material.Concrete)
+	mound("LumenWestRidge", Vector3.new(-125, 0, -610), 44, 72, 10, Color3.fromRGB(34, 30, 46), Color3.fromRGB(72, 42, 86), Enum.Material.Slate)
+	mound("LumenEastRidge", Vector3.new(126, 0, -610), 44, 72, 10, Color3.fromRGB(34, 30, 46), Color3.fromRGB(72, 42, 86), Enum.Material.Slate)
+end
+
 local function buildBiomeDecorations(root: Folder, biomeDecorations: any): ()
 	if not biomeDecorations or type(biomeDecorations.all) ~= "function" then
 		return
@@ -2047,6 +2323,7 @@ function WorldService.init(deps: WorldDeps): ()
 	buildSpawnDecorations(root, deps.spawnDecorations)
 	buildWildDecorations(root, deps.wildDecorations)
 	buildBiomeDecorations(root, deps.biomeDecorations)
+	buildBiomeRelief(root)
 	buildZoneVolumes(root, deps.zones)
 	buildStaticActors(root, deps.presentation, deps.zones)
 	verifyNpcInteractionBinding(root, "ThresholdInstructor", "npc_threshold_instructor")
