@@ -2249,6 +2249,61 @@ local function buildBiomeRelief(root: Folder): ()
 	mound("LumenEastRidge", Vector3.new(126, 0, -610), 44, 72, 10, Color3.fromRGB(34, 30, 46), Color3.fromRGB(72, 42, 86), Enum.Material.Slate)
 end
 
+local function buildBiomeGateways(root: Folder): ()
+	local folder = Instance.new("Folder")
+	folder.Name = "BiomeGateways"
+	folder.Parent = root
+	local stone = Color3.fromRGB(72, 68, 82)
+	local cap = Color3.fromRGB(168, 148, 118)
+	local shadow = Color3.fromRGB(32, 30, 44)
+	local violet = Color3.fromRGB(184, 72, 255)
+	local cyan = Color3.fromRGB(80, 220, 255)
+	local amber = Color3.fromRGB(255, 170, 76)
+
+	local function part(name: string, size: Vector3, position: Vector3, color: Color3, material: Enum.Material, yaw: number?)
+		local item = makePart(name, size, position, color, "Free", false)
+		item.Material = material
+		if yaw then
+			item.CFrame = CFrame.new(position) * CFrame.Angles(0, math.rad(yaw), 0)
+		end
+		item.Parent = folder
+		return item
+	end
+
+	local function gateway(
+		prefix: string,
+		position: Vector3,
+		width: number,
+		height: number,
+		accent: Color3,
+		yaw: number
+	)
+		local axis = CFrame.Angles(0, math.rad(yaw), 0)
+		local left = position + (axis:VectorToWorldSpace(Vector3.new(-width * 0.5, height * 0.5, 0)))
+		local right = position + (axis:VectorToWorldSpace(Vector3.new(width * 0.5, height * 0.5, 0)))
+		local top = position + (axis:VectorToWorldSpace(Vector3.new(0, height, 0)))
+		part(prefix .. "_PillarL", Vector3.new(5, height, 5), left, stone, Enum.Material.Basalt, yaw)
+		part(prefix .. "_PillarR", Vector3.new(5, height, 5), right, stone, Enum.Material.Basalt, yaw)
+		part(prefix .. "_CapL", Vector3.new(6.2, 1.2, 6.2), left + Vector3.new(0, height * 0.52, 0), cap, Enum.Material.Sandstone, yaw)
+		part(prefix .. "_CapR", Vector3.new(6.2, 1.2, 6.2), right + Vector3.new(0, height * 0.52, 0), cap, Enum.Material.Sandstone, yaw)
+		part(prefix .. "_Beam", Vector3.new(width + 5, 4, 4), top, shadow, Enum.Material.Slate, yaw)
+		part(prefix .. "_EnergyBeam", Vector3.new(width - 2, 0.42, 0.35), top + axis:VectorToWorldSpace(Vector3.new(0, -1.5, -2.1)), accent, Enum.Material.Neon, yaw)
+		part(prefix .. "_CrystalL", Vector3.new(1.4, 4.5, 1.4), left + Vector3.new(0, height * 0.58, 0), accent, Enum.Material.Neon, yaw)
+		part(prefix .. "_CrystalR", Vector3.new(1.4, 4.5, 1.4), right + Vector3.new(0, height * 0.58, 0), accent, Enum.Material.Neon, yaw)
+		for side = -1, 1, 2 do
+			local wing = position + axis:VectorToWorldSpace(Vector3.new(side * (width * 0.5 + 7), height * 0.22, 0))
+			part(("%s_Wing_%s"):format(prefix, if side < 0 then "L" else "R"), Vector3.new(10, height * 0.44, 3), wing, stone, Enum.Material.Limestone, yaw)
+		end
+	end
+
+	gateway("GatewayLumen", Vector3.new(0, 0, -450), 34, 18, cyan, 0)
+	gateway("GatewayWoods", Vector3.new(240, 0, -260), 26, 15, Color3.fromRGB(104, 230, 130), 90)
+	gateway("GatewayPort", Vector3.new(-240, 0, -70), 28, 16, amber, 90)
+	gateway("GatewayGrey", Vector3.new(160, 0, -440), 30, 17, violet, 0)
+	gateway("GatewayAcademy", Vector3.new(50, 0, 48), 30, 16, amber, 0)
+	gateway("GatewayVeil", Vector3.new(-150, 0, 190), 24, 14, Color3.fromRGB(128, 255, 170), 90)
+end
+
 local function buildBiomeDecorations(root: Folder, biomeDecorations: any): ()
 	if not biomeDecorations or type(biomeDecorations.all) ~= "function" then
 		return
@@ -2324,6 +2379,7 @@ function WorldService.init(deps: WorldDeps): ()
 	buildWildDecorations(root, deps.wildDecorations)
 	buildBiomeDecorations(root, deps.biomeDecorations)
 	buildBiomeRelief(root)
+	buildBiomeGateways(root)
 	buildZoneVolumes(root, deps.zones)
 	buildStaticActors(root, deps.presentation, deps.zones)
 	verifyNpcInteractionBinding(root, "ThresholdInstructor", "npc_threshold_instructor")
